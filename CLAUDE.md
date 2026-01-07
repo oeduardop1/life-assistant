@@ -46,12 +46,39 @@ Use Context7 to fetch up-to-date documentation in these scenarios:
 1. Identify libraries/frameworks involved in the task
 2. Query Context7 for each one (resolve-library-id → query-docs)
 3. Read and understand the current documentation
-4. THEN create the plan or write the code
+4. Compare Context7 best practices with project documentation
+5. If divergence found → notify user before proceeding
+6. THEN create the plan or write the code
 ```
 
 **If Context7 has no coverage for a library:**
 - Inform the user: "Context7 does not have documentation for [library]. Should I proceed with general knowledge or would you like to provide documentation?"
 - Wait for user guidance before proceeding
+
+**Detecting Documentation Drift:**
+
+When consulting Context7, ALWAYS compare the official best practices with the project's documentation (`ENGINEERING.md`, `SYSTEM_SPECS.md`, etc.). If you identify divergences:
+
+1. **Stop before implementing** - Do not proceed with outdated patterns
+2. **Notify the user** with this format:
+   ```
+   ⚠️ Documentation drift detected:
+
+   - **File:** `ENGINEERING.md` §X.X
+   - **Current (project):** [what the project docs say]
+   - **Best practice (Context7):** [what Context7 recommends]
+   - **Impact:** [why this matters]
+
+   Should I update the project documentation before proceeding?
+   ```
+3. **Wait for user approval** before updating any documentation
+4. **If approved:** Update the relevant spec file, then proceed with implementation using the correct best practice
+
+Examples of drift to watch for:
+- Deprecated APIs or patterns still documented in project specs
+- Configuration approaches that have better alternatives
+- Testing patterns that have evolved
+- Security practices that have been updated
 
 ### Other Requirements
 
