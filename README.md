@@ -28,7 +28,13 @@ docker compose -f infra/docker/docker-compose.yml up -d
 # 5. Verificar se os servicos estao rodando
 docker compose -f infra/docker/docker-compose.yml ps
 
-# 6. Executar em modo desenvolvimento
+# 6. Aplicar schema do banco de dados
+pnpm --filter database db:push
+
+# 7. (Opcional) Popular banco com dados de teste
+pnpm --filter database db:seed
+
+# 8. Executar em modo desenvolvimento
 pnpm dev
 ```
 
@@ -52,6 +58,13 @@ pnpm format:check            # Verificar formatacao
 # Testes
 pnpm test                    # Executar testes unitarios
 pnpm test:e2e                # Executar testes E2E
+
+# Database (requer Docker rodando)
+pnpm --filter database db:generate  # Gerar migrations a partir do schema
+pnpm --filter database db:migrate   # Aplicar migrations pendentes
+pnpm --filter database db:push      # Push schema direto (dev only)
+pnpm --filter database db:studio    # Abrir Drizzle Studio (GUI)
+pnpm --filter database db:seed      # Popular banco com dados de teste
 
 # Limpeza
 pnpm clean                   # Limpar builds e node_modules
