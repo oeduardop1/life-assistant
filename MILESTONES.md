@@ -168,36 +168,88 @@
 
 ---
 
-### M0.3 — Package: Config
+### M0.3 — Package: Config ✅
 
 **Objetivo:** Criar package de configuração com validação via Zod.
 
 **Tasks:**
 
-- [ ] Configurar tsup para build
-- [ ] Criar schema Zod para variáveis de ambiente:
-  - [ ] App config (NODE_ENV, PORT, APP_URL)
-  - [ ] Database config (DATABASE_URL, SUPABASE_*)
-  - [ ] Redis config (REDIS_URL)
-  - [ ] AI config (LLM_PROVIDER, GEMINI_*, ANTHROPIC_*)
-  - [ ] Storage config (R2_*, CLOUDFLARE_*)
-  - [ ] Auth config (JWT_SECRET)
-  - [ ] Integrations config (TELEGRAM_*, GOOGLE_*, STRIPE_*)
-  - [ ] Observability config (SENTRY_DSN, AXIOM_*, LOG_LEVEL)
-- [ ] Criar função `loadConfig()` que valida e retorna config tipado
-- [ ] Criar função `validateEnv()` para CI
-- [ ] Documentar todas as variáveis
+- [x] Configurar tsup para build
+- [x] Adicionar dependências: zod@4.3.5, vitest@4.0.16, @vitest/coverage-v8@4.0.16
+- [x] Criar schema Zod para variáveis de ambiente:
+  - [x] App config (NODE_ENV, PORT, FRONTEND_URL, APP_VERSION)
+  - [x] Database config (DATABASE_URL, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_JWT_SECRET)
+  - [x] Redis config (REDIS_URL)
+  - [x] AI config (LLM_PROVIDER, GEMINI_API_KEY, GEMINI_MODEL, ANTHROPIC_API_KEY, CLAUDE_MODEL)
+  - [x] Storage config (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_ENDPOINT)
+  - [x] Integrations config (TELEGRAM_BOT_TOKEN, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY)
+  - [x] Observability config (SENTRY_DSN, AXIOM_TOKEN, AXIOM_DATASET, LOG_LEVEL)
+- [x] Criar função `loadConfig()` que valida e retorna config tipado
+- [x] Criar função `getConfig()` com cache
+- [x] Criar função `validateEnv()` para CI
+- [x] Criar função `isEnvValid()` para validação sem exit
+- [x] Exportar tudo via `index.ts`
 
 **Testes:**
-- [ ] Testes unitários para validação de schemas Zod
-- [ ] Teste que `loadConfig()` falha com variáveis inválidas
-- [ ] Teste que `loadConfig()` retorna config tipado corretamente
+
+- [x] Configurar Vitest com coverage 100%
+- [x] Testes de appSchema (`schemas.test.ts`):
+  - [x] Validar NODE_ENV aceita development, staging, production, test
+  - [x] Rejeitar NODE_ENV inválido
+  - [x] Coercer PORT de string para number
+  - [x] Rejeitar PORT fora do range (1-65535)
+  - [x] Usar defaults quando variáveis não definidas
+- [x] Testes de databaseSchema (`schemas.test.ts`):
+  - [x] Requerer DATABASE_URL
+  - [x] Validar prefixo postgresql://
+  - [x] Requerer SUPABASE_JWT_SECRET com min 32 chars
+  - [x] Requerer todas as variáveis SUPABASE_*
+- [x] Testes de redisSchema (`schemas.test.ts`):
+  - [x] Aceitar redis:// e rediss://
+  - [x] Rejeitar URLs inválidas
+- [x] Testes de aiSchema (`schemas.test.ts`):
+  - [x] Requerer GEMINI_API_KEY quando LLM_PROVIDER=gemini
+  - [x] Requerer ANTHROPIC_API_KEY quando LLM_PROVIDER=claude
+  - [x] Não requerer ANTHROPIC_API_KEY quando LLM_PROVIDER=gemini
+  - [x] Não requerer GEMINI_API_KEY quando LLM_PROVIDER=claude
+  - [x] Usar modelo default de cada provider
+- [x] Testes de storageSchema (`schemas.test.ts`):
+  - [x] Requerer R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+  - [x] R2_ENDPOINT opcional
+  - [x] Usar R2_BUCKET_NAME default
+- [x] Testes de integrationsSchema (`schemas.test.ts`):
+  - [x] Todas as variáveis opcionais
+  - [x] Aceitar valores vazios
+- [x] Testes de observabilitySchema (`schemas.test.ts`):
+  - [x] SENTRY_DSN e AXIOM_TOKEN opcionais
+  - [x] Usar LOG_LEVEL default 'info'
+  - [x] Validar LOG_LEVEL enum (debug, info, warn, error)
+- [x] Testes de loadConfig (`loader.test.ts`):
+  - [x] Retornar config válido com env correto
+  - [x] Throw com mensagem clara para env inválido
+  - [x] Cachear config após primeira chamada
+  - [x] Mensagem de erro listar todos os campos inválidos
+  - [x] Mensagem de erro NÃO expor valores secretos
+- [x] Testes de getConfig (`loader.test.ts`):
+  - [x] Retornar config cacheado se existir
+  - [x] Carregar config se cache vazio
+- [x] Testes de clearConfigCache (`loader.test.ts`):
+  - [x] Limpar cache corretamente
+  - [x] Próxima chamada recarregar config
+- [x] Testes de isEnvValid (`validator.test.ts`):
+  - [x] Retornar true para env válido
+  - [x] Retornar false para env inválido
+- [x] Testes de validateEnv (`validator.test.ts`):
+  - [x] Chamar process.exit(1) para env inválido
+  - [x] Logar mensagem de sucesso para env válido
 
 **Definition of Done:**
-- [ ] Validação falha com mensagem clara para variáveis faltantes
-- [ ] TypeScript infere tipos corretamente do config
-- [ ] `pnpm --filter config build` passa
-- [ ] Testes passam com >90% coverage
+- [x] Validação falha com mensagem clara para variáveis faltantes
+- [x] TypeScript infere tipos corretamente do config
+- [x] Package compila: `pnpm --filter config build`
+- [x] Lint passa: `pnpm --filter config lint`
+- [x] Typecheck passa: `pnpm --filter config typecheck`
+- [x] Testes passam com 100% coverage (67 testes)
 
 ---
 

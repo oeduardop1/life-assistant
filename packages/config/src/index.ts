@@ -1,31 +1,37 @@
-// @life-assistant/config
-// Configuracoes e validacao de ENV
-// Implementacao completa no milestone M0.3
+/**
+ * @life-assistant/config
+ * Configuração e validação de variáveis de ambiente via Zod
+ */
 
+// Version
 export const CONFIG_VERSION = '0.1.0';
 
-/**
- * Ambiente da aplicacao
- */
-export type Environment = 'development' | 'staging' | 'production' | 'test';
+// Loader
+export { loadConfig, getConfig, clearConfigCache } from './loader';
 
-/**
- * Configuracao base (placeholder)
- * Sera expandida com Zod no M0.3
- */
-export interface AppConfig {
-  env: Environment;
-  port: number;
-  frontendUrl: string;
-}
+// Validator
+export { validateEnv, isEnvValid } from './validator';
 
-/**
- * Retorna o ambiente atual
- */
-export function getEnvironment(): Environment {
-  const env = process.env.NODE_ENV;
-  if (env === 'production' || env === 'staging' || env === 'test') {
-    return env;
-  }
-  return 'development';
-}
+// Types
+export type {
+  EnvConfig,
+  AppEnv,
+  DatabaseEnv,
+  RedisEnv,
+  AiEnv,
+  StorageEnv,
+  IntegrationsEnv,
+  ObservabilityEnv,
+} from './schemas';
+
+// Schemas (para uso avançado/testes)
+export {
+  envSchema,
+  appSchema,
+  databaseSchema,
+  redisSchema,
+  aiSchema,
+  storageSchema,
+  integrationsSchema,
+  observabilitySchema,
+} from './schemas';
