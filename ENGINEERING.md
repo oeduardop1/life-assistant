@@ -618,10 +618,12 @@ GEMINI_MODEL=gemini-flash  # Usar versão mais recente disponível
 ```yaml
 # infra/docker/docker-compose.yml
 # Nota: Campo 'version' não é mais necessário no Docker Compose v5+
+# Versões verificadas em Janeiro 2026
 
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    # PostgreSQL 17 com pgvector 0.8.0
+    image: pgvector/pgvector:0.8.0-pg17
     container_name: life-assistant-db
     environment:
       POSTGRES_USER: postgres
@@ -639,7 +641,8 @@ services:
       retries: 5
 
   redis:
-    image: redis:7-alpine
+    # Redis 8 Alpine (versão mais recente)
+    image: redis:8-alpine
     container_name: life-assistant-redis
     ports:
       - '6379:6379'
@@ -652,7 +655,8 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio:latest
+    # MinIO via Quay.io (minio/minio no Docker Hub foi descontinuado em Out/2025)
+    image: quay.io/minio/minio:latest
     container_name: life-assistant-minio
     command: server /data --console-address ":9001"
     environment:
@@ -822,16 +826,18 @@ export default defineConfig({
 }
 ```
 
-### 10.3 Turborepo Pipeline
+### 10.3 Turborepo Tasks
+
+> **Nota:** Turborepo v2+ usa `tasks` em vez de `pipeline` (sintaxe antiga v1).
 
 ```json
 // turbo.json
 {
   "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "dev": {
       "cache": false,
@@ -844,10 +850,15 @@ export default defineConfig({
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"]
     },
     "test:e2e": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build"],
+      "outputs": ["playwright-report/**"]
+    },
+    "clean": {
+      "cache": false
     }
   }
 }

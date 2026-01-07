@@ -1,0 +1,12 @@
+{
+  "name": "@life-assistant/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'NestJS API not yet initialized - see milestone M0.5'",
+    "build": "echo 'NestJS API not yet initialized - see milestone M0.5'",
+    "lint": "echo 'NestJS API not yet initialized - see milestone M0.5'",
+    "typecheck": "echo 'NestJS API not yet initialized - see milestone M0.5'",
+    "clean": "rm -rf dist"
+  }
+}

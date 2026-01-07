@@ -15,7 +15,7 @@
 
 | Versão | Nome | Foco Principal | Status |
 |--------|------|----------------|--------|
-| **0.x** | Fundação | Infraestrutura base | 🔴 Não iniciado |
+| **0.x** | Fundação | Infraestrutura base | 🟡 Em andamento |
 | **1.x** | Conselheira | Chat + Decisões + Segundo Cérebro | 🔴 Não iniciado |
 | **2.x** | Tracker | Métricas + Score + Relatórios | 🔴 Não iniciado |
 | **3.x** | Assistente | Integrações + Automações | 🔴 Não iniciado |
@@ -27,16 +27,16 @@
 > **Objetivo:** Estabelecer toda a infraestrutura técnica necessária antes de qualquer feature de negócio.
 > **Referências:** `ENGINEERING.md` §1-§10
 
-### M0.1 — Setup do Monorepo
+### M0.1 — Setup do Monorepo 🟢
 
 **Objetivo:** Criar estrutura base do monorepo com Turborepo e pnpm workspaces.
 
 **Tasks:**
 
-- [ ] Inicializar repositório Git
-- [ ] Configurar pnpm workspaces (`pnpm-workspace.yaml`)
-- [ ] Configurar Turborepo (`turbo.json` com pipelines: build, dev, lint, typecheck, test)
-- [ ] Criar estrutura de diretórios conforme `ENGINEERING.md` §3.1:
+- [x] Inicializar repositório Git
+- [x] Configurar pnpm workspaces (`pnpm-workspace.yaml`)
+- [x] Configurar Turborepo (`turbo.json` com tasks: build, dev, lint, typecheck, test, clean)
+- [x] Criar estrutura de diretórios conforme `ENGINEERING.md` §3.1:
   ```
   apps/web/
   apps/api/
@@ -47,23 +47,31 @@
   docs/adr/
   infra/docker/
   ```
-- [ ] Configurar TypeScript base (`tsconfig.json`) com strict mode
-- [ ] Configurar ESLint compartilhado
-- [ ] Configurar Prettier
-- [ ] Criar `.env.example` com todas as variáveis de `ENGINEERING.md` §16
-- [ ] Criar `docker-compose.yml` para desenvolvimento local (PostgreSQL + Redis + MinIO)
-- [ ] Documentar comandos no README.md
-- [ ] Testar que `pnpm install` e `pnpm build` funcionam
+- [x] Configurar TypeScript base (`tsconfig.json`) com strict mode
+- [x] Configurar ESLint compartilhado (flat config ESLint 9+)
+- [x] Configurar Prettier
+- [x] Criar `.env.example` com todas as variáveis de `ENGINEERING.md` §16
+- [x] Criar `docker-compose.yml` para desenvolvimento local (PostgreSQL + Redis + MinIO)
+- [x] Documentar comandos no README.md
+- [x] Testar que `pnpm install` e `pnpm build` funcionam
 
 **Definition of Done:**
-- [ ] `pnpm install` executa sem erros
-- [ ] `pnpm build` compila todos os packages
-- [ ] `pnpm lint` passa
-- [ ] `pnpm typecheck` passa
-- [ ] Docker compose sobe os serviços locais
+- [x] `pnpm install` executa sem erros
+- [x] `pnpm build` compila todos os packages
+- [x] `pnpm lint` passa
+- [x] `pnpm typecheck` passa
+- [x] Docker compose sobe os serviços locais
 
 **Notas:**
-_Adicionar notas de progresso aqui durante o desenvolvimento_
+- **07 Jan 2026:** Milestone concluído com sucesso
+- Turborepo v2+ usa `tasks` em vez de `pipeline` - ENGINEERING.md atualizado
+- Docker images atualizadas para versões mais recentes:
+  - PostgreSQL 17 com pgvector 0.8.0 (`pgvector/pgvector:0.8.0-pg17`)
+  - Redis 8 Alpine (`redis:8-alpine`)
+  - MinIO via Quay.io (`quay.io/minio/minio:latest`) - minio/minio no Docker Hub descontinuado em Out/2025
+- ESLint 9+ usa flat config (`eslint.config.js`)
+- Packages incluem: shared, database, ai, config (todos com tsup para build)
+- Apps são placeholders: web (Next.js M0.6), api (NestJS M0.5)
 
 ---
 
@@ -1590,9 +1598,9 @@ _Adicionar notas de progresso aqui durante o desenvolvimento_
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
-| _YYYY-MM-DD_ | _M0.1_ | _Iniciado/Concluído_ | _Detalhes_ |
+| 2026-01-07 | M0.1 | Concluído | Setup completo do monorepo com Turborepo, pnpm workspaces, TypeScript, ESLint 9, Prettier, Docker Compose |
 
 ---
 
-*Última atualização: 06 Janeiro 2026*
+*Última atualização: 07 Janeiro 2026*
 *Revisão: Removidas versões hardcoded de pacotes (Next.js, Tailwind, React Query, Zustand)*

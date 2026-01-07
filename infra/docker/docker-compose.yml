@@ -1,0 +1,55 @@
+# Docker Compose v5+ - campo 'version' nao e mais necessario
+# Versoes verificadas em Janeiro 2026
+
+services:
+  postgres:
+    # PostgreSQL 17 com pgvector 0.8.0
+    image: pgvector/pgvector:0.8.0-pg17
+    container_name: life-assistant-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: life_assistant
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    # Redis 8.4 Alpine (versao mais recente)
+    image: redis:8-alpine
+    container_name: life-assistant-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    # MinIO via Quay.io (registro oficial - minio/minio no Docker Hub foi descontinuado em Out/2025)
+    image: quay.io/minio/minio:latest
+    container_name: life-assistant-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

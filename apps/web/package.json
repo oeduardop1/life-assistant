@@ -1,0 +1,12 @@
+{
+  "name": "@life-assistant/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Next.js app not yet initialized - see milestone M0.6'",
+    "build": "echo 'Next.js app not yet initialized - see milestone M0.6'",
+    "lint": "echo 'Next.js app not yet initialized - see milestone M0.6'",
+    "typecheck": "echo 'Next.js app not yet initialized - see milestone M0.6'",
+    "clean": "rm -rf .next dist"
+  }
+}
