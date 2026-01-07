@@ -1,32 +1,49 @@
-// @life-assistant/shared
-// Tipos, constantes e utilitarios compartilhados
+/**
+ * @life-assistant/shared
+ * Tipos, constantes e utilitários compartilhados
+ */
 
 export const VERSION = '0.1.0';
 
-/**
- * Areas da vida rastreadas pelo sistema
- * Referencia: DATA_MODEL.md
- */
-export type LifeArea =
-  | 'health'
-  | 'financial'
-  | 'career'
-  | 'relationships'
-  | 'spirituality'
-  | 'personal_growth'
-  | 'mental_health'
-  | 'leisure';
+// Enums
+export {
+  UserStatus,
+  LifeArea,
+  TrackingType,
+  ConversationType,
+  DecisionStatus,
+  VaultItemType,
+  VaultCategory,
+  ExpenseCategory,
+  ALL_USER_STATUSES,
+  ALL_LIFE_AREAS,
+  ALL_TRACKING_TYPES,
+  ALL_CONVERSATION_TYPES,
+  ALL_DECISION_STATUSES,
+  ALL_VAULT_ITEM_TYPES,
+  ALL_VAULT_CATEGORIES,
+  ALL_EXPENSE_CATEGORIES,
+} from './enums';
 
-/**
- * Lista de todas as areas da vida
- */
-export const LIFE_AREAS: readonly LifeArea[] = [
-  'health',
-  'financial',
-  'career',
-  'relationships',
-  'spirituality',
-  'personal_growth',
-  'mental_health',
-  'leisure',
-] as const;
+// Constants
+export {
+  DEFAULT_WEIGHTS,
+  WEIGHT_CONFIG,
+  TRACKING_VALIDATIONS,
+  TRACKING_DEFAULTS,
+  RATE_LIMITS,
+  STORAGE_LIMITS,
+  SYSTEM_DEFAULTS,
+  DATA_RETENTION_DAYS,
+} from './constants';
+
+// Utils
+export {
+  formatCurrency,
+  formatDate,
+  normalizeText,
+  sleep,
+  retry,
+  type DateFormat,
+  type RetryOptions,
+} from './utils';

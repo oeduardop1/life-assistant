@@ -75,40 +75,96 @@
 
 ---
 
-### M0.2 — Package: Shared
+### M0.2 — Package: Shared 🟢
 
 **Objetivo:** Criar package de tipos, constantes e utilitários compartilhados.
 
 **Tasks:**
 
-- [ ] Configurar tsup para build do package
-- [ ] Criar tipos base conforme `DATA_MODEL.md`:
-  - [ ] `LifeArea` enum (8 áreas)
-  - [ ] `TrackingType` enum
-  - [ ] `DecisionStatus` enum
-  - [ ] `UserStatus` enum
-  - [ ] `ConversationType` enum
-  - [ ] `VaultItemType` enum
-  - [ ] `VaultCategory` enum
-  - [ ] `ExpenseCategory` enum
-- [ ] Criar constantes:
-  - [ ] `DEFAULT_WEIGHTS` (pesos das áreas)
-  - [ ] `TRACKING_VALIDATIONS` (limites de validação)
-  - [ ] `RATE_LIMITS` (por plano)
-  - [ ] `STORAGE_LIMITS` (por plano)
-- [ ] Criar utilitários:
-  - [ ] `formatCurrency(value, currency)`
-  - [ ] `formatDate(date, timezone)`
-  - [ ] `normalizeText(text)` (para wikilinks case/accent insensitive)
-  - [ ] `sleep(ms)`
-  - [ ] `retry(fn, options)`
-- [ ] Exportar tudo via `index.ts`
-- [ ] Testes unitários para utilitários
+- [x] Configurar tsup para build do package
+- [x] Criar tipos base conforme `DATA_MODEL.md`:
+  - [x] `LifeArea` enum (8 áreas)
+  - [x] `TrackingType` enum
+  - [x] `DecisionStatus` enum
+  - [x] `UserStatus` enum
+  - [x] `ConversationType` enum
+  - [x] `VaultItemType` enum
+  - [x] `VaultCategory` enum
+  - [x] `ExpenseCategory` enum
+- [x] Criar constantes:
+  - [x] `DEFAULT_WEIGHTS` (pesos das áreas)
+  - [x] `TRACKING_VALIDATIONS` (limites de validação)
+  - [x] `RATE_LIMITS` (por plano)
+  - [x] `STORAGE_LIMITS` (por plano)
+- [x] Criar utilitários:
+  - [x] `formatCurrency(value, currency)`
+  - [x] `formatDate(date, timezone)`
+  - [x] `normalizeText(text)` (para wikilinks case/accent insensitive)
+  - [x] `sleep(ms)`
+  - [x] `retry(fn, options)`
+- [x] Exportar tudo via `index.ts`
+
+**Testes:**
+
+- [x] Configurar Vitest com coverage 100%
+- [x] Testes de enums (`enums.test.ts`):
+  - [x] Verificar valores de UserStatus (5)
+  - [x] Verificar valores de LifeArea (8)
+  - [x] Verificar valores de TrackingType (13)
+  - [x] Verificar valores de ConversationType (5)
+  - [x] Verificar valores de DecisionStatus (7)
+  - [x] Verificar valores de VaultItemType (5)
+  - [x] Verificar valores de VaultCategory (6)
+  - [x] Verificar valores de ExpenseCategory (13)
+  - [x] Verificar arrays ALL_* para iteração
+- [x] Testes de constantes (`constants.test.ts`):
+  - [x] Verificar DEFAULT_WEIGHTS (8 áreas, valores 0.5-1.0)
+  - [x] Verificar TRACKING_VALIDATIONS (weight, water, sleep, mood, energy)
+  - [x] Verificar RATE_LIMITS (free, pro, premium)
+  - [x] Verificar STORAGE_LIMITS (free, pro, premium)
+  - [x] Verificar SYSTEM_DEFAULTS (timezone, locale, currency)
+- [x] Testes de formatCurrency (`formatters.test.ts`):
+  - [x] Formatar BRL padrão
+  - [x] Formatar USD
+  - [x] Valores negativos
+  - [x] Zero
+  - [x] Números grandes
+- [x] Testes de formatDate (`formatters.test.ts`):
+  - [x] Formato short (dd/MM/yyyy)
+  - [x] Formato long (dd de MMMM de yyyy)
+  - [x] Formato full (dia da semana completo)
+  - [x] Input string ISO
+  - [x] Timezone diferente
+  - [x] Locale en-US
+- [x] Testes de normalizeText (`normalize.test.ts`):
+  - [x] Converter para lowercase
+  - [x] Remover acentos
+  - [x] Trim whitespace
+  - [x] Preservar hífens
+  - [x] Strings vazias e especiais
+- [x] Testes de sleep (`async.test.ts`):
+  - [x] Delay correto
+  - [x] Delay zero
+- [x] Testes de retry (`async.test.ts`):
+  - [x] Sucesso na primeira tentativa
+  - [x] Sucesso após falhas
+  - [x] Throw após maxAttempts
+  - [x] Exponential backoff
+  - [x] Respeitar maxDelayMs
+  - [x] Filtro shouldRetry
 
 **Definition of Done:**
-- [ ] Package compila corretamente
-- [ ] Exports funcionam em outros packages
-- [ ] Testes passam com >90% coverage
+- [x] Package compila: `pnpm --filter shared build`
+- [x] Exports funcionam em outros packages
+- [x] Testes passam com 100% coverage
+
+**Notas:**
+- **06 Jan 2026:** Milestone concluído com sucesso
+- 8 enums criados: UserStatus, LifeArea, TrackingType, ConversationType, DecisionStatus, VaultItemType, VaultCategory, ExpenseCategory
+- Constantes: DEFAULT_WEIGHTS, TRACKING_VALIDATIONS, RATE_LIMITS, STORAGE_LIMITS, SYSTEM_DEFAULTS, DATA_RETENTION_DAYS
+- Utilitários: formatCurrency, formatDate (com date-fns-tz), normalizeText, sleep, retry
+- 77 testes com 100% coverage (statements, branches, functions, lines)
+- Dependências: date-fns@4.1.0, date-fns-tz@3.2.0, vitest@4.0.16, @vitest/coverage-v8@4.0.16
 
 ---
 
@@ -1599,8 +1655,9 @@
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
 | 2026-01-07 | M0.1 | Concluído | Setup completo do monorepo com Turborepo, pnpm workspaces, TypeScript, ESLint 9, Prettier, Docker Compose |
+| 2026-01-06 | M0.2 | Concluído | Package shared com 8 enums, constantes, utilitários e 77 testes (100% coverage) |
 
 ---
 
-*Última atualização: 07 Janeiro 2026*
-*Revisão: Removidas versões hardcoded de pacotes (Next.js, Tailwind, React Query, Zustand)*
+*Última atualização: 06 Janeiro 2026*
+*Revisão: M0.2 concluído - @life-assistant/shared implementado*
