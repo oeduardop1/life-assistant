@@ -1,0 +1,89 @@
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+
+// Core modules
+import { ConfigModule } from './config/config.module.js';
+import { LoggerModule } from './logger/logger.module.js';
+import { DatabaseModule } from './database/database.module.js';
+import { HealthModule } from './health/health.module.js';
+
+// Common
+import { RequestIdMiddleware } from './common/middleware/index.js';
+import { AuthGuard } from './common/guards/index.js';
+import { LoggingInterceptor, TransformInterceptor } from './common/interceptors/index.js';
+import { AllExceptionsFilter } from './common/filters/index.js';
+
+/**
+ * AppModule - Root application module
+ *
+ * Configures:
+ * - Global modules (Config, Logger, Database)
+ * - Middleware (RequestId)
+ * - Guards (Auth, Throttler)
+ * - Interceptors (Logging, Transform)
+ * - Filters (AllExceptions)
+ */
+@Module({
+  imports: [
+    // Core modules (global)
+    ConfigModule,
+    LoggerModule,
+    DatabaseModule,
+
+    // Rate limiting
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 10, // 10 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+      {
+        name: 'long',
+        ttl: 3600000, // 1 hour
+        limit: 1000, // 1000 requests per hour
+      },
+    ]),
+
+    // Feature modules
+    HealthModule,
+  ],
+  providers: [
+    // Global auth guard (requires @Public() to bypass)
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+    // Rate limiting guard
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    // Logging interceptor
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    // Response transform interceptor
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
+    // Global exception filter
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
+  ],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Apply RequestIdMiddleware to all routes
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}

@@ -193,7 +193,8 @@ Princípios que **não podem ser violados** em nenhuma circunstância:
 | Zod | Validação |
 | BullMQ | Job queues |
 | Socket.io | WebSockets |
-| Passport | Estratégias de auth |
+| jose | JWT validation (Supabase tokens) |
+| Passport | OAuth strategies (opcional) |
 | class-validator | Validação de DTOs |
 
 ### 2.4 AI/LLM
@@ -725,9 +726,9 @@ COPY --from=builder /app/apps/api/package.json ./
 
 EXPOSE 4000
 
-# Health check endpoint
+# Health check endpoint (note: uses /api prefix)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:4000/api/health || exit 1
 
 CMD ["node", "dist/main.js"]
 ```

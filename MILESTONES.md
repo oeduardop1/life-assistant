@@ -307,14 +307,14 @@
 
 ---
 
-### M0.5 — App: API (NestJS Base)
+### M0.5 — App: API (NestJS Base) 🟢
 
 **Objetivo:** Criar aplicação NestJS com estrutura de módulos e configurações base.
 
 **Tasks:**
 
-- [ ] Inicializar NestJS com CLI
-- [ ] Configurar estrutura de módulos conforme `ENGINEERING.md` §4:
+- [x] Inicializar NestJS com CLI
+- [x] Configurar estrutura de módulos conforme `ENGINEERING.md` §4:
   ```
   src/
     modules/
@@ -323,36 +323,84 @@
       interceptors/
       filters/
       decorators/
+      middleware/
+      errors/
+      types/
     config/
+    database/
+    logger/
+    health/
     jobs/
   ```
-- [ ] Configurar módulos core:
-  - [ ] ConfigModule (usando @life-assistant/config)
-  - [ ] DatabaseModule (usando @life-assistant/database)
-  - [ ] LoggerModule (JSON estruturado)
-- [ ] Criar guards:
-  - [ ] AuthGuard (JWT validation)
-  - [ ] RateLimitGuard
-- [ ] Criar interceptors:
-  - [ ] LoggingInterceptor (request_id, user_id)
-  - [ ] TransformInterceptor (response wrapper)
-- [ ] Criar filters:
-  - [ ] AllExceptionsFilter (error handling padronizado)
-- [ ] Criar decorators:
-  - [ ] @CurrentUser() (extrair user do request)
-  - [ ] @Public() (marcar rota como pública)
-- [ ] Configurar health check endpoint (`/health`, `/health/ready`)
-- [ ] Configurar Swagger/OpenAPI
-- [ ] Criar Dockerfile conforme `ENGINEERING.md` §9.3
-- [ ] Configurar testes (Vitest + Supertest)
+- [x] Criar classes de erro:
+  - [x] DomainError (erros de domínio)
+  - [x] ApplicationError (erros de aplicação com code e statusCode)
+- [x] Configurar módulos core:
+  - [x] ConfigModule (usando @life-assistant/config)
+  - [x] DatabaseModule (usando @life-assistant/database)
+  - [x] LoggerModule (JSON estruturado)
+- [x] Criar middleware:
+  - [x] RequestIdMiddleware (gerar request_id único via crypto.randomUUID)
+- [x] Criar decorators:
+  - [x] @CurrentUser() (extrair user do request)
+  - [x] @Public() (marcar rota como pública)
+- [x] Criar guards:
+  - [x] AuthGuard (JWT validation via Supabase usando jose)
+  - [x] RateLimitGuard (usando @nestjs/throttler)
+- [x] Criar interceptors:
+  - [x] LoggingInterceptor (request_id, user_id, timing)
+  - [x] TransformInterceptor (response wrapper)
+- [x] Criar filters:
+  - [x] AllExceptionsFilter (error handling padronizado, sem stack traces em prod)
+- [x] Configurar health check endpoints (`/api/health`, `/api/health/ready`)
+- [x] Configurar Swagger/OpenAPI em `/api/docs`
+- [x] Configurar bootstrap (main.ts):
+  - [x] CORS para FRONTEND_URL
+  - [x] ValidationPipe global
+  - [x] Global prefix `/api`
+  - [x] Graceful shutdown (onModuleDestroy)
+- [x] Criar Dockerfile conforme `ENGINEERING.md` §9.3
+- [x] Configurar Vitest + Supertest
+- [x] Escrever testes unitários (100% coverage):
+  - [x] AuthGuard tests (7 tests)
+  - [x] LoggingInterceptor tests (6 tests)
+  - [x] TransformInterceptor tests (6 tests)
+  - [x] AllExceptionsFilter tests (17 tests)
+  - [x] Decorator tests - @CurrentUser (5 tests), @Public (4 tests)
+  - [x] RequestIdMiddleware tests (5 tests)
+  - [x] ConfigService tests (35 tests)
+  - [x] DatabaseService tests (11 tests)
+  - [x] LoggerService tests (24 tests)
+  - [x] HealthController tests (7 tests)
+  - [x] Error classes tests (10 tests)
+- [x] Escrever testes de integração:
+  - [x] Health endpoints - GET /api/health, /api/health/ready (5 tests)
+  - [x] Auth flow - protected vs public routes (8 tests)
+
+**Testes:** 150 testes passando (137 unitários + 13 integração)
 
 **Definition of Done:**
-- [ ] `pnpm --filter api dev` inicia servidor na porta 4000
-- [ ] GET /health retorna 200
-- [ ] Swagger disponível em /api/docs
-- [ ] AuthGuard rejeita requests sem token
-- [ ] Logs em formato JSON estruturado
-- [ ] Docker build funciona
+- [x] `pnpm --filter api dev` inicia servidor na porta 4000
+- [x] GET /api/health retorna 200
+- [x] GET /api/health/ready verifica DB connection
+- [x] Swagger disponível em /api/docs
+- [x] AuthGuard rejeita requests sem token válido
+- [x] Logs em formato JSON estruturado com request_id e user_id
+- [x] CORS permite FRONTEND_URL
+- [x] ValidationPipe rejeita payloads inválidos
+- [x] Docker build funciona
+- [x] Testes unitários passam (100% coverage em guards/interceptors/filters)
+- [x] Testes de integração passam
+
+**Notas:**
+- **07 Jan 2026:** Milestone concluído com sucesso
+- Dependências: @nestjs/core@11.1.11, @nestjs/terminus@11.0.0, @nestjs/throttler@6.4.0, @nestjs/swagger@11.2.0, jose@6.0.11
+- Usa jose para validação de JWT Supabase (mais leve que jsonwebtoken)
+- LoggerService com JSON estruturado (nível configurável via LOG_LEVEL)
+- Rate limiting com 3 níveis: short (10/s), medium (100/min), long (1000/h)
+- Error handling diferencia DomainError, ApplicationError e erros gerais
+- Response wrapper inclui success, data/error, e meta (timestamp, requestId)
+- Testes de integração usam inline controllers para evitar problemas de mocking com pnpm workspaces
 
 ---
 
@@ -1716,6 +1764,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-07 | M0.5 | Concluído | App API NestJS com guards, interceptors, filters, decorators, health endpoints, Swagger, 150 testes (137 unit + 13 integration) |
 | 2026-01-07 | M0.4 | Concluído | Package database com 28 tabelas, 21 enums, RLS policies, 230 testes (unit + integration) |
 | 2026-01-07 | M0.3 | Concluído | Package config com validação Zod, 67 testes (100% coverage) |
 | 2026-01-07 | M0.1 | Concluído | Setup completo do monorepo com Turborepo, pnpm workspaces, TypeScript, ESLint 9, Prettier, Docker Compose |
@@ -1724,4 +1773,4 @@
 ---
 
 *Última atualização: 07 Janeiro 2026*
-*Revisão: M0.4 concluído - @life-assistant/database implementado*
+*Revisão: M0.5 concluído - @life-assistant/api implementado com NestJS base*

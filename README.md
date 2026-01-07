@@ -58,6 +58,7 @@ pnpm format:check            # Verificar formatacao
 # Testes
 pnpm test                    # Executar testes unitarios
 pnpm test:e2e                # Executar testes E2E
+pnpm --filter api test:integration  # Testes de integracao da API
 
 # Database (requer Docker rodando)
 pnpm --filter database db:generate  # Gerar migrations a partir do schema
@@ -98,6 +99,7 @@ O ambiente de desenvolvimento local inclui:
 | PostgreSQL | 5432 | Banco de dados com pgvector |
 | Redis | 6379 | Cache e filas (BullMQ) |
 | MinIO | 9000/9001 | Storage S3-compatible |
+| API (dev) | 4000 | Backend NestJS (quando rodando) |
 
 ### Comandos Docker
 
@@ -129,6 +131,10 @@ docker exec life-assistant-redis redis-cli ping
 
 # Verificar extensoes PostgreSQL
 docker exec life-assistant-db psql -U postgres -d life_assistant -c "SELECT extname FROM pg_extension;"
+
+# API (requer pnpm --filter api dev rodando)
+curl http://localhost:4000/api/health
+# Swagger docs disponivel em http://localhost:4000/api/docs
 ```
 
 ## Documentacao
