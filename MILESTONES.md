@@ -1,0 +1,1598 @@
+# MILESTONES.md — Life Assistant AI
+
+> **Documento de referência.** Define o roadmap de desenvolvimento organizado em fases/versões.
+> Para especificações detalhadas, consulte os documentos de precedência em `CLAUDE.md`.
+>
+> **Convenções:**
+> - [ ] Task pendente
+> - [x] Task concluída
+> - [~] Task em andamento
+> - [!] Task bloqueada
+
+---
+
+## Visão Geral das Versões
+
+| Versão | Nome | Foco Principal | Status |
+|--------|------|----------------|--------|
+| **0.x** | Fundação | Infraestrutura base | 🔴 Não iniciado |
+| **1.x** | Conselheira | Chat + Decisões + Segundo Cérebro | 🔴 Não iniciado |
+| **2.x** | Tracker | Métricas + Score + Relatórios | 🔴 Não iniciado |
+| **3.x** | Assistente | Integrações + Automações | 🔴 Não iniciado |
+
+---
+
+## Fase 0: Fundação (v0.x)
+
+> **Objetivo:** Estabelecer toda a infraestrutura técnica necessária antes de qualquer feature de negócio.
+> **Referências:** `ENGINEERING.md` §1-§10
+
+### M0.1 — Setup do Monorepo
+
+**Objetivo:** Criar estrutura base do monorepo com Turborepo e pnpm workspaces.
+
+**Tasks:**
+
+- [ ] Inicializar repositório Git
+- [ ] Configurar pnpm workspaces (`pnpm-workspace.yaml`)
+- [ ] Configurar Turborepo (`turbo.json` com pipelines: build, dev, lint, typecheck, test)
+- [ ] Criar estrutura de diretórios conforme `ENGINEERING.md` §3.1:
+  ```
+  apps/web/
+  apps/api/
+  packages/shared/
+  packages/database/
+  packages/ai/
+  packages/config/
+  docs/adr/
+  infra/docker/
+  ```
+- [ ] Configurar TypeScript base (`tsconfig.json`) com strict mode
+- [ ] Configurar ESLint compartilhado
+- [ ] Configurar Prettier
+- [ ] Criar `.env.example` com todas as variáveis de `ENGINEERING.md` §16
+- [ ] Criar `docker-compose.yml` para desenvolvimento local (PostgreSQL + Redis + MinIO)
+- [ ] Documentar comandos no README.md
+- [ ] Testar que `pnpm install` e `pnpm build` funcionam
+
+**Definition of Done:**
+- [ ] `pnpm install` executa sem erros
+- [ ] `pnpm build` compila todos os packages
+- [ ] `pnpm lint` passa
+- [ ] `pnpm typecheck` passa
+- [ ] Docker compose sobe os serviços locais
+
+**Notas:**
+_Adicionar notas de progresso aqui durante o desenvolvimento_
+
+---
+
+### M0.2 — Package: Shared
+
+**Objetivo:** Criar package de tipos, constantes e utilitários compartilhados.
+
+**Tasks:**
+
+- [ ] Configurar tsup para build do package
+- [ ] Criar tipos base conforme `DATA_MODEL.md`:
+  - [ ] `LifeArea` enum (8 áreas)
+  - [ ] `TrackingType` enum
+  - [ ] `DecisionStatus` enum
+  - [ ] `UserStatus` enum
+  - [ ] `ConversationType` enum
+  - [ ] `VaultItemType` enum
+  - [ ] `VaultCategory` enum
+  - [ ] `ExpenseCategory` enum
+- [ ] Criar constantes:
+  - [ ] `DEFAULT_WEIGHTS` (pesos das áreas)
+  - [ ] `TRACKING_VALIDATIONS` (limites de validação)
+  - [ ] `RATE_LIMITS` (por plano)
+  - [ ] `STORAGE_LIMITS` (por plano)
+- [ ] Criar utilitários:
+  - [ ] `formatCurrency(value, currency)`
+  - [ ] `formatDate(date, timezone)`
+  - [ ] `normalizeText(text)` (para wikilinks case/accent insensitive)
+  - [ ] `sleep(ms)`
+  - [ ] `retry(fn, options)`
+- [ ] Exportar tudo via `index.ts`
+- [ ] Testes unitários para utilitários
+
+**Definition of Done:**
+- [ ] Package compila corretamente
+- [ ] Exports funcionam em outros packages
+- [ ] Testes passam com >90% coverage
+
+---
+
+### M0.3 — Package: Config
+
+**Objetivo:** Criar package de configuração com validação via Zod.
+
+**Tasks:**
+
+- [ ] Configurar tsup para build
+- [ ] Criar schema Zod para variáveis de ambiente:
+  - [ ] App config (NODE_ENV, PORT, APP_URL)
+  - [ ] Database config (DATABASE_URL, SUPABASE_*)
+  - [ ] Redis config (REDIS_URL)
+  - [ ] AI config (LLM_PROVIDER, GEMINI_*, ANTHROPIC_*)
+  - [ ] Storage config (R2_*, CLOUDFLARE_*)
+  - [ ] Auth config (JWT_SECRET)
+  - [ ] Integrations config (TELEGRAM_*, GOOGLE_*, STRIPE_*)
+  - [ ] Observability config (SENTRY_DSN, AXIOM_*, LOG_LEVEL)
+- [ ] Criar função `loadConfig()` que valida e retorna config tipado
+- [ ] Criar função `validateEnv()` para CI
+- [ ] Documentar todas as variáveis
+
+**Testes:**
+- [ ] Testes unitários para validação de schemas Zod
+- [ ] Teste que `loadConfig()` falha com variáveis inválidas
+- [ ] Teste que `loadConfig()` retorna config tipado corretamente
+
+**Definition of Done:**
+- [ ] Validação falha com mensagem clara para variáveis faltantes
+- [ ] TypeScript infere tipos corretamente do config
+- [ ] `pnpm --filter config build` passa
+- [ ] Testes passam com >90% coverage
+
+---
+
+### M0.4 — Package: Database
+
+**Objetivo:** Configurar Drizzle ORM com schema completo e migrations.
+
+**Tasks:**
+
+- [ ] Instalar dependências (drizzle-orm, drizzle-kit, postgres)
+- [ ] Configurar `drizzle.config.ts`
+- [ ] Criar schemas conforme `DATA_MODEL.md`:
+  - [ ] **Core:** users, user_settings, user_consents
+  - [ ] **Chat:** conversations, messages
+  - [ ] **Tracking:** tracking_entries, tracking_goals
+  - [ ] **Decisions:** decisions, decision_options, decision_criteria, decision_reviews
+  - [ ] **Notes:** notes, note_links
+  - [ ] **People:** people, people_interactions
+  - [ ] **Vault:** vault_items
+  - [ ] **Goals:** goals, habits, habit_completions
+  - [ ] **Scores:** life_balance_scores, area_scores
+  - [ ] **Integrations:** user_integrations, calendar_events
+  - [ ] **System:** audit_logs, notifications, export_requests
+  - [ ] **Embeddings:** embeddings (com pgvector)
+- [ ] Criar índices conforme `DATA_MODEL.md` §10
+- [ ] Configurar RLS policies conforme `ENGINEERING.md` §6
+- [ ] Criar migration inicial
+- [ ] Criar seed para dados de teste
+- [ ] Criar scripts npm: db:generate, db:migrate, db:push, db:studio
+
+**Testes:**
+- [ ] Testes de integração para RLS policies:
+  - [ ] Verificar que usuário só acessa próprios dados
+  - [ ] Verificar que query sem `app.user_id` falha
+  - [ ] Testar isolamento entre usuários diferentes
+- [ ] Testes para seed data
+- [ ] Testes para migrations (up/down)
+
+**Definition of Done:**
+- [ ] `pnpm --filter database db:push` aplica schema sem erros
+- [ ] `pnpm --filter database db:studio` abre Drizzle Studio
+- [ ] RLS policies funcionam (testar com SET LOCAL app.user_id)
+- [ ] Seed popula dados de teste
+- [ ] Testes de RLS passam
+
+---
+
+### M0.5 — App: API (NestJS Base)
+
+**Objetivo:** Criar aplicação NestJS com estrutura de módulos e configurações base.
+
+**Tasks:**
+
+- [ ] Inicializar NestJS com CLI
+- [ ] Configurar estrutura de módulos conforme `ENGINEERING.md` §4:
+  ```
+  src/
+    modules/
+    common/
+      guards/
+      interceptors/
+      filters/
+      decorators/
+    config/
+    jobs/
+  ```
+- [ ] Configurar módulos core:
+  - [ ] ConfigModule (usando @life-assistant/config)
+  - [ ] DatabaseModule (usando @life-assistant/database)
+  - [ ] LoggerModule (JSON estruturado)
+- [ ] Criar guards:
+  - [ ] AuthGuard (JWT validation)
+  - [ ] RateLimitGuard
+- [ ] Criar interceptors:
+  - [ ] LoggingInterceptor (request_id, user_id)
+  - [ ] TransformInterceptor (response wrapper)
+- [ ] Criar filters:
+  - [ ] AllExceptionsFilter (error handling padronizado)
+- [ ] Criar decorators:
+  - [ ] @CurrentUser() (extrair user do request)
+  - [ ] @Public() (marcar rota como pública)
+- [ ] Configurar health check endpoint (`/health`, `/health/ready`)
+- [ ] Configurar Swagger/OpenAPI
+- [ ] Criar Dockerfile conforme `ENGINEERING.md` §9.3
+- [ ] Configurar testes (Vitest + Supertest)
+
+**Definition of Done:**
+- [ ] `pnpm --filter api dev` inicia servidor na porta 4000
+- [ ] GET /health retorna 200
+- [ ] Swagger disponível em /api/docs
+- [ ] AuthGuard rejeita requests sem token
+- [ ] Logs em formato JSON estruturado
+- [ ] Docker build funciona
+
+---
+
+### M0.6 — App: Web (Next.js Base)
+
+**Objetivo:** Criar aplicação Next.js com estrutura base e componentes UI.
+
+**Tasks:**
+
+- [ ] Inicializar Next.js com App Router
+- [ ] Configurar estrutura conforme `ENGINEERING.md` §3.1:
+  ```
+  src/
+    app/
+      (auth)/     # rotas públicas
+      (app)/      # rotas autenticadas
+      api/        # API routes (BFF)
+    components/
+    hooks/
+    lib/
+    stores/
+  ```
+- [ ] Instalar e configurar:
+  - [ ] Tailwind CSS
+  - [ ] shadcn/ui (inicializar com componentes base)
+  - [ ] React Query
+  - [ ] Zustand
+  - [ ] React Hook Form + Zod
+- [ ] Criar layout base:
+  - [ ] RootLayout com providers
+  - [ ] AuthLayout (páginas públicas)
+  - [ ] AppLayout (páginas autenticadas com sidebar)
+- [ ] Criar componentes base:
+  - [ ] Button, Input, Card, Dialog, Toast (via shadcn)
+  - [ ] LoadingSpinner
+  - [ ] EmptyState
+  - [ ] ErrorBoundary
+- [ ] Configurar tema light/dark
+- [ ] Criar hook `useAuth()` (integração Supabase)
+- [ ] Criar hook `useApi()` (fetch com auth header)
+- [ ] Criar Dockerfile conforme `ENGINEERING.md` §9.4
+- [ ] Configurar Playwright para E2E
+
+**Definition of Done:**
+- [ ] `pnpm --filter web dev` inicia na porta 3000
+- [ ] Componentes shadcn renderizam corretamente
+- [ ] Tema dark/light funciona
+- [ ] Docker build funciona
+- [ ] Playwright configurado
+
+---
+
+### M0.7 — Autenticação (Supabase Auth)
+
+**Objetivo:** Implementar fluxo completo de autenticação.
+
+**Referências:** `SYSTEM_SPECS.md` §3.1, `INTEGRATIONS_SPECS.md` §5
+
+**Tasks:**
+
+**Backend (API):**
+- [ ] Criar módulo `auth`:
+  - [ ] `AuthController` com endpoints: signup, login, logout, refresh, forgot-password, reset-password
+  - [ ] `AuthService` integrando Supabase Auth
+  - [ ] `AuthGuard` validando JWT Supabase
+- [ ] Implementar middleware que seta `app.user_id` no contexto do DB
+- [ ] Criar triggers SQL para sync auth.users → public.users (conforme `INTEGRATIONS_SPECS.md` §5.5)
+
+**Frontend (Web):**
+- [ ] Criar páginas em `(auth)/`:
+  - [ ] `/login` - formulário de login (email + Google OAuth)
+  - [ ] `/signup` - formulário de cadastro
+  - [ ] `/forgot-password` - solicitar reset
+  - [ ] `/reset-password` - definir nova senha
+  - [ ] `/verify-email` - confirmação de email
+- [ ] Criar `AuthProvider` com contexto de autenticação
+- [ ] Implementar redirect para login em rotas protegidas
+- [ ] Implementar redirect para dashboard após login
+
+**Testes:**
+- [ ] Testes de integração para todos os endpoints de auth
+- [ ] Teste E2E: fluxo completo de signup → verify → login → logout
+
+**Definition of Done:**
+- [ ] Signup com email/senha funciona
+- [ ] Signup com Google OAuth funciona
+- [ ] Email de verificação é enviado
+- [ ] Login funciona após verificação
+- [ ] Logout invalida sessão
+- [ ] Recuperação de senha funciona
+- [ ] Rotas protegidas redirecionam para login
+- [ ] Testes passam
+
+---
+
+### M0.8 — Onboarding Wizard
+
+**Objetivo:** Implementar wizard de configuração inicial após signup.
+
+**Referências:** `SYSTEM_SPECS.md` §3.1
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar endpoint `POST /api/onboarding/complete`
+- [ ] Criar endpoint `GET /api/onboarding/status`
+- [ ] Salvar progresso parcial do onboarding
+- [ ] Atualizar `user.status` para 'active' ao completar
+
+**Frontend:**
+- [ ] Criar páginas de onboarding em `(auth)/onboarding/`:
+  - [ ] `/onboarding` - layout com stepper de progresso
+  - [ ] `/onboarding/profile` - Etapa 1: Perfil (nome, timezone) - **obrigatório**
+  - [ ] `/onboarding/areas` - Etapa 2: Áreas de foco (selecionar min 3) - **obrigatório**
+  - [ ] `/onboarding/telegram` - Etapa 3: Conectar Telegram - **opcional, skip permitido**
+  - [ ] `/onboarding/tutorial` - Etapa 4: Tutorial interativo - **opcional, skip permitido**
+- [ ] Componentes:
+  - [ ] OnboardingStepper (indicador de progresso)
+  - [ ] ProfileForm (nome, timezone picker)
+  - [ ] AreaSelector (cards das 8 áreas, min 3 selecionadas)
+  - [ ] TelegramConnect (QR code ou link, status de vinculação)
+  - [ ] TutorialCarousel (slides interativos)
+  - [ ] SkipButton (para etapas opcionais)
+- [ ] Implementar navegação entre etapas
+- [ ] Salvar progresso a cada etapa
+- [ ] Redirect para dashboard ao completar
+
+**Testes:**
+- [ ] Testes unitários para validação de formulários
+- [ ] Teste E2E: fluxo completo de onboarding (todas etapas)
+- [ ] Teste E2E: fluxo com skip nas etapas opcionais
+
+**Definition of Done:**
+- [ ] Usuário é redirecionado para onboarding após signup
+- [ ] Progresso é salvo automaticamente
+- [ ] Usuário só acessa app após etapas obrigatórias
+- [ ] Skip funciona nas etapas opcionais
+
+---
+
+### M0.9 — CI/CD Pipeline
+
+**Objetivo:** Configurar pipeline de integração e deploy contínuo.
+
+**Referências:** `ENGINEERING.md` §12
+
+**Tasks:**
+
+- [ ] Criar `.github/workflows/ci.yml`:
+  - [ ] Checkout + pnpm setup
+  - [ ] Install dependencies
+  - [ ] Run lint
+  - [ ] Run typecheck
+  - [ ] Run tests
+  - [ ] Run build
+- [ ] Criar `.github/workflows/deploy-web.yml`:
+  - [ ] Trigger on push to main
+  - [ ] Deploy para Vercel
+- [ ] Criar `.github/workflows/deploy-api.yml`:
+  - [ ] Trigger on push to main
+  - [ ] Deploy para Railway
+- [ ] Configurar branch protection rules (require CI pass)
+- [ ] Configurar secrets no GitHub
+
+**Definition of Done:**
+- [ ] CI roda em todo PR
+- [ ] Deploy automático para staging em push to develop
+- [ ] Deploy automático para produção em push to main
+- [ ] Branch protection ativo
+
+---
+
+## Fase 1: Conselheira (v1.x)
+
+> **Objetivo:** Implementar a feature principal de ajudar o usuário a tomar decisões através de chat com IA, sistema de decisões estruturadas e segundo cérebro.
+> **Referências:** `PRODUCT_SPECS.md` §2.1, §6.1, §6.2, §6.3, `AI_SPECS.md`, `SYSTEM_SPECS.md` §3.2, §3.5, §3.6
+
+### M1.1 — Package: AI (LLM Abstraction)
+
+**Objetivo:** Criar abstração de LLM que permite trocar provider via ENV.
+
+**Referências:** `ENGINEERING.md` §8, `AI_SPECS.md` §2
+
+**Tasks:**
+
+- [ ] Criar interface `LLMPort` conforme `ENGINEERING.md` §8.2:
+  ```typescript
+  interface LLMPort {
+    chat(params: ChatParams): Promise<ChatResponse>;
+    stream(params: ChatParams): AsyncIterable<StreamChunk>;
+    getInfo(): ProviderInfo;
+  }
+  ```
+- [ ] Implementar `GeminiAdapter` usando @google/generative-ai
+- [ ] Implementar `ClaudeAdapter` usando @anthropic-ai/sdk (preparar para futuro)
+- [ ] Criar `LLMFactory` que retorna adapter baseado em ENV
+- [ ] Implementar rate limiting
+- [ ] Implementar retry com backoff exponencial
+- [ ] Criar serviço de embeddings (text-embedding-004)
+- [ ] Testes para ambos adapters
+
+**Definition of Done:**
+- [ ] `LLM_PROVIDER=gemini` usa Gemini
+- [ ] `LLM_PROVIDER=claude` usa Claude
+- [ ] Streaming funciona
+- [ ] Rate limiting aplicado
+- [ ] Testes passam
+
+---
+
+### M1.2 — Módulo: Chat Básico
+
+**Objetivo:** Implementar chat com IA com streaming de resposta.
+
+**Referências:** `SYSTEM_SPECS.md` §3.2, `AI_SPECS.md` §4
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `chat` com Clean Architecture:
+  - [ ] `ChatController` - POST /chat/messages, GET /chat/conversations
+  - [ ] `SendMessageUseCase` - orquestra envio de mensagem
+  - [ ] `ConversationRepository` - CRUD de conversas
+  - [ ] `MessageRepository` - CRUD de mensagens
+- [ ] Implementar streaming via Server-Sent Events (SSE)
+- [ ] Implementar system prompt base conforme `AI_SPECS.md` §4.1
+- [ ] Implementar rate limiting por plano (conforme `SYSTEM_SPECS.md` §2.6)
+- [ ] Salvar mensagens no banco
+- [ ] Implementar tipos de conversa: general, counselor
+
+**Frontend:**
+- [ ] Criar página `/chat`:
+  - [ ] Lista de conversas (sidebar)
+  - [ ] Área de mensagens com scroll
+  - [ ] Input de mensagem
+  - [ ] Botão enviar
+- [ ] Implementar streaming de resposta (SSE)
+- [ ] Implementar typing indicator
+- [ ] Implementar auto-scroll
+- [ ] Criar nova conversa
+- [ ] Histórico de conversas
+
+**Testes:**
+- [ ] Teste unitário: SendMessageUseCase
+- [ ] Teste integração: API de chat
+- [ ] Teste E2E: enviar mensagem e receber resposta
+
+**Definition of Done:**
+- [ ] Usuário envia mensagem e recebe resposta com streaming
+- [ ] Histórico de conversa é mantido
+- [ ] Rate limit funciona por plano
+- [ ] Múltiplas conversas funcionam
+- [ ] Testes passam
+
+---
+
+### M1.3 — Sistema de Memória (RAG)
+
+**Objetivo:** Implementar RAG para contextualização das respostas da IA.
+
+**Referências:** `AI_SPECS.md` §6, `DATA_MODEL.md` §7 (embeddings)
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `memory`:
+  - [ ] `EmbeddingService` - gerar embeddings de texto
+  - [ ] `IndexingService` - indexar conteúdo no pgvector
+  - [ ] `RetrievalService` - buscar chunks relevantes
+- [ ] Implementar pipeline de indexação:
+  - [ ] Chunking (512 tokens, overlap 50)
+  - [ ] Gerar embedding
+  - [ ] Salvar no pgvector
+- [ ] Implementar retrieval:
+  - [ ] Busca por similaridade
+  - [ ] Threshold de 0.7
+  - [ ] Máximo 5 chunks
+  - [ ] Boost para conteúdo recente
+- [ ] Integrar com chat:
+  - [ ] Buscar contexto relevante antes de chamar LLM
+  - [ ] Adicionar ao system prompt
+- [ ] Criar job para indexação assíncrona
+- [ ] Excluir Vault da indexação (conforme `SYSTEM_SPECS.md` §5.4)
+
+**Conteúdo indexado (conforme `AI_SPECS.md` §6.1):**
+- [ ] Mensagens do usuário (não da IA)
+- [ ] Notas do Segundo Cérebro
+- [ ] Decisões e análises
+- [ ] Perfil e preferências
+- [ ] Tracking entries (resumidos)
+
+**Testes:**
+- [ ] Testes unitários:
+  - [ ] Chunking (verifica tamanho e overlap corretos)
+  - [ ] RetrievalService (threshold, max chunks, boost recência)
+- [ ] Testes de integração:
+  - [ ] EmbeddingService gera embeddings corretamente
+  - [ ] IndexingService salva no pgvector
+  - [ ] Busca por similaridade retorna resultados relevantes
+- [ ] Teste que Vault items NUNCA são indexados
+
+**Definition of Done:**
+- [ ] Embeddings são gerados e salvos
+- [ ] Busca retorna chunks relevantes
+- [ ] Chat usa contexto do RAG
+- [ ] Vault nunca é indexado
+- [ ] Job de indexação funciona
+- [ ] Testes passam
+
+---
+
+### M1.4 — Classificação de Intent
+
+**Objetivo:** Classificar intenção da mensagem para executar ações.
+
+**Referências:** `AI_SPECS.md` §5
+
+**Tasks:**
+
+- [ ] Criar `IntentClassifier` service:
+  - [ ] Implementar classificação via LLM (prompt em `AI_SPECS.md` §5.3)
+  - [ ] Extrair dados estruturados da mensagem
+- [ ] Implementar categorias de intent:
+  - [ ] COMMAND (comandos explícitos /peso, /agua)
+  - [ ] TRACK_METRIC (registro implícito "pesei 82kg")
+  - [ ] CREATE_NOTE ("anota isso")
+  - [ ] CREATE_REMINDER ("me lembra amanhã")
+  - [ ] START_DECISION ("devo aceitar o emprego?")
+  - [ ] QUERY_DATA ("quanto gastei?")
+  - [ ] CHAT_GENERAL (conversa livre)
+  - [ ] CHAT_COUNSELOR ("preciso desabafar")
+- [ ] Implementar extração de dados por intent (conforme `AI_SPECS.md` §5.4)
+- [ ] Integrar com fluxo de chat
+
+**Testes:**
+- [ ] Testes unitários para IntentClassifier:
+  - [ ] Classificação correta para cada categoria de intent
+  - [ ] Extração de dados estruturados (peso, valor, data, etc.)
+  - [ ] Tratamento de mensagens ambíguas
+- [ ] Testes com dataset de exemplos reais:
+  - [ ] Mínimo 20 exemplos por categoria
+  - [ ] Validar accuracy >95%
+- [ ] Teste de integração com fluxo de chat
+
+**Definition of Done:**
+- [ ] Mensagens são classificadas corretamente (>95% accuracy)
+- [ ] Dados são extraídos das mensagens
+- [ ] Classificação integrada ao chat
+- [ ] Testes passam
+
+---
+
+### M1.5 — Sistema de Decisões
+
+**Objetivo:** Implementar sistema estruturado de análise de decisões.
+
+**Referências:** `SYSTEM_SPECS.md` §3.5, `PRODUCT_SPECS.md` §6.3, `AI_SPECS.md` §7.3
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `decisions` com Clean Architecture:
+  - [ ] `DecisionController` - CRUD de decisões
+  - [ ] `CreateDecisionUseCase`
+  - [ ] `AddOptionsUseCase`
+  - [ ] `AddCriteriaUseCase`
+  - [ ] `GenerateAnalysisUseCase` - análise via IA
+  - [ ] `MakeDecisionUseCase` - registrar escolha
+  - [ ] `ReviewDecisionUseCase` - feedback após período
+  - [ ] `DecisionRepository`
+- [ ] Implementar estados: DRAFT → ANALYZING → READY → DECIDED/POSTPONED/CANCELED → REVIEWED
+- [ ] Implementar validações:
+  - [ ] Mínimo 2 opções, máximo 10
+  - [ ] Mínimo 1 critério, máximo 20
+- [ ] Implementar análise da IA (conforme `AI_SPECS.md` §7.3):
+  - [ ] Resumo da situação
+  - [ ] Prós/contras de cada opção
+  - [ ] Score por critério
+  - [ ] Riscos principais
+  - [ ] Perguntas para reflexão
+  - [ ] Recomendação (se solicitado)
+- [ ] Implementar agendamento de review:
+  - [ ] 7 dias (urgente)
+  - [ ] 30 dias (padrão)
+  - [ ] 90 dias (estratégico)
+  - [ ] Customizável pelo usuário
+- [ ] Criar job para notificação de review
+
+**Frontend:**
+- [ ] Criar páginas de decisões:
+  - [ ] `/decisions` - lista de decisões com filtros
+  - [ ] `/decisions/new` - criar nova decisão
+  - [ ] `/decisions/[id]` - visualizar decisão
+  - [ ] `/decisions/[id]/edit` - editar opções/critérios
+  - [ ] `/decisions/[id]/review` - registrar review
+- [ ] Componentes:
+  - [ ] DecisionCard (resumo na lista)
+  - [ ] OptionsList (gerenciar opções)
+  - [ ] CriteriaList (gerenciar critérios com pesos)
+  - [ ] AnalysisView (exibir análise da IA)
+  - [ ] DecisionMatrix (tabela opção x critério)
+  - [ ] ReviewForm
+
+**Testes:**
+- [ ] Testes unitários para use cases
+- [ ] Teste E2E: criar decisão → adicionar opções → gerar análise → decidir
+
+**Definition of Done:**
+- [ ] CRUD completo de decisões
+- [ ] IA gera análise estruturada
+- [ ] Estados funcionam corretamente
+- [ ] Review agendado e notificado
+- [ ] Testes passam
+
+---
+
+### M1.6 — Segundo Cérebro (Notas)
+
+**Objetivo:** Implementar sistema de notas com wikilinks e graph view.
+
+**Referências:** `SYSTEM_SPECS.md` §3.6, `PRODUCT_SPECS.md` §6.2
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `notes`:
+  - [ ] `NoteController` - CRUD de notas
+  - [ ] `CreateNoteUseCase`
+  - [ ] `UpdateNoteUseCase`
+  - [ ] `SearchNotesUseCase` - busca full-text
+  - [ ] `GetBacklinksUseCase` - notas que linkam para a atual
+  - [ ] `GetGraphDataUseCase` - dados para graph view
+  - [ ] `NoteRepository`
+- [ ] Implementar processamento de wikilinks:
+  - [ ] Parser de `[[Nota]]` e `[[Nota|Texto]]`
+  - [ ] Busca case e accent insensitive
+  - [ ] Atualizar backlinks automaticamente
+- [ ] Implementar pastas/folders
+- [ ] Implementar tags
+- [ ] Implementar lixeira com restauração (30 dias)
+- [ ] Indexar notas para RAG
+
+**Frontend:**
+- [ ] Criar páginas de notas:
+  - [ ] `/notes` - lista com árvore de pastas
+  - [ ] `/notes/[id]` - visualizar nota
+  - [ ] `/notes/[id]/edit` - editar nota
+  - [ ] `/notes/graph` - graph view
+- [ ] Componentes:
+  - [ ] NoteTree (navegação por pastas)
+  - [ ] NoteEditor (Tiptap com suporte a Markdown e wikilinks)
+  - [ ] NoteViewer (renderização)
+  - [ ] BacklinksList
+  - [ ] GraphView (React Flow)
+  - [ ] QuickSwitcher (Cmd+K com cmdk)
+  - [ ] TagsInput
+- [ ] Implementar templates de nota:
+  - [ ] Daily Note
+  - [ ] Meeting
+  - [ ] Project
+  - [ ] Book
+  - [ ] Person
+
+**Testes:**
+- [ ] Testes unitários para parser de wikilinks
+- [ ] Teste E2E: criar nota com wikilink → verificar backlink
+
+**Definition of Done:**
+- [ ] CRUD de notas funciona
+- [ ] Wikilinks funcionam (case/accent insensitive)
+- [ ] Backlinks calculados automaticamente
+- [ ] Graph view visualiza conexões
+- [ ] Quick switcher (Cmd+K) funciona
+- [ ] Busca full-text funciona
+- [ ] Templates disponíveis
+- [ ] Lixeira com restauração
+- [ ] Notas indexadas para RAG
+
+---
+
+### M1.7 — Perspectiva Cristã
+
+**Objetivo:** Implementar feature opt-in de perspectiva cristã no chat.
+
+**Referências:** `PRODUCT_SPECS.md` §8, `AI_SPECS.md` §4.3
+
+**Tasks:**
+
+**Backend:**
+- [ ] Adicionar configuração `christianPerspective: boolean` no user_settings
+- [ ] Implementar system prompt de perspectiva cristã (conforme `AI_SPECS.md` §4.3)
+- [ ] Integrar com chat: aplicar prompt quando habilitado
+
+**Frontend:**
+- [ ] Criar toggle nas configurações do usuário (`/settings/preferences`)
+- [ ] Adicionar seção "Perspectiva Cristã" com explicação
+- [ ] Componente ToggleWithDescription para o setting
+
+**Testes:**
+- [ ] Teste unitário: prompt correto é aplicado quando habilitado
+- [ ] Teste unitário: prompt cristão NÃO é aplicado quando desabilitado
+- [ ] Teste de integração: resposta da IA inclui perspectiva bíblica (quando habilitado)
+- [ ] Teste de integração: resposta da IA NÃO menciona religião (quando desabilitado)
+- [ ] Teste E2E: toggle de configuração persiste corretamente
+
+**Definition of Done:**
+- [ ] Usuário pode habilitar/desabilitar perspectiva cristã
+- [ ] IA integra princípios bíblicos naturalmente quando habilitado
+- [ ] Nunca menciona aspectos religiosos quando desabilitado
+- [ ] Testes passam
+
+---
+
+### M1.8 — Confirmação de Tracking via Chat
+
+**Objetivo:** Implementar confirmação antes de registrar métricas via chat.
+
+**Referências:** `AI_SPECS.md` §9.2.1
+
+**Tasks:**
+
+**Backend:**
+- [ ] Implementar fluxo de confirmação no chat:
+  1. Usuário menciona métrica ("pesei 82kg")
+  2. IA extrai dados e pede confirmação
+  3. Usuário confirma ou corrige
+  4. IA registra e confirma
+- [ ] Criar `ConfirmationService` para gerenciar estado de confirmação
+- [ ] Permitir correções (valor, data, categoria)
+- [ ] Exceções (comandos explícitos não requerem confirmação)
+
+**Frontend:**
+- [ ] Componente ConfirmationCard no chat (exibe dados extraídos)
+- [ ] Botões de Confirmar/Corrigir/Cancelar
+- [ ] Formulário inline para correções
+
+**Testes:**
+- [ ] Teste unitário: extração de dados de mensagens
+- [ ] Teste unitário: fluxo de confirmação
+- [ ] Teste de integração: mensagem implícita → confirmação → registro
+- [ ] Teste de integração: comando explícito → registro direto (sem confirmação)
+- [ ] Teste E2E: fluxo completo de tracking via chat com confirmação
+
+**Definition of Done:**
+- [ ] Tracking via conversa sempre pede confirmação
+- [ ] Correções funcionam
+- [ ] Comandos explícitos (/peso) não pedem confirmação
+- [ ] Testes passam
+
+---
+
+### M1.9 — Guardrails de Segurança
+
+**Objetivo:** Implementar guardrails para tópicos sensíveis.
+
+**Referências:** `AI_SPECS.md` §8
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar `GuardrailService` para verificação de conteúdo:
+  - [ ] Suicídio/autolesão → CVV (188) + acolhimento
+  - [ ] Abuso/violência → recursos (180, 190)
+  - [ ] Diagnósticos médicos → sugerir profissional
+  - [ ] Aconselhamento financeiro → não dar recomendações específicas
+  - [ ] Conteúdo ilegal → recusar educadamente
+- [ ] Implementar respostas padrão para cada guardrail (templates)
+- [ ] Integrar verificação no fluxo de chat (antes de responder)
+
+**Testes:**
+- [ ] Testes unitários para cada tipo de guardrail:
+  - [ ] Detecção de conteúdo sobre suicídio/autolesão
+  - [ ] Detecção de conteúdo sobre abuso/violência
+  - [ ] Detecção de solicitação de diagnóstico médico
+  - [ ] Detecção de solicitação de aconselhamento financeiro específico
+  - [ ] Detecção de conteúdo ilegal
+- [ ] Teste de integração: mensagem sensível → resposta apropriada
+- [ ] Teste que guardrails NÃO disparam para conteúdo normal
+- [ ] Teste E2E: fluxo completo de guardrail (mensagem → resposta de suporte)
+
+**Definition of Done:**
+- [ ] Todos os guardrails funcionam conforme especificado
+- [ ] Respostas incluem recursos de ajuda apropriados
+- [ ] Testes passam
+
+---
+
+### M1.10 — UI/UX Polish v1
+
+**Objetivo:** Refinar interface e experiência para lançamento da v1.
+
+**Tasks:**
+
+**Componentes de Estado (conforme `SYSTEM_SPECS.md` §4):**
+- [ ] Criar componente EmptyState reutilizável:
+  - [ ] Ícone contextual
+  - [ ] Mensagem principal
+  - [ ] Descrição secundária
+  - [ ] Call-to-action
+- [ ] Criar componente LoadingState reutilizável:
+  - [ ] Skeleton para listas
+  - [ ] Skeleton para cards
+  - [ ] Spinner para ações
+- [ ] Criar componente ErrorState reutilizável:
+  - [ ] Mensagem de erro amigável
+  - [ ] Botão de retry
+  - [ ] Link para suporte
+- [ ] Implementar Toast notifications (success, error, warning, info)
+- [ ] Implementar ConfirmationModal para ações destrutivas
+
+**Aplicar estados em todas as telas:**
+- [ ] Chat: empty (sem conversas), loading, error
+- [ ] Decisões: empty (sem decisões), loading, error
+- [ ] Notas: empty (sem notas), loading, error
+- [ ] Configurações: loading, error
+
+**Responsividade:**
+- [ ] Revisar layout em mobile (< 640px)
+- [ ] Revisar layout em tablet (640px - 1024px)
+- [ ] Revisar layout em desktop (> 1024px)
+- [ ] Testar sidebar colapsável em mobile
+
+**Testes:**
+- [ ] Testes de componentes para EmptyState, LoadingState, ErrorState
+- [ ] Teste E2E: verificar empty states nas telas principais
+- [ ] Teste E2E: verificar loading states durante carregamento
+- [ ] Testes de responsividade (viewport mobile, tablet, desktop)
+
+**Definition of Done:**
+- [ ] Todos os empty/loading/error states implementados em todas as telas
+- [ ] App funciona bem em todas as resoluções
+- [ ] Toasts funcionam para todas as ações
+- [ ] Confirmações funcionam para ações destrutivas
+- [ ] Não há bugs críticos
+- [ ] Testes passam
+
+---
+
+## Fase 2: Tracker (v2.x)
+
+> **Objetivo:** Implementar sistema de tracking de métricas, Life Balance Score, dashboard e relatórios.
+> **Referências:** `PRODUCT_SPECS.md` §2.3, §6.7, §6.8, §6.14, §6.15, §6.17, `SYSTEM_SPECS.md` §3.3, §3.4, §3.9, §3.10
+
+### M2.1 — Módulo: Tracking de Métricas
+
+**Objetivo:** Implementar registro de métricas de vida.
+
+**Referências:** `SYSTEM_SPECS.md` §3.3
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `tracking`:
+  - [ ] `TrackingController` - CRUD de entries
+  - [ ] `RecordMetricUseCase` - validar e salvar
+  - [ ] `GetHistoryUseCase` - buscar histórico com filtros
+  - [ ] `GetAggregationsUseCase` - cálculos (média, soma, etc)
+  - [ ] `TrackingRepository`
+- [ ] Implementar tipos de tracking (conforme `SYSTEM_SPECS.md` §3.3):
+  - [ ] weight (0-500kg)
+  - [ ] water (0-10000ml)
+  - [ ] sleep (0-24h, com qualidade 1-10)
+  - [ ] exercise (tipo, duração, intensidade)
+  - [ ] expense (valor, categoria)
+  - [ ] income
+  - [ ] mood (1-10)
+  - [ ] energy (1-10)
+  - [ ] habit
+  - [ ] custom
+- [ ] Implementar validações conforme `SYSTEM_SPECS.md` §3.3
+- [ ] Implementar categorias de despesa (conforme `SYSTEM_SPECS.md`)
+- [ ] Implementar agregações (média, soma, variação)
+- [ ] Integrar com intent classifier (tracking via chat)
+
+**Frontend:**
+- [ ] Criar página `/tracking`:
+  - [ ] Formulários rápidos por tipo de métrica
+  - [ ] Histórico com filtros
+  - [ ] Gráficos de evolução
+- [ ] Componentes:
+  - [ ] QuickTrackForm (botões para registrar comum)
+  - [ ] MetricChart (gráfico de linha/barra)
+  - [ ] TrackingHistory (lista com filtros)
+  - [ ] CategoryPicker (para despesas)
+
+**Testes:**
+- [ ] Testes unitários para validações
+- [ ] Teste E2E: registrar peso → ver no histórico
+
+**Definition of Done:**
+- [ ] Todos os tipos de tracking funcionam
+- [ ] Validações aplicadas
+- [ ] Agregações calculadas corretamente
+- [ ] Gráficos de evolução funcionam
+- [ ] Tracking via chat funciona
+
+---
+
+### M2.2 — Life Balance Score
+
+**Objetivo:** Implementar cálculo do Life Balance Score.
+
+**Referências:** `SYSTEM_SPECS.md` §3.4
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar serviço `ScoreCalculator`:
+  - [ ] Calcular score de cada área (0-100)
+  - [ ] Aplicar pesos configuráveis
+  - [ ] Calcular Life Balance Score geral
+- [ ] Implementar fórmulas por área (conforme `SYSTEM_SPECS.md` §3.4):
+  - [ ] Saúde: peso (IMC), exercício, sono, água, alimentação
+  - [ ] Financeiro: budget, savings, debt, investments
+  - [ ] Relacionamentos: interações, qualidade
+  - [ ] Carreira: satisfação, progresso, work-life
+  - [ ] Saúde Mental: humor, energia, stress
+  - [ ] (outros conforme spec)
+- [ ] Implementar comportamento com dados insuficientes (retorna 50 + aviso)
+- [ ] Criar job para cálculo diário (00:00 UTC)
+- [ ] Armazenar histórico de scores
+
+**Frontend:**
+- [ ] Componentes de Score:
+  - [ ] LifeBalanceGauge (velocímetro 0-100 com cores)
+  - [ ] AreaScoreCard (score + ícone + tendência por área)
+  - [ ] ScoreTrend (seta up/down com percentual de mudança)
+  - [ ] ScoreHistoryChart (gráfico de linha da evolução)
+  - [ ] WeightConfigModal (ajustar pesos das áreas)
+- [ ] Exibir Life Balance Score no dashboard
+- [ ] Exibir scores por área
+- [ ] Exibir tendências (setas up/down)
+- [ ] Gráfico de evolução dos scores
+- [ ] Página `/settings/weights` para configurar pesos
+
+**Testes:**
+- [ ] Testes unitários para ScoreCalculator:
+  - [ ] Cálculo correto de cada área
+  - [ ] Aplicação correta dos pesos
+  - [ ] Cálculo do Life Balance Score geral
+  - [ ] Comportamento com dados insuficientes (retorna 50)
+- [ ] Testes de integração:
+  - [ ] Job de cálculo diário executa corretamente
+  - [ ] Histórico é armazenado corretamente
+- [ ] Teste E2E: verificar scores no dashboard após tracking
+
+**Definition of Done:**
+- [ ] Scores calculados corretamente
+- [ ] Pesos configuráveis pelo usuário
+- [ ] Histórico armazenado
+- [ ] Job diário funcionando
+- [ ] UI exibe scores com tendências
+- [ ] Testes passam
+
+---
+
+### M2.3 — Dashboard Principal
+
+**Objetivo:** Implementar dashboard com visão geral da vida do usuário.
+
+**Referências:** `PRODUCT_SPECS.md` §6.14
+
+**Tasks:**
+
+- [ ] Criar página `/dashboard`:
+  - [ ] Life Balance Score (destaque)
+  - [ ] Scores por área (cards)
+  - [ ] Destaques positivos
+  - [ ] Pontos de atenção
+  - [ ] Decisões em aberto
+  - [ ] Hábitos (streaks)
+  - [ ] Eventos do dia
+  - [ ] Métricas recentes
+- [ ] Implementar widgets:
+  - [ ] ScoreGauge (velocímetro do score)
+  - [ ] AreaCard (score + tendência por área)
+  - [ ] HighlightsCard
+  - [ ] AlertsCard
+  - [ ] UpcomingEvents
+  - [ ] RecentTracking
+  - [ ] HabitsStreak
+- [ ] Implementar período selecionável (hoje, semana, mês)
+- [ ] Implementar comparativo com período anterior
+
+**Testes:**
+- [ ] Testes de componentes para cada widget:
+  - [ ] ScoreGauge renderiza corretamente
+  - [ ] AreaCard exibe dados e tendência
+  - [ ] HighlightsCard lista itens positivos
+  - [ ] AlertsCard lista pontos de atenção
+- [ ] Testes de integração:
+  - [ ] API retorna dados corretos para dashboard
+  - [ ] Filtro de período funciona
+  - [ ] Comparativo calcula corretamente
+- [ ] Teste E2E: dashboard carrega e exibe dados do usuário
+- [ ] Teste E2E: mudar período atualiza dados
+
+**Definition of Done:**
+- [ ] Dashboard exibe todas as informações relevantes
+- [ ] Widgets são interativos
+- [ ] Dados atualizados em tempo real
+- [ ] Comparativos funcionam
+- [ ] Testes passam
+
+---
+
+### M2.4 — Metas e Hábitos
+
+**Objetivo:** Implementar sistema de metas e tracking de hábitos.
+
+**Referências:** `SYSTEM_SPECS.md` §3.9, `PRODUCT_SPECS.md` §6.15
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `goals`:
+  - [ ] CRUD de metas (título, área, valor alvo, prazo, milestones)
+  - [ ] Calcular progresso
+  - [ ] Notificar em risco/concluída
+- [ ] Criar módulo `habits`:
+  - [ ] CRUD de hábitos (título, frequência, reminder)
+  - [ ] Registrar completion
+  - [ ] Calcular streak
+  - [ ] Implementar grace period (1 dia não quebra streak)
+  - [ ] Implementar freeze (max 3/mês)
+  - [ ] Lembretes em horário configurado
+
+**Frontend:**
+- [ ] Criar página `/goals`:
+  - [ ] Lista de metas com progresso
+  - [ ] Criar/editar meta
+  - [ ] Visualizar milestones
+- [ ] Criar página `/habits`:
+  - [ ] Lista de hábitos com streaks
+  - [ ] Check-in diário
+  - [ ] Calendário de completions
+  - [ ] Freeze button
+- [ ] Componentes:
+  - [ ] GoalProgress (barra de progresso com percentual)
+  - [ ] GoalCard (resumo da meta)
+  - [ ] GoalForm (criar/editar meta)
+  - [ ] MilestoneList (sub-metas)
+  - [ ] HabitCard (com streak e botão de check-in)
+  - [ ] HabitCalendar (visualização mensal de completions)
+  - [ ] StreakBadge (número + fogo emoji)
+  - [ ] FreezeButton (com contador de freezes restantes)
+  - [ ] HabitForm (criar/editar hábito)
+
+**Testes:**
+- [ ] Testes unitários:
+  - [ ] Cálculo de progresso de meta
+  - [ ] Cálculo de streak (considerando grace period)
+  - [ ] Lógica de freeze (max 3/mês)
+  - [ ] Validação de frequência de hábito
+- [ ] Testes de integração:
+  - [ ] CRUD de metas via API
+  - [ ] CRUD de hábitos via API
+  - [ ] Check-in de hábito
+  - [ ] Notificação de meta em risco
+- [ ] Teste E2E: criar meta → atualizar progresso → completar
+- [ ] Teste E2E: criar hábito → check-in diário → verificar streak
+- [ ] Teste E2E: usar freeze e verificar contador
+
+**Definition of Done:**
+- [ ] CRUD de metas funciona
+- [ ] Progresso calculado automaticamente
+- [ ] Hábitos com streak funcionam
+- [ ] Grace period funciona
+- [ ] Freeze funciona (max 3/mês)
+- [ ] Lembretes enviados
+- [ ] Testes passam
+
+---
+
+### M2.5 — Relatórios
+
+**Objetivo:** Implementar geração de relatórios periódicos.
+
+**Referências:** `SYSTEM_SPECS.md` §3.10, `AI_SPECS.md` §7.1, §7.2
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `reports`:
+  - [ ] `GenerateMorningSummaryUseCase`
+  - [ ] `GenerateWeeklyReportUseCase`
+  - [ ] `GenerateMonthlyReportUseCase`
+- [ ] Implementar prompts de relatório (conforme `AI_SPECS.md` §7.1, §7.2)
+- [ ] Criar jobs para geração:
+  - [ ] Morning summary: configurável (default 07:00), janela de 20 min
+  - [ ] Weekly report: domingo 20:00
+  - [ ] Monthly report: dia 1, 10:00
+- [ ] Salvar relatórios como notas no Segundo Cérebro (opcional)
+
+**Frontend:**
+- [ ] Criar página `/reports`:
+  - [ ] Lista de relatórios gerados (com filtros por tipo e período)
+  - [ ] Visualizar relatório
+  - [ ] Configurar horários de envio
+  - [ ] Exportar PDF
+- [ ] Componentes:
+  - [ ] ReportCard (resumo na lista)
+  - [ ] ReportViewer (renderização do relatório)
+  - [ ] ReportConfigForm (horários e preferências)
+  - [ ] ExportButton (PDF, Markdown)
+  - [ ] ReportSection (seção reutilizável do relatório)
+  - [ ] MetricHighlight (destaque de métrica)
+  - [ ] ComparisonBadge (comparativo com período anterior)
+
+**Testes:**
+- [ ] Testes unitários:
+  - [ ] Geração de conteúdo do morning summary
+  - [ ] Geração de conteúdo do weekly report
+  - [ ] Geração de conteúdo do monthly report
+  - [ ] Cálculo de comparativos
+- [ ] Testes de integração:
+  - [ ] Job de morning summary executa no horário
+  - [ ] Job de weekly report executa domingo
+  - [ ] Job de monthly report executa dia 1
+  - [ ] Relatório é salvo como nota (quando configurado)
+- [ ] Teste E2E: visualizar relatório e exportar PDF
+- [ ] Teste E2E: alterar configuração de horário
+
+**Definition of Done:**
+- [ ] Morning summary gerado e enviado no horário
+- [ ] Weekly report gerado domingo à noite
+- [ ] Monthly report gerado no primeiro dia do mês
+- [ ] Relatórios podem ser visualizados e exportados
+- [ ] Horários configuráveis
+- [ ] Testes passam
+
+---
+
+## Fase 3: Assistente (v3.x)
+
+> **Objetivo:** Implementar integrações externas e funcionalidades de assistente pessoal.
+> **Referências:** `PRODUCT_SPECS.md` §2.2, §5.2, §6.4, §6.5, §6.6, `INTEGRATIONS_SPECS.md`
+
+### M3.1 — Integração Telegram
+
+**Objetivo:** Implementar bot do Telegram para interação rápida.
+
+**Referências:** `INTEGRATIONS_SPECS.md` §2
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `telegram`:
+  - [ ] Webhook handler
+  - [ ] Command handlers (/start, /peso, /agua, /gasto, etc)
+  - [ ] Message handler (conversa com IA)
+  - [ ] Voice handler (transcrição)
+  - [ ] Photo handler (análise com vision)
+- [ ] Implementar vinculação de conta
+- [ ] Implementar envio de notificações:
+  - [ ] Morning summary
+  - [ ] Weekly report
+  - [ ] Lembretes
+  - [ ] Alertas
+- [ ] Respeitar quiet hours
+- [ ] Detectar bot bloqueado e desativar integração
+
+**Frontend:**
+- [ ] Página de configuração `/settings/telegram`:
+  - [ ] Botão vincular/desvincular
+  - [ ] Status da integração (conectado/desconectado/erro)
+  - [ ] Configurar notificações por tipo
+  - [ ] Configurar quiet hours
+- [ ] Componentes:
+  - [ ] TelegramLinkButton (gera link deep link)
+  - [ ] TelegramStatus (badge de status com último sync)
+  - [ ] NotificationPreferences (toggles por tipo)
+  - [ ] QuietHoursConfig (horário início/fim)
+
+**Testes:**
+- [ ] Testes de integração:
+  - [ ] Webhook handler processa mensagens corretamente
+  - [ ] Command handlers (/peso, /agua, /gasto, etc.)
+  - [ ] Message handler (conversa com IA)
+  - [ ] Vinculação de conta
+  - [ ] Envio de notificações
+- [ ] Testes unitários:
+  - [ ] Parser de comandos
+  - [ ] Validação de quiet hours
+  - [ ] Detecção de bot bloqueado
+- [ ] Teste E2E: vincular Telegram → receber notificação
+
+**Definition of Done:**
+- [ ] Bot responde comandos
+- [ ] Conversa com IA funciona
+- [ ] Áudio é transcrito
+- [ ] Vinculação funciona
+- [ ] Notificações enviadas
+- [ ] Quiet hours respeitado
+- [ ] Bot bloqueado = integração desativada
+- [ ] Testes passam
+
+---
+
+### M3.2 — Integração Google Calendar
+
+**Objetivo:** Sincronizar eventos do Google Calendar.
+
+**Referências:** `INTEGRATIONS_SPECS.md` §3
+
+**Tasks:**
+
+**Backend:**
+- [ ] Implementar OAuth flow com Google
+- [ ] Criar serviço de sync:
+  - [ ] Buscar calendários
+  - [ ] Buscar eventos (próximos 30 dias)
+  - [ ] Salvar localmente
+- [ ] Criar job de sync a cada 15 min (com staggering)
+- [ ] Implementar rate limiting e backoff
+- [ ] Refresh token automático
+- [ ] Desativar se token revogado
+
+**Frontend:**
+- [ ] Página `/settings/calendar`:
+  - [ ] Botão conectar/desconectar Google
+  - [ ] Selecionar calendários a sincronizar (checkboxes)
+  - [ ] Status do sync (último sync, próximo sync)
+  - [ ] Botão forçar sync manual
+- [ ] Componentes:
+  - [ ] GoogleConnectButton (inicia OAuth flow)
+  - [ ] CalendarSelector (lista de calendários com checkboxes)
+  - [ ] SyncStatus (timestamp do último sync + indicador)
+  - [ ] CalendarEventCard (evento na agenda)
+
+**Uso no sistema:**
+- [ ] Eventos aparecem no morning summary
+- [ ] IA considera agenda ao sugerir
+
+**Testes:**
+- [ ] Testes de integração:
+  - [ ] OAuth flow completo
+  - [ ] Busca de calendários
+  - [ ] Busca de eventos
+  - [ ] Salvamento local de eventos
+  - [ ] Refresh token automático
+- [ ] Testes unitários:
+  - [ ] Rate limiting e backoff
+  - [ ] Detecção de token revogado
+  - [ ] Staggering de sync entre usuários
+- [ ] Teste E2E: conectar Google → ver eventos no dashboard
+
+**Definition of Done:**
+- [ ] OAuth funciona
+- [ ] Sync a cada 15 min
+- [ ] Eventos aparecem no app
+- [ ] Morning summary inclui eventos
+- [ ] Desconectar remove tokens
+- [ ] Testes passam
+
+---
+
+### M3.3 — Vault (Informações Sensíveis)
+
+**Objetivo:** Implementar área segura para dados sensíveis.
+
+**Referências:** `SYSTEM_SPECS.md` §3.8, `PRODUCT_SPECS.md` §6.5
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `vault`:
+  - [ ] CRUD de vault items
+  - [ ] Criptografia AES-256-GCM + Argon2id
+  - [ ] Re-autenticação para acesso
+  - [ ] Timeout de 5 minutos
+- [ ] Tipos de item: credential, document, card, note, file
+- [ ] Categorias: personal, financial, work, health, legal
+- [ ] Audit log de acessos
+- [ ] NUNCA indexar no RAG
+
+**Frontend:**
+- [ ] Criar página `/vault`:
+  - [ ] Lista de itens por categoria
+  - [ ] Modal de re-autenticação
+  - [ ] Formulários por tipo de item
+  - [ ] Visualização com reveal de senha
+- [ ] Componentes:
+  - [ ] VaultItem (card com ícone por tipo)
+  - [ ] VaultItemForm (formulário dinâmico por tipo)
+  - [ ] ReauthModal (modal de re-autenticação)
+  - [ ] PasswordReveal (botão de mostrar/ocultar)
+  - [ ] SecureInput (input com máscara)
+  - [ ] VaultCategoryTabs (filtro por categoria)
+  - [ ] SessionTimer (countdown do timeout de 5 min)
+
+**Testes:**
+- [ ] Testes unitários:
+  - [ ] Criptografia AES-256-GCM
+  - [ ] Derivação de chave com Argon2id
+  - [ ] Validação de tipos de item
+  - [ ] Lógica de timeout (5 min)
+- [ ] Testes de integração:
+  - [ ] CRUD de vault items via API
+  - [ ] Re-autenticação requerida para acesso
+  - [ ] Audit log é criado em cada acesso
+  - [ ] Vault items NÃO são indexados no RAG
+- [ ] Teste de segurança:
+  - [ ] Dados estão criptografados no banco
+  - [ ] Não é possível acessar sem re-auth após timeout
+- [ ] Teste E2E: criar item → re-autenticar → visualizar → verificar audit log
+
+**Definition of Done:**
+- [ ] CRUD funciona
+- [ ] Dados criptografados no banco
+- [ ] Re-autenticação requerida
+- [ ] Timeout funciona
+- [ ] Audit log de acessos
+- [ ] Vault não aparece em buscas RAG
+- [ ] Testes passam
+
+---
+
+### M3.4 — Pessoas (CRM Pessoal)
+
+**Objetivo:** Implementar gerenciamento de relacionamentos pessoais.
+
+**Referências:** `SYSTEM_SPECS.md` §3.7, `PRODUCT_SPECS.md` §6.6
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `people`:
+  - [ ] CRUD de pessoas
+  - [ ] Registrar interações
+  - [ ] Lembretes de aniversário
+  - [ ] Lembretes de tempo sem contato
+  - [ ] Sugestão de presentes (via IA)
+- [ ] Vincular pessoas a notas
+
+**Frontend:**
+- [ ] Criar página `/people`:
+  - [ ] Lista de pessoas com busca/filtros (por grupo, última interação)
+  - [ ] Criar/editar pessoa
+  - [ ] Visualizar pessoa com histórico completo
+- [ ] Criar página `/people/[id]`:
+  - [ ] Informações da pessoa
+  - [ ] Timeline de interações
+  - [ ] Notas vinculadas
+  - [ ] Histórico de presentes
+- [ ] Componentes:
+  - [ ] PersonCard (avatar, nome, relacionamento, última interação)
+  - [ ] PersonForm (criar/editar pessoa)
+  - [ ] InteractionTimeline (lista cronológica)
+  - [ ] InteractionForm (registrar nova interação)
+  - [ ] BirthdayReminder (card de aniversários próximos)
+  - [ ] GiftSuggestions (sugestões da IA)
+  - [ ] GiftHistory (presentes dados/recebidos)
+  - [ ] PersonGroups (tags: família, trabalho, amigos, etc.)
+  - [ ] ContactSuggestion (alerta de tempo sem contato)
+
+**Testes:**
+- [ ] Testes de integração:
+  - [ ] CRUD de pessoas via API
+  - [ ] Registro de interações
+  - [ ] Lembretes de aniversário (job)
+  - [ ] Lembretes de tempo sem contato (job)
+  - [ ] Vínculo com notas
+- [ ] Testes unitários:
+  - [ ] Cálculo de tempo sem contato
+  - [ ] Validação de dados da pessoa
+- [ ] Teste E2E: criar pessoa → registrar interação → ver na timeline
+- [ ] Teste E2E: verificar lembrete de aniversário próximo
+
+**Definition of Done:**
+- [ ] CRUD funciona
+- [ ] Interações registradas
+- [ ] Lembretes de aniversário funcionam
+- [ ] Lembretes de contato funcionam
+- [ ] Vínculo com notas funciona
+- [ ] Testes passam
+
+---
+
+### M3.5 — Notificações Proativas
+
+**Objetivo:** Implementar sistema de notificações e check-ins proativos.
+
+**Referências:** `SYSTEM_SPECS.md` §3.11, `PRODUCT_SPECS.md` §6.16, `AI_SPECS.md` §7.4
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `notifications`:
+  - [ ] Tipos: reminder, alert, report, insight, milestone, social
+  - [ ] Canais: push (web), telegram, email, in-app
+  - [ ] Respeitar quiet hours
+  - [ ] Preferências por tipo
+- [ ] Implementar check-ins proativos (conforme `AI_SPECS.md` §7.4):
+  - [ ] Dias sem tracking
+  - [ ] Queda de humor
+  - [ ] Evento próximo
+  - [ ] Follow-up de decisão
+- [ ] Criar jobs para envio
+
+**Frontend:**
+- [ ] Página `/settings/notifications`:
+  - [ ] Configurar canais (push, telegram, email)
+  - [ ] Configurar tipos de notificação
+  - [ ] Configurar quiet hours
+  - [ ] Configurar frequência de check-ins
+- [ ] Página `/notifications`:
+  - [ ] Histórico de notificações
+  - [ ] Marcar como lida
+  - [ ] Filtros por tipo
+- [ ] Componentes:
+  - [ ] NotificationBell (ícone no header com badge de não lidas)
+  - [ ] NotificationDropdown (lista rápida de recentes)
+  - [ ] NotificationCard (card individual)
+  - [ ] NotificationPreferencesForm (configurações por tipo)
+  - [ ] ChannelToggle (toggle por canal)
+  - [ ] QuietHoursInput (horário início/fim)
+
+**Testes:**
+- [ ] Testes de integração:
+  - [ ] Envio por cada canal (push, telegram, email)
+  - [ ] Respeito ao quiet hours
+  - [ ] Preferências por tipo
+- [ ] Testes unitários:
+  - [ ] Lógica de check-in proativo (dias sem tracking, queda de humor, etc.)
+  - [ ] Validação de preferências
+- [ ] Teste E2E: configurar preferências → receber notificação do tipo configurado
+- [ ] Teste E2E: verificar quiet hours bloqueia notificação
+
+**Definition of Done:**
+- [ ] Notificações enviadas por todos os canais
+- [ ] Quiet hours respeitado
+- [ ] Check-ins proativos funcionam
+- [ ] Preferências configuráveis
+- [ ] Testes passam
+
+---
+
+### M3.6 — Stripe (Pagamentos)
+
+**Objetivo:** Implementar sistema de assinaturas e pagamentos.
+
+**Referências:** `INTEGRATIONS_SPECS.md` §4
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `billing`:
+  - [ ] Checkout session para upgrade
+  - [ ] Webhook handlers (subscription events)
+  - [ ] Portal de billing
+- [ ] Implementar planos: Free, Pro, Premium
+- [ ] Aplicar limites por plano
+- [ ] Notificar falhas de pagamento
+
+**Frontend:**
+- [ ] Página `/settings/billing`:
+  - [ ] Plano atual com features
+  - [ ] Botões de upgrade/downgrade
+  - [ ] Histórico de faturas
+  - [ ] Link para portal Stripe
+- [ ] Componentes:
+  - [ ] PlanCard (nome, preço, features, botão de ação)
+  - [ ] PlanComparison (tabela comparativa dos planos)
+  - [ ] CurrentPlanBadge (badge do plano atual)
+  - [ ] UsageMeter (uso vs limite por feature)
+  - [ ] InvoiceList (lista de faturas)
+  - [ ] PaymentMethodCard (último 4 dígitos do cartão)
+  - [ ] UpgradeModal (confirmação de upgrade)
+
+**Testes:**
+- [ ] Testes de integração:
+  - [ ] Checkout session é criada corretamente
+  - [ ] Webhook handlers processam eventos (subscription.created, .updated, .deleted, invoice.paid, invoice.payment_failed)
+  - [ ] Portal de billing redireciona corretamente
+  - [ ] Limites são aplicados após upgrade/downgrade
+- [ ] Testes unitários:
+  - [ ] Verificação de limites por plano
+  - [ ] Cálculo de uso vs limite
+- [ ] Teste E2E: upgrade de plano → verificar novas features
+- [ ] Teste E2E: verificar limite de mensagens no plano Free
+
+**Definition of Done:**
+- [ ] Upgrade funciona
+- [ ] Limites aplicados por plano
+- [ ] Cancelamento funciona
+- [ ] Notificações de falha
+- [ ] Testes passam
+
+---
+
+### M3.7 — Storage (Cloudflare R2)
+
+**Objetivo:** Implementar upload e armazenamento de arquivos.
+
+**Referências:** `INTEGRATIONS_SPECS.md` §7
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar `StorageService` com integração R2:
+  - [ ] `uploadFile(file, path)` - upload de arquivo
+  - [ ] `getSignedUrl(path)` - URL temporária para download
+  - [ ] `deleteFile(path)` - remover arquivo
+- [ ] Implementar upload de avatar:
+  - [ ] Validar tipo (jpg, png, webp)
+  - [ ] Validar tamanho (max 2MB)
+  - [ ] Redimensionar para 256x256
+- [ ] Implementar upload de anexos (notas):
+  - [ ] Validar tipos permitidos (imagens, PDFs)
+  - [ ] Validar tamanho por plano
+- [ ] Implementar export de dados:
+  - [ ] Gerar arquivo ZIP com dados do usuário
+  - [ ] Presigned URL para download (24h)
+  - [ ] Job assíncrono para geração
+- [ ] Presigned URLs para download seguro
+
+**Frontend:**
+- [ ] Componentes:
+  - [ ] AvatarUpload (preview, crop, upload)
+  - [ ] FileUpload (drag & drop, progress)
+  - [ ] FilePreview (thumbnail, nome, tamanho)
+  - [ ] ExportDataButton (solicitar export)
+  - [ ] DownloadLink (link com expiração)
+
+**Testes:**
+- [ ] Testes de integração:
+  - [ ] Upload de arquivo para R2
+  - [ ] Download via presigned URL
+  - [ ] Deleção de arquivo
+  - [ ] Export de dados completo
+- [ ] Testes unitários:
+  - [ ] Validação de tipo de arquivo
+  - [ ] Validação de tamanho
+  - [ ] Geração de presigned URL
+- [ ] Teste E2E: upload de avatar → ver avatar no perfil
+- [ ] Teste E2E: anexar arquivo em nota → download do anexo
+
+**Definition of Done:**
+- [ ] Upload funciona
+- [ ] Download funciona
+- [ ] Avatars funcionam
+- [ ] Exports funcionam
+- [ ] Validações de tamanho/tipo aplicadas
+- [ ] Testes passam
+
+---
+
+## Acompanhamento
+
+### Legenda de Status
+
+| Emoji | Significado |
+|-------|-------------|
+| 🔴 | Não iniciado |
+| 🟡 | Em andamento |
+| 🟢 | Concluído |
+| 🔵 | Bloqueado |
+
+### Histórico de Progresso
+
+| Data | Milestone | Ação | Notas |
+|------|-----------|------|-------|
+| _YYYY-MM-DD_ | _M0.1_ | _Iniciado/Concluído_ | _Detalhes_ |
+
+---
+
+*Última atualização: 06 Janeiro 2026*
+*Revisão: Removidas versões hardcoded de pacotes (Next.js, Tailwind, React Query, Zustand)*
