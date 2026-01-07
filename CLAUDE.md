@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Life Assistant AI is a SaaS platform with integrated AI that serves as a personal assistant, second brain, counselor, and life tracker. The project is currently in **specification phase** - no code has been implemented yet.
+Life Assistant AI is a SaaS platform with integrated AI that serves as a personal assistant, second brain, counselor, and life tracker. The project is in **active development** - see `MILESTONES.md` for current progress.
 
 ## Documentation Structure
 
@@ -71,12 +71,12 @@ Use Context7 to fetch up-to-date documentation in these scenarios:
 - Never assume or hardcode outdated versions
 
 ```bash
-# ✅ Correct: check version first
-pnpm info drizzle-orm version  # returns "0.35.3"
-pnpm add drizzle-orm@0.35.3
+# ✅ Correct: check version first, then use it
+pnpm info <package> version    # check current version
+pnpm add <package>@<version>   # use that version
 
-# ❌ Wrong: assume version
-pnpm add drizzle-orm@0.29.0  # outdated version
+# ❌ Wrong: assume version without checking
+pnpm add <package>@<old-version>  # potentially outdated
 ```
 
 **Always use latest LTS versions for infrastructure:**
@@ -104,7 +104,7 @@ When an official CLI command exists to generate initial setup/configuration, use
 | Create NestJS project | Write structure manually | `npx @nestjs/cli new api` |
 | Setup shadcn/ui | Write `components.json` manually | `pnpm dlx shadcn-ui@latest init` |
 | Setup Playwright | Write `playwright.config.ts` manually | `pnpm create playwright` |
-| Setup ESLint | Write `.eslintrc.js` manually | `pnpm eslint --init` |
+| Setup ESLint | Write config manually | Use ESLint 9+ flat config (`eslint.config.js`) |
 | Setup Tailwind | Write `tailwind.config.js` manually | `pnpm dlx tailwindcss init` |
 
 **Why:** Scaffolding commands generate configurations with current best practices and compatibility with the installed version.
@@ -136,7 +136,7 @@ When analyzing a feature or task, new decisions may be needed that are not alrea
 
 ## Commands
 
-No code has been implemented yet. When implementation begins, expect these commands (per `ENGINEERING.md`):
+Available commands (run from repo root, not `apps/*`):
 
 ```bash
 # Install dependencies
