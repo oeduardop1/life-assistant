@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { jwtVerify } from 'jose';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
-import { AppConfigService } from '../../config/config.service.js';
-import type { AuthenticatedRequest, AuthenticatedUser, JwtPayload } from '../types/request.types.js';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { AppConfigService } from '../../config/config.service';
+import type { AuthenticatedRequest, AuthenticatedUser, JwtPayload } from '../types/request.types';
 
 /**
  * AuthGuard - Validates Supabase JWT tokens

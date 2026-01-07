@@ -1,2 +1,2 @@
-export { DomainError } from './domain.error.js';
-export { ApplicationError } from './application.error.js';
+export { DomainError } from './domain.error';
+export { ApplicationError } from './application.error';

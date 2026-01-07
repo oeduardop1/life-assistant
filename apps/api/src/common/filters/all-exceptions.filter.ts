@@ -6,10 +6,10 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { DomainError, ApplicationError } from '../errors/index.js';
-import { AppConfigService } from '../../config/config.service.js';
-import { AppLoggerService } from '../../logger/logger.service.js';
-import type { AuthenticatedRequest, ApiResponse } from '../types/request.types.js';
+import { DomainError, ApplicationError } from '../errors/index';
+import { AppConfigService } from '../../config/config.service';
+import { AppLoggerService } from '../../logger/logger.service';
+import type { AuthenticatedRequest, ApiResponse } from '../types/request.types';
 
 /**
  * AllExceptionsFilter - Catches and formats all exceptions

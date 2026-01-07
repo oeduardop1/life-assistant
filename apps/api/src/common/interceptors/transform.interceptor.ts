@@ -5,7 +5,7 @@ import {
   CallHandler,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
-import type { AuthenticatedRequest, ApiResponse } from '../types/request.types.js';
+import type { AuthenticatedRequest, ApiResponse } from '../types/request.types';
 
 /**
  * TransformInterceptor - Wraps all responses in standard format

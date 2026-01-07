@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { type Observable, tap } from 'rxjs';
-import { AppLoggerService } from '../../logger/logger.service.js';
-import type { AuthenticatedRequest } from '../types/request.types.js';
+import { AppLoggerService } from '../../logger/logger.service';
+import type { AuthenticatedRequest } from '../types/request.types';
 
 /**
  * LoggingInterceptor - Logs incoming requests and outgoing responses

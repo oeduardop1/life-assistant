@@ -1,1 +1,1 @@
-export { AuthGuard } from './auth.guard.js';
+export { AuthGuard } from './auth.guard';

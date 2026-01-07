@@ -5,9 +5,9 @@ import {
   HealthCheckResult,
 } from '@nestjs/terminus';
 import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
-import { Public } from '../common/decorators/index.js';
-import { DatabaseService } from '../database/database.service.js';
-import { AppConfigService } from '../config/config.service.js';
+import { Public } from '../common/decorators/index';
+import { DatabaseService } from '../database/database.service';
+import { AppConfigService } from '../config/config.service';
 
 /**
  * HealthController - Application health check endpoints

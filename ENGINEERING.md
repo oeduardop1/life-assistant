@@ -368,6 +368,108 @@ modules/tracking/
         └── tracking-events.listener.ts
 ```
 
+### 4.1 Configuração do Projeto NestJS
+
+#### Sistema de Módulos: CommonJS
+
+NestJS usa **CommonJS** como sistema de módulos. Isso é documentado oficialmente (ver ADR-007) e confirmado pela documentação oficial do Prisma para NestJS que menciona "NestJS's CommonJS setup".
+
+**Configuração obrigatória:**
+
+```json
+// apps/api/package.json - NÃO usar "type": "module"
+{
+  "name": "@life-assistant/api",
+  "private": true
+  // NÃO incluir: "type": "module"
+}
+```
+
+```json
+// apps/api/tsconfig.json
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node"
+  }
+}
+```
+
+#### Compilação com SWC
+
+NestJS usa SWC para compilação rápida. O arquivo `.swcrc` é obrigatório para configurar decorators:
+
+```json
+// apps/api/.swcrc
+{
+  "$schema": "https://swc.rs/schema.json",
+  "sourceMaps": true,
+  "jsc": {
+    "parser": {
+      "syntax": "typescript",
+      "decorators": true,
+      "dynamicImport": true
+    },
+    "transform": {
+      "legacyDecorator": true,
+      "decoratorMetadata": true
+    },
+    "target": "es2022",
+    "baseUrl": "./"
+  },
+  "module": {
+    "type": "commonjs"
+  },
+  "minify": false
+}
+```
+
+Também configurar no `nest-cli.json`:
+
+```json
+// apps/api/nest-cli.json
+{
+  "compilerOptions": {
+    "builder": "swc"
+  }
+}
+```
+
+#### Carregamento de Variáveis de Ambiente em Monorepo
+
+Em um monorepo, o arquivo `.env` fica na raiz do workspace (`/life-assistant/.env`), mas a API é executada de `apps/api/`. O dotenv precisa ser carregado **antes** de qualquer import que use variáveis de ambiente:
+
+```typescript
+// apps/api/src/main.ts
+import 'reflect-metadata';
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
+
+// Carrega .env da raiz do workspace (DEVE ser antes de outros imports)
+loadEnv({ path: resolve(__dirname, '../../../.env') });
+
+// Agora é seguro importar módulos que usam env vars
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+// ...
+```
+
+**Por que não usar `@nestjs/config`?**
+
+O projeto usa um package customizado `@life-assistant/config` com validação Zod. O `@nestjs/config` carrega automaticamente o `.env` do diretório atual, mas em monorepos o `.env` está na raiz. A solução é carregar manualmente com dotenv antes dos imports.
+
+#### Providers com Escopo (Transient/Request)
+
+Providers marcados com `Scope.TRANSIENT` ou `Scope.REQUEST` **não podem** ser obtidos com `app.get()`. Use `app.resolve()`:
+
+```typescript
+// ❌ ERRADO - Gera InvalidClassScopeException
+const logger = app.get(AppLoggerService);
+
+// ✅ CORRETO - Para providers TRANSIENT ou REQUEST
+const logger = await app.resolve(AppLoggerService);
+```
+
 ---
 
 ## 5) Padrões de Código
@@ -1319,6 +1421,8 @@ Proposed | Accepted | Deprecated | Superseded
 | ADR-003 | Usar Gemini como LLM inicial | Accepted |
 | ADR-004 | Usar BullMQ para job queue | Accepted |
 | ADR-005 | Usar Socket.io para real-time | Accepted |
+| ADR-006 | Usar jose para validação JWT | Accepted |
+| ADR-007 | Usar CommonJS como sistema de módulos no NestJS | Accepted |
 
 ---
 

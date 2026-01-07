@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { AppLoggerService } from './logger.service.js';
+import { AppLoggerService } from './logger.service';
 
 /**
  * LoggerModule - Global module providing JSON structured logging

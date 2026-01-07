@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { DatabaseService } from './database.service.js';
+import { DatabaseService } from './database.service';
 
 /**
  * DatabaseModule - Global module providing database access

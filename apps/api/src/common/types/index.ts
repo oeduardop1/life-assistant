@@ -3,4 +3,4 @@ export type {
   AuthenticatedUser,
   AuthenticatedRequest,
   ApiResponse,
-} from './request.types.js';
+} from './request.types';

@@ -157,7 +157,7 @@ describe('aiSchema', () => {
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.GEMINI_MODEL).toBe('gemini-2.0-flash-exp');
+      expect(result.data.GEMINI_MODEL).toBe('gemini-flash');
     }
   });
 
@@ -200,7 +200,7 @@ describe('aiSchema', () => {
     });
     expect(geminiResult.success).toBe(true);
     if (geminiResult.success) {
-      expect(geminiResult.data.GEMINI_MODEL).toBe('gemini-2.0-flash-exp');
+      expect(geminiResult.data.GEMINI_MODEL).toBe('gemini-flash');
     }
 
     const claudeResult = aiSchema.safeParse({

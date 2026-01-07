@@ -1,5 +1,5 @@
 import { Injectable, LoggerService as NestLoggerService, Scope } from '@nestjs/common';
-import { AppConfigService } from '../config/config.service.js';
+import { AppConfigService } from '../config/config.service';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 

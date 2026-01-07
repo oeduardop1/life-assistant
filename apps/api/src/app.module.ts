@@ -3,16 +3,16 @@ import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 // Core modules
-import { ConfigModule } from './config/config.module.js';
-import { LoggerModule } from './logger/logger.module.js';
-import { DatabaseModule } from './database/database.module.js';
-import { HealthModule } from './health/health.module.js';
+import { ConfigModule } from './config/config.module';
+import { LoggerModule } from './logger/logger.module';
+import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
 
 // Common
-import { RequestIdMiddleware } from './common/middleware/index.js';
-import { AuthGuard } from './common/guards/index.js';
-import { LoggingInterceptor, TransformInterceptor } from './common/interceptors/index.js';
-import { AllExceptionsFilter } from './common/filters/index.js';
+import { RequestIdMiddleware } from './common/middleware/index';
+import { AuthGuard } from './common/guards/index';
+import { LoggingInterceptor, TransformInterceptor } from './common/interceptors/index';
+import { AllExceptionsFilter } from './common/filters/index';
 
 /**
  * AppModule - Root application module

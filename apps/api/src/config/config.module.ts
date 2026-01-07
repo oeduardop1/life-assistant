@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { AppConfigService } from './config.service.js';
+import { AppConfigService } from './config.service';
 
 /**
  * ConfigModule - Global module providing configuration access

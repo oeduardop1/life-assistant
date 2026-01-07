@@ -1,1 +1,1 @@
-export { AllExceptionsFilter } from './all-exceptions.filter.js';
+export { AllExceptionsFilter } from './all-exceptions.filter';

@@ -8,7 +8,7 @@ import { z } from 'zod';
 const geminiSchema = z.object({
   LLM_PROVIDER: z.literal('gemini'),
   GEMINI_API_KEY: z.string().min(1, { message: 'GEMINI_API_KEY is required when LLM_PROVIDER is gemini' }),
-  GEMINI_MODEL: z.string().default('gemini-2.0-flash-exp'),
+  GEMINI_MODEL: z.string().default('gemini-flash'),
   ANTHROPIC_API_KEY: z.string().optional(),
   CLAUDE_MODEL: z.string().optional(),
 });

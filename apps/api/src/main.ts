@@ -1,10 +1,16 @@
 import 'reflect-metadata';
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env from workspace root (must be before other imports that use env vars)
+loadEnv({ path: resolve(__dirname, '../../../.env') });
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModule } from './app.module.js';
-import { AppConfigService } from './config/config.service.js';
-import { AppLoggerService } from './logger/logger.service.js';
+import { AppModule } from './app.module';
+import { AppConfigService } from './config/config.service';
+import { AppLoggerService } from './logger/logger.service';
 
 /**
  * Bootstrap the NestJS application
@@ -16,7 +22,7 @@ async function bootstrap() {
 
   // Get services
   const config = app.get(AppConfigService);
-  const logger = app.get(AppLoggerService);
+  const logger = await app.resolve(AppLoggerService);
   logger.setContext('Bootstrap');
 
   // Use custom logger
