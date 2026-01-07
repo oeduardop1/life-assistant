@@ -24,8 +24,37 @@ Life Assistant AI is a SaaS platform with integrated AI that serves as a persona
 ## AI Usage Requirements
 
 - Always open `PRODUCT_SPECS.md`, `SYSTEM_SPECS.md`, and the most relevant spec for the task before working
-- Always use Context7 when code generation, setup/configuration steps, or library/API documentation are needed; if coverage is missing, say so and ask the user
 - When unsure or missing information, ask the user before proceeding
+
+### Context7 Usage (MANDATORY)
+
+**NEVER make implementation decisions without first consulting Context7.** This is a hard requirement.
+
+Use Context7 to fetch up-to-date documentation in these scenarios:
+
+| Scenario | Action |
+|----------|--------|
+| **Before creating implementation plan** | Query Context7 for all libraries/frameworks involved to understand current APIs, patterns, and best practices |
+| **During code generation** | Query Context7 for the specific library being used to ensure correct syntax and usage |
+| **When setup/configuration is needed** | Query Context7 for official setup guides and configuration options |
+| **When a test fails** | Query Context7 for the testing library AND the library being tested to understand correct usage before attempting to fix |
+| **When an error occurs** | Query Context7 for the library throwing the error to find the correct solution based on current docs |
+| **When unsure about an API** | Query Context7 instead of guessing or using potentially outdated knowledge |
+
+**Workflow:**
+```
+1. Identify libraries/frameworks involved in the task
+2. Query Context7 for each one (resolve-library-id → query-docs)
+3. Read and understand the current documentation
+4. THEN create the plan or write the code
+```
+
+**If Context7 has no coverage for a library:**
+- Inform the user: "Context7 does not have documentation for [library]. Should I proceed with general knowledge or would you like to provide documentation?"
+- Wait for user guidance before proceeding
+
+### Other Requirements
+
 - Cite the source doc when stating rules or constraints (e.g., "Per `SYSTEM_SPECS.md` §3.2...")
 - Request user authorization before updating documentation, specifications, or creating new files
 - Do not assume tools, paths, or stacks beyond what is defined in `ENGINEERING.md`
