@@ -1851,97 +1851,103 @@ ALTER TABLE habit_freezes ENABLE ROW LEVEL SECURITY;
 
 ### 6.2 Policies
 
+> **Nota sobre performance:** Usamos `(SELECT auth.user_id())` em vez de `auth.user_id()` diretamente.
+> Isso garante que a função seja executada **uma vez por query** em vez de uma vez por linha.
+> Ver: https://supabase.com/docs/guides/database/database-advisors?lint=0003_auth_rls_initplan
+
 ```sql
 -- Função helper para obter user_id do contexto
+-- Usa NULLIF para tratar strings vazias como NULL
 CREATE OR REPLACE FUNCTION auth.user_id() RETURNS uuid AS $$
   SELECT COALESCE(
-    current_setting('app.user_id', true)::uuid,
-    (current_setting('request.jwt.claims', true)::json->>'sub')::uuid
+    NULLIF(current_setting('app.user_id', true), '')::uuid,
+    NULLIF(current_setting('request.jwt.claims', true)::json->>'sub', '')::uuid
   );
 $$ LANGUAGE sql STABLE;
 
 -- Policy genérica para tabelas com user_id
+-- IMPORTANTE: Usar (SELECT auth.user_id()) para performance
 CREATE POLICY "Users can only access own data" ON users
-  FOR ALL USING (id = auth.user_id());
+  FOR ALL USING (id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own conversations" ON conversations
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own messages" ON messages
   FOR ALL USING (
     conversation_id IN (
-      SELECT id FROM conversations WHERE user_id = auth.user_id()
+      SELECT id FROM conversations WHERE user_id = (SELECT auth.user_id())
     )
   );
 
 CREATE POLICY "Users can only access own tracking" ON tracking_entries
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own scores" ON life_balance_history
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own notes" ON notes
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own note_links" ON note_links
   FOR ALL USING (
-    source_note_id IN (SELECT id FROM notes WHERE user_id = auth.user_id())
+    source_note_id IN (SELECT id FROM notes WHERE user_id = (SELECT auth.user_id()))
   );
 
 CREATE POLICY "Users can only access own decisions" ON decisions
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own decision_options" ON decision_options
   FOR ALL USING (
-    decision_id IN (SELECT id FROM decisions WHERE user_id = auth.user_id())
+    decision_id IN (SELECT id FROM decisions WHERE user_id = (SELECT auth.user_id()))
   );
 
 CREATE POLICY "Users can only access own decision_criteria" ON decision_criteria
   FOR ALL USING (
-    decision_id IN (SELECT id FROM decisions WHERE user_id = auth.user_id())
+    decision_id IN (SELECT id FROM decisions WHERE user_id = (SELECT auth.user_id()))
   );
 
 CREATE POLICY "Users can only access own people" ON people
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own vault" ON vault_items
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own goals" ON goals
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own habits" ON habits
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own notifications" ON notifications
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own reminders" ON reminders
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own integrations" ON user_integrations
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own embeddings" ON embeddings
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own audit logs" ON audit_logs
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own calendar events" ON calendar_events
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own budgets" ON budgets
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own subscriptions" ON subscriptions
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own export requests" ON export_requests
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own habit freezes" ON habit_freezes
-  FOR ALL USING (user_id = auth.user_id());
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 ```
 
 ---
@@ -2267,6 +2273,8 @@ packages/database/
 ```typescript
 // packages/database/drizzle.config.ts
 
+// IMPORTANTE: dotenv/config necessário para comandos CLI (drizzle-kit)
+import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
@@ -2276,6 +2284,8 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
+  verbose: true,
+  strict: true,
 });
 ```
 
@@ -2297,4 +2307,5 @@ pnpm drizzle-kit studio
 
 ---
 
-*Última atualização: Janeiro 2026*
+*Última atualização: 07 Janeiro 2026*
+*Revisão: RLS policies atualizadas com otimização (SELECT auth.user_id()), drizzle.config.ts com dotenv*

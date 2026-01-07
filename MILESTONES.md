@@ -253,47 +253,57 @@
 
 ---
 
-### M0.4 — Package: Database
+### M0.4 — Package: Database 🟢
 
 **Objetivo:** Configurar Drizzle ORM com schema completo e migrations.
 
 **Tasks:**
 
-- [ ] Instalar dependências (drizzle-orm, drizzle-kit, postgres)
-- [ ] Configurar `drizzle.config.ts`
-- [ ] Criar schemas conforme `DATA_MODEL.md`:
-  - [ ] **Core:** users, user_settings, user_consents
-  - [ ] **Chat:** conversations, messages
-  - [ ] **Tracking:** tracking_entries, tracking_goals
-  - [ ] **Decisions:** decisions, decision_options, decision_criteria, decision_reviews
-  - [ ] **Notes:** notes, note_links
-  - [ ] **People:** people, people_interactions
-  - [ ] **Vault:** vault_items
-  - [ ] **Goals:** goals, habits, habit_completions
-  - [ ] **Scores:** life_balance_scores, area_scores
-  - [ ] **Integrations:** user_integrations, calendar_events
-  - [ ] **System:** audit_logs, notifications, export_requests
-  - [ ] **Embeddings:** embeddings (com pgvector)
-- [ ] Criar índices conforme `DATA_MODEL.md` §10
-- [ ] Configurar RLS policies conforme `ENGINEERING.md` §6
-- [ ] Criar migration inicial
-- [ ] Criar seed para dados de teste
-- [ ] Criar scripts npm: db:generate, db:migrate, db:push, db:studio
+- [x] Instalar dependências (drizzle-orm, drizzle-kit, pg, dotenv)
+- [x] Configurar `drizzle.config.ts`
+- [x] Criar schemas conforme `DATA_MODEL.md`:
+  - [x] **Core:** users
+  - [x] **Chat:** conversations, messages
+  - [x] **Tracking:** tracking_entries, life_balance_history
+  - [x] **Decisions:** decisions, decision_options, decision_criteria, decision_scores
+  - [x] **Notes:** notes, note_links
+  - [x] **People:** people, person_notes, person_interactions
+  - [x] **Vault:** vault_items
+  - [x] **Goals:** goals, goal_milestones, habits, habit_completions, habit_freezes
+  - [x] **Integrations:** user_integrations, calendar_events, budgets, subscriptions
+  - [x] **System:** audit_logs, notifications, reminders, export_requests
+  - [x] **Embeddings:** embeddings (com pgvector)
+- [x] Criar índices conforme `DATA_MODEL.md` §10
+- [x] Configurar RLS policies conforme `ENGINEERING.md` §6
+- [x] Criar migration inicial
+- [x] Criar seed para dados de teste
+- [x] Criar scripts npm: db:generate, db:migrate, db:push, db:studio
 
 **Testes:**
-- [ ] Testes de integração para RLS policies:
-  - [ ] Verificar que usuário só acessa próprios dados
-  - [ ] Verificar que query sem `app.user_id` falha
-  - [ ] Testar isolamento entre usuários diferentes
-- [ ] Testes para seed data
-- [ ] Testes para migrations (up/down)
+- [x] Testes de integração para RLS policies:
+  - [x] Verificar que usuário só acessa próprios dados
+  - [x] Verificar que query sem `app.user_id` falha
+  - [x] Testar isolamento entre usuários diferentes
+- [x] Testes para seed data
+- [x] Testes para migrations (up/down)
 
 **Definition of Done:**
-- [ ] `pnpm --filter database db:push` aplica schema sem erros
-- [ ] `pnpm --filter database db:studio` abre Drizzle Studio
-- [ ] RLS policies funcionam (testar com SET LOCAL app.user_id)
-- [ ] Seed popula dados de teste
-- [ ] Testes de RLS passam
+- [x] `pnpm --filter database db:push` aplica schema sem erros
+- [x] `pnpm --filter database db:studio` abre Drizzle Studio (requer DATABASE_URL)
+- [x] RLS policies funcionam (testar com SET LOCAL app.user_id)
+- [x] Seed popula dados de teste
+- [x] Testes de RLS passam
+
+**Notas:**
+- **07 Jan 2026:** Milestone concluído com sucesso
+- Dependências: drizzle-orm@0.38.4, drizzle-kit@0.30.4, pg@8.16.1, dotenv@17.2.3
+- 28 tabelas implementadas conforme DATA_MODEL.md
+- 21 enums PostgreSQL definidos
+- RLS policies com otimização de performance: `(SELECT auth.user_id())` em vez de `auth.user_id()` - evita execução por-linha (conforme Supabase docs)
+- Pool error handler adicionado conforme node-postgres best practices
+- dotenv import adicionado ao drizzle.config.ts para CLI commands
+- 199 testes unitários + 31 testes de integração passando
+- Lint, typecheck e build passam
 
 ---
 
@@ -1706,10 +1716,12 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-07 | M0.4 | Concluído | Package database com 28 tabelas, 21 enums, RLS policies, 230 testes (unit + integration) |
+| 2026-01-07 | M0.3 | Concluído | Package config com validação Zod, 67 testes (100% coverage) |
 | 2026-01-07 | M0.1 | Concluído | Setup completo do monorepo com Turborepo, pnpm workspaces, TypeScript, ESLint 9, Prettier, Docker Compose |
 | 2026-01-06 | M0.2 | Concluído | Package shared com 8 enums, constantes, utilitários e 77 testes (100% coverage) |
 
 ---
 
-*Última atualização: 06 Janeiro 2026*
-*Revisão: M0.2 concluído - @life-assistant/shared implementado*
+*Última atualização: 07 Janeiro 2026*
+*Revisão: M0.4 concluído - @life-assistant/database implementado*

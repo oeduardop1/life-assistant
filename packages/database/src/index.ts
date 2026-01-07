@@ -1,10 +1,21 @@
 // @life-assistant/database
-// Schema Drizzle + migrations
-// Implementacao completa no milestone M0.4
+// Schema Drizzle + migrations + client
 
 export const DATABASE_VERSION = '0.1.0';
 
-// Placeholder - sera expandido no M0.4
-export interface DatabaseConfig {
-  connectionString: string;
-}
+// Client
+export {
+  getDb,
+  getPool,
+  closePool,
+  withUserId,
+  withTransaction,
+  withUserTransaction,
+  schema,
+} from './client';
+
+// Schema (re-export everything)
+export * from './schema';
+
+// Types for convenience
+export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
