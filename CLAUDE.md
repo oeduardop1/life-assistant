@@ -6,362 +6,129 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Life Assistant AI is a SaaS platform with integrated AI that serves as a personal assistant, second brain, counselor, and life tracker. The project is in **active development** - see `MILESTONES.md` for current progress.
 
-## Documentation Structure
+## Documentation Reference
 
 | Document | Purpose | Precedence |
 |----------|---------|------------|
-| `PRODUCT_SPECS.md` | What the app does, features, personas | 1st (scope/features) |
-| `SYSTEM_SPECS.md` | Business rules, flows, Definition of Done | 2nd (rules/flows) |
-| `ENGINEERING.md` | Tech stack, architecture, patterns | 3rd (tech/infra) |
-| `DATA_MODEL.md` | Database schema, tables, relationships | 4th (data) |
-| `AI_SPECS.md` | LLM behavior, prompts, RAG configuration | 5th (AI) |
-| `INTEGRATIONS_SPECS.md` | External APIs (Telegram, Stripe, Calendar) | 6th (integrations) |
-| `MILESTONES.md` | Development roadmap, tasks, progress tracking | Reference |
-| `TBD_TRACKER.md` | Pending decisions requiring human input | Reference |
+| `PRODUCT_SPECS.md` | Features, personas | 1st |
+| `SYSTEM_SPECS.md` | Business rules, flows | 2nd |
+| `ENGINEERING.md` | Tech stack, architecture | 3rd |
+| `DATA_MODEL.md` | Database schema | 4th |
+| `AI_SPECS.md` | LLM behavior, prompts | 5th |
+| `INTEGRATIONS_SPECS.md` | External APIs | 6th |
+| `MILESTONES.md` | Tasks, progress | Reference |
+| `TBD_TRACKER.md` | Pending decisions | Reference |
 
-**In case of conflict between documents, follow the precedence order above.**
+**In case of conflict, follow precedence order. Always read relevant specs before implementing.**
 
-## AI Usage Requirements
+## AI Workflow
 
-- Always open `PRODUCT_SPECS.md`, `SYSTEM_SPECS.md`, and the most relevant spec for the task before working
-- When unsure or missing information, ask the user before proceeding
+### Before Implementation
 
-### Context7 Usage (MANDATORY)
-
-**NEVER make implementation decisions without first consulting Context7.** This is a hard requirement.
-
-Use Context7 to fetch up-to-date documentation in these scenarios:
-
-| Scenario | Action |
-|----------|--------|
-| **Before creating implementation plan** | Query Context7 for all libraries/frameworks involved to understand current APIs, patterns, and best practices |
-| **During code generation** | Query Context7 for the specific library being used to ensure correct syntax and usage |
-| **When setup/configuration is needed** | Query Context7 for official setup guides and configuration options |
-| **When a test fails** | Query Context7 for the testing library AND the library being tested to understand correct usage before attempting to fix |
-| **When an error occurs** | Query Context7 for the library throwing the error to find the correct solution based on current docs |
-| **When unsure about an API** | Query Context7 instead of guessing or using potentially outdated knowledge |
-
-**Workflow:**
-```
-1. Identify libraries/frameworks involved in the task
-2. Query Context7 for each one (resolve-library-id → query-docs)
-3. Read and understand the current documentation
-4. Compare Context7 best practices with project documentation
-5. If divergence found → notify user before proceeding
-6. THEN create the plan or write the code
-```
-
-**If Context7 has no coverage for a library:**
-- Inform the user: "Context7 does not have documentation for [library]. Should I proceed with general knowledge or would you like to provide documentation?"
-- Wait for user guidance before proceeding
-
-**Detecting Documentation Drift:**
-
-When consulting Context7, ALWAYS compare the official best practices with the project's documentation (`ENGINEERING.md`, `SYSTEM_SPECS.md`, etc.). If you identify divergences:
-
-1. **Stop before implementing** - Do not proceed with outdated patterns
-2. **Notify the user** with this format:
+1. **Read MILESTONES.md** - understand task scope
+2. **Validate completeness**:
+   - Do tasks cover 100% of feature scope? (check future milestones if gaps found)
+   - Do test tasks cover unit, integration, E2E (if UI)?
+   - If gaps → request authorization to add tasks (explain why)
+3. **Read relevant specs** - PRODUCT_SPECS, SYSTEM_SPECS, ENGINEERING, etc.
+4. **Query Context7** for all libraries/frameworks involved
+5. **Compare best practices** - if project docs diverge from Context7:
    ```
    ⚠️ Documentation drift detected:
-
-   - **File:** `ENGINEERING.md` §X.X
-   - **Current (project):** [what the project docs say]
-   - **Best practice (Context7):** [what Context7 recommends]
-   - **Impact:** [why this matters]
-
-   Should I update the project documentation before proceeding?
+   - **File:** [spec file]
+   - **Issue:** [what diverges]
+   - **Recommendation:** [what to update]
    ```
-3. **Wait for user approval** before updating any documentation
-4. **If approved:** Update the relevant spec file, then proceed with implementation using the correct best practice
+   → Request authorization before updating
 
-Examples of drift to watch for:
-- Deprecated APIs or patterns still documented in project specs
-- Configuration approaches that have better alternatives
-- Testing patterns that have evolved
-- Security practices that have been updated
+### During Implementation
 
-### Other Requirements
+- Follow patterns from `ENGINEERING.md`
+- Check dependency versions: `pnpm info <pkg> version` before installing
+- Prefer CLI scaffolding over manual setup
+- Cite source when stating rules: "Per `SYSTEM_SPECS.md` §3.2..."
 
-- Cite the source doc when stating rules or constraints (e.g., "Per `SYSTEM_SPECS.md` §3.2...")
-- Request user authorization before updating documentation, specifications, or creating new files
-- Do not assume tools, paths, or stacks beyond what is defined in `ENGINEERING.md`
-- Do not introduce new dependencies or major tech without an ADR in `docs/adr/` (per `ENGINEERING.md` §14)
-- Always update `TBD_TRACKER.md` and the owning spec when a TBD is resolved (after user authorization)
-- Always update `MILESTONES.md` after finishing a task; add progress notes even for partial work
-- Only mark milestones as completed when all tests pass; ask user for confirmation before marking done
+### After Implementation
 
-### Dependency & Setup Management
+1. **Run quality checks**:
+   - `pnpm typecheck && pnpm lint && pnpm test`
+   - `pnpm test:e2e` (if UI changes)
+2. **Document decisions** - if any decision not in project docs:
+   ```
+   📝 Undocumented implementation:
+   - **What:** [description]
+   - **Suggested doc:** [ADR, ENGINEERING.md, etc.]
+   ```
+   → Request authorization before updating
+3. **Update MILESTONES.md** with progress notes
+4. **Request confirmation** before marking task complete (only if all checks pass)
 
-**Always use the latest package versions:**
-- Before adding any dependency, check the current version with `pnpm info <package> version`
-- Use the exact current version in installation commands
-- Never assume or hardcode outdated versions
+### Authorization Rule
 
-```bash
-# ✅ Correct: check version first, then use it
-pnpm info <package> version    # check current version
-pnpm add <package>@<version>   # use that version
+**Always request user authorization before:**
+- Creating new files
+- Updating any documentation or specs
+- Adding tasks to milestones
+- Marking tasks as completed
 
-# ❌ Wrong: assume version without checking
-pnpm add <package>@<old-version>  # potentially outdated
-```
+## Quick References
 
-**Always use latest LTS versions for infrastructure:**
-- **Node.js**: Use latest LTS version (check https://nodejs.org)
-- **pnpm**: Use latest stable version (check https://pnpm.io)
-- **Docker Compose**: Use v5+ (no longer requires `version` field in yaml)
+| Topic | Reference |
+|-------|-----------|
+| Commands | `README.md` |
+| Architecture & Patterns | `ENGINEERING.md` §4 |
+| Testing | `ENGINEERING.md` §11 |
+| Security | `SYSTEM_SPECS.md` §6, `ENGINEERING.md` §6 |
+| Commits & PRs | `ENGINEERING.md` §15 |
+| Business Rules | `SYSTEM_SPECS.md` §3 |
+| Multi-tenancy | `ENGINEERING.md` §6, `DATA_MODEL.md` §6 |
+| LLM Abstraction | `ENGINEERING.md` §8 |
+| Jobs | `ENGINEERING.md` §7 |
 
-When setting up CI pipelines, Dockerfiles, or local development:
-```yaml
-# ✅ Correct: use latest LTS
-node-version: 24  # Check nodejs.org for current LTS
-version: 10       # Check pnpm.io for current version
+## Coding Style
 
-# ❌ Wrong: use outdated versions
-node-version: 18  # Old LTS, no longer maintained
-version: 8        # Outdated pnpm
-```
+- TypeScript strict + Zod (no `any` without justification)
+- Domain names from `DATA_MODEL.md`
+- Business rules in `application/` layer
+- Portuguese in user-facing, English in code
 
-**Always prefer CLI scaffolding commands over manual setup:**
-When an official CLI command exists to generate initial setup/configuration, use it instead of writing files manually.
+## Context7 Usage
 
-| Situation | ❌ Don't do | ✅ Do |
-|-----------|------------|-------|
-| Create Next.js project | Write `next.config.js` manually | `pnpm create next-app@latest` |
-| Create NestJS project | Write structure manually | `npx @nestjs/cli new api` |
-| Setup shadcn/ui | Write `components.json` manually | `pnpm dlx shadcn-ui@latest init` |
-| Setup Playwright | Write `playwright.config.ts` manually | `pnpm create playwright` |
-| Setup ESLint | Write config manually | Use ESLint 9+ flat config (`eslint.config.js`) |
-| Setup Tailwind | Write `tailwind.config.js` manually | `pnpm dlx tailwindcss init` |
+Query Context7 in these scenarios:
+- Before creating implementation plan
+- During code generation
+- When a test fails or error occurs
+- When unsure about an API
 
-**Why:** Scaffolding commands generate configurations with current best practices and compatibility with the installed version.
+**If Context7 has no coverage:**
+> "Context7 does not have documentation for [library]. Should I proceed with general knowledge?"
 
-### Milestone Management
+**Workflow:**
+1. `resolve-library-id` → get library ID
+2. `query-docs` → fetch documentation
+3. Compare with project docs
+4. If divergence → notify user before proceeding
 
-When working on milestones:
+## TBD Tracker
 
-1. **Before starting**: Read the milestone tasks and understand the scope
-2. **During development**: Add notes to the milestone tracking progress, blockers, or discoveries (even if not a specific task)
-3. **After completing a task**:
-   - Run all relevant tests (`pnpm test`, `pnpm typecheck`, `pnpm lint`)
-   - Only consider marking complete if all tests pass
-   - Ask user: "All tests passed. Can I mark milestone X task Y as completed?"
-   - Wait for user confirmation before updating `MILESTONES.md`
-4. **If tests fail**: Do not mark as complete; fix issues first or document blockers in milestone notes
-
-### Handling New Implementation Decisions
-
-When analyzing a feature or task, new decisions may be needed that are not already tracked as TBDs. Follow this process:
-
-1. **Identify gaps**: During analysis, identify decisions needed for implementation (e.g., which provider to use, API design choices, UI behavior details)
-2. **Discuss with user**: Present options with recommendations and trade-offs; ask for user approval
-3. **Document decisions** (after user approval):
-   - Create ADR in `docs/adr/` if decision is significant (per `ENGINEERING.md` §14)
-   - Update relevant specs (`DATA_MODEL.md`, `SYSTEM_SPECS.md`, etc.) with implementation details
-   - Add to `TBD_TRACKER.md` history of resolutions (even if not previously tracked as TBD)
-4. **Reference the ADR**: In specs, reference the ADR (e.g., "ver ADR-005")
-
-## Commands
-
-Available commands (run from repo root, not `apps/*`):
-
-```bash
-# Install dependencies
-pnpm install
-
-# Development (run from repo root, not apps/*)
-pnpm dev                     # Run all apps concurrently
-pnpm --filter web dev        # Run only frontend
-pnpm --filter api dev        # Run only backend
-
-# Quality checks
-pnpm lint                    # ESLint across all packages
-pnpm typecheck               # TypeScript strict mode
-pnpm test                    # Vitest unit/integration tests
-pnpm test:e2e                # Playwright E2E tests
-
-# Database operations
-pnpm --filter database db:generate   # Generate Drizzle client
-pnpm --filter database db:migrate    # Run migrations
-pnpm --filter database db:push       # Push schema changes
-pnpm --filter database db:studio     # Open Drizzle Studio
-
-# Build
-pnpm build                   # Build all packages
-
-# Single test file
-pnpm --filter api test src/modules/tracking/__tests__/record-weight.test.ts
-```
-
-## Project Structure
-
-```
-life-assistant/
-├── apps/
-│   ├── web/                 # Next.js frontend
-│   │   ├── src/
-│   │   │   ├── app/         # App Router pages
-│   │   │   ├── components/  # React components
-│   │   │   └── hooks/       # Custom hooks
-│   │   └── e2e/             # Playwright E2E tests
-│   └── api/                 # NestJS backend
-│       ├── src/
-│       │   └── modules/     # Feature modules (Clean Architecture)
-│       │       └── {module}/
-│       │           ├── presentation/    # Controllers, DTOs
-│       │           ├── application/     # Use cases
-│       │           ├── domain/          # Entities, interfaces
-│       │           └── infrastructure/  # Repositories, adapters
-│       └── test/
-│           ├── unit/        # Unit tests
-│           ├── integration/ # Integration tests
-│           └── e2e/         # API E2E tests
-├── packages/
-│   ├── database/            # Drizzle ORM + schemas
-│   ├── ai/                  # LLM abstraction layer
-│   ├── shared/              # Shared utilities, types
-│   └── config/              # Environment config with Zod
-├── docs/
-│   └── adr/                 # Architecture Decision Records
-├── infra/                   # Docker, scripts
-└── [spec files]             # PRODUCT_SPECS.md, etc.
-```
-
-## Architecture Summary
-
-- **Pattern**: Modular Monolith + Clean Architecture
-- **Monorepo**: Turborepo with `apps/` (web, api) and `packages/` (shared, database, ai, config)
-- **Frontend**: Next.js + React Query + Tailwind + shadcn/ui
-- **Backend**: NestJS with modules following presentation/application/domain/infrastructure layers
-- **Database**: PostgreSQL (Supabase) + Drizzle ORM + pgvector
-- **Jobs**: BullMQ with Redis (Upstash)
-- **LLM**: Abstracted via `LLMPort` interface - Gemini initial, Claude migration planned
-
-## Key Patterns
-
-### Multi-tenancy
-- Every sensitive table has `user_id` column
-- RLS (Row Level Security) enabled on all tables
-- All queries must use `SET LOCAL app.user_id`
-
-### LLM Abstraction
-Switching LLM providers requires only ENV changes:
-```bash
-LLM_PROVIDER=gemini  # or 'claude'
-```
-
-### Jobs
-- Must be idempotent (deterministic `jobId`)
-- Errors categorized as retryable (rate limit, 5xx) or non-retryable (validation)
-
-### Life Areas
-The system tracks 8 life areas: `health`, `financial`, `career`, `relationships`, `spirituality`, `personal_growth`, `mental_health`, `leisure`
-
-## TBD Tracker Usage
-
-When encountering ambiguity, business decisions, or conflicts between specs:
-1. Add item to `TBD_TRACKER.md` using the template
-2. Include context, options, and AI recommendation
-3. Wait for human decision before implementing
+When encountering ambiguity, business decisions, or conflicts:
+1. Add to `TBD_TRACKER.md` with context, options, recommendation
+2. Wait for human decision before implementing
 
 Do NOT add TBDs for technical decisions you can make yourself.
 
-## Important Business Rules
+## Project Context
 
-- **Tracking via chat**: AI must always confirm before recording metrics
-- **Christian perspective**: Opt-in feature, never impose
-- **Wikilinks**: Case and accent insensitive search
-- **Decisions**: Minimum 2 options required
-- **Morning summary**: 20-minute window around configured time
-- **LGPD**: Soft delete → hard delete after 30 days
-
-## Coding Style & Naming Conventions
-
-- **TypeScript strict mode** with Zod validation; avoid `any` without justification
-- **Domain naming from specs**: Use canonical names from `DATA_MODEL.md` (e.g., `user_id`, `tracking_type`, `life_area`)
-- **Enums**: Use TypeScript enums matching spec definitions (e.g., `TrackingType`, `LifeArea`, `DecisionStatus`)
-- **Business rules in domain layer**: Keep validation and rules in `application/use-cases`, never in controllers or UI
-- **Portuguese in user-facing**: UI text, error messages, and AI responses in Portuguese (pt-BR)
-- **English in code**: Variable names, comments, and documentation in English
-
-```typescript
-// ✅ Good
-const trackingEntry = await recordWeightUseCase.execute(userId, { value: 82.5 });
-
-// ❌ Bad
-const te = await rw(uid, { v: 82.5 });
+**Structure:**
+```
+life-assistant/
+├── apps/web/     # Next.js frontend
+├── apps/api/     # NestJS backend
+├── packages/     # Shared libraries
+├── docs/adr/     # Architecture Decision Records
+└── infra/        # Docker, deployment
 ```
 
-## Testing Guidelines
+**Stack:** Next.js + NestJS + PostgreSQL (Supabase) + Drizzle + BullMQ + Redis
 
-- **Frameworks**: Vitest (unit/integration), Supertest (API), Playwright (E2E)
-- **Test location**: Module-local in `__tests__/` directories or `*.test.ts` files
-- **Naming convention**: `should_[expected]_when_[condition]`
-- **Coverage**: Minimum 80% on use cases (per `ENGINEERING.md` §11.2)
-
-### E2E Requirement
-
-Every new UI feature (page, flow, form) **must** include a Playwright E2E test:
-- Cover happy path and main error cases
-- Use Page Object Model for pages with multiple tests
-- Use `data-testid` attributes for selectors, never CSS classes
-- Place tests in `apps/web/e2e/specs/`
-
-See `ENGINEERING.md` §11.4 for full Playwright configuration and examples.
-
-## Commit & Pull Request Guidelines
-
-### Commit Messages
-
-Use concise, descriptive messages with type prefix:
-
-```
-feat: add weight tracking via chat
-fix: correct IMC calculation for edge cases
-docs: update SYSTEM_SPECS with decision review rules
-refactor: extract embedding service to shared package
-test: add E2E tests for login flow
-chore: update dependencies
-```
-
-### Pull Request Requirements
-
-- Describe the change and its purpose
-- Cite updated spec files (e.g., "Updates `SYSTEM_SPECS.md` §3.4")
-- Note any resolved TBD items
-- Include screenshots for UI changes
-- Ensure all checks pass (`pnpm lint`, `pnpm typecheck`, `pnpm test`)
-- Follow DoD checklist in `ENGINEERING.md` §15.1
-
-## Security
-
-Follow `SYSTEM_SPECS.md` §6 and `ENGINEERING.md` security guidelines:
-
-### Inviolable Rules
-
-- ❌ Never log secrets (API keys, tokens, passwords)
-- ❌ Never expose stack traces to users
-- ❌ Never allow queries without `user_id` filter on sensitive tables
-- ❌ Never store Vault contents in embeddings/RAG
-- ✅ Always validate input on backend (Zod schemas)
-- ✅ Always use prepared statements (Drizzle handles this)
-- ✅ Always sanitize output
-
-### Multi-tenant Isolation
-
-- Every sensitive table has `user_id` column with RLS
-- Use `SET LOCAL app.user_id` before queries
-- Vault requires re-authentication with 5-minute timeout
-
-### Encryption
-
-| Data | Method |
-|------|--------|
-| Passwords | bcrypt |
-| Vault items | AES-256-GCM + Argon2id KDF |
-| Traffic | TLS 1.3 |
-| Backups | Encrypted at rest |
-
-### Audit Logging
-
-Log these actions: login, logout, password change, vault access, data export, deletions, config changes.
+**Architecture:** Modular Monolith + Clean Architecture (presentation/application/domain/infrastructure)
