@@ -168,20 +168,85 @@ Princípios que **não podem ser violados** em nenhuma circunstância:
 
 ### 2.2 Frontend
 
-| Tecnologia | Uso |
-|------------|-----|
-| Next.js | Framework React com App Router |
-| React | UI Library |
-| TypeScript | Type safety |
-| React Query | Server state management |
-| Zustand | Client state (quando necessário) |
-| Tailwind CSS | Styling |
-| shadcn/ui | Componentes base |
-| React Hook Form | Formulários |
-| Zod | Validação de schemas |
-| Tiptap | Editor Markdown (Segundo Cérebro) |
-| React Flow | Graph View |
-| cmdk | Quick Switcher (Cmd+K) |
+| Tecnologia | Versão | Uso |
+|------------|--------|-----|
+| Next.js | 16.1.1 | Framework React com App Router, Turbopack |
+| React | 19 | UI Library |
+| TypeScript | 5.x | Type safety (strict mode) |
+| TanStack Query | 5.90.16 | Server state management |
+| Zustand | 5.0.9 | Client state com localStorage persistence |
+| Tailwind CSS | 4.1.18 | Styling (CSS-first configuration) |
+| shadcn/ui | 3.6.3 | Componentes base (new-york style) |
+| React Hook Form | 7.70.0 | Formulários |
+| Zod | 3.x | Validação de schemas |
+| next-themes | 0.4.6 | Dark/Light mode |
+| lucide-react | 0.562.0 | Ícones |
+| Playwright | 1.57.0 | E2E testing |
+| Tiptap | - | Editor Markdown (Segundo Cérebro, M1+) |
+| React Flow | - | Graph View (M1+) |
+| cmdk | - | Quick Switcher Cmd+K (M1+) |
+
+#### Decisões Arquiteturais Frontend
+
+**Tailwind CSS v4 (CSS-first)**
+
+Utiliza configuração CSS-first com `@import "tailwindcss"` em vez das antigas diretivas `@tailwind`. A configuração é feita via `@theme` directive em `globals.css`.
+
+```css
+/* apps/web/src/app/globals.css */
+@import 'tailwindcss';
+
+@theme {
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(9% 0 0);
+
+  @media (prefers-color-scheme: dark) {
+    --color-background: oklch(9% 0 0);
+    --color-foreground: oklch(98% 0 0);
+  }
+}
+```
+
+**shadcn/ui Setup Manual**
+
+Componentes criados manualmente em vez de usar CLI devido a problemas de resolução de pacotes workspace. Todos os componentes seguem convenções new-york style.
+
+**State Management Patterns**
+
+- **Server state**: TanStack Query com 60s staleTime para SSR
+- **Client state**: Zustand com localStorage persistence para UI state (sidebar, modals)
+- **Form state**: React Hook Form com validação Zod
+
+```typescript
+// apps/web/src/lib/query-client.ts
+export function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000,  // SSR pattern
+        gcTime: 5 * 60 * 1000,
+        retry: 1,
+      },
+    },
+  });
+}
+```
+
+**Route Groups**
+
+- `(auth)`: Centered layout para páginas de autenticação (sem sidebar)
+- `(app)`: App layout com sidebar e header para páginas autenticadas
+
+```
+app/
+├── (auth)/
+│   ├── login/page.tsx
+│   └── layout.tsx       # AuthLayout (centered)
+├── (app)/
+│   ├── dashboard/page.tsx
+│   └── layout.tsx       # AppLayout (with sidebar)
+└── layout.tsx           # RootLayout (providers)
+```
 
 ### 2.3 Backend
 
@@ -323,6 +388,169 @@ life-assistant/
 | `ai` | `shared`, `config` | `database`, apps |
 | `apps/web` | Todos os packages | `apps/api` |
 | `apps/api` | Todos os packages | `apps/web` |
+
+### 3.3 Package Patterns and Documentation
+
+**Filosofia de Documentação:**
+- Packages internos utilizam **documentação inline (JSDoc/TSDoc)** em vez de READMEs
+- Especificações centralizadas em `ENGINEERING.md`, `DATA_MODEL.md`, `AI_SPECS.md`, etc.
+- README raiz contém apenas setup essencial e comandos principais
+
+#### Type Encapsulation Pattern
+
+Quando um package encapsula uma biblioteca externa ou ORM, exporte um tipo customizado que abstrai a implementação (ver ADR-008):
+
+```typescript
+// ✅ BOM: packages/database/src/client.ts
+export type Database = ReturnType<typeof drizzle<typeof schema>>;
+
+export function getDb(): Database {
+  db ??= drizzle(getPool(), { schema });
+  return db;
+}
+```
+
+```typescript
+// ✅ BOM: apps/api/src/database/database.service.ts
+import { type Database, getDb } from '@life-assistant/database';
+
+get db(): Database {  // Tipo customizado, não NodePgDatabase
+  return getDb();
+}
+```
+
+**Benefícios:**
+- Consumidores dependem de abstração, não de implementação concreta
+- Facilita troca futura de bibliotecas (ex: Drizzle → Prisma)
+- Previne vazamento de detalhes de infraestrutura
+
+#### Singleton Pattern para Factories
+
+Packages que provêm instâncias (database, cache, clients) devem usar singletons:
+
+```typescript
+// ✅ BOM: packages/database/src/client.ts
+let pool: Pool | null = null;
+let db: Database | null = null;
+
+export function getDb(): Database {
+  db ??= drizzle(getPool(), { schema });
+  return db;
+}
+
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
+    db = null;
+  }
+}
+```
+
+**Benefícios:**
+- Pool único de conexões (eficiência de memória)
+- Instância consistente entre imports
+- Gerenciamento de ciclo de vida centralizado
+
+#### Export Principles
+
+1. **Exporte tipos, não implementações** de camadas de infraestrutura
+2. **Exporte factory functions** para singletons (não instâncias diretamente)
+3. **Exporte constants e enums** da camada shared
+4. **Exporte utilities** domain-agnostic
+5. **Oculte detalhes privados** (ex: não exporte tipos raw de ORMs)
+
+#### Package API Reference
+
+**`@life-assistant/database`**
+```typescript
+// Exports principais
+export { getDb, getPool, closePool, withUserId, withTransaction, withUserTransaction, schema };
+export type { Database, InferSelectModel, InferInsertModel };
+
+// Uso
+import { getDb, withUserId, type Database } from '@life-assistant/database';
+
+const notes = await withUserId(userId, async (db) => {
+  return db.select().from(schema.notes);
+});
+```
+Ver: `DATA_MODEL.md` para schema completo, ADR-008 para rationale de tipo.
+
+**`@life-assistant/config`**
+```typescript
+// Exports principais
+export { loadConfig, getConfig, validateEnv, isEnvValid };
+export type { EnvConfig, AppEnv, DatabaseEnv, RedisEnv, AiEnv, StorageEnv, IntegrationsEnv, ObservabilityEnv };
+
+// Uso
+import { getConfig } from '@life-assistant/config';
+
+const config = getConfig();
+console.log(config.app.port);  // Type-safe
+```
+Ver: `.env.example` para variáveis disponíveis.
+
+**`@life-assistant/shared`**
+```typescript
+// Exports principais
+export {
+  // Enums
+  LifeArea, TrackingType, DecisionStatus, VaultItemType, ExpenseCategory,
+  // Constants
+  DEFAULT_WEIGHTS, TRACKING_VALIDATIONS, RATE_LIMITS, STORAGE_LIMITS,
+  // Utils
+  formatCurrency, formatDate, normalizeText, sleep, retry,
+};
+
+// Uso
+import { LifeArea, formatCurrency, normalizeText } from '@life-assistant/shared';
+
+const amount = formatCurrency(1234.56, 'BRL');  // "R$ 1.234,56"
+const normalized = normalizeText('São Paulo');  // "sao paulo"
+```
+Ver: `SYSTEM_SPECS.md` §4 para definição de Life Areas e enums.
+
+**`@life-assistant/ai`** (M1.1 - não implementado)
+```typescript
+// Exports planejados
+export { createLLM, type LLMPort, type LLMProvider };
+
+// Uso futuro
+import { createLLM } from '@life-assistant/ai';
+
+const llm = await createLLM('gemini');  // ou 'claude'
+const response = await llm.chat([{ role: 'user', content: 'Hello' }]);
+```
+Ver: `AI_SPECS.md` para configuração de prompts e providers.
+
+#### Code Documentation Standards
+
+Toda função/classe exportada de package DEVE ter JSDoc:
+
+```typescript
+/**
+ * Execute uma callback com contexto RLS para um usuário específico.
+ *
+ * Define `app.user_id` no session context do PostgreSQL, garantindo que
+ * políticas RLS sejam aplicadas corretamente.
+ *
+ * @param userId - ID do usuário para contexto RLS
+ * @param callback - Função a executar com o database scoped
+ * @returns Resultado da callback
+ *
+ * @example
+ * const notes = await withUserId(userId, async (db) => {
+ *   return db.select().from(schema.notes);
+ * });
+ */
+export async function withUserId<T>(
+  userId: string,
+  callback: (db: Database) => Promise<T>
+): Promise<T> {
+  // implementação...
+}
+```
 
 ---
 
@@ -1535,16 +1763,196 @@ RESEND_API_KEY=xxx
 
 ---
 
-## 17) Evolução para Escala
+## 17) Troubleshooting
 
-### 17.1 Quando Migrar Infra
+### 17.1 Problemas Comuns - Frontend (Web)
+
+#### Dev Server Não Inicia
+
+**Sintomas:**
+- `Error: listen EADDRINUSE: address already in use :::3000`
+- Server trava durante startup
+
+**Soluções:**
+1. Verificar se porta 3000 está disponível: `lsof -i :3000`
+2. Matar processo existente: `kill -9 $(lsof -t -i:3000)`
+3. Limpar cache do Next.js: `rm -rf apps/web/.next`
+4. Reinstalar dependências: `pnpm install`
+
+#### Testes Playwright Falhando
+
+**Sintomas:**
+- `browserType.launch: Executable doesn't exist`
+- Tests timeout ou falham com screenshot
+
+**Soluções:**
+1. Instalar browsers: `pnpm exec playwright install`
+2. Instalar dependências do sistema (Linux): `pnpm exec playwright install-deps`
+3. Garantir que dev server está rodando na porta 3000
+4. Verificar `baseURL` em `playwright.config.ts`
+5. Rodar com UI mode para debug: `pnpm --filter web test:e2e:ui`
+
+#### Tema Não Persiste
+
+**Sintomas:**
+- Tema reseta para light/dark ao recarregar página
+- Flash of unstyled content (FOUC)
+
+**Soluções:**
+1. Verificar localStorage: Abrir DevTools → Application → Local Storage → `theme` key
+2. Verificar `ThemeProvider` em `app/layout.tsx` tem `attribute="class"`
+3. Verificar HTML tem `suppressHydrationWarning` attribute
+4. Limpar localStorage e testar novamente
+
+#### Build Falha com Module Not Found
+
+**Sintomas:**
+- `Module not found: Can't resolve '@life-assistant/...'`
+- Workspace package não encontrado
+
+**Soluções:**
+1. Verificar se package foi built: `pnpm --filter <package> build`
+2. Build todos packages: `pnpm build`
+3. Verificar `next.config.ts` tem `transpilePackages` configurado
+4. Limpar cache: `rm -rf node_modules .next && pnpm install`
+
+### 17.2 Problemas Comuns - Backend (API)
+
+#### Database Connection Errors
+
+**Sintomas:**
+- `ECONNREFUSED` ou `Connection timeout`
+- `password authentication failed`
+
+**Soluções:**
+1. Verificar Docker está rodando: `docker compose -f infra/docker/docker-compose.yml ps`
+2. Verificar DATABASE_URL: `echo $DATABASE_URL`
+3. Verificar logs PostgreSQL: `docker compose -f infra/docker/docker-compose.yml logs life-assistant-db`
+4. Testar conexão manual: `psql $DATABASE_URL`
+5. Recriar container se necessário: `docker compose -f infra/docker/docker-compose.yml up -d --force-recreate life-assistant-db`
+
+#### Migration Errors
+
+**Sintomas:**
+- `relation "my_table" already exists`
+- `column "my_column" of relation "my_table" already exists`
+
+**Soluções:**
+1. Verificar migrations aplicadas: `pnpm --filter database db:studio` → Migrations tab
+2. Drop e recriar (dev only, PERDE DADOS): `pnpm --filter database db:push --force`
+3. Editar migration manualmente se conflito: `packages/database/migrations/*.sql`
+4. Em último caso, recriar DB: `docker compose down -v && docker compose up -d`
+
+#### RLS Policy Violations
+
+**Sintomas:**
+- `new row violates row-level security policy`
+- `permission denied for table users`
+
+**Soluções:**
+1. Verificar está usando `withUserId()` ou `withUserTransaction()`:
+   ```typescript
+   // ❌ Errado
+   const notes = await db.select().from(schema.notes);
+
+   // ✅ Correto
+   const notes = await withUserId(userId, async (db) => {
+     return db.select().from(schema.notes);
+   });
+   ```
+2. Verificar `user_id` no insert corresponde ao userId do contexto RLS
+3. Verificar policies no PostgreSQL: `SELECT * FROM pg_policies WHERE tablename = 'notes';`
+4. Ver `packages/database/migrations/` para policies corretas
+
+#### TypeScript Type Errors
+
+**Sintomas:**
+- `Cannot find module 'drizzle-orm/node-postgres'`
+- `The inferred type of 'db' cannot be named`
+
+**Soluções:**
+1. Usar `type Database` de `@life-assistant/database` (ver ADR-008):
+   ```typescript
+   // ❌ Errado
+   import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
+   // ✅ Correto
+   import { type Database } from '@life-assistant/database';
+   ```
+2. Build package database: `pnpm --filter database build`
+3. Verificar exports em `packages/database/src/index.ts`
+
+### 17.3 Problemas Comuns - Docker
+
+#### Container Não Inicia
+
+**Sintomas:**
+- `Exited (1)` ou `Exited (137)` status
+- Logs mostram erro de memória
+
+**Soluções:**
+1. Verificar logs: `docker compose -f infra/docker/docker-compose.yml logs <service>`
+2. Aumentar memória Docker Desktop (Settings → Resources → Memory)
+3. Verificar portas não estão em uso: `lsof -i :5432` (PostgreSQL), `lsof -i :6379` (Redis)
+4. Recriar containers: `docker compose down && docker compose up -d`
+
+#### Volume Permission Errors
+
+**Sintomas:**
+- `permission denied` ao escrever em volumes
+- PostgreSQL não consegue criar arquivos
+
+**Soluções:**
+1. Verificar permissões de diretório: `ls -la infra/docker/data/`
+2. Dar permissões corretas: `chmod -R 755 infra/docker/data/`
+3. Deletar volumes e recriar (PERDE DADOS): `docker compose down -v && docker compose up -d`
+
+### 17.4 Problemas Comuns - Testes
+
+#### Vitest Testes Falhando
+
+**Sintomas:**
+- Import errors: `Cannot find module '@life-assistant/...'`
+- Tests passam local mas falham em CI
+
+**Soluções:**
+1. Build packages antes de testar: `pnpm build`
+2. Verificar `vitest.config.ts` tem resolvers corretos
+3. Limpar cache Vitest: `pnpm test --clearCache`
+4. Rodar com coverage para debug: `pnpm test --coverage`
+
+#### E2E Tests Flaky
+
+**Sintomas:**
+- Tests passam às vezes, falham outras
+- Timeouts intermitentes
+
+**Soluções:**
+1. Aumentar timeout em `playwright.config.ts`: `timeout: 30000`
+2. Adicionar `waitFor` explícitos em elementos dinâmicos
+3. Usar `data-testid` em vez de seletores CSS
+4. Desabilitar parallel em CI: `workers: process.env.CI ? 1 : undefined`
+5. Adicionar retry: `retries: process.env.CI ? 2 : 0`
+
+### 17.5 Recursos Adicionais
+
+- **Logs estruturados**: Ver §13 "Observabilidade"
+- **Database debugging**: `pnpm --filter database db:studio` (Drizzle Studio GUI)
+- **API debugging**: Swagger docs em `http://localhost:4000/api/docs`
+- **Frontend debugging**: React Query Devtools (automatically enabled in dev)
+
+---
+
+## 18) Evolução para Escala
+
+### 18.1 Quando Migrar Infra
 
 - Volume alto de jobs
 - SLA B2B
 - Múltiplos ambientes (staging/prod) + compliance
 - Custo e controle exigirem AWS
 
-### 17.2 Alvo AWS (Sem Refatoração)
+### 18.2 Alvo AWS (Sem Refatoração)
 
 | Serviço Atual | Serviço AWS |
 |---------------|-------------|
@@ -1554,7 +1962,7 @@ RESEND_API_KEY=xxx
 | Cloudflare R2 | S3 |
 | Vercel | CloudFront + S3 ou ECS |
 
-### 17.3 Evoluções Técnicas Planejadas
+### 18.3 Evoluções Técnicas Planejadas
 
 | Evolução | Quando |
 |----------|--------|
@@ -1564,7 +1972,7 @@ RESEND_API_KEY=xxx
 | Data warehouse | Quando analytics exigir |
 | Microservices | Apenas se necessário (evitar) |
 
-### 17.4 Estratégia de Particionamento
+### 18.4 Estratégia de Particionamento
 
 > **Status:** Planejado para futuro. Não implementar agora.
 

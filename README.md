@@ -137,6 +137,45 @@ curl http://localhost:4000/api/health
 # Swagger docs disponivel em http://localhost:4000/api/docs
 ```
 
+## Web App
+
+O frontend é construído com Next.js 16, React 19, e shadcn/ui.
+
+### Tecnologias
+
+- **Next.js 16.1.1**: App Router, Turbopack, React 19
+- **Tailwind CSS v4**: CSS-first configuration
+- **shadcn/ui**: Componentes UI (new-york style)
+- **TanStack Query v5**: Server state management
+- **Zustand 5**: Client state com localStorage persistence
+- **Playwright 1.57**: E2E testing
+
+### Acessar
+
+```bash
+# Desenvolvimento
+pnpm --filter web dev              # http://localhost:3000
+
+# Build produção
+pnpm --filter web build
+pnpm --filter web start
+
+# Testes E2E
+pnpm --filter web test:e2e
+```
+
+### Features Implementadas (M0.6)
+
+- ✅ Landing page responsiva
+- ✅ Dashboard com sidebar e header
+- ✅ Tema dark/light com persistência
+- ✅ Sidebar toggle com estado persistente
+- ✅ Error boundaries e loading states
+- ✅ Componentes shadcn/ui base
+- ✅ Suporte Docker com standalone output
+
+Veja `ENGINEERING.md` §2.2 para documentação técnica completa do frontend.
+
 ## Documentacao
 
 | Documento | Descricao |

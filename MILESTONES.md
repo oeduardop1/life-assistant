@@ -404,52 +404,105 @@
 
 ---
 
-### M0.6 — App: Web (Next.js Base)
+### M0.6 — App: Web (Next.js Base) ✅
+
+**Status:** CONCLUÍDO em 07 Jan 2026
 
 **Objetivo:** Criar aplicação Next.js com estrutura base e componentes UI.
 
 **Tasks:**
 
-- [ ] Inicializar Next.js com App Router
-- [ ] Configurar estrutura conforme `ENGINEERING.md` §3.1:
+**1. Setup Inicial:**
+- [x] Inicializar Next.js com `pnpm create next-app@latest apps/web`
+  - TypeScript: ✅ / ESLint: ✅ / Tailwind CSS: ✅ / `src/` directory: ✅ / App Router: ✅ / Turbopack: ✅
+- [x] Atualizar package.json com workspace dependencies (@life-assistant/shared, @life-assistant/config)
+- [x] Configurar next.config.ts (transpilePackages, standalone output, security headers)
+- [x] Criar .env.example com NEXT_PUBLIC_API_URL
+
+**2. Estrutura de Diretórios:**
+- [x] Configurar estrutura conforme `ENGINEERING.md` §3.1:
   ```
-  src/
-    app/
-      (auth)/     # rotas públicas
-      (app)/      # rotas autenticadas
-      api/        # API routes (BFF)
-    components/
-    hooks/
-    lib/
-    stores/
+  src/app/(auth)/layout.tsx, (app)/layout.tsx, (app)/dashboard/page.tsx,
+  layout.tsx, page.tsx, not-found.tsx, error.tsx
+  components/ui/, layouts/, common/, theme/
+  hooks/use-auth.ts, use-api.ts
+  lib/query-client.ts, utils.ts
+  stores/ui-store.ts
+  app/globals.css
+  e2e/specs/
   ```
-- [ ] Instalar e configurar:
-  - [ ] Tailwind CSS
-  - [ ] shadcn/ui (inicializar com componentes base)
-  - [ ] React Query
-  - [ ] Zustand
-  - [ ] React Hook Form + Zod
-- [ ] Criar layout base:
-  - [ ] RootLayout com providers
-  - [ ] AuthLayout (páginas públicas)
-  - [ ] AppLayout (páginas autenticadas com sidebar)
-- [ ] Criar componentes base:
-  - [ ] Button, Input, Card, Dialog, Toast (via shadcn)
-  - [ ] LoadingSpinner
-  - [ ] EmptyState
-  - [ ] ErrorBoundary
-- [ ] Configurar tema light/dark
-- [ ] Criar hook `useAuth()` (integração Supabase)
-- [ ] Criar hook `useApi()` (fetch com auth header)
-- [ ] Criar Dockerfile conforme `ENGINEERING.md` §9.4
-- [ ] Configurar Playwright para E2E
+
+**3. Dependências:**
+- [x] @tanstack/react-query@5.90.16, @tanstack/react-query-devtools@5.90.16
+- [x] zustand@5.0.9
+- [x] react-hook-form@7.70.0, @hookform/resolvers@5.2.2
+- [x] class-variance-authority, clsx, tailwind-merge
+- [x] lucide-react@0.562.0, next-themes@0.4.6
+- [x] tw-animate-css
+
+**4. shadcn/ui Setup (Tailwind v4):**
+- [x] Componentes criados manualmente (CLI teve problemas com workspace packages)
+- [x] Instalados: button, input, card, dialog, sonner, avatar, separator, skeleton, scroll-area
+
+**5. Configuração de Providers:**
+- [x] Criar lib/query-client.ts com QueryClient config (staleTime: 60s, SSR pattern)
+- [x] Criar components/layouts/root-layout-providers.tsx (QueryClientProvider, ThemeProvider, Toaster, ReactQueryDevtools)
+- [x] Configurar RootLayout (app/layout.tsx) com providers
+
+**6. Layouts:**
+- [x] Criar AuthLayout em app/(auth)/layout.tsx (centered, sem sidebar, com ThemeToggle)
+- [x] Criar AppLayout em app/(app)/layout.tsx (com Sidebar e Header)
+- [x] Criar components/layouts/header.tsx (sidebar toggle, theme toggle)
+- [x] Criar components/layouts/sidebar.tsx (navigation com useUIStore)
+
+**7. Componentes Base:**
+- [x] LoadingSpinner (Loader2 icon), EmptyState (icon, title, action), ErrorBoundary (class component), ThemeToggle (Moon/Sun)
+
+**8. State Management:**
+- [x] Criar stores/ui-store.ts (Zustand: sidebarOpen, modals, com persistência)
+
+**9. Hooks & Utilities:**
+- [x] hooks/use-auth.ts (placeholder para M0.7), hooks/use-api.ts (fetch wrapper), lib/utils.ts (cn())
+
+**10. Páginas Placeholder:**
+- [x] app/page.tsx (landing), app/(app)/dashboard/page.tsx, app/not-found.tsx, app/error.tsx
+
+**11. Tema Light/Dark:**
+- [x] Configurar Tailwind v4 com darkMode class, CSS variables em globals.css, ThemeProvider
+
+**12. Docker:**
+- [x] Dockerfile (multi-stage: Node 24 LTS Alpine, pnpm workspace, standalone, non-root user nextjs), .dockerignore
+
+**13. Playwright E2E:**
+- [x] Instalar: `pnpm create playwright` (TypeScript, e2e/ folder)
+- [x] playwright.config.ts (chromium, firefox, webkit, mobile-chrome, webServer)
+- [x] Smoke tests: should_load_homepage_successfully, should_toggle_theme_successfully, should_toggle_sidebar_successfully
+
+**14. Documentação:**
+- [x] Atualizar ENGINEERING.md §2.2 com decisões arquiteturais frontend (Tailwind v4, shadcn/ui, State Management, Route Groups)
+- [x] Atualizar ENGINEERING.md §17 com Troubleshooting frontend
+- [x] Atualizar README.md raiz com seção Web App
 
 **Definition of Done:**
-- [ ] `pnpm --filter web dev` inicia na porta 3000
-- [ ] Componentes shadcn renderizam corretamente
-- [ ] Tema dark/light funciona
-- [ ] Docker build funciona
-- [ ] Playwright configurado
+- [x] `pnpm --filter web dev` inicia na porta 3000
+- [x] Componentes shadcn renderizam corretamente
+- [x] Tema dark/light funciona e persiste
+- [x] Sidebar toggle funciona e persiste
+- [x] Docker build funciona
+- [x] Playwright E2E: 12 testes passando (3 specs × 4 browsers)
+- [x] TypeCheck: ✅ / Lint: ✅ / Build: ✅ (4.2s)
+
+**Notas:**
+- **07 Jan 2026:** Milestone concluído com sucesso
+- Next.js 16.1.1 com Turbopack (5-10x faster dev server)
+- Tailwind CSS v4.1.18 com CSS-first configuration (`@import "tailwindcss"`)
+- shadcn/ui components configurados manualmente (new-york style) devido a problemas de resolução workspace
+- TanStack Query 5.90.16 com padrão SSR (staleTime: 60s)
+- Zustand 5.0.9 para UI state com persistência localStorage
+- 3 smoke tests E2E via Playwright (homepage, theme toggle, sidebar toggle) - todos passando em 4 browsers
+- Docker com Next.js standalone output, non-root user (nextjs), Node 24 LTS Alpine
+- **Decisão arquitetural:** Type encapsulation pattern implementado (ver ADR-008)
+- **Documentação:** Movida para ENGINEERING.md (§2.2, §17) - sem README separado conforme padrão do projeto
 
 ---
 
@@ -1764,6 +1817,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-07 | M0.6 | Concluído | App web Next.js 16 com Turbopack, Tailwind v4, shadcn/ui, React Query, Zustand, Playwright E2E (12 testes), ADR-008 (Database Type Encapsulation) |
 | 2026-01-07 | M0.5 | Concluído | App API NestJS com guards, interceptors, filters, decorators, health endpoints, Swagger, 150 testes (137 unit + 13 integration) |
 | 2026-01-07 | M0.4 | Concluído | Package database com 28 tabelas, 21 enums, RLS policies, 230 testes (unit + integration) |
 | 2026-01-07 | M0.3 | Concluído | Package config com validação Zod, 67 testes (100% coverage) |
@@ -1773,4 +1827,4 @@
 ---
 
 *Última atualização: 07 Janeiro 2026*
-*Revisão: M0.5 concluído - @life-assistant/api implementado com NestJS base*
+*Revisão: M0.6 concluído - @life-assistant/web implementado com Next.js 16 + Tailwind v4 + shadcn/ui*

@@ -7,6 +7,7 @@ import {
   withTransaction,
   withUserTransaction,
   schema,
+  type Database,
 } from '@life-assistant/database';
 import type { Pool } from 'pg';
 
@@ -23,7 +24,7 @@ export class DatabaseService implements OnModuleDestroy {
   /**
    * Get the Drizzle database instance
    */
-  get db() {
+  get db(): Database {
     return getDb();
   }
 

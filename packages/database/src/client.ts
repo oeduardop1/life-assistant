@@ -143,5 +143,8 @@ export async function withUserTransaction<T>(
   }
 }
 
+// Type alias for the database instance
+export type Database = ReturnType<typeof drizzle<typeof schema>>;
+
 // Re-export schema for convenience
 export { schema };
