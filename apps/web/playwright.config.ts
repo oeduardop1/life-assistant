@@ -13,6 +13,10 @@ export default defineConfig({
     ['list'],
   ],
 
+  // Global setup for creating authenticated test user
+  // Note: Requires Supabase and test user to be available
+  globalSetup: process.env.SKIP_GLOBAL_SETUP ? undefined : './e2e/setup/global-setup.ts',
+
   use: {
     baseURL,
     trace: 'on-first-retry',

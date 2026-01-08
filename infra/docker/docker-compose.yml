@@ -1,26 +1,15 @@
 # Docker Compose v5+ - campo 'version' nao e mais necessario
 # Versoes verificadas em Janeiro 2026
+#
+# NOTA: PostgreSQL foi removido - usar Supabase CLI (npx supabase start)
+# Supabase CLI inclui:
+# - PostgreSQL 17 com pgvector (porta 54322)
+# - Auth API (porta 54321)
+# - Studio (porta 54323)
+# - Inbucket para emails (porta 54324)
+# Veja ADR-009 para mais detalhes.
 
 services:
-  postgres:
-    # PostgreSQL 17 com pgvector 0.8.0
-    image: pgvector/pgvector:0.8.0-pg17
-    container_name: life-assistant-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: life_assistant
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   redis:
     # Redis 8.4 Alpine (versao mais recente)
     image: redis:8-alpine
@@ -50,6 +39,5 @@ services:
       - minio_data:/data
 
 volumes:
-  postgres_data:
   redis_data:
   minio_data:

@@ -944,33 +944,46 @@ GEMINI_MODEL=gemini-flash  # Usar versão mais recente disponível
 
 ## 9) Docker e Ambiente Local
 
-### 9.1 Docker Compose para Desenvolvimento
+### 9.1 Supabase CLI para Desenvolvimento
+
+O projeto usa Supabase CLI para desenvolvimento local (veja ADR-009). Isso fornece alta paridade com produção (Supabase Cloud) e inclui PostgreSQL com pgvector, Auth API, e captura de emails.
+
+**Portas do Supabase CLI:**
+
+| Serviço | Porta | Descrição |
+|---------|-------|-----------|
+| API | 54321 | REST API e Auth (GoTrue) |
+| PostgreSQL | 54322 | Banco de dados com pgvector |
+| Studio | 54323 | Dashboard de administração |
+| Inbucket | 54324 | Captura de emails |
+
+```bash
+# Inicializar (primeira vez)
+npx supabase init
+
+# Iniciar serviços
+npx supabase start
+
+# Ver status
+npx supabase status
+
+# Parar serviços
+npx supabase stop
+
+# Resetar banco (aplica migrations)
+npx supabase db reset
+```
+
+**Emails de desenvolvimento:** Em ambiente local, todos os emails (confirmação, reset de senha) são capturados no Inbucket. Acesse http://localhost:54324 para visualizar.
+
+### 9.2 Docker Compose (Serviços Complementares)
 
 ```yaml
 # infra/docker/docker-compose.yml
-# Nota: Campo 'version' não é mais necessário no Docker Compose v5+
-# Versões verificadas em Janeiro 2026
+# PostgreSQL foi movido para Supabase CLI (npx supabase start)
+# Veja ADR-009 para detalhes
 
 services:
-  postgres:
-    # PostgreSQL 17 com pgvector 0.8.0
-    image: pgvector/pgvector:0.8.0-pg17
-    container_name: life-assistant-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: life_assistant
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   redis:
     # Redis 8 Alpine (versão mais recente)
     image: redis:8-alpine
@@ -1000,25 +1013,26 @@ services:
       - minio_data:/data
 
 volumes:
-  postgres_data:
   redis_data:
   minio_data:
 ```
 
-### 9.2 Script de Inicialização do DB
+### 9.3 Configuração do Supabase
 
-```sql
--- infra/docker/init/init.sql
+```toml
+# supabase/config.toml (principais configurações)
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://localhost:3000/callback"]
+minimum_password_length = 8
 
--- Habilitar extensões
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "vector";
-
--- Criar schema de audit
-CREATE SCHEMA IF NOT EXISTS audit;
+[auth.email]
+enable_signup = true
+enable_confirmations = true
 ```
 
-### 9.3 Dockerfile do Backend (API)
+### 9.4 Dockerfile do Backend (API)
 
 ```dockerfile
 # apps/api/Dockerfile
@@ -1063,7 +1077,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["node", "dist/main.js"]
 ```
 
-### 9.4 Dockerfile do Frontend (Web)
+### 9.5 Dockerfile do Frontend (Web)
 
 ```dockerfile
 # apps/web/Dockerfile
@@ -1708,13 +1722,19 @@ FRONTEND_URL=http://localhost:3000
 APP_VERSION=1.0.0
 
 # ============================================
-# DATABASE (Supabase)
+# DATABASE (Supabase CLI local - porta 54322)
 # ============================================
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/life_assistant
+DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
 SUPABASE_URL=http://localhost:54321
 SUPABASE_ANON_KEY=xxx
 SUPABASE_SERVICE_KEY=xxx
 SUPABASE_JWT_SECRET=xxx
+
+# ============================================
+# FRONTEND (Next.js public vars)
+# ============================================
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
 
 # ============================================
 # REDIS (Upstash)
@@ -1825,11 +1845,11 @@ RESEND_API_KEY=xxx
 - `password authentication failed`
 
 **Soluções:**
-1. Verificar Docker está rodando: `docker compose -f infra/docker/docker-compose.yml ps`
-2. Verificar DATABASE_URL: `echo $DATABASE_URL`
-3. Verificar logs PostgreSQL: `docker compose -f infra/docker/docker-compose.yml logs life-assistant-db`
+1. Verificar Supabase está rodando: `npx supabase status`
+2. Verificar DATABASE_URL usa porta 54322: `echo $DATABASE_URL`
+3. Reiniciar Supabase: `npx supabase stop && npx supabase start`
 4. Testar conexão manual: `psql $DATABASE_URL`
-5. Recriar container se necessário: `docker compose -f infra/docker/docker-compose.yml up -d --force-recreate life-assistant-db`
+5. Resetar banco se necessário: `npx supabase db reset`
 
 #### Migration Errors
 
@@ -1841,7 +1861,7 @@ RESEND_API_KEY=xxx
 1. Verificar migrations aplicadas: `pnpm --filter database db:studio` → Migrations tab
 2. Drop e recriar (dev only, PERDE DADOS): `pnpm --filter database db:push --force`
 3. Editar migration manualmente se conflito: `packages/database/migrations/*.sql`
-4. Em último caso, recriar DB: `docker compose down -v && docker compose up -d`
+4. Em último caso, resetar Supabase: `npx supabase db reset`
 
 #### RLS Policy Violations
 
@@ -1882,7 +1902,7 @@ RESEND_API_KEY=xxx
 2. Build package database: `pnpm --filter database build`
 3. Verificar exports em `packages/database/src/index.ts`
 
-### 17.3 Problemas Comuns - Docker
+### 17.3 Problemas Comuns - Docker e Supabase
 
 #### Container Não Inicia
 
@@ -1892,20 +1912,31 @@ RESEND_API_KEY=xxx
 
 **Soluções:**
 1. Verificar logs: `docker compose -f infra/docker/docker-compose.yml logs <service>`
-2. Aumentar memória Docker Desktop (Settings → Resources → Memory)
-3. Verificar portas não estão em uso: `lsof -i :5432` (PostgreSQL), `lsof -i :6379` (Redis)
+2. Aumentar memória Docker Desktop (Settings → Resources → Memory) - Supabase requer ~2GB adicional
+3. Verificar portas não estão em uso: `lsof -i :54322` (PostgreSQL), `lsof -i :6379` (Redis)
 4. Recriar containers: `docker compose down && docker compose up -d`
+
+#### Supabase Não Inicia
+
+**Sintomas:**
+- `supabase start` trava ou falha
+- Containers Supabase não aparecem
+
+**Soluções:**
+1. Verificar Docker está rodando e tem memória suficiente
+2. Parar e reiniciar: `npx supabase stop && npx supabase start`
+3. Verificar logs: `docker logs supabase_db_life-assistant`
+4. Em último caso, remover containers: `npx supabase stop --no-backup && npx supabase start`
 
 #### Volume Permission Errors
 
 **Sintomas:**
 - `permission denied` ao escrever em volumes
-- PostgreSQL não consegue criar arquivos
+- Containers não conseguem criar arquivos
 
 **Soluções:**
-1. Verificar permissões de diretório: `ls -la infra/docker/data/`
-2. Dar permissões corretas: `chmod -R 755 infra/docker/data/`
-3. Deletar volumes e recriar (PERDE DADOS): `docker compose down -v && docker compose up -d`
+1. Deletar volumes Docker e recriar (PERDE DADOS): `docker compose down -v && docker compose up -d`
+2. Para Supabase: `npx supabase stop --no-backup && npx supabase start`
 
 ### 17.4 Problemas Comuns - Testes
 

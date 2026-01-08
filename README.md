@@ -20,27 +20,50 @@ pnpm install
 
 # 3. Configurar variaveis de ambiente
 cp .env.example .env
-# Edite .env com suas credenciais
+cp apps/web/.env.example apps/web/.env.local
+# Edite os arquivos com suas credenciais (veja "Estrutura de .env" abaixo)
 
-# 4. Subir servicos de desenvolvimento (PostgreSQL, Redis, MinIO)
-docker compose -f infra/docker/docker-compose.yml up -d
+# 4. Iniciar toda a infraestrutura (Docker + Supabase)
+pnpm infra:up
 
-# 5. Verificar se os servicos estao rodando
-docker compose -f infra/docker/docker-compose.yml ps
-
-# 6. Aplicar schema do banco de dados
+# 5. Aplicar schema do banco de dados
 pnpm --filter database db:push
 
-# 7. (Opcional) Popular banco com dados de teste
+# 6. (Opcional) Popular banco com dados de teste
 pnpm --filter database db:seed
 
-# 8. Executar em modo desenvolvimento
+# 7. Executar em modo desenvolvimento
 pnpm dev
 ```
+
+## Fluxo de Desenvolvimento Diario
+
+```bash
+# Comecar o dia
+pnpm infra:up     # Inicia Redis, MinIO, PostgreSQL, Auth, Studio (~10s)
+pnpm dev          # Inicia API (4000) + Web (3000)
+
+# Durante o desenvolvimento, acesse:
+# - Web App:         http://localhost:3000
+# - API:             http://localhost:4000
+# - API Docs:        http://localhost:4000/api/docs
+# - Supabase Studio: http://localhost:54323
+# - Emails (dev):    http://localhost:54324
+
+# Terminar o dia
+# Ctrl+C para parar o pnpm dev
+pnpm infra:down   # Para toda a infraestrutura
+```
+
+> **Nota:** Os dados persistem entre reinicializacoes. O `infra:down` para os containers mas mantem os volumes (dados) e imagens (nao precisa baixar novamente).
 
 ## Comandos Disponiveis
 
 ```bash
+# Infraestrutura (Docker + Supabase)
+pnpm infra:up                # Iniciar toda a infraestrutura
+pnpm infra:down              # Parar toda a infraestrutura
+
 # Desenvolvimento
 pnpm dev                     # Rodar todos os apps em modo dev
 pnpm --filter web dev        # Rodar apenas o frontend
@@ -60,7 +83,7 @@ pnpm test                    # Executar testes unitarios
 pnpm test:e2e                # Executar testes E2E
 pnpm --filter api test:integration  # Testes de integracao da API
 
-# Database (requer Docker rodando)
+# Database (requer infra:up rodando)
 pnpm --filter database db:generate  # Gerar migrations a partir do schema
 pnpm --filter database db:migrate   # Aplicar migrations pendentes
 pnpm --filter database db:push      # Push schema direto (dev only)
@@ -70,6 +93,22 @@ pnpm --filter database db:seed      # Popular banco com dados de teste
 # Limpeza
 pnpm clean                   # Limpar builds e node_modules
 ```
+
+## Estrutura de Arquivos .env
+
+O projeto usa arquivos `.env` separados por necessidade dos frameworks:
+
+| Arquivo | Proposito | Lido por |
+|---------|-----------|----------|
+| `.env` (raiz) | Variaveis do backend (DATABASE_URL, SUPABASE_*, REDIS_*, etc) | NestJS via dotenv |
+| `apps/web/.env.local` | Variaveis do frontend (NEXT_PUBLIC_*) | Next.js automaticamente |
+
+**Por que arquivos separados?**
+- O Next.js **so carrega** `.env*` do diretorio do projeto (`apps/web/`)
+- O Turborepo **nao injeta** variaveis de ambiente no runtime
+- Esta e a abordagem padrao para monorepos Next.js + NestJS
+
+**Nota:** Variaveis `NEXT_PUBLIC_*` nao devem ficar no `.env` raiz (nao serao lidas pelo Next.js).
 
 ## Estrutura do Projeto
 
@@ -90,52 +129,43 @@ life-assistant/
 └── [spec files]             # Documentacao de especificacoes
 ```
 
-## Docker Services
+## Servicos de Desenvolvimento
 
-O ambiente de desenvolvimento local inclui:
+O ambiente de desenvolvimento local e gerenciado pelos scripts `pnpm infra:up` e `pnpm infra:down`.
+
+### Portas e Servicos
 
 | Servico | Porta | Descricao |
 |---------|-------|-----------|
-| PostgreSQL | 5432 | Banco de dados com pgvector |
-| Redis | 6379 | Cache e filas (BullMQ) |
-| MinIO | 9000/9001 | Storage S3-compatible |
-| API (dev) | 4000 | Backend NestJS (quando rodando) |
+| **Supabase API** | 54321 | REST API e Auth (GoTrue) |
+| **PostgreSQL** | 54322 | Banco de dados com pgvector |
+| **Supabase Studio** | 54323 | Dashboard de administracao |
+| **Inbucket** | 54324 | Captura de emails de desenvolvimento |
+| **Redis** | 6379 | Cache e filas (BullMQ) |
+| **MinIO** | 9000/9001 | Storage S3-compatible |
+| **Web (Next.js)** | 3000 | Frontend (quando rodando) |
+| **API (NestJS)** | 4000 | Backend (quando rodando) |
 
-### Comandos Docker
+### Comandos Uteis
 
 ```bash
-# Subir servicos
-docker compose -f infra/docker/docker-compose.yml up -d
+# Ver status do Supabase
+npx supabase status
 
-# Ver status
-docker compose -f infra/docker/docker-compose.yml ps
+# Resetar banco (aplica todas migrations do Supabase)
+npx supabase db reset
 
-# Ver logs
+# Ver logs do Docker
 docker compose -f infra/docker/docker-compose.yml logs -f
 
-# Parar servicos
-docker compose -f infra/docker/docker-compose.yml down
-
-# Parar e remover volumes (CUIDADO: apaga dados)
-docker compose -f infra/docker/docker-compose.yml down -v
-```
-
-### Verificar Servicos
-
-```bash
-# PostgreSQL
-docker exec life-assistant-db pg_isready -U postgres
-
-# Redis
+# Verificar Redis
 docker exec life-assistant-redis redis-cli ping
 
-# Verificar extensoes PostgreSQL
-docker exec life-assistant-db psql -U postgres -d life_assistant -c "SELECT extname FROM pg_extension;"
-
-# API (requer pnpm --filter api dev rodando)
+# Verificar API (requer pnpm dev rodando)
 curl http://localhost:4000/api/health
-# Swagger docs disponivel em http://localhost:4000/api/docs
 ```
+
+**Emails de desenvolvimento:** Em ambiente local, todos os emails (confirmacao, reset de senha) sao capturados no Inbucket. Acesse http://localhost:54324 para visualizar.
 
 ## Web App
 

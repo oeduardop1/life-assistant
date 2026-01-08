@@ -8,6 +8,9 @@ import { LoggerModule } from './logger/logger.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 
+// Feature modules
+import { AuthModule } from './modules/auth/auth.module';
+
 // Common
 import { RequestIdMiddleware } from './common/middleware/index';
 import { AuthGuard } from './common/guards/index';
@@ -52,6 +55,7 @@ import { AllExceptionsFilter } from './common/filters/index';
 
     // Feature modules
     HealthModule,
+    AuthModule,
   ],
   providers: [
     // Global auth guard (requires @Public() to bypass)

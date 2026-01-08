@@ -17,7 +17,9 @@
     "test:e2e": "turbo run test:e2e",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "infra:up": "./scripts/dev-start.sh",
+    "infra:down": "./scripts/dev-stop.sh"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
