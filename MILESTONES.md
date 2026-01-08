@@ -594,88 +594,88 @@
 **Tasks:**
 
 **Backend:**
-- [ ] Criar endpoint `POST /api/onboarding/complete`
-- [ ] Criar endpoint `GET /api/onboarding/status`
-- [ ] Criar endpoint `PATCH /api/onboarding/step/:step` para salvar progresso por etapa
-- [ ] Salvar progresso parcial do onboarding
-- [ ] Atualizar `user.status` para 'active' ao completar
-- [ ] Criar DTOs de validação com class-validator:
-  - [ ] `ProfileStepDto` (name: min 2 chars, timezone: valid IANA timezone)
-  - [ ] `AreasStepDto` (areas: LifeArea[], min 3, max 8)
-  - [ ] `TelegramStepDto` (telegramId?: string, skipped: boolean)
-- [ ] Criar `OnboardingModule` com Clean Architecture (conforme `ENGINEERING.md` §4):
-  - [ ] `OnboardingController` em `presentation/controllers/`
-  - [ ] `OnboardingService` em `application/services/`
-  - [ ] DTOs em `presentation/dtos/` com barrel export
-- [ ] Registrar `OnboardingModule` no `AppModule`
-- [ ] Atualizar `preferences.areaWeights` ao salvar etapa de áreas (áreas não selecionadas = peso 0)
-- [ ] Criar job diário para limpar onboardings abandonados após 30 dias (cron via BullMQ)
+- [x] Criar endpoint `POST /api/onboarding/complete`
+- [x] Criar endpoint `GET /api/onboarding/status`
+- [x] Criar endpoint `PATCH /api/onboarding/step/:step` para salvar progresso por etapa
+- [x] Salvar progresso parcial do onboarding
+- [x] Atualizar `user.status` para 'active' ao completar
+- [x] Criar DTOs de validação com class-validator:
+  - [x] `ProfileStepDto` (name: min 2 chars, timezone: valid IANA timezone)
+  - [x] `AreasStepDto` (areas: LifeArea[], min 3, max 8)
+  - [x] `TelegramStepDto` (telegramId?: string, skipped: boolean)
+- [x] Criar `OnboardingModule` com Clean Architecture (conforme `ENGINEERING.md` §4):
+  - [x] `OnboardingController` em `presentation/controllers/`
+  - [x] `OnboardingService` em `application/services/`
+  - [x] DTOs em `presentation/dtos/` com barrel export
+- [x] Registrar `OnboardingModule` no `AppModule`
+- [x] Atualizar `preferences.areaWeights` ao salvar etapa de áreas (áreas não selecionadas = peso 0)
+- [x] Criar job diário para limpar onboardings abandonados após 30 dias (cron via BullMQ)
 
 **Technical Debt (do M0.7):**
-- [ ] Migrar `middleware.ts` para convenção "proxy" do Next.js 16+ (ver https://nextjs.org/docs/messages/middleware-to-proxy)
-- [ ] Criar seed data para testes E2E (usuário `test@example.com` para que 36 E2E tests passem)
+- [x] ~~Migrar `middleware.ts` para convenção "proxy" do Next.js 16+~~ — N/A: middleware é de auth, não proxy
+- [x] Criar seed data para testes E2E (usuário `test@example.com` para que 36 E2E tests passem)
 
 **Frontend:**
-- [ ] Instalar componente Form do shadcn: `npx shadcn@latest add form`
-- [ ] Instalar timezone picker: `pnpm add react-timezone-select`
-- [ ] Criar páginas de onboarding em `(auth)/onboarding/`:
-  - [ ] `/onboarding` - layout com stepper de progresso
-  - [ ] `/onboarding/profile` - Etapa 1: Perfil (nome, timezone) - **obrigatório**
-  - [ ] `/onboarding/areas` - Etapa 2: Áreas de foco (selecionar min 3) - **obrigatório**
-  - [ ] `/onboarding/telegram` - Etapa 3: Conectar Telegram - **opcional, skip permitido**
-  - [ ] `/onboarding/tutorial` - Etapa 4: Tutorial interativo - **opcional, skip permitido**
-- [ ] Componentes:
-  - [ ] OnboardingStepper (indicador de progresso)
-  - [ ] ProfileForm (nome, timezone picker)
-  - [ ] AreaSelector (cards das 8 áreas, min 3 selecionadas)
-  - [ ] TelegramConnect (QR code ou link, status de vinculação)
-  - [ ] TutorialCarousel (slides interativos)
-  - [ ] SkipButton (para etapas opcionais)
-- [ ] Implementar navegação entre etapas
-- [ ] Salvar progresso a cada etapa
-- [ ] Redirect para dashboard ao completar
-- [ ] Atualizar `middleware.ts`:
-  - [ ] Adicionar `/onboarding` às rotas públicas
-  - [ ] Redirecionar para `/onboarding` se `onboardingCompletedAt` é null
-- [ ] Atualizar `callback/route.ts`:
-  - [ ] Verificar status do onboarding após `exchangeCodeForSession`
-  - [ ] Redirecionar para `/onboarding` se não completou
-- [ ] Criar hook `useOnboarding` em `hooks/use-onboarding.ts`:
-  - [ ] Estado: currentStep, completedSteps, data, isLoading
-  - [ ] Métodos: goToStep(), saveCurrentStep(), skipStep()
-  - [ ] Sincronização com API (GET status, PATCH step)
-- [ ] Criar schemas Zod de validação em `lib/validations/onboarding.ts`:
-  - [ ] `profileStepSchema` (name: min 2, timezone: válido)
-  - [ ] `areasStepSchema` (areas: min 3 items)
+- [x] Instalar componente Form do shadcn: `npx shadcn@latest add form`
+- [x] Instalar timezone picker: `pnpm add react-timezone-select`
+- [x] Criar páginas de onboarding em `(auth)/onboarding/`:
+  - [x] `/onboarding` - layout com stepper de progresso
+  - [x] `/onboarding/profile` - Etapa 1: Perfil (nome, timezone) - **obrigatório**
+  - [x] `/onboarding/areas` - Etapa 2: Áreas de foco (selecionar min 3) - **obrigatório**
+  - [x] `/onboarding/telegram` - Etapa 3: Conectar Telegram - **opcional, skip permitido**
+  - [x] `/onboarding/tutorial` - Etapa 4: Tutorial interativo - **opcional, skip permitido**
+- [x] Componentes:
+  - [x] OnboardingStepper (indicador de progresso)
+  - [x] ProfileForm (nome, timezone picker)
+  - [x] AreaSelector (cards das 8 áreas, min 3 selecionadas)
+  - [x] TelegramConnect (QR code ou link, status de vinculação)
+  - [x] TutorialCarousel (slides interativos)
+  - [x] SkipButton (para etapas opcionais)
+- [x] Implementar navegação entre etapas
+- [x] Salvar progresso a cada etapa
+- [x] Redirect para dashboard ao completar
+- [x] Atualizar `middleware.ts`:
+  - [x] Adicionar `/onboarding` às rotas públicas
+  - [x] Redirecionar para `/onboarding` se `onboardingCompletedAt` é null
+- [x] Atualizar `callback/route.ts`:
+  - [x] Verificar status do onboarding após `exchangeCodeForSession`
+  - [x] Redirecionar para `/onboarding` se não completou
+- [x] Criar hook `useOnboarding` em `hooks/use-onboarding.ts`:
+  - [x] Estado: currentStep, completedSteps, data, isLoading
+  - [x] Métodos: goToStep(), saveCurrentStep(), skipStep()
+  - [x] Sincronização com API (GET status, PATCH step)
+- [x] Criar schemas Zod de validação em `lib/validations/onboarding.ts`:
+  - [x] `profileStepSchema` (name: min 2, timezone: válido)
+  - [x] `areasStepSchema` (areas: min 3 items)
 
 **Testes:**
-- [ ] Testes unitários para validação de formulários
-- [ ] Testes unitários para OnboardingService:
-  - [ ] `getOnboardingStatus` retorna etapa correta
-  - [ ] `saveStepProgress` valida e salva dados
-  - [ ] `completeOnboarding` atualiza status e `onboardingCompletedAt`
-- [ ] Testes de integração para endpoints:
-  - [ ] `GET /api/onboarding/status` - retorna dados corretos
-  - [ ] `PATCH /api/onboarding/step/:step` - salva progresso
-  - [ ] `POST /api/onboarding/complete` - finaliza onboarding
-  - [ ] Todos retornam 401 sem autenticação
-- [ ] Teste E2E: fluxo completo de onboarding (todas etapas)
-- [ ] Teste E2E: fluxo com skip nas etapas opcionais
-- [ ] Teste E2E: usuário retoma onboarding onde parou (login após abandono)
-- [ ] Teste E2E: validação impede avançar com < 3 áreas selecionadas
-- [ ] Teste E2E: após verificar email, redireciona para `/onboarding` (não dashboard)
-- [ ] Teste de middleware: usuário com `onboardingCompletedAt=null` é redirecionado para `/onboarding`
+- [x] Testes unitários para validação de formulários
+- [x] Testes unitários para OnboardingService:
+  - [x] `getOnboardingStatus` retorna etapa correta
+  - [x] `saveStepProgress` valida e salva dados
+  - [x] `completeOnboarding` atualiza status e `onboardingCompletedAt`
+- [x] Testes de integração para endpoints:
+  - [x] `GET /api/onboarding/status` - retorna dados corretos
+  - [x] `PATCH /api/onboarding/step/:step` - salva progresso
+  - [x] `POST /api/onboarding/complete` - finaliza onboarding
+  - [x] Todos retornam 401 sem autenticação
+- [x] Teste E2E: fluxo completo de onboarding (todas etapas)
+- [x] Teste E2E: fluxo com skip nas etapas opcionais
+- [x] Teste E2E: usuário retoma onboarding onde parou (login após abandono)
+- [x] Teste E2E: validação impede avançar com < 3 áreas selecionadas
+- [x] Teste E2E: após verificar email, redireciona para `/onboarding` (não dashboard)
+- [x] Teste de middleware: usuário com `onboardingCompletedAt=null` é redirecionado para `/onboarding`
 
 **Definition of Done:**
-- [ ] Usuário é redirecionado para onboarding após signup
-- [ ] Progresso é salvo automaticamente
-- [ ] Usuário só acessa app após etapas obrigatórias
-- [ ] Skip funciona nas etapas opcionais
-- [ ] OnboardingModule segue Clean Architecture (`ENGINEERING.md` §4)
-- [ ] DTOs validados com class-validator
-- [ ] Middleware redireciona para onboarding quando necessário
-- [ ] Callback redireciona para onboarding após verificação de email
-- [ ] Job de limpeza de onboardings abandonados configurado
+- [x] Usuário é redirecionado para onboarding após signup
+- [x] Progresso é salvo automaticamente
+- [x] Usuário só acessa app após etapas obrigatórias
+- [x] Skip funciona nas etapas opcionais
+- [x] OnboardingModule segue Clean Architecture (`ENGINEERING.md` §4)
+- [x] DTOs validados com class-validator
+- [x] Middleware redireciona para onboarding quando necessário
+- [x] Callback redireciona para onboarding após verificação de email
+- [x] Job de limpeza de onboardings abandonados configurado
 
 ---
 
