@@ -596,14 +596,28 @@
 **Backend:**
 - [ ] Criar endpoint `POST /api/onboarding/complete`
 - [ ] Criar endpoint `GET /api/onboarding/status`
+- [ ] Criar endpoint `PATCH /api/onboarding/step/:step` para salvar progresso por etapa
 - [ ] Salvar progresso parcial do onboarding
 - [ ] Atualizar `user.status` para 'active' ao completar
+- [ ] Criar DTOs de validação com class-validator:
+  - [ ] `ProfileStepDto` (name: min 2 chars, timezone: valid IANA timezone)
+  - [ ] `AreasStepDto` (areas: LifeArea[], min 3, max 8)
+  - [ ] `TelegramStepDto` (telegramId?: string, skipped: boolean)
+- [ ] Criar `OnboardingModule` com Clean Architecture (conforme `ENGINEERING.md` §4):
+  - [ ] `OnboardingController` em `presentation/controllers/`
+  - [ ] `OnboardingService` em `application/services/`
+  - [ ] DTOs em `presentation/dtos/` com barrel export
+- [ ] Registrar `OnboardingModule` no `AppModule`
+- [ ] Atualizar `preferences.areaWeights` ao salvar etapa de áreas (áreas não selecionadas = peso 0)
+- [ ] Criar job diário para limpar onboardings abandonados após 30 dias (cron via BullMQ)
 
 **Technical Debt (do M0.7):**
 - [ ] Migrar `middleware.ts` para convenção "proxy" do Next.js 16+ (ver https://nextjs.org/docs/messages/middleware-to-proxy)
 - [ ] Criar seed data para testes E2E (usuário `test@example.com` para que 36 E2E tests passem)
 
 **Frontend:**
+- [ ] Instalar componente Form do shadcn: `npx shadcn@latest add form`
+- [ ] Instalar timezone picker: `pnpm add react-timezone-select`
 - [ ] Criar páginas de onboarding em `(auth)/onboarding/`:
   - [ ] `/onboarding` - layout com stepper de progresso
   - [ ] `/onboarding/profile` - Etapa 1: Perfil (nome, timezone) - **obrigatório**
@@ -620,17 +634,48 @@
 - [ ] Implementar navegação entre etapas
 - [ ] Salvar progresso a cada etapa
 - [ ] Redirect para dashboard ao completar
+- [ ] Atualizar `middleware.ts`:
+  - [ ] Adicionar `/onboarding` às rotas públicas
+  - [ ] Redirecionar para `/onboarding` se `onboardingCompletedAt` é null
+- [ ] Atualizar `callback/route.ts`:
+  - [ ] Verificar status do onboarding após `exchangeCodeForSession`
+  - [ ] Redirecionar para `/onboarding` se não completou
+- [ ] Criar hook `useOnboarding` em `hooks/use-onboarding.ts`:
+  - [ ] Estado: currentStep, completedSteps, data, isLoading
+  - [ ] Métodos: goToStep(), saveCurrentStep(), skipStep()
+  - [ ] Sincronização com API (GET status, PATCH step)
+- [ ] Criar schemas Zod de validação em `lib/validations/onboarding.ts`:
+  - [ ] `profileStepSchema` (name: min 2, timezone: válido)
+  - [ ] `areasStepSchema` (areas: min 3 items)
 
 **Testes:**
 - [ ] Testes unitários para validação de formulários
+- [ ] Testes unitários para OnboardingService:
+  - [ ] `getOnboardingStatus` retorna etapa correta
+  - [ ] `saveStepProgress` valida e salva dados
+  - [ ] `completeOnboarding` atualiza status e `onboardingCompletedAt`
+- [ ] Testes de integração para endpoints:
+  - [ ] `GET /api/onboarding/status` - retorna dados corretos
+  - [ ] `PATCH /api/onboarding/step/:step` - salva progresso
+  - [ ] `POST /api/onboarding/complete` - finaliza onboarding
+  - [ ] Todos retornam 401 sem autenticação
 - [ ] Teste E2E: fluxo completo de onboarding (todas etapas)
 - [ ] Teste E2E: fluxo com skip nas etapas opcionais
+- [ ] Teste E2E: usuário retoma onboarding onde parou (login após abandono)
+- [ ] Teste E2E: validação impede avançar com < 3 áreas selecionadas
+- [ ] Teste E2E: após verificar email, redireciona para `/onboarding` (não dashboard)
+- [ ] Teste de middleware: usuário com `onboardingCompletedAt=null` é redirecionado para `/onboarding`
 
 **Definition of Done:**
 - [ ] Usuário é redirecionado para onboarding após signup
 - [ ] Progresso é salvo automaticamente
 - [ ] Usuário só acessa app após etapas obrigatórias
 - [ ] Skip funciona nas etapas opcionais
+- [ ] OnboardingModule segue Clean Architecture (`ENGINEERING.md` §4)
+- [ ] DTOs validados com class-validator
+- [ ] Middleware redireciona para onboarding quando necessário
+- [ ] Callback redireciona para onboarding após verificação de email
+- [ ] Job de limpeza de onboardings abandonados configurado
 
 ---
 
@@ -991,6 +1036,7 @@
 - [ ] Criar toggle nas configurações do usuário (`/settings/preferences`)
 - [ ] Adicionar seção "Perspectiva Cristã" com explicação
 - [ ] Componente ToggleWithDescription para o setting
+- [ ] Adicionar opção de habilitar perspectiva cristã na etapa 2 do onboarding (toggle opcional junto com seleção de áreas) — conforme `PRODUCT_SPECS.md` §7.1 item 2c
 
 **Testes:**
 - [ ] Teste unitário: prompt correto é aplicado quando habilitado
@@ -998,11 +1044,13 @@
 - [ ] Teste de integração: resposta da IA inclui perspectiva bíblica (quando habilitado)
 - [ ] Teste de integração: resposta da IA NÃO menciona religião (quando desabilitado)
 - [ ] Teste E2E: toggle de configuração persiste corretamente
+- [ ] Teste E2E: toggle no onboarding habilita perspectiva cristã corretamente
 
 **Definition of Done:**
 - [ ] Usuário pode habilitar/desabilitar perspectiva cristã
 - [ ] IA integra princípios bíblicos naturalmente quando habilitado
 - [ ] Nunca menciona aspectos religiosos quando desabilitado
+- [ ] Toggle no onboarding funciona corretamente
 - [ ] Testes passam
 
 ---
@@ -1693,6 +1741,12 @@
   - [ ] Evento próximo
   - [ ] Follow-up de decisão
 - [ ] Criar jobs para envio
+- [ ] Implementar job de notificações de onboarding abandonado (conforme `SYSTEM_SPECS.md` §3.1):
+  - [ ] Dia 3: email "Complete seu cadastro para começar a usar o app!"
+  - [ ] Dia 7: email "Falta pouco! Termine o cadastro."
+  - [ ] Dia 14: email "Seus dados expiram em 16 dias. Complete agora!"
+  - [ ] Dia 25: email "Última chance! Seus dados serão removidos em 5 dias."
+- [ ] Criar template de email para lembretes de onboarding
 
 **Frontend:**
 - [ ] Página `/settings/notifications`:
@@ -1717,6 +1771,7 @@
   - [ ] Envio por cada canal (push, telegram, email)
   - [ ] Respeito ao quiet hours
   - [ ] Preferências por tipo
+  - [ ] Job de notificação de onboarding abandonado envia emails nos dias corretos
 - [ ] Testes unitários:
   - [ ] Lógica de check-in proativo (dias sem tracking, queda de humor, etc.)
   - [ ] Validação de preferências
@@ -1728,6 +1783,7 @@
 - [ ] Quiet hours respeitado
 - [ ] Check-ins proativos funcionam
 - [ ] Preferências configuráveis
+- [ ] Notificações de onboarding abandonado enviadas nos dias corretos
 - [ ] Testes passam
 
 ---
