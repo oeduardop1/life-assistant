@@ -55,6 +55,18 @@ export const userPreferencesSchema = z.object({
       exerciseGoalWeekly: z.number().int().positive().default(150), // minutes
     })
     .default({}),
+
+  // Onboarding progress state
+  onboarding: z
+    .object({
+      profileComplete: z.boolean().default(false),
+      areasComplete: z.boolean().default(false),
+      telegramComplete: z.boolean().default(false),
+      telegramSkipped: z.boolean().default(false),
+      tutorialComplete: z.boolean().default(false),
+      tutorialSkipped: z.boolean().default(false),
+    })
+    .default({}),
 });
 
 // Type inferred from schema

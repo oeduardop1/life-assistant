@@ -194,8 +194,9 @@ pnpm --filter web start
 pnpm --filter web test:e2e
 ```
 
-### Features Implementadas (M0.6)
+### Features Implementadas
 
+**Web App (M0.6):**
 - ✅ Landing page responsiva
 - ✅ Dashboard com sidebar e header
 - ✅ Tema dark/light com persistência
@@ -203,6 +204,21 @@ pnpm --filter web test:e2e
 - ✅ Error boundaries e loading states
 - ✅ Componentes shadcn/ui base
 - ✅ Suporte Docker com standalone output
+
+**Autenticação (M0.7):**
+- ✅ Signup com email/senha
+- ✅ Login com validação
+- ✅ Verificação de email
+- ✅ Recuperação de senha
+- ✅ Logout funcional
+- ✅ Proteção de rotas via middleware
+
+**Onboarding (M0.8):**
+- ✅ Wizard de 4 etapas (Perfil, Áreas, Telegram, Tutorial)
+- ✅ 2 etapas obrigatórias, 2 opcionais com skip
+- ✅ Persistência de progresso parcial
+- ✅ Job de cleanup de onboardings abandonados (30 dias)
+- ✅ Redirect automático baseado em status do usuário
 
 Veja `ENGINEERING.md` §2.2 para documentação técnica completa do frontend.
 

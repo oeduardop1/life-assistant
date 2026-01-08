@@ -15,6 +15,12 @@ const publicRoutes = [
 ];
 
 /**
+ * Routes accessible during onboarding (authenticated but pending status)
+ * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ */
+const onboardingRoutes = ['/onboarding'];
+
+/**
  * Auth routes that redirect to dashboard if already authenticated
  */
 const authRoutes = ['/login', '/signup'];
@@ -81,7 +87,13 @@ export async function middleware(request: NextRequest) {
   // Check if the current route is an auth route
   const isAuthRoute = authRoutes.some((route) => pathname === route);
 
+  // Check if the current route is an onboarding route
+  const isOnboardingRoute = onboardingRoutes.some((route) =>
+    pathname.startsWith(route),
+  );
+
   // Redirect to login if not authenticated and trying to access protected route
+  // Allow onboarding routes only if authenticated
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
@@ -90,7 +102,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect to dashboard if authenticated and trying to access auth pages
-  if (user && isAuthRoute) {
+  // (login, signup) - but NOT onboarding pages
+  if (user && isAuthRoute && !isOnboardingRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

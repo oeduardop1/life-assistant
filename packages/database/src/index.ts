@@ -20,3 +20,6 @@ export * from './schema';
 // Types for convenience
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 export type { Database } from './client';
+
+// Query helpers
+export { eq, and, or, not, isNull, isNotNull, lt, gt, lte, gte, sql } from 'drizzle-orm';

@@ -23,6 +23,7 @@ import { defaultUserPreferences } from '../schema/preferences';
 // Deterministic UUIDs for test data
 // These IDs will be consistent across runs
 export const TEST_USER_ID = '00000000-0000-4000-8000-000000000001';
+export const TEST_ONBOARDING_USER_ID = '00000000-0000-4000-8000-000000000007';
 export const TEST_CONVERSATION_ID = '00000000-0000-4000-8000-000000000002';
 export const TEST_NOTE_1_ID = '00000000-0000-4000-8000-000000000003';
 export const TEST_NOTE_2_ID = '00000000-0000-4000-8000-000000000004';
@@ -52,6 +53,20 @@ export async function seed() {
     onboardingCompletedAt: new Date(),
   };
   await db.insert(users).values(testUser).onConflictDoNothing();
+
+  // Create test user with pending onboarding (for E2E onboarding tests)
+  console.log('Creating onboarding test user...');
+  const onboardingTestUser: NewUser = {
+    id: TEST_ONBOARDING_USER_ID,
+    email: 'onboarding@example.com',
+    name: 'Novo Usuario', // Initial name from signup, can be updated in profile step
+    status: 'pending',
+    plan: 'free',
+    preferences: defaultUserPreferences,
+    emailVerifiedAt: new Date(),
+    onboardingCompletedAt: null, // Onboarding not completed
+  };
+  await db.insert(users).values(onboardingTestUser).onConflictDoNothing();
 
   // Create sample conversation
   console.log('Creating sample conversation...');

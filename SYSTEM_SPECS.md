@@ -177,7 +177,7 @@ flowchart LR
 | Etapa | Campos | Obrigatório |
 |-------|--------|-------------|
 | 1. Perfil | Nome, Timezone | ✅ Sim |
-| 2. Áreas de foco | Selecionar min 3 áreas | ✅ Sim |
+| 2. Áreas de foco | Selecionar 3-8 áreas | ✅ Sim |
 | 3. Telegram | Conectar bot | ❌ Não |
 | 4. Tutorial | Tour interativo | ❌ Skip permitido |
 

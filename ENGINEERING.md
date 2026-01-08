@@ -827,6 +827,7 @@ export interface TrackingRepositoryPort {
 | `sync-calendar` | Sync Google Calendar | Média |
 | `proactive-checkin` | Check-ins proativos | Baixa |
 | `notifications` | Envio de notificações | Alta |
+| `cleanup-onboarding` | Limpeza de onboardings abandonados (30d) | Baixa |
 
 ### 7.2 Idempotência (Obrigatório)
 
@@ -1665,6 +1666,9 @@ Proposed | Accepted | Deprecated | Superseded
 | ADR-005 | Usar Socket.io para real-time | Accepted |
 | ADR-006 | Usar jose para validação JWT | Accepted |
 | ADR-007 | Usar CommonJS como sistema de módulos no NestJS | Accepted |
+| ADR-008 | Database Type Encapsulation | Accepted |
+| ADR-009 | Supabase CLI para desenvolvimento local | Accepted |
+| ADR-010 | Soft delete para cleanup de onboardings abandonados | Accepted |
 
 ---
 

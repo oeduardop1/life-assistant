@@ -558,6 +558,16 @@ export const userPreferencesSchema = z.object({
     sleepGoal: z.number().positive().default(8), // horas
     exerciseGoalWeekly: z.number().int().positive().default(150), // minutos
   }).default({}),
+
+  // Progresso do onboarding
+  onboarding: z.object({
+    profileComplete: z.boolean().default(false),
+    areasComplete: z.boolean().default(false),
+    telegramComplete: z.boolean().default(false),
+    telegramSkipped: z.boolean().default(false),
+    tutorialComplete: z.boolean().default(false),
+    tutorialSkipped: z.boolean().default(false),
+  }).default({}),
 });
 
 // Type inferido do schema
