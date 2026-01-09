@@ -97,6 +97,7 @@ print_substep() {
 }
 
 # Read input with optional default value
+# Stores result in CONFIG[$var_name] - access it after calling
 read_input() {
     local prompt=$1
     local default=${2:-}
@@ -114,22 +115,20 @@ read_input() {
     value=$(echo "$value" | tr -d '\r' | xargs)
     value="${value:-$default}"
     CONFIG[$var_name]="$value"
-    echo "$value"
 }
 
-# Read secret input (hidden)
+# Read secret input (visible - user is configuring their own environment)
+# Stores result in CONFIG[$var_name] - access it after calling
 read_secret() {
     local prompt=$1
     local var_name=$2
     local value
 
     echo -ne "    ${prompt}: "
-    read -rs value
-    echo ""
+    read -r value
     # Remove carriage returns (from Windows copy/paste) and trim whitespace
     value=$(echo "$value" | tr -d '\r' | xargs)
     CONFIG[$var_name]="$value"
-    echo "$value"
 }
 
 # Confirm action (Y/n)
@@ -369,49 +368,49 @@ configure_supabase() {
     # Project URL
     print_substep "Project URL (found in API settings or Connect button)"
     while true; do
-        local url
-        url=$(read_input "SUPABASE_URL" "" "SUPABASE_URL")
-        if validate_url "$url"; then
+        read_input "SUPABASE_URL" "" "SUPABASE_URL"
+        if validate_url "${CONFIG[SUPABASE_URL]}"; then
             break
         fi
         print_error "Invalid URL. Must start with https://"
     done
     echo ""
 
-    # Anon Key
-    print_substep "Anon/Public Key (safe to expose in frontend)"
-    echo -e "    ${GRAY}Look for 'Publishable key' (sb_publishable_*) or legacy 'anon' key (eyJ*)${NC}"
+    # Publishable Key (formerly Anon Key)
+    print_substep "Publishable Key (safe to expose in frontend)"
+    echo -e "    ${GRAY}Copy from: API Keys → Publishable key (sb_publishable_*)${NC}"
+    echo -e "    ${GRAY}Or legacy 'anon' key from: Legacy anon, service_role API keys tab${NC}"
     while true; do
-        local anon_key
-        anon_key=$(read_secret "SUPABASE_ANON_KEY" "SUPABASE_ANON_KEY")
-        if validate_supabase_key "$anon_key"; then
+        read_secret "SUPABASE_ANON_KEY" "SUPABASE_ANON_KEY"
+        if validate_supabase_key "${CONFIG[SUPABASE_ANON_KEY]}"; then
             break
         fi
-        print_error "Invalid key format. Should start with 'eyJ' or 'sb_'"
+        print_error "Invalid key format. Should start with 'sb_publishable_' or 'eyJ'"
     done
     echo ""
 
-    # Service Role Key
-    print_substep "Service Role Key (${RED}KEEP SECRET${NC} - backend only)"
+    # Secret Key (formerly Service Role Key)
+    print_substep "Secret Key (${RED}KEEP SECRET${NC} - backend only)"
     echo -e "    ${YELLOW}⚠ This key bypasses RLS - never expose in frontend!${NC}"
-    echo -e "    ${GRAY}Look for 'Secret key' (sb_secret_*) or legacy 'service_role' key (eyJ*)${NC}"
+    echo -e "    ${GRAY}Copy from: API Keys → Secret key (sb_secret_*)${NC}"
+    echo -e "    ${GRAY}Or legacy 'service_role' key from: Legacy anon, service_role API keys tab${NC}"
     while true; do
-        local service_key
-        service_key=$(read_secret "SUPABASE_SERVICE_KEY" "SUPABASE_SERVICE_KEY")
-        if validate_supabase_key "$service_key"; then
+        read_secret "SUPABASE_SERVICE_KEY" "SUPABASE_SERVICE_KEY"
+        if validate_supabase_key "${CONFIG[SUPABASE_SERVICE_KEY]}"; then
             break
         fi
-        print_error "Invalid key format. Should start with 'eyJ' or 'sb_'"
+        print_error "Invalid key format. Should start with 'sb_secret_' or 'eyJ'"
     done
     echo ""
 
     # Database URL
     print_substep "Database Connection String"
-    echo -e "    ${GRAY}Navigate to: Connect button → Connection string (with password)${NC}"
+    echo -e "    ${GRAY}Click 'Connect' button at top of dashboard${NC}"
+    echo -e "    ${GRAY}Select your framework → Copy the connection string${NC}"
+    echo -e "    ${GRAY}Format: postgresql://postgres:[PASSWORD]@db.xxx.supabase.co:5432/postgres${NC}"
     while true; do
-        local db_url
-        db_url=$(read_secret "DATABASE_URL" "DATABASE_URL")
-        if validate_database_url "$db_url"; then
+        read_secret "DATABASE_URL" "DATABASE_URL"
+        if validate_database_url "${CONFIG[DATABASE_URL]}"; then
             break
         fi
         print_error "Invalid format. Must start with postgres:// or postgresql://"
@@ -427,9 +426,8 @@ configure_sentry() {
 
     if confirm "    Configure Sentry?"; then
         while true; do
-            local dsn
-            dsn=$(read_input "SENTRY_DSN" "" "SENTRY_DSN")
-            if [[ -z "$dsn" ]] || validate_sentry_dsn "$dsn"; then
+            read_input "SENTRY_DSN" "" "SENTRY_DSN"
+            if [[ -z "${CONFIG[SENTRY_DSN]}" ]] || validate_sentry_dsn "${CONFIG[SENTRY_DSN]}"; then
                 break
             fi
             print_warning "DSN format looks unusual. Expected: https://key@org.ingest.sentry.io/project"
@@ -446,9 +444,8 @@ configure_redis() {
     print_substep "Redis URL"
     echo -e "    ${GRAY}From Upstash, Railway Redis, or other provider${NC}"
     while true; do
-        local redis_url
-        redis_url=$(read_secret "REDIS_URL" "REDIS_URL")
-        if validate_redis_url "$redis_url"; then
+        read_secret "REDIS_URL" "REDIS_URL"
+        if validate_redis_url "${CONFIG[REDIS_URL]}"; then
             break
         fi
         print_error "Invalid format. Must start with redis:// or rediss://"
@@ -527,9 +524,8 @@ configure_railway_vars() {
     print_substep "Frontend URL"
     echo -e "    ${GRAY}Your Vercel deployment URL (e.g., https://xxx.vercel.app)${NC}"
     while true; do
-        local frontend_url
-        frontend_url=$(read_input "FRONTEND_URL" "" "FRONTEND_URL")
-        if validate_url "$frontend_url"; then
+        read_input "FRONTEND_URL" "" "FRONTEND_URL"
+        if validate_url "${CONFIG[FRONTEND_URL]}"; then
             break
         fi
         print_error "Invalid URL. Must start with https://"
