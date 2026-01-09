@@ -1,3 +1,7 @@
+// Sentry instrumentation MUST be imported first
+// See: https://docs.sentry.io/platforms/javascript/guides/node/install/commonjs/
+import './instrument';
+
 import 'reflect-metadata';
 import { config as loadEnv } from 'dotenv';
 import { resolve } from 'path';

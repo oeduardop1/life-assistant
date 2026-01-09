@@ -26,6 +26,7 @@
     "@nestjs/swagger": "11.2.0",
     "@nestjs/terminus": "11.0.0",
     "@nestjs/throttler": "6.4.0",
+    "@sentry/nestjs": "^10.32.1",
     "@supabase/supabase-js": "2.90.0",
     "bullmq": "^5.66.4",
     "class-transformer": "0.5.1",

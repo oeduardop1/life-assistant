@@ -203,6 +203,16 @@ Veja `MILESTONES.md` para lista completa de features implementadas e roadmap.
 
 Veja `ENGINEERING.md` §2.2 para documentacao tecnica completa do frontend.
 
+## Deploy
+
+Para deploy em produção, consulte **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
+| Serviço | Plataforma |
+|---------|------------|
+| Web (Next.js) | [Vercel](https://vercel.com) |
+| API (NestJS) | [Railway](https://railway.app) |
+| Database | [Supabase](https://supabase.com) |
+
 ## Documentacao
 
 | Documento | Descricao |
@@ -215,6 +225,7 @@ Veja `ENGINEERING.md` §2.2 para documentacao tecnica completa do frontend.
 | `INTEGRATIONS_SPECS.md` | APIs externas (Telegram, Stripe, Calendar) |
 | `MILESTONES.md` | Roadmap de desenvolvimento |
 | `TBD_TRACKER.md` | Decisoes pendentes |
+| `DEPLOYMENT.md` | Guia de deploy em producao |
 
 ## Licenca
 

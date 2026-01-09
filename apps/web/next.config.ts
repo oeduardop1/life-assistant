@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
   // Standalone output for Docker
@@ -39,4 +40,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry organization and project slugs
+  org: process.env.SENTRY_ORG || 'life-assistant',
+  project: process.env.SENTRY_PROJECT || 'web',
+
+  // Auth token for source map uploads (set in CI environment)
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
+});

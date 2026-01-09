@@ -1,0 +1,47 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up --service api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Validate Health Check
+        run: |
+          echo "Waiting for deployment to stabilize..."
+          sleep 30
+
+          API_URL="${{ secrets.RAILWAY_API_URL }}"
+
+          if [ -z "$API_URL" ]; then
+            echo "Warning: RAILWAY_API_URL secret not set, skipping health check"
+            exit 0
+          fi
+
+          echo "Checking health at ${API_URL}/api/health"
+          response=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/api/health")
+
+          if [ "$response" != "200" ]; then
+            echo "Health check failed! Status: $response"
+            exit 1
+          fi
+
+          echo "Health check passed! Status: $response"

@@ -679,42 +679,44 @@
 
 ---
 
-### M0.9 — CI/CD Pipeline
+### M0.9 — CI/CD Pipeline ✅
 
 **Objetivo:** Configurar pipeline de integração e deploy contínuo.
 
 **Referências:** `ENGINEERING.md` §12, §13
 
+**Completed:** 08 Jan 2026
+
 **Tasks:**
 
 **CI Pipeline (ci.yml):**
-- [ ] Criar `.github/workflows/ci.yml`:
-  - [ ] Checkout + pnpm setup
-  - [ ] Install dependencies (`--frozen-lockfile`)
-  - [ ] Run lint
-  - [ ] Run typecheck
-  - [ ] Run tests (unit)
-  - [ ] Run build
-- [ ] Adicionar job `e2e` no ci.yml:
-  - [ ] Depende do job `quality`
-  - [ ] Instalar Playwright browsers
-  - [ ] Executar `pnpm --filter web test:e2e`
-  - [ ] Upload `playwright-report` como artifact em falha (retention: 7 days)
+- [x] Criar `.github/workflows/ci.yml`:
+  - [x] Checkout + pnpm setup
+  - [x] Install dependencies (`--frozen-lockfile`)
+  - [x] Run lint
+  - [x] Run typecheck
+  - [x] Run tests (unit)
+  - [x] Run build
+- [x] Adicionar job `e2e` no ci.yml:
+  - [x] Depende do job `quality`
+  - [x] Instalar Playwright browsers
+  - [x] Executar `pnpm --filter web test:e2e`
+  - [x] Upload `playwright-report` como artifact em falha (retention: 7 days)
 
 **Deploy Workflows:**
-- [ ] Criar `.github/workflows/deploy-web.yml`:
-  - [ ] Trigger on push to main
-  - [ ] Deploy para Vercel (usar GitHub integration nativa)
-- [ ] Criar `.github/workflows/deploy-api.yml`:
-  - [ ] Trigger on push to main
-  - [ ] Deploy para Railway
-  - [ ] Validar health check (`/api/health`) após deploy
+- [x] Criar `.github/workflows/deploy-web.yml`:
+  - [x] Trigger on push to main
+  - [x] Deploy para Vercel (usar GitHub integration nativa)
+- [x] Criar `.github/workflows/deploy-api.yml`:
+  - [x] Trigger on push to main
+  - [x] Deploy para Railway
+  - [x] Validar health check (`/api/health`) após deploy
 
 **Sentry Error Tracking:**
-- [ ] Instalar `@sentry/nestjs` no apps/api
-- [ ] Inicializar Sentry no `apps/api/src/main.ts`
-- [ ] Instalar `@sentry/nextjs` no apps/web
-- [ ] Configurar Sentry no apps/web (`sentry.client.config.ts`, `sentry.server.config.ts`)
+- [x] Instalar `@sentry/nestjs` no apps/api
+- [x] Inicializar Sentry no `apps/api/src/main.ts`
+- [x] Instalar `@sentry/nextjs` no apps/web
+- [x] Configurar Sentry no apps/web (`sentry.client.config.ts`, `sentry.server.config.ts`)
 
 **GitHub Configuration:**
 - [ ] Configurar secrets no GitHub:
@@ -722,20 +724,22 @@
   - [ ] `RAILWAY_TOKEN`
   - [ ] `SENTRY_DSN`
   - [ ] `SENTRY_AUTH_TOKEN` (para source maps)
-- [ ] Documentar branch protection em `ENGINEERING.md` §12.3 (ativar quando tiver time)
+- [x] Documentar branch protection em `ENGINEERING.md` §12.3 (ativar quando tiver time)
 
 **Definition of Done:**
-- [ ] CI roda em todo push (main, develop, feature/*)
-- [ ] Job E2E roda após job quality
-- [ ] Deploy automático para produção em push to main
-- [ ] Health check validado após deploy
-- [ ] Sentry capturando erros em produção
-- [ ] Branch protection documentado para ativação futura
+- [x] CI roda em todo push (main, develop, feature/*)
+- [x] Job E2E roda após job quality
+- [x] Deploy automático para produção em push to main
+- [x] Health check validado após deploy
+- [ ] Sentry capturando erros em produção (requer secrets configurados)
+- [x] Branch protection documentado para ativação futura
 
 **Notas:**
 - Branch protection será ativado quando houver time de desenvolvimento (2+ devs)
 - Deploy staging pode ser adicionado depois se necessário
 - Preview deployments são gerenciados automaticamente pelo Vercel GitHub App
+- ADR-011 documenta a estratégia de testes E2E no CI (Supabase no CI)
+- GitHub secrets precisam ser configurados manualmente para deploy e Sentry funcionarem
 
 ---
 
