@@ -23,41 +23,41 @@ cp .env.example .env
 cp apps/web/.env.example apps/web/.env.local
 # Edite os arquivos com suas credenciais (veja "Estrutura de .env" abaixo)
 
-# 4. Iniciar toda a infraestrutura (Docker + Supabase)
+# 4. Iniciar toda a infraestrutura (Docker + Supabase + Migrations + Seed)
 pnpm infra:up
 
-# 5. Aplicar schema do banco de dados
-pnpm --filter database db:push
-
-# 6. (Opcional) Popular banco com dados de teste
-pnpm --filter database db:seed
-
-# 7. Executar em modo desenvolvimento
+# 5. Executar em modo desenvolvimento
 pnpm dev
 ```
+
+> O `infra:up` ja aplica as migrations do banco e executa o seed automaticamente.
 
 ## Fluxo de Desenvolvimento Diario
 
 ```bash
 # Comecar o dia
-pnpm infra:up     # Inicia Redis, MinIO, PostgreSQL, Auth, Studio (~10s)
+pnpm infra:up     # Inicia Redis, MinIO, PostgreSQL, Auth, Studio (~60s)
 pnpm dev          # Inicia API (4000) + Web (3000)
 
 # Veja "Portas e Servicos" abaixo para URLs de acesso
 
 # Terminar o dia
 # Ctrl+C para parar o pnpm dev
-pnpm infra:down   # Para toda a infraestrutura
+pnpm infra:down   # Para toda a infraestrutura (~15s)
 ```
 
 > **Nota:** Os dados persistem entre reinicializacoes. O `infra:down` para os containers mas mantem os volumes (dados) e imagens (nao precisa baixar novamente).
+
+> **Dica:** Se o `infra:up` falhar, use `pnpm infra:up --clean` para limpar e tentar novamente.
 
 ## Comandos Disponiveis
 
 ```bash
 # Infraestrutura (Docker + Supabase)
-pnpm infra:up                # Iniciar toda a infraestrutura
+pnpm infra:up                # Iniciar toda a infraestrutura + migrations + seed
+pnpm infra:up --clean        # Limpar containers zombie e iniciar (use apos falha)
 pnpm infra:down              # Parar toda a infraestrutura
+pnpm infra:down -rf          # Parar e apagar todos os dados (reset completo)
 
 # Desenvolvimento
 pnpm dev                     # Rodar todos os apps em modo dev
@@ -160,13 +160,55 @@ curl http://localhost:4000/api/health
 
 **Emails de desenvolvimento:** Em ambiente local, todos os emails (confirmacao, reset de senha) sao capturados no Inbucket. Acesse http://localhost:54324 para visualizar.
 
-### Opcoes Avancadas de Infraestrutura
+### Opcoes de Infraestrutura
 
-| Comando | Descricao |
-|---------|-----------|
-| `pnpm infra:down --reset` | Para e **apaga todos os dados** |
-| `pnpm infra:down --reset --force` | Reset sem confirmacao (para CI) |
-| `--help` | Mostra todas as opcoes (funciona em ambos) |
+Os scripts `infra:up` e `infra:down` possuem opcoes avancadas para diferentes cenarios.
+
+**Iniciar (`pnpm infra:up`)**
+
+| Flag | Descricao |
+|------|-----------|
+| `--clean, -c` | Limpa containers zombie antes de iniciar (use apos falha) |
+| `--timeout, -t N` | Timeout em segundos (default: 120) |
+| `--verbose, -v` | Mostra output detalhado para debug |
+| `--skip-migrations` | Pula migrations e seed do banco |
+| `--help, -h` | Mostra todas as opcoes |
+
+**Parar (`pnpm infra:down`)**
+
+| Flag | Descricao |
+|------|-----------|
+| `--reset, -r` | Para e **apaga todos os dados** (volumes) |
+| `--force, -f` | Sem confirmacao (para CI/scripts) |
+| `--timeout, -t N` | Timeout em segundos (default: 30) |
+| `--verbose, -v` | Mostra output detalhado para debug |
+| `--help, -h` | Mostra todas as opcoes |
+
+**Exemplos**
+
+```bash
+# Iniciar apos falha anterior (recomendado)
+pnpm infra:up --clean
+
+# Iniciar com timeout maior e debug
+pnpm infra:up -t 180 -v
+
+# Reset completo sem confirmacao (CI)
+pnpm infra:down -rf
+
+# Ver todas as opcoes
+pnpm infra:up --help
+pnpm infra:down --help
+```
+
+**Troubleshooting**
+
+| Problema | Solucao |
+|----------|---------|
+| Timeout ao iniciar | `pnpm infra:up --clean` |
+| Portas em uso | `pnpm infra:down -rf && pnpm infra:up` |
+| Containers zombie | `pnpm infra:up -c` |
+| Ver o que esta acontecendo | Adicione `-v` ao comando |
 
 ### Setup de Producao
 
