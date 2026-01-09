@@ -18,6 +18,15 @@ life-assistant/
 └── infra/        # Docker, deployment
 ```
 
+## Infrastructure
+
+| Service | Purpose | Environment |
+|---------|---------|-------------|
+| **Vercel** | Frontend hosting (apps/web) | Production |
+| **Railway** | Backend hosting (apps/api) | Production |
+| **Supabase** | Database + Auth | Production |
+| **Sentry** | Error tracking | All environments |
+
 ## Commands
 ```bash
 pnpm dev              # Start dev servers
@@ -25,7 +34,7 @@ pnpm build            # Production build
 pnpm typecheck        # TypeScript check
 pnpm lint             # ESLint
 pnpm test             # Unit tests
-pnpm test:e2e         # E2E tests (run if UI changes)
+pnpm test:e2e         # E2E tests
 ```
 
 ## Documentation Precedence
@@ -43,13 +52,22 @@ pnpm test:e2e         # E2E tests (run if UI changes)
 
 **In case of conflict, follow precedence order.**
 
-## ⚠️ IMPLEMENTATION PROTOCOL (MANDATORY)
+## ⚠️ MANDATORY PROTOCOL (PLANNING & IMPLEMENTATION)
 
-Follow these steps IN ORDER. Do NOT skip steps. Do NOT start coding before completing steps 1-3.
+**WHEN TO USE:** Only for milestone-related work. Triggers include:
+- "implement M0.X..."
+- "create a plan for milestone..."
+- "work on milestone..."
+- Any reference to tasks in MILESTONES.md
+
+**SKIP THIS PROTOCOL FOR:** Documentation, questions, refactoring, code review, or any task not tied to a milestone.
+
+Follow these steps IN ORDER for milestone work — including planning.
+Do NOT skip steps. Do NOT start planning or coding before completing steps 1-3.
 
 ### Step 1: Validate Milestone Completeness
 
-Before anything else:
+Before creating a plan or writing any code:
 1. Read the task in `MILESTONES.md`
 2. Check: do the tasks cover 100% of what needs to be implemented?
    - Include all features, edge cases, error handling
@@ -80,14 +98,15 @@ After Step 1 is complete:
 ```
    **STOP and wait for authorization. Do NOT proceed until approved.**
 
-### Step 3: Plan Implementation
+### Step 3: Create/Refine Plan
 
 After Steps 1-2 are complete:
-1. Create implementation plan
+1. Create or refine implementation plan
 2. For each dependency: run `pnpm info <package> version` to get latest version
-3. Use versions from step 2 in your plan
+3. Include versions in the plan
+4. Present plan for user approval
 
-**Only after completing Steps 1-3 can you start writing code.**
+**Only after user approves the plan can you start writing code.**
 
 ### Step 4: Implement
 
@@ -141,7 +160,7 @@ After implementation:
 
 ## Context7 Usage
 
-Query Context7: before implementation plan, during code generation, when errors occur, when unsure about APIs.
+Query Context7: before creating plans, during code generation, when errors occur, when unsure about APIs.
 ```
 1. resolve-library-id → get ID
 2. query-docs → fetch documentation
