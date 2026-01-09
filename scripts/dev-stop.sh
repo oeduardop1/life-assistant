@@ -169,21 +169,18 @@ ${BOLD}USAGE${NC}
     pnpm infra:down [OPTIONS]
 
 ${BOLD}OPTIONS${NC}
-    ${GREEN}--reset${NC}       Delete all data and volumes (PostgreSQL, Redis, MinIO)
+    ${GREEN}--reset, -r${NC}   Delete all data and volumes (PostgreSQL, Redis, MinIO)
                   This is a ${RED}DESTRUCTIVE${NC} operation that cannot be undone.
                   Requires confirmation unless --force is used.
 
-    ${GREEN}--force${NC}       Skip confirmation prompts (use with caution)
-    ${GREEN}-f${NC}            Alias for --force
+    ${GREEN}--force, -f${NC}   Skip confirmation prompts (use with caution)
 
-    ${GREEN}--timeout${NC} N   Set timeout for operations in seconds (default: 30)
-    ${GREEN}-t${NC} N          Alias for --timeout
+    ${GREEN}--timeout, -t${NC} N
+                  Set timeout for operations in seconds (default: 30)
 
-    ${GREEN}--verbose${NC}     Show detailed debug output
-    ${GREEN}-v${NC}            Alias for --verbose
+    ${GREEN}--verbose, -v${NC} Show detailed debug output
 
-    ${GREEN}--help${NC}        Show this help message
-    ${GREEN}-h${NC}            Alias for --help
+    ${GREEN}--help, -h${NC}    Show this help message
 
 ${BOLD}TIMEOUTS${NC}
     The script uses timeouts to prevent hanging:
@@ -224,7 +221,7 @@ EOF
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --reset)
+            --reset|-r)
                 RESET_MODE=true
                 shift
                 ;;
