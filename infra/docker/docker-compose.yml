@@ -1,5 +1,8 @@
-# Docker Compose v5+ - campo 'version' nao e mais necessario
+# Docker Compose for Life Assistant
 # Versoes verificadas em Janeiro 2026
+#
+# NOTA: O atributo 'name' garante que volumes e networks sejam prefixados
+# com 'life-assistant_', evitando conflitos com outros projetos.
 #
 # NOTA: PostgreSQL foi removido - usar Supabase CLI (npx supabase start)
 # Supabase CLI inclui:
@@ -8,6 +11,8 @@
 # - Studio (porta 54323)
 # - Inbucket para emails (porta 54324)
 # Veja ADR-009 para mais detalhes.
+
+name: life-assistant
 
 services:
   redis:

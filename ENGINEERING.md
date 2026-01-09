@@ -984,6 +984,8 @@ npx supabase db reset
 # PostgreSQL foi movido para Supabase CLI (npx supabase start)
 # Veja ADR-009 para detalhes
 
+name: life-assistant  # Garante volumes únicos (life-assistant_redis_data)
+
 services:
   redis:
     # Redis 8 Alpine (versão mais recente)
@@ -1017,6 +1019,8 @@ volumes:
   redis_data:
   minio_data:
 ```
+
+> **Nota:** O atributo `name: life-assistant` faz com que os volumes sejam criados como `life-assistant_redis_data` e `life-assistant_minio_data`, evitando conflitos com outros projetos que usem estrutura similar.
 
 ### 9.3 Configuração do Supabase
 
