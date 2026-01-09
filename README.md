@@ -168,6 +168,22 @@ curl http://localhost:4000/api/health
 | `pnpm infra:down --reset --force` | Reset sem confirmacao (para CI) |
 | `--help` | Mostra todas as opcoes (funciona em ambos) |
 
+### Setup de Producao
+
+Script interativo para configurar variaveis de ambiente em Vercel, Railway e GitHub:
+
+```bash
+pnpm setup:prod          # Setup completo interativo
+pnpm setup:prod:dry      # Preview sem executar mudancas
+pnpm setup:prod:check    # Verificar status atual das variaveis
+pnpm setup:vercel        # Configurar apenas Vercel
+pnpm setup:railway       # Configurar apenas Railway
+```
+
+**Pre-requisitos:** CLIs instalados e autenticados (`vercel login`, `railway login`, `gh auth login`).
+
+Veja `DEPLOYMENT.md` para guia completo de deploy.
+
 ## Web App
 
 O frontend é construído com Next.js 16, React 19, e shadcn/ui.
