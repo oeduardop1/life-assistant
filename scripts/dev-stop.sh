@@ -21,6 +21,7 @@ readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
 readonly GRAY='\033[0;90m'
 readonly BOLD='\033[1m'
 readonly NC='\033[0m' # No Color
@@ -30,15 +31,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 readonly DOCKER_COMPOSE_FILE="$PROJECT_ROOT/infra/docker/docker-compose.yml"
 
-# Timeouts (in seconds)
-readonly SUPABASE_STOP_TIMEOUT=60
+# Timeouts (in seconds) - can be overridden with --timeout
+DEFAULT_CONTAINER_TIMEOUT=10
+DEFAULT_SUPABASE_TIMEOUT=30
+DEFAULT_DOCKER_COMPOSE_TIMEOUT=30
+DEFAULT_VOLUME_TIMEOUT=10
+
+CONTAINER_TIMEOUT=$DEFAULT_CONTAINER_TIMEOUT
+SUPABASE_TIMEOUT=$DEFAULT_SUPABASE_TIMEOUT
+DOCKER_COMPOSE_TIMEOUT=$DEFAULT_DOCKER_COMPOSE_TIMEOUT
+VOLUME_TIMEOUT=$DEFAULT_VOLUME_TIMEOUT
 
 # Operation modes
 RESET_MODE=false
 FORCE_MODE=false
+VERBOSE_MODE=false
 
-# Track errors
+# Track errors and timing
 ERRORS=0
+WARNINGS=0
+STEP_START=0
 
 # =============================================================================
 # Helper Functions
@@ -54,14 +66,22 @@ print_success() {
 
 print_warning() {
     echo -e "${YELLOW}⚠${NC} $1"
+    WARNINGS=$((WARNINGS + 1))
 }
 
 print_error() {
     echo -e "${RED}✗${NC} $1" >&2
+    ERRORS=$((ERRORS + 1))
 }
 
 print_debug() {
     echo -e "${GRAY}  → $1${NC}"
+}
+
+print_verbose() {
+    if [[ "$VERBOSE_MODE" == "true" ]]; then
+        echo -e "${GRAY}  [DEBUG] $1${NC}"
+    fi
 }
 
 print_header() {
@@ -70,6 +90,71 @@ print_header() {
     echo -e "${BLUE}  $1${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
+}
+
+# Start timing a step
+start_step() {
+    local step_name=$1
+    STEP_START=$SECONDS
+    print_info "${step_name}..."
+}
+
+# End timing a step
+end_step() {
+    local elapsed=$((SECONDS - STEP_START))
+    print_debug "Completed in ${elapsed}s"
+}
+
+# Run command with timeout and logging
+run_with_timeout() {
+    local timeout_sec=$1
+    local description=$2
+    shift 2
+
+    print_verbose "Running: $* (timeout: ${timeout_sec}s)"
+
+    local output
+    local exit_code=0
+
+    if output=$(timeout "$timeout_sec" "$@" 2>&1); then
+        print_verbose "Success: $description"
+        return 0
+    else
+        exit_code=$?
+        if [[ $exit_code -eq 124 ]]; then
+            print_warning "Timeout after ${timeout_sec}s: $description"
+            print_verbose "Output: $output"
+            return 124
+        else
+            print_verbose "Failed (exit $exit_code): $description"
+            print_verbose "Output: $output"
+            return $exit_code
+        fi
+    fi
+}
+
+# Show spinner while waiting
+show_progress() {
+    local pid=$1
+    local description=$2
+    local timeout=$3
+    local start=$SECONDS
+    local spinner='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local i=0
+
+    while kill -0 "$pid" 2>/dev/null; do
+        local elapsed=$((SECONDS - start))
+        if [[ $elapsed -ge $timeout ]]; then
+            kill -9 "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            return 124
+        fi
+        printf "\r${GRAY}  %s ${description} (%ds)${NC}  " "${spinner:i++%${#spinner}:1}" "$elapsed"
+        sleep 0.1
+    done
+    printf "\r%-60s\r" " "  # Clear the line
+    wait "$pid" 2>/dev/null
+    return $?
 }
 
 # =============================================================================
@@ -84,15 +169,30 @@ ${BOLD}USAGE${NC}
     pnpm infra:down [OPTIONS]
 
 ${BOLD}OPTIONS${NC}
-    ${GREEN}--reset${NC}     Delete all data and volumes (PostgreSQL, Redis, MinIO)
-                This is a ${RED}DESTRUCTIVE${NC} operation that cannot be undone.
-                Requires confirmation unless --force is used.
+    ${GREEN}--reset${NC}       Delete all data and volumes (PostgreSQL, Redis, MinIO)
+                  This is a ${RED}DESTRUCTIVE${NC} operation that cannot be undone.
+                  Requires confirmation unless --force is used.
 
-    ${GREEN}--force${NC}     Skip confirmation prompts (use with caution)
-    ${GREEN}-f${NC}          Alias for --force
+    ${GREEN}--force${NC}       Skip confirmation prompts (use with caution)
+    ${GREEN}-f${NC}            Alias for --force
 
-    ${GREEN}--help${NC}      Show this help message
-    ${GREEN}-h${NC}          Alias for --help
+    ${GREEN}--timeout${NC} N   Set timeout for operations in seconds (default: 30)
+    ${GREEN}-t${NC} N          Alias for --timeout
+
+    ${GREEN}--verbose${NC}     Show detailed debug output
+    ${GREEN}-v${NC}            Alias for --verbose
+
+    ${GREEN}--help${NC}        Show this help message
+    ${GREEN}-h${NC}            Alias for --help
+
+${BOLD}TIMEOUTS${NC}
+    The script uses timeouts to prevent hanging:
+      • Container stop: ${DEFAULT_CONTAINER_TIMEOUT}s per container
+      • Supabase stop:  ${DEFAULT_SUPABASE_TIMEOUT}s total
+      • Docker Compose: ${DEFAULT_DOCKER_COMPOSE_TIMEOUT}s total
+      • Volume removal: ${DEFAULT_VOLUME_TIMEOUT}s per volume
+
+    If operations timeout, the script will force-kill containers.
 
 ${BOLD}EXAMPLES${NC}
     ${GRAY}# Stop services, keep all data${NC}
@@ -104,20 +204,15 @@ ${BOLD}EXAMPLES${NC}
     ${GRAY}# Stop and delete everything (no confirmation, for CI)${NC}
     pnpm infra:down --reset --force
 
-${BOLD}DATA PRESERVATION${NC}
-    ${GREEN}Without --reset:${NC}
-      • Containers are stopped and removed
-      • Docker volumes are ${GREEN}PRESERVED${NC}
-      • Database data persists between restarts
-      • Redis cache persists between restarts
-      • MinIO files persist between restarts
+    ${GRAY}# Stop with longer timeout (60s) and verbose output${NC}
+    pnpm infra:down --timeout 60 --verbose
 
-    ${RED}With --reset:${NC}
-      • Containers are stopped and removed
-      • Docker volumes are ${RED}DELETED${NC}
-      • PostgreSQL database is ${RED}WIPED${NC}
-      • Redis cache is ${RED}CLEARED${NC}
-      • MinIO storage is ${RED}EMPTIED${NC}
+${BOLD}TROUBLESHOOTING${NC}
+    If the script hangs or fails, try:
+      ${CYAN}docker stop \$(docker ps -q --filter name=supabase)${NC}
+      ${CYAN}docker stop \$(docker ps -q --filter name=life-assistant)${NC}
+      ${CYAN}docker rm \$(docker ps -aq --filter name=supabase)${NC}
+      ${CYAN}docker rm \$(docker ps -aq --filter name=life-assistant)${NC}
 
 EOF
 }
@@ -136,6 +231,21 @@ parse_args() {
             --force|-f)
                 FORCE_MODE=true
                 shift
+                ;;
+            --verbose|-v)
+                VERBOSE_MODE=true
+                shift
+                ;;
+            --timeout|-t)
+                if [[ -z "${2:-}" ]] || [[ ! "$2" =~ ^[0-9]+$ ]]; then
+                    print_error "Timeout must be a positive number"
+                    exit 1
+                fi
+                CONTAINER_TIMEOUT=$2
+                SUPABASE_TIMEOUT=$2
+                DOCKER_COMPOSE_TIMEOUT=$2
+                VOLUME_TIMEOUT=$2
+                shift 2
                 ;;
             --help|-h)
                 show_help
@@ -197,94 +307,186 @@ confirm_reset() {
 }
 
 # =============================================================================
-# Service Detection
+# Container Discovery
 # =============================================================================
 
+get_supabase_containers() {
+    docker ps -q --filter "name=supabase" 2>/dev/null || true
+}
+
+get_supabase_container_names() {
+    docker ps --filter "name=supabase" --format "{{.Names}}" 2>/dev/null || true
+}
+
+get_docker_compose_containers() {
+    # Only get life-assistant containers that are NOT supabase
+    docker ps -q --filter "name=life-assistant" 2>/dev/null | while read -r id; do
+        local name
+        name=$(docker inspect --format '{{.Name}}' "$id" 2>/dev/null | sed 's/^\///')
+        if [[ ! "$name" =~ ^supabase ]]; then
+            echo "$id"
+        fi
+    done
+}
+
+get_docker_compose_container_names() {
+    # Only get life-assistant containers that are NOT supabase (Redis, MinIO)
+    docker ps --filter "name=life-assistant" --format "{{.Names}}" 2>/dev/null | grep -v "^supabase" || true
+}
+
+get_all_containers() {
+    docker ps -aq --filter "name=supabase" --filter "name=life-assistant" 2>/dev/null || true
+}
+
 check_supabase_running() {
-    if docker ps --filter "name=supabase" --format "{{.Names}}" 2>/dev/null | grep -q "supabase"; then
-        return 0
-    fi
-    return 1
+    [[ -n "$(get_supabase_containers)" ]]
 }
 
 check_docker_services_running() {
-    if docker ps --filter "name=life-assistant" --format "{{.Names}}" 2>/dev/null | grep -q "life-assistant"; then
-        return 0
-    fi
-    return 1
+    [[ -n "$(get_docker_compose_containers)" ]]
 }
 
 get_supabase_volumes() {
-    # Get all volumes related to supabase
     docker volume ls --format "{{.Name}}" 2>/dev/null | grep -E "supabase" || true
 }
 
 get_docker_compose_volumes() {
-    # Get volumes from our docker-compose
-    # Matches both old format (docker_*) and new format (life-assistant_*)
-    # Anchors ^ and $ ensure exact matching for safety (prevents matching other projects)
     docker volume ls --format "{{.Name}}" 2>/dev/null | grep -E "^(docker|life-assistant)_(redis|minio|postgres)_data$" || true
 }
 
 # =============================================================================
-# Service Management - Normal Stop
+# Container Status Display
 # =============================================================================
 
-stop_supabase() {
-    print_header "Stopping Supabase"
+show_container_status() {
+    local containers
+    containers=$(get_supabase_container_names)
+    local dc_containers
+    dc_containers=$(get_docker_compose_container_names)
+
+    local supabase_count=0
+    local dc_count=0
+
+    if [[ -n "$containers" ]]; then
+        supabase_count=$(echo "$containers" | wc -l | tr -d ' ')
+    fi
+
+    if [[ -n "$dc_containers" ]]; then
+        dc_count=$(echo "$dc_containers" | wc -l | tr -d ' ')
+    fi
+
+    local total=$((supabase_count + dc_count))
+
+    if [[ $total -eq 0 ]]; then
+        print_info "No containers running"
+        return 1
+    fi
+
+    print_info "Found ${BOLD}$total${NC} containers to stop:"
+
+    if [[ $supabase_count -gt 0 ]]; then
+        print_debug "Supabase: $supabase_count containers"
+        if [[ "$VERBOSE_MODE" == "true" ]]; then
+            echo "$containers" | while read -r name; do
+                print_verbose "  - $name"
+            done
+        fi
+    fi
+
+    if [[ $dc_count -gt 0 ]]; then
+        print_debug "Docker Compose: $dc_count containers (Redis, MinIO)"
+        if [[ "$VERBOSE_MODE" == "true" ]]; then
+            echo "$dc_containers" | while read -r name; do
+                print_verbose "  - $name"
+            done
+        fi
+    fi
+
+    return 0
+}
+
+# =============================================================================
+# Service Management - Stop Operations
+# =============================================================================
+
+stop_container_gracefully() {
+    local container_id=$1
+    local container_name=$2
+    local timeout=$3
+
+    print_verbose "Stopping $container_name (timeout: ${timeout}s)"
+
+    if docker stop -t "$timeout" "$container_id" &>/dev/null; then
+        print_verbose "Stopped: $container_name"
+        return 0
+    else
+        print_verbose "Failed to stop gracefully: $container_name"
+        return 1
+    fi
+}
+
+force_kill_container() {
+    local container_id=$1
+    local container_name=$2
+
+    print_verbose "Force killing: $container_name"
+
+    if docker kill "$container_id" &>/dev/null; then
+        print_verbose "Killed: $container_name"
+        return 0
+    else
+        print_verbose "Failed to kill: $container_name"
+        return 1
+    fi
+}
+
+remove_container() {
+    local container_id=$1
+
+    docker rm -f "$container_id" &>/dev/null || true
+}
+
+stop_supabase_via_cli() {
+    print_header "Step 1/3: Stopping Supabase"
 
     if ! check_supabase_running; then
-        print_warning "Supabase is not running (or already stopped)"
+        print_success "Supabase is not running"
         return 0
     fi
 
-    print_info "Stopping Supabase services..."
+    local container_count
+    container_count=$(get_supabase_containers | wc -l | tr -d ' ')
+    print_info "Stopping $container_count Supabase containers..."
+
+    # Try graceful stop via Supabase CLI first
+    start_step "Attempting graceful stop via Supabase CLI"
 
     local stop_args=""
     if [[ "$RESET_MODE" == "true" ]]; then
         stop_args="--no-backup"
-        print_debug "Command: npx -y supabase stop --no-backup (timeout: ${SUPABASE_STOP_TIMEOUT}s)"
+    fi
+
+    print_debug "Command: npx -y supabase stop $stop_args"
+
+    # Run in background with timeout
+    (timeout "$SUPABASE_TIMEOUT" npx -y supabase stop $stop_args &>/dev/null) &
+    local pid=$!
+
+    if show_progress $pid "Supabase CLI stop" "$SUPABASE_TIMEOUT"; then
+        end_step
+        print_success "Supabase stopped via CLI"
+        return 0
     else
-        print_debug "Command: npx -y supabase stop (timeout: ${SUPABASE_STOP_TIMEOUT}s)"
+        end_step
+        print_warning "Supabase CLI timed out or failed, using Docker directly"
     fi
 
-    local stop_output
-    if stop_output=$(timeout "$SUPABASE_STOP_TIMEOUT" npx -y supabase stop $stop_args 2>&1); then
-        print_success "Supabase stopped successfully"
-    else
-        local exit_code=$?
-        if [[ $exit_code -eq 124 ]]; then
-            print_error "Supabase stop timed out after ${SUPABASE_STOP_TIMEOUT}s"
-            print_debug "Attempting force stop via Docker..."
-            force_stop_supabase
-        else
-            print_error "Failed to stop Supabase cleanly (exit code: $exit_code)"
-            echo "$stop_output" | tail -10
-            print_debug "Attempting force stop via Docker..."
-            force_stop_supabase
-        fi
-    fi
-}
-
-force_stop_supabase() {
-    local containers
-    containers=$(docker ps -q --filter "name=supabase" 2>/dev/null || true)
-
-    if [[ -n "$containers" ]]; then
-        print_info "Force stopping Supabase containers..."
-        if docker stop $containers 2>/dev/null; then
-            print_success "Supabase containers force stopped"
-            # Also remove them
-            docker rm $containers 2>/dev/null || true
-        else
-            print_error "Failed to force stop some containers"
-            ERRORS=$((ERRORS + 1))
-        fi
-    fi
+    # Fallback: Stop containers directly via Docker
+    stop_containers_directly "supabase"
 }
 
 stop_docker_services() {
-    print_header "Stopping Docker Services (Redis + MinIO)"
+    print_header "Step 2/3: Stopping Docker Services (Redis + MinIO)"
 
     if [[ ! -f "$DOCKER_COMPOSE_FILE" ]]; then
         print_warning "Docker Compose file not found, skipping..."
@@ -292,114 +494,143 @@ stop_docker_services() {
     fi
 
     if ! check_docker_services_running; then
-        print_warning "No Docker services running"
-
-        # Even if containers aren't running, we might need to remove volumes in reset mode
-        if [[ "$RESET_MODE" == "true" ]]; then
-            remove_docker_compose_volumes
-        fi
+        print_success "Docker services are not running"
         return 0
     fi
 
-    print_info "Stopping containers..."
+    local container_count
+    container_count=$(get_docker_compose_containers | wc -l | tr -d ' ')
+    print_info "Stopping $container_count Docker Compose containers..."
+
+    start_step "Running docker compose down"
 
     local down_args=""
     if [[ "$RESET_MODE" == "true" ]]; then
-        down_args="-v"
-        print_debug "Command: docker compose down -v (removing volumes)"
+        down_args="-v --remove-orphans"
+        print_debug "Command: docker compose down -v --remove-orphans"
     else
-        print_debug "Command: docker compose down"
+        down_args="--remove-orphans"
+        print_debug "Command: docker compose down --remove-orphans"
     fi
 
-    if docker compose -f "$DOCKER_COMPOSE_FILE" down $down_args 2>&1; then
-        print_success "Docker services stopped successfully"
-        if [[ "$RESET_MODE" == "true" ]]; then
-            print_success "Docker volumes removed"
-        fi
+    # Run in background with timeout
+    (timeout "$DOCKER_COMPOSE_TIMEOUT" docker compose -f "$DOCKER_COMPOSE_FILE" down $down_args &>/dev/null) &
+    local pid=$!
+
+    if show_progress $pid "docker compose down" "$DOCKER_COMPOSE_TIMEOUT"; then
+        end_step
+        print_success "Docker services stopped"
+        return 0
     else
-        print_error "Failed to stop Docker services cleanly"
-        print_debug "Attempting force stop..."
-        force_stop_docker_services
+        end_step
+        print_warning "Docker compose timed out, stopping containers directly"
     fi
+
+    # Fallback: Stop containers directly
+    stop_containers_directly "life-assistant"
 }
 
-force_stop_docker_services() {
+stop_containers_directly() {
+    local filter=$1
     local containers
-    containers=$(docker ps -q --filter "name=life-assistant" 2>/dev/null || true)
+    containers=$(docker ps -q --filter "name=$filter" 2>/dev/null || true)
 
-    if [[ -n "$containers" ]]; then
-        docker stop $containers 2>/dev/null || true
-        docker rm $containers 2>/dev/null || true
+    if [[ -z "$containers" ]]; then
+        print_debug "No $filter containers found"
+        return 0
     fi
 
-    if [[ "$RESET_MODE" == "true" ]]; then
-        remove_docker_compose_volumes
-    fi
+    local count
+    count=$(echo "$containers" | wc -l | tr -d ' ')
+    print_info "Force stopping $count $filter containers..."
 
-    ERRORS=$((ERRORS + 1))
+    local stopped=0
+    local killed=0
+    local failed=0
+
+    while read -r container_id; do
+        [[ -z "$container_id" ]] && continue
+
+        local container_name
+        container_name=$(docker inspect --format '{{.Name}}' "$container_id" 2>/dev/null | sed 's/^\///')
+
+        # Try graceful stop with short timeout
+        if timeout "$CONTAINER_TIMEOUT" docker stop -t 5 "$container_id" &>/dev/null; then
+            stopped=$((stopped + 1))
+            print_debug "Stopped: $container_name"
+        else
+            # Force kill
+            if docker kill "$container_id" &>/dev/null; then
+                killed=$((killed + 1))
+                print_debug "Killed: $container_name"
+            else
+                failed=$((failed + 1))
+                print_warning "Failed to stop: $container_name"
+            fi
+        fi
+
+        # Remove container
+        docker rm -f "$container_id" &>/dev/null || true
+
+    done <<< "$containers"
+
+    if [[ $failed -eq 0 ]]; then
+        print_success "All $filter containers stopped (graceful: $stopped, forced: $killed)"
+    else
+        print_warning "Some containers failed to stop (stopped: $stopped, killed: $killed, failed: $failed)"
+    fi
 }
 
 # =============================================================================
 # Reset Mode - Volume Cleanup
 # =============================================================================
 
-remove_docker_compose_volumes() {
-    print_info "Removing Docker Compose volumes..."
+remove_volumes() {
+    print_header "Step 3/3: Removing Data Volumes"
 
-    local volumes
-    volumes=$(get_docker_compose_volumes)
+    local supabase_volumes
+    local dc_volumes
+    supabase_volumes=$(get_supabase_volumes)
+    dc_volumes=$(get_docker_compose_volumes)
 
-    if [[ -z "$volumes" ]]; then
-        print_debug "No Docker Compose volumes found"
+    local all_volumes="$supabase_volumes"$'\n'"$dc_volumes"
+    all_volumes=$(echo "$all_volumes" | grep -v '^$' | sort -u)
+
+    if [[ -z "$all_volumes" ]]; then
+        print_success "No volumes to remove"
         return 0
     fi
 
-    for vol in $volumes; do
-        if docker volume rm "$vol" 2>/dev/null; then
-            print_debug "Removed volume: $vol"
-        else
-            print_warning "Could not remove volume: $vol (may be in use)"
-        fi
-    done
-}
-
-remove_supabase_volumes() {
-    print_header "Removing Supabase Data"
-
-    print_info "Removing Supabase Docker volumes..."
-
-    local volumes
-    volumes=$(get_supabase_volumes)
-
-    if [[ -z "$volumes" ]]; then
-        print_debug "No Supabase volumes found"
-        print_success "Supabase data cleaned"
-        return 0
-    fi
+    local count
+    count=$(echo "$all_volumes" | wc -l | tr -d ' ')
+    print_info "Removing $count data volumes..."
 
     local removed=0
     local failed=0
 
-    for vol in $volumes; do
-        if docker volume rm "$vol" 2>/dev/null; then
-            print_debug "Removed volume: $vol"
+    while read -r vol; do
+        [[ -z "$vol" ]] && continue
+
+        print_debug "Removing volume: $vol"
+
+        if timeout "$VOLUME_TIMEOUT" docker volume rm "$vol" &>/dev/null; then
             removed=$((removed + 1))
+            print_verbose "Removed: $vol"
         else
-            print_warning "Could not remove volume: $vol"
             failed=$((failed + 1))
+            print_warning "Could not remove: $vol (may be in use)"
         fi
-    done
+    done <<< "$all_volumes"
 
     if [[ $failed -eq 0 ]]; then
-        print_success "Supabase data cleaned ($removed volumes removed)"
+        print_success "All volumes removed ($removed total)"
     else
-        print_warning "Supabase data partially cleaned ($removed removed, $failed failed)"
-        ERRORS=$((ERRORS + 1))
+        print_warning "Volume cleanup partial ($removed removed, $failed failed)"
+        print_debug "Run 'docker volume prune' to clean up orphaned volumes"
     fi
 }
 
 cleanup_supabase_cache() {
-    # Clean local supabase cache if it exists
     local supabase_dir="$PROJECT_ROOT/supabase/.temp"
 
     if [[ -d "$supabase_dir" ]]; then
@@ -414,48 +645,37 @@ cleanup_supabase_cache() {
 # =============================================================================
 
 verify_stopped() {
-    print_header "Verifying Cleanup"
+    print_header "Verification"
 
-    local any_issues=false
+    local any_running=false
 
     # Check containers
-    local la_containers
-    la_containers=$(docker ps --filter "name=life-assistant" --format "{{.Names}}" 2>/dev/null || true)
+    local remaining
+    remaining=$(docker ps --filter "name=supabase" --filter "name=life-assistant" --format "{{.Names}}" 2>/dev/null || true)
 
-    if [[ -n "$la_containers" ]]; then
-        any_issues=true
-        print_warning "Some life-assistant containers still running:"
-        echo "$la_containers" | while read -r container; do
-            print_debug "$container"
+    if [[ -n "$remaining" ]]; then
+        any_running=true
+        local count
+        count=$(echo "$remaining" | wc -l | tr -d ' ')
+        print_warning "$count containers still running:"
+        echo "$remaining" | while read -r name; do
+            print_debug "$name"
         done
-        ERRORS=$((ERRORS + 1))
     else
-        print_success "All life-assistant containers stopped"
+        print_success "All containers stopped"
     fi
 
-    local supabase_containers
-    supabase_containers=$(docker ps --filter "name=supabase" --format "{{.Names}}" 2>/dev/null || true)
-
-    if [[ -n "$supabase_containers" ]]; then
-        any_issues=true
-        print_warning "Some Supabase containers still running:"
-        echo "$supabase_containers" | while read -r container; do
-            print_debug "$container"
-        done
-        ERRORS=$((ERRORS + 1))
-    else
-        print_success "All Supabase containers stopped"
-    fi
-
-    # In reset mode, also verify volumes are gone
+    # In reset mode, verify volumes
     if [[ "$RESET_MODE" == "true" ]]; then
         local remaining_volumes
         remaining_volumes=$(get_supabase_volumes)
-        remaining_volumes+=$(get_docker_compose_volumes)
+        remaining_volumes+=$'\n'$(get_docker_compose_volumes)
+        remaining_volumes=$(echo "$remaining_volumes" | grep -v '^$' | sort -u)
 
         if [[ -n "$remaining_volumes" ]]; then
-            any_issues=true
-            print_warning "Some volumes still exist (may need manual cleanup):"
+            local vol_count
+            vol_count=$(echo "$remaining_volumes" | wc -l | tr -d ' ')
+            print_warning "$vol_count volumes still exist:"
             echo "$remaining_volumes" | while read -r vol; do
                 [[ -n "$vol" ]] && print_debug "$vol"
             done
@@ -464,23 +684,28 @@ verify_stopped() {
         fi
     fi
 
-    # Show total container count
-    if [[ "$any_issues" == "false" ]]; then
-        local total
-        total=$(docker ps -q 2>/dev/null | wc -l | tr -d ' ')
-        print_debug "Total running containers (other projects): $total"
+    if [[ "$any_running" == "true" ]]; then
+        return 1
     fi
+    return 0
 }
 
-show_cleanup_commands() {
-    if [[ $ERRORS -gt 0 ]]; then
-        echo ""
-        print_info "Manual cleanup commands if needed:"
-        print_debug "docker stop \$(docker ps -q --filter name=supabase)"
-        print_debug "docker stop \$(docker ps -q --filter name=life-assistant)"
-        print_debug "docker volume rm \$(docker volume ls -q | grep -E 'supabase|redis|minio')"
-        print_debug "docker system prune -f"
-    fi
+show_manual_cleanup() {
+    echo ""
+    print_info "Manual cleanup commands if needed:"
+    echo ""
+    echo -e "  ${CYAN}# Force stop all project containers${NC}"
+    echo -e "  docker stop \$(docker ps -q --filter name=supabase --filter name=life-assistant)"
+    echo ""
+    echo -e "  ${CYAN}# Remove all project containers${NC}"
+    echo -e "  docker rm -f \$(docker ps -aq --filter name=supabase --filter name=life-assistant)"
+    echo ""
+    echo -e "  ${CYAN}# Remove all project volumes${NC}"
+    echo -e "  docker volume rm \$(docker volume ls -q | grep -E 'supabase|life-assistant|redis|minio')"
+    echo ""
+    echo -e "  ${CYAN}# Nuclear option - prune everything unused${NC}"
+    echo -e "  docker system prune -af --volumes"
+    echo ""
 }
 
 # =============================================================================
@@ -488,8 +713,9 @@ show_cleanup_commands() {
 # =============================================================================
 
 main() {
-    # Parse command line arguments
     parse_args "$@"
+
+    local total_start=$SECONDS
 
     # Show appropriate header
     if [[ "$RESET_MODE" == "true" ]]; then
@@ -499,47 +725,65 @@ main() {
         print_header "Life Assistant - Stopping Infrastructure"
     fi
 
-    local start_time=$SECONDS
-
     # Check if Docker is running
     if ! docker info &> /dev/null; then
         print_warning "Docker is not running - nothing to stop"
         exit 0
     fi
 
-    # Stop services (Supabase first, then Docker)
-    stop_supabase
+    # Show current status
+    if ! show_container_status; then
+        if [[ "$RESET_MODE" == "true" ]]; then
+            print_info "Checking for volumes to remove..."
+            remove_volumes
+            cleanup_supabase_cache
+        fi
+        print_success "Nothing to do"
+        exit 0
+    fi
+
+    echo ""
+
+    # Stop services
+    stop_supabase_via_cli
     stop_docker_services
 
-    # In reset mode, also clean up Supabase volumes and cache
+    # In reset mode, clean up volumes
     if [[ "$RESET_MODE" == "true" ]]; then
-        remove_supabase_volumes
+        remove_volumes
         cleanup_supabase_cache
     fi
 
-    # Verify everything is cleaned up
-    verify_stopped
+    # Verify everything is stopped
+    if ! verify_stopped; then
+        show_manual_cleanup
+    fi
 
-    local elapsed=$((SECONDS - start_time))
+    local total_elapsed=$((SECONDS - total_start))
 
     # Final summary
     echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
     if [[ $ERRORS -eq 0 ]]; then
         if [[ "$RESET_MODE" == "true" ]]; then
-            print_success "Infrastructure reset complete! All data deleted. (${elapsed}s)"
+            echo -e "${GREEN}  ✓ Infrastructure reset complete! (${total_elapsed}s)${NC}"
+            echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
             echo ""
-            print_info "Run ${GREEN}pnpm infra:up${NC} to start fresh"
+            print_info "All data deleted. Run ${GREEN}pnpm infra:up${NC} to start fresh."
         else
-            print_success "All services stopped successfully! (${elapsed}s)"
+            echo -e "${GREEN}  ✓ All services stopped! (${total_elapsed}s)${NC}"
+            echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
             echo ""
-            print_info "Data preserved. Run ${GREEN}pnpm infra:up${NC} to restart"
+            print_info "Data preserved. Run ${GREEN}pnpm infra:up${NC} to restart."
         fi
     else
-        print_warning "Completed with $ERRORS warning(s). (${elapsed}s)"
-        show_cleanup_commands
+        echo -e "${YELLOW}  ⚠ Completed with $ERRORS error(s), $WARNINGS warning(s) (${total_elapsed}s)${NC}"
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        show_manual_cleanup
     fi
-    echo ""
 
+    echo ""
     exit $ERRORS
 }
 
