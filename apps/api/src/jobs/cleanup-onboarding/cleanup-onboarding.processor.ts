@@ -5,7 +5,7 @@ import { lt, and, isNull, eq } from '@life-assistant/database';
 import { UserStatus } from '@life-assistant/shared';
 import { DatabaseService } from '../../database/database.service';
 import { AppLoggerService } from '../../logger/logger.service';
-import { QUEUES } from '../jobs.module';
+import { QUEUES } from '../queues';
 
 /**
  * Job data for cleanup operations

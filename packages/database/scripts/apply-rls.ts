@@ -1,16 +1,20 @@
 // scripts/apply-rls.ts
 // Apply RLS policies to the database
 
+import { config } from 'dotenv';
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Load .env from monorepo root
+config({ path: resolve(__dirname, '../../../.env') });
+
 const DATABASE_URL =
-  process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/life_assistant';
+  process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:54322/postgres';
 
 async function applyRLS() {
   console.log('Connecting to database...');

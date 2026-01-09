@@ -8,14 +8,10 @@ import {
 } from './cleanup-onboarding';
 import { DatabaseModule } from '../database/database.module';
 import { LoggerModule } from '../logger/logger.module';
+import { QUEUES } from './queues';
 
-/**
- * Job queues defined in the system
- * @see ENGINEERING.md §7.1
- */
-export const QUEUES = {
-  CLEANUP_ONBOARDING: 'cleanup-onboarding',
-} as const;
+// Re-export QUEUES for external consumers
+export { QUEUES };
 
 /**
  * JobsModule - BullMQ job queue processing

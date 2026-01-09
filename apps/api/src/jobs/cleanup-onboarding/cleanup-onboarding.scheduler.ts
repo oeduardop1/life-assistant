@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { AppLoggerService } from '../../logger/logger.service';
-import { QUEUES } from '../jobs.module';
+import { QUEUES } from '../queues';
 
 /**
  * Days after which abandoned onboarding users are cleaned up
