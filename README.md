@@ -129,9 +129,42 @@ life-assistant/
 └── [spec files]             # Documentacao de especificacoes
 ```
 
-## Servicos de Desenvolvimento
+## Desenvolvimento Local
 
-O ambiente de desenvolvimento local e gerenciado pelos scripts `pnpm infra:up` e `pnpm infra:down`.
+### Passo a Passo
+
+```bash
+# 1. Clone o repositorio
+git clone https://github.com/oeduardop1/life-assistant.git
+cd life-assistant
+
+# 2. Instale as dependencias
+pnpm install
+
+# 3. Configure as variaveis de ambiente
+cp .env.example .env
+# Edite o .env se necessario (os valores padrao funcionam para dev local)
+
+# 4. Inicie a infraestrutura (Docker + Supabase)
+pnpm infra:up
+# Aguarde ~1-2 min na primeira execucao (download de imagens Docker)
+
+# 5. Inicie os apps (frontend + backend)
+pnpm dev
+# Web: http://localhost:3000
+# API: http://localhost:4000
+```
+
+### Comandos de Infraestrutura
+
+| Comando | Descricao |
+|---------|-----------|
+| `pnpm infra:up` | Inicia Redis, MinIO e Supabase |
+| `pnpm infra:up --help` | Mostra ajuda do comando |
+| `pnpm infra:down` | Para os servicos (preserva dados) |
+| `pnpm infra:down --reset` | Para e **apaga todos os dados** |
+| `pnpm infra:down --reset --force` | Reset sem confirmacao (para CI) |
+| `pnpm infra:down --help` | Mostra todas as opcoes |
 
 ### Portas e Servicos
 
