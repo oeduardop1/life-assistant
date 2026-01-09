@@ -20,6 +20,20 @@
 - [ ] Conta no [Supabase](https://supabase.com) (gratuito)
 - [ ] Conta no [Sentry](https://sentry.io) (gratuito)
 
+### CLIs (Opcional)
+
+Os CLIs permitem configurar variáveis de ambiente sem usar o dashboard:
+
+```bash
+# Instalar CLIs
+npm install -g vercel
+npm install -g @railway/cli
+
+# Autenticar
+vercel login
+railway login
+```
+
 ---
 
 ## 1. Configurar Sentry
@@ -161,14 +175,43 @@ npx supabase db push
 
 ### 3.3 Environment Variables
 
-Adicione em **Project Settings → Environment Variables**:
-
 | Key | Onde Obter |
 |-----|------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Connect ou Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API Keys (publishable ou anon) |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry → Projeto web → Settings → Client Keys (DSN) |
 | `NEXT_PUBLIC_API_URL` | URL do Railway (após deploy da API) |
+
+#### Opção A: Via Dashboard
+
+1. Acesse **Project Settings → Environment Variables**
+2. Adicione cada variável manualmente
+3. Selecione os environments (Production, Preview, Development)
+
+#### Opção B: Via CLI
+
+```bash
+# Primeiro, linkar ao projeto (na pasta apps/web)
+cd apps/web
+vercel link
+
+# Adicionar variáveis uma a uma (interativo)
+vercel env add NEXT_PUBLIC_SUPABASE_URL
+vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+vercel env add NEXT_PUBLIC_SENTRY_DSN
+vercel env add NEXT_PUBLIC_API_URL
+
+# Ou adicionar com valor direto (para production)
+echo "https://xxx.supabase.co" | vercel env add NEXT_PUBLIC_SUPABASE_URL production
+
+# Listar variáveis configuradas
+vercel env ls
+
+# Baixar variáveis para .env.local (útil para dev)
+vercel env pull .env.local
+```
+
+> **Nota:** O Vercel CLI não suporta importação em massa de `.env`. Cada variável deve ser adicionada individualmente.
 
 ### 3.4 Criar Access Token (para CI/CD)
 
@@ -185,7 +228,22 @@ Ou: Clique no avatar → **Settings** → **Tokens**
 
 ### 3.5 Deploy
 
-Clique em **Deploy** e aguarde a conclusão.
+#### Via Dashboard (Recomendado para Produção)
+- Clique em **Deploy** e aguarde a conclusão
+- Deploys automáticos ocorrem a cada `git push` para `main`
+
+#### Via CLI (Útil para Testes)
+```bash
+cd apps/web
+
+# Deploy para preview
+vercel
+
+# Deploy para produção
+vercel --prod
+```
+
+> **Nota:** O deploy via Git Integration (dashboard) é recomendado para produção pois garante que o código vem do repositório (source of truth).
 
 ---
 
@@ -208,8 +266,6 @@ Em **Settings → Build**:
 
 ### 4.3 Environment Variables
 
-Em **Variables**, adicione:
-
 | Key | Onde Obter |
 |-----|------------|
 | `NODE_ENV` | `production` |
@@ -221,6 +277,48 @@ Em **Variables**, adicione:
 | `REDIS_URL` | Upstash ou outro provider Redis |
 | `SENTRY_DSN` | Sentry → Projeto api → Settings → Client Keys (DSN) |
 | `FRONTEND_URL` | URL do Vercel |
+
+#### Opção A: Via Dashboard
+
+1. Acesse o projeto no Railway
+2. Vá em **Variables**
+3. Adicione cada variável manualmente
+
+#### Opção B: Via CLI
+
+```bash
+# Primeiro, linkar ao projeto
+railway link
+
+# Adicionar variáveis uma a uma
+railway variables set NODE_ENV=production
+railway variables set PORT=4000
+railway variables set DATABASE_URL="postgres://..."
+railway variables set SUPABASE_URL="https://xxx.supabase.co"
+
+# Adicionar múltiplas variáveis de uma vez
+railway variables set \
+  NODE_ENV=production \
+  PORT=4000 \
+  FRONTEND_URL="https://seu-projeto.vercel.app"
+
+# Listar variáveis configuradas
+railway variables
+
+# Importar de arquivo .env (todas as variáveis de uma vez)
+# Crie um arquivo .env.railway com as variáveis, depois:
+export $(cat .env.railway | xargs) && railway variables set \
+  NODE_ENV=$NODE_ENV \
+  PORT=$PORT \
+  DATABASE_URL="$DATABASE_URL" \
+  SUPABASE_URL="$SUPABASE_URL" \
+  SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+  SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_KEY" \
+  SENTRY_DSN="$SENTRY_DSN" \
+  FRONTEND_URL="$FRONTEND_URL"
+```
+
+> **Dica:** O Railway CLI permite adicionar múltiplas variáveis em um único comando, diferente do Vercel.
 
 ### 4.4 Health Check
 
@@ -244,7 +342,25 @@ Ou: Clique no avatar → **Account Settings** → **Tokens**
    - Não selecione → cria token de conta pessoal
 4. **Copie o token** — ele não será exibido novamente
 
-### 4.6 Atualizar Vercel
+### 4.6 Deploy
+
+#### Via Dashboard (Recomendado para Produção)
+- Deploys automáticos ocorrem a cada `git push` para `main`
+- Acompanhe em **Deployments** no dashboard
+
+#### Via CLI (Útil para Testes)
+```bash
+# Linkar ao projeto (se ainda não fez)
+railway link
+
+# Deploy
+railway up
+
+# Ver logs
+railway logs
+```
+
+### 4.7 Atualizar Vercel
 
 Após o deploy no Railway, copie a URL pública e adicione no Vercel:
 - `NEXT_PUBLIC_API_URL` = `https://seu-projeto.railway.app/api`
@@ -327,9 +443,14 @@ curl https://seu-projeto.railway.app/api/health
 
 ## Referências
 
+### Documentação Geral
 - [ENGINEERING.md §12](ENGINEERING.md) — Arquitetura de CI/CD
 - [Vercel Monorepo Docs](https://vercel.com/docs/monorepos)
 - [Railway Docs](https://docs.railway.com/)
 - [Supabase API Keys](https://supabase.com/docs/guides/api/api-keys)
 - [Sentry Auth Tokens](https://docs.sentry.io/account/auth-tokens/)
 - [Sentry Next.js Setup](https://docs.sentry.io/platforms/javascript/guides/nextjs/)
+
+### CLI Documentation
+- [Vercel CLI](https://vercel.com/docs/cli) — `vercel env`, `vercel link`, `vercel deploy`
+- [Railway CLI](https://docs.railway.com/reference/cli-api) — `railway variables`, `railway link`, `railway up`
