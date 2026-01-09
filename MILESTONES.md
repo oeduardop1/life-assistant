@@ -683,31 +683,59 @@
 
 **Objetivo:** Configurar pipeline de integração e deploy contínuo.
 
-**Referências:** `ENGINEERING.md` §12
+**Referências:** `ENGINEERING.md` §12, §13
 
 **Tasks:**
 
+**CI Pipeline (ci.yml):**
 - [ ] Criar `.github/workflows/ci.yml`:
   - [ ] Checkout + pnpm setup
-  - [ ] Install dependencies
+  - [ ] Install dependencies (`--frozen-lockfile`)
   - [ ] Run lint
   - [ ] Run typecheck
-  - [ ] Run tests
+  - [ ] Run tests (unit)
   - [ ] Run build
+- [ ] Adicionar job `e2e` no ci.yml:
+  - [ ] Depende do job `quality`
+  - [ ] Instalar Playwright browsers
+  - [ ] Executar `pnpm --filter web test:e2e`
+  - [ ] Upload `playwright-report` como artifact em falha (retention: 7 days)
+
+**Deploy Workflows:**
 - [ ] Criar `.github/workflows/deploy-web.yml`:
   - [ ] Trigger on push to main
-  - [ ] Deploy para Vercel
+  - [ ] Deploy para Vercel (usar GitHub integration nativa)
 - [ ] Criar `.github/workflows/deploy-api.yml`:
   - [ ] Trigger on push to main
   - [ ] Deploy para Railway
-- [ ] Configurar branch protection rules (require CI pass)
-- [ ] Configurar secrets no GitHub
+  - [ ] Validar health check (`/api/health`) após deploy
+
+**Sentry Error Tracking:**
+- [ ] Instalar `@sentry/nestjs` no apps/api
+- [ ] Inicializar Sentry no `apps/api/src/main.ts`
+- [ ] Instalar `@sentry/nextjs` no apps/web
+- [ ] Configurar Sentry no apps/web (`sentry.client.config.ts`, `sentry.server.config.ts`)
+
+**GitHub Configuration:**
+- [ ] Configurar secrets no GitHub:
+  - [ ] `VERCEL_TOKEN`
+  - [ ] `RAILWAY_TOKEN`
+  - [ ] `SENTRY_DSN`
+  - [ ] `SENTRY_AUTH_TOKEN` (para source maps)
+- [ ] Documentar branch protection em `ENGINEERING.md` §12.3 (ativar quando tiver time)
 
 **Definition of Done:**
-- [ ] CI roda em todo PR
-- [ ] Deploy automático para staging em push to develop
+- [ ] CI roda em todo push (main, develop, feature/*)
+- [ ] Job E2E roda após job quality
 - [ ] Deploy automático para produção em push to main
-- [ ] Branch protection ativo
+- [ ] Health check validado após deploy
+- [ ] Sentry capturando erros em produção
+- [ ] Branch protection documentado para ativação futura
+
+**Notas:**
+- Branch protection será ativado quando houver time de desenvolvimento (2+ devs)
+- Deploy staging pode ser adicionado depois se necessário
+- Preview deployments são gerenciados automaticamente pelo Vercel GitHub App
 
 ---
 

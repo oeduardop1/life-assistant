@@ -1569,6 +1569,36 @@ jobs:
 - Exports sempre em storage (URLs assinadas)
 - Secrets em secret manager do provedor (nunca no repo)
 
+### 12.3 Branch Protection (Quando Tiver Time)
+
+> **Status atual:** Desabilitado (desenvolvimento solo)
+> **Ativar quando:** Time de desenvolvimento com 2+ devs
+
+Branch protection é uma configuração do GitHub que exige PRs e aprovação de CI antes de merge. Durante desenvolvimento solo, permite-se push direto para agilidade. Esta seção documenta a configuração recomendada para quando o projeto tiver um time.
+
+**Configuração recomendada para `main`:**
+- [ ] Require pull request before merging
+- [ ] Require status checks to pass before merging
+  - [ ] CI workflow (quality + e2e jobs)
+- [ ] Require conversation resolution before merging
+- [ ] Do not allow bypassing the above settings
+
+**Configuração recomendada para `develop`:**
+- [ ] Require status checks to pass before merging
+  - [ ] CI workflow (quality job)
+- [ ] Allow force pushes (para rebase)
+
+**Como ativar:**
+1. Acessar GitHub repo → Settings → Branches → Add branch ruleset
+2. Definir branch pattern: `main` ou `develop`
+3. Marcar as opções conforme acima
+4. Save changes
+
+**Quando ativar:**
+- Ao adicionar segundo desenvolvedor ao projeto
+- Ao entrar em fase de produção com usuários reais
+- Quando quiser garantir code review obrigatório
+
 ---
 
 ## 13) Observabilidade
@@ -2133,5 +2163,5 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-*Última atualização: 06 Janeiro 2026*
+*Última atualização: 08 Janeiro 2026*
 *Revisão: Versões de infraestrutura atualizadas para LTS mais recentes (Node.js 24, pnpm 10, Docker Compose v5+)*
