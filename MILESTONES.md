@@ -168,7 +168,7 @@
 
 ---
 
-### M0.3 — Package: Config ✅
+### M0.3 — Package: Config 🟢
 
 **Objetivo:** Criar package de configuração com validação via Zod.
 
@@ -404,7 +404,7 @@
 
 ---
 
-### M0.6 — App: Web (Next.js Base) ✅
+### M0.6 — App: Web (Next.js Base) 🟢
 
 **Status:** CONCLUÍDO em 07 Jan 2026
 
@@ -585,7 +585,7 @@
 
 ---
 
-### M0.8 — Onboarding Wizard
+### M0.8 — Onboarding Wizard 🟢
 
 **Objetivo:** Implementar wizard de configuração inicial após signup.
 
@@ -679,7 +679,7 @@
 
 ---
 
-### M0.9 — CI/CD Pipeline ✅
+### M0.9 — CI/CD Pipeline 🟢
 
 **Objetivo:** Configurar pipeline de integração e deploy contínuo.
 
@@ -748,7 +748,7 @@
 > **Objetivo:** Implementar a feature principal de ajudar o usuário a tomar decisões através de chat com IA, sistema de decisões estruturadas e segundo cérebro.
 > **Referências:** `PRODUCT_SPECS.md` §2.1, §6.1, §6.2, §6.3, `AI_SPECS.md`, `SYSTEM_SPECS.md` §3.2, §3.5, §3.6
 
-### M1.1 — Package: AI (LLM Abstraction)
+### M1.1 — Package: AI (LLM Abstraction) 🔴
 
 **Objetivo:** Criar abstração de LLM que permite trocar provider via ENV.
 
@@ -781,7 +781,7 @@
 
 ---
 
-### M1.2 — Módulo: Chat Básico
+### M1.2 — Módulo: Chat Básico 🔴
 
 **Objetivo:** Implementar chat com IA com streaming de resposta.
 
@@ -827,7 +827,7 @@
 
 ---
 
-### M1.3 — Sistema de Memória (RAG)
+### M1.3 — Sistema de Memória (RAG) 🔴
 
 **Objetivo:** Implementar RAG para contextualização das respostas da IA.
 
@@ -882,7 +882,7 @@
 
 ---
 
-### M1.4 — Classificação de Intent
+### M1.4 — Classificação de Intent 🔴
 
 **Objetivo:** Classificar intenção da mensagem para executar ações.
 
@@ -923,7 +923,7 @@
 
 ---
 
-### M1.5 — Sistema de Decisões
+### M1.5 — Sistema de Decisões 🔴
 
 **Objetivo:** Implementar sistema estruturado de análise de decisões.
 
@@ -987,7 +987,7 @@
 
 ---
 
-### M1.6 — Segundo Cérebro (Notas)
+### M1.6 — Segundo Cérebro (Notas) 🔴
 
 **Objetivo:** Implementar sistema de notas com wikilinks e graph view.
 
@@ -1051,7 +1051,7 @@
 
 ---
 
-### M1.7 — Perspectiva Cristã
+### M1.7 — Perspectiva Cristã 🔴
 
 **Objetivo:** Implementar feature opt-in de perspectiva cristã no chat.
 
@@ -1087,7 +1087,7 @@
 
 ---
 
-### M1.8 — Confirmação de Tracking via Chat
+### M1.8 — Confirmação de Tracking via Chat 🔴
 
 **Objetivo:** Implementar confirmação antes de registrar métricas via chat.
 
@@ -1125,7 +1125,7 @@
 
 ---
 
-### M1.9 — Guardrails de Segurança
+### M1.9 — Guardrails de Segurança 🔴
 
 **Objetivo:** Implementar guardrails para tópicos sensíveis.
 
@@ -1161,7 +1161,7 @@
 
 ---
 
-### M1.10 — UI/UX Polish v1
+### M1.10 — UI/UX Polish v1 🔴
 
 **Objetivo:** Refinar interface e experiência para lançamento da v1.
 
@@ -1217,7 +1217,7 @@
 > **Objetivo:** Implementar sistema de tracking de métricas, Life Balance Score, dashboard e relatórios.
 > **Referências:** `PRODUCT_SPECS.md` §2.3, §6.7, §6.8, §6.14, §6.15, §6.17, `SYSTEM_SPECS.md` §3.3, §3.4, §3.9, §3.10
 
-### M2.1 — Módulo: Tracking de Métricas
+### M2.1 — Módulo: Tracking de Métricas 🔴
 
 **Objetivo:** Implementar registro de métricas de vida.
 
@@ -1272,7 +1272,7 @@
 
 ---
 
-### M2.2 — Life Balance Score
+### M2.2 — Life Balance Score 🔴
 
 **Objetivo:** Implementar cálculo do Life Balance Score.
 
@@ -1330,7 +1330,7 @@
 
 ---
 
-### M2.3 — Dashboard Principal
+### M2.3 — Dashboard Principal 🔴
 
 **Objetivo:** Implementar dashboard com visão geral da vida do usuário.
 
@@ -1380,7 +1380,7 @@
 
 ---
 
-### M2.4 — Metas e Hábitos
+### M2.4 — Metas e Hábitos 🔴
 
 **Objetivo:** Implementar sistema de metas e tracking de hábitos.
 
@@ -1448,7 +1448,7 @@
 
 ---
 
-### M2.5 — Relatórios
+### M2.5 — Relatórios 🔴
 
 **Objetivo:** Implementar geração de relatórios periódicos.
 
@@ -1512,7 +1512,7 @@
 > **Objetivo:** Implementar integrações externas e funcionalidades de assistente pessoal.
 > **Referências:** `PRODUCT_SPECS.md` §2.2, §5.2, §6.4, §6.5, §6.6, `INTEGRATIONS_SPECS.md`
 
-### M3.1 — Integração Telegram
+### M3.1 — Integração Telegram 🔴
 
 **Objetivo:** Implementar bot do Telegram para interação rápida.
 
@@ -1573,7 +1573,7 @@
 
 ---
 
-### M3.2 — Integração Google Calendar
+### M3.2 — Integração Google Calendar 🔴
 
 **Objetivo:** Sincronizar eventos do Google Calendar.
 
@@ -1631,7 +1631,7 @@
 
 ---
 
-### M3.3 — Vault (Informações Sensíveis)
+### M3.3 — Vault (Informações Sensíveis) 🔴
 
 **Objetivo:** Implementar área segura para dados sensíveis.
 
@@ -1692,7 +1692,7 @@
 
 ---
 
-### M3.4 — Pessoas (CRM Pessoal)
+### M3.4 — Pessoas (CRM Pessoal) 🔴
 
 **Objetivo:** Implementar gerenciamento de relacionamentos pessoais.
 
@@ -1753,7 +1753,7 @@
 
 ---
 
-### M3.5 — Notificações Proativas
+### M3.5 — Notificações Proativas 🔴
 
 **Objetivo:** Implementar sistema de notificações e check-ins proativos.
 
@@ -1820,7 +1820,7 @@
 
 ---
 
-### M3.6 — Stripe (Pagamentos)
+### M3.6 — Stripe (Pagamentos) 🔴
 
 **Objetivo:** Implementar sistema de assinaturas e pagamentos.
 
@@ -1873,7 +1873,7 @@
 
 ---
 
-### M3.7 — Storage (Cloudflare R2)
+### M3.7 — Storage (Cloudflare R2) 🔴
 
 **Objetivo:** Implementar upload e armazenamento de arquivos.
 
