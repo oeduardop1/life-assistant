@@ -12,7 +12,7 @@
 
 ```bash
 # 1. Clonar o repositorio
-git clone https://github.com/seu-usuario/life-assistant.git
+git clone https://github.com/oeduardop1/life-assistant.git
 cd life-assistant
 
 # 2. Instalar dependencias
@@ -43,12 +43,7 @@ pnpm dev
 pnpm infra:up     # Inicia Redis, MinIO, PostgreSQL, Auth, Studio (~10s)
 pnpm dev          # Inicia API (4000) + Web (3000)
 
-# Durante o desenvolvimento, acesse:
-# - Web App:         http://localhost:3000
-# - API:             http://localhost:4000
-# - API Docs:        http://localhost:4000/api/docs
-# - Supabase Studio: http://localhost:54323
-# - Emails (dev):    http://localhost:54324
+# Veja "Portas e Servicos" abaixo para URLs de acesso
 
 # Terminar o dia
 # Ctrl+C para parar o pnpm dev
@@ -129,42 +124,7 @@ life-assistant/
 └── [spec files]             # Documentacao de especificacoes
 ```
 
-## Desenvolvimento Local
-
-### Passo a Passo
-
-```bash
-# 1. Clone o repositorio
-git clone https://github.com/oeduardop1/life-assistant.git
-cd life-assistant
-
-# 2. Instale as dependencias
-pnpm install
-
-# 3. Configure as variaveis de ambiente
-cp .env.example .env
-# Edite o .env se necessario (os valores padrao funcionam para dev local)
-
-# 4. Inicie a infraestrutura (Docker + Supabase)
-pnpm infra:up
-# Aguarde ~1-2 min na primeira execucao (download de imagens Docker)
-
-# 5. Inicie os apps (frontend + backend)
-pnpm dev
-# Web: http://localhost:3000
-# API: http://localhost:4000
-```
-
-### Comandos de Infraestrutura
-
-| Comando | Descricao |
-|---------|-----------|
-| `pnpm infra:up` | Inicia Redis, MinIO e Supabase |
-| `pnpm infra:up --help` | Mostra ajuda do comando |
-| `pnpm infra:down` | Para os servicos (preserva dados) |
-| `pnpm infra:down --reset` | Para e **apaga todos os dados** |
-| `pnpm infra:down --reset --force` | Reset sem confirmacao (para CI) |
-| `pnpm infra:down --help` | Mostra todas as opcoes |
+## Referencia de Desenvolvimento
 
 ### Portas e Servicos
 
@@ -200,6 +160,14 @@ curl http://localhost:4000/api/health
 
 **Emails de desenvolvimento:** Em ambiente local, todos os emails (confirmacao, reset de senha) sao capturados no Inbucket. Acesse http://localhost:54324 para visualizar.
 
+### Opcoes Avancadas de Infraestrutura
+
+| Comando | Descricao |
+|---------|-----------|
+| `pnpm infra:down --reset` | Para e **apaga todos os dados** |
+| `pnpm infra:down --reset --force` | Reset sem confirmacao (para CI) |
+| `--help` | Mostra todas as opcoes (funciona em ambos) |
+
 ## Web App
 
 O frontend é construído com Next.js 16, React 19, e shadcn/ui.
@@ -227,33 +195,13 @@ pnpm --filter web start
 pnpm --filter web test:e2e
 ```
 
-### Features Implementadas
+### Status do Projeto
 
-**Web App (M0.6):**
-- ✅ Landing page responsiva
-- ✅ Dashboard com sidebar e header
-- ✅ Tema dark/light com persistência
-- ✅ Sidebar toggle com estado persistente
-- ✅ Error boundaries e loading states
-- ✅ Componentes shadcn/ui base
-- ✅ Suporte Docker com standalone output
+Veja `MILESTONES.md` para lista completa de features implementadas e roadmap.
 
-**Autenticação (M0.7):**
-- ✅ Signup com email/senha
-- ✅ Login com validação
-- ✅ Verificação de email
-- ✅ Recuperação de senha
-- ✅ Logout funcional
-- ✅ Proteção de rotas via middleware
+**Milestones concluidos:** M0.1 → M0.8 (Foundation + Auth + Onboarding)
 
-**Onboarding (M0.8):**
-- ✅ Wizard de 4 etapas (Perfil, Áreas, Telegram, Tutorial)
-- ✅ 2 etapas obrigatórias, 2 opcionais com skip
-- ✅ Persistência de progresso parcial
-- ✅ Job de cleanup de onboardings abandonados (30 dias)
-- ✅ Redirect automático baseado em status do usuário
-
-Veja `ENGINEERING.md` §2.2 para documentação técnica completa do frontend.
+Veja `ENGINEERING.md` §2.2 para documentacao tecnica completa do frontend.
 
 ## Documentacao
 
