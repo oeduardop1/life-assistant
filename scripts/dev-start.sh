@@ -637,32 +637,40 @@ apply_database_schema() {
     print_info "Running Drizzle migrations..."
     print_debug "Command: pnpm --filter @life-assistant/database db:push"
 
+    local push_exit_code=0
     local push_output
-    # Use || true to prevent script exit on pnpm failure
-    push_output=$(pnpm --filter @life-assistant/database db:push 2>&1) || true
+    push_output=$(pnpm --filter @life-assistant/database db:push 2>&1) || push_exit_code=$?
 
-    if [[ -n "$push_output" ]] && ! echo "$push_output" | grep -qi "error"; then
+    if [[ $push_exit_code -eq 0 ]]; then
         print_success "Database schema applied"
+        # Show output only in verbose mode on success
         print_verbose "$push_output"
     else
-        print_warning "Schema push had issues (may be okay if already applied)"
-        print_verbose "$push_output"
+        print_warning "Schema push had issues (exit code: $push_exit_code)"
+        # Always show output on warning to help debugging
+        if [[ -n "$push_output" ]]; then
+            echo -e "${GRAY}$push_output${NC}"
+        fi
     fi
 
     # Seed database
     print_info "Running database seed..."
     print_debug "Command: pnpm --filter @life-assistant/database db:seed"
 
+    local seed_exit_code=0
     local seed_output
-    # Use || true to prevent script exit on pnpm failure
-    seed_output=$(pnpm --filter @life-assistant/database db:seed 2>&1) || true
+    seed_output=$(pnpm --filter @life-assistant/database db:seed 2>&1) || seed_exit_code=$?
 
-    if [[ -n "$seed_output" ]] && ! echo "$seed_output" | grep -qi "error"; then
+    if [[ $seed_exit_code -eq 0 ]]; then
         print_success "Database seeded"
+        # Show output only in verbose mode on success
         print_verbose "$seed_output"
     else
-        print_warning "Seed had issues (may be okay if already seeded)"
-        print_verbose "$seed_output"
+        print_warning "Seed had issues (exit code: $seed_exit_code)"
+        # Always show output on warning to help debugging
+        if [[ -n "$seed_output" ]]; then
+            echo -e "${GRAY}$seed_output${NC}"
+        fi
     fi
 
     end_step
