@@ -998,7 +998,6 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 
 | Recurso | Free | Pro | Premium |
 |---------|------|-----|---------|
-| **Preço** | R$ 0 | R$ 29/mês | R$ 59/mês |
 | Mensagens/mês | 100 | Ilimitado | Ilimitado |
 | Histórico | 30 dias | 1 ano | Ilimitado |
 | Áreas da vida | 3 | Todas | Todas |

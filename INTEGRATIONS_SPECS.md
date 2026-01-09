@@ -1107,11 +1107,13 @@ const context = {
 
 ### 4.2 Produtos e Preços
 
-| Plano | Preço Mensal | Preço Anual | Stripe Price ID |
-|-------|--------------|-------------|-----------------|
-| **Free** | R$ 0 | R$ 0 | - |
-| **Pro** | R$ 29,90 | R$ 299,00 | `price_pro_monthly` / `price_pro_yearly` |
-| **Premium** | R$ 49,90 | R$ 499,00 | `price_premium_monthly` / `price_premium_yearly` |
+| Plano | Stripe Product ID | Stripe Price IDs |
+|-------|-------------------|------------------|
+| **Free** | - | - |
+| **Pro** | `prod_pro` | `price_pro_monthly` / `price_pro_yearly` |
+| **Premium** | `prod_premium` | `price_premium_monthly` / `price_premium_yearly` |
+
+> **Nota:** Valores serão configurados diretamente no Stripe Dashboard. IDs acima são placeholders - substituir pelos IDs reais ao criar produtos.
 
 ### 4.3 Configuração
 
