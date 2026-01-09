@@ -110,6 +110,8 @@ read_input() {
     fi
 
     read -r value
+    # Remove carriage returns (from Windows copy/paste) and trim whitespace
+    value=$(echo "$value" | tr -d '\r' | xargs)
     value="${value:-$default}"
     CONFIG[$var_name]="$value"
     echo "$value"
@@ -124,6 +126,8 @@ read_secret() {
     echo -ne "    ${prompt}: "
     read -rs value
     echo ""
+    # Remove carriage returns (from Windows copy/paste) and trim whitespace
+    value=$(echo "$value" | tr -d '\r' | xargs)
     CONFIG[$var_name]="$value"
     echo "$value"
 }
