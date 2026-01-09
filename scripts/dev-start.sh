@@ -602,15 +602,21 @@ show_supabase_status() {
 
     print_info "Fetching Supabase status..."
 
+    # Use subshell with || true to prevent script exit on failure
     local status_output
-    if status_output=$(npx -y supabase status 2>&1); then
+    status_output=$(npx -y supabase status 2>&1) || true
+
+    if [[ -n "$status_output" ]] && ! echo "$status_output" | grep -q "Error\|error\|failed"; then
         echo ""
+        # Use grep with || true to handle case where no matches found
         echo "$status_output" | grep -E "(API URL|GraphQL URL|S3 Storage|DB URL|Studio URL|Inbucket URL|JWT secret|anon key|service_role key)" | while read -r line; do
             echo -e "  ${GREEN}•${NC} $line"
-        done
+        done || true
         echo ""
+        print_success "Status retrieved"
     else
         print_warning "Could not fetch status (services may still be starting)"
+        print_debug "This is normal - status was shown during startup"
     fi
 
     end_step
@@ -632,7 +638,10 @@ apply_database_schema() {
     print_debug "Command: pnpm --filter @life-assistant/database db:push"
 
     local push_output
-    if push_output=$(pnpm --filter @life-assistant/database db:push 2>&1); then
+    # Use || true to prevent script exit on pnpm failure
+    push_output=$(pnpm --filter @life-assistant/database db:push 2>&1) || true
+
+    if [[ -n "$push_output" ]] && ! echo "$push_output" | grep -qi "error"; then
         print_success "Database schema applied"
         print_verbose "$push_output"
     else
@@ -645,7 +654,10 @@ apply_database_schema() {
     print_debug "Command: pnpm --filter @life-assistant/database db:seed"
 
     local seed_output
-    if seed_output=$(pnpm --filter @life-assistant/database db:seed 2>&1); then
+    # Use || true to prevent script exit on pnpm failure
+    seed_output=$(pnpm --filter @life-assistant/database db:seed 2>&1) || true
+
+    if [[ -n "$seed_output" ]] && ! echo "$seed_output" | grep -qi "error"; then
         print_success "Database seeded"
         print_verbose "$seed_output"
     else
