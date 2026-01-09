@@ -5,6 +5,7 @@
 #
 # Usage:
 #   ./dev-start.sh           Start all services
+#   ./dev-start.sh --clean   Clean up first, then start
 #   ./dev-start.sh --help    Show help
 #
 # =============================================================================
@@ -20,6 +21,7 @@ readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
 readonly GRAY='\033[0;90m'
 readonly BOLD='\033[1m'
 readonly NC='\033[0m' # No Color
@@ -29,12 +31,31 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 readonly DOCKER_COMPOSE_FILE="$PROJECT_ROOT/infra/docker/docker-compose.yml"
 
-# Timeouts (in seconds)
-readonly REDIS_TIMEOUT=30
-readonly SUPABASE_TIMEOUT=180
+# Timeouts (in seconds) - can be overridden with --timeout
+DEFAULT_REDIS_TIMEOUT=30
+DEFAULT_SUPABASE_TIMEOUT=120
+DEFAULT_DB_WAIT_TIMEOUT=60
 
-# Track cleanup state
+REDIS_TIMEOUT=$DEFAULT_REDIS_TIMEOUT
+SUPABASE_TIMEOUT=$DEFAULT_SUPABASE_TIMEOUT
+DB_WAIT_TIMEOUT=$DEFAULT_DB_WAIT_TIMEOUT
+
+# Operation modes
+CLEAN_MODE=false
+VERBOSE_MODE=false
+SKIP_MIGRATIONS=false
+
+# Supabase ports
+readonly SUPABASE_API_PORT=54321
+readonly SUPABASE_DB_PORT=54322
+readonly SUPABASE_STUDIO_PORT=54323
+
+# Track state
 CLEANUP_DONE=false
+ERRORS=0
+WARNINGS=0
+STEP_START=0
+CURRENT_STEP=""
 
 # =============================================================================
 # Helper Functions
@@ -50,14 +71,22 @@ print_success() {
 
 print_warning() {
     echo -e "${YELLOW}⚠${NC} $1"
+    WARNINGS=$((WARNINGS + 1))
 }
 
 print_error() {
     echo -e "${RED}✗${NC} $1" >&2
+    ERRORS=$((ERRORS + 1))
 }
 
 print_debug() {
     echo -e "${GRAY}  → $1${NC}"
+}
+
+print_verbose() {
+    if [[ "$VERBOSE_MODE" == "true" ]]; then
+        echo -e "${GRAY}  [DEBUG] $1${NC}"
+    fi
 }
 
 print_header() {
@@ -68,25 +97,70 @@ print_header() {
     echo ""
 }
 
-# Run command with timeout
-run_with_timeout() {
-    local timeout=$1
+# Start timing a step
+start_step() {
+    local step_num=$1
+    local total=$2
+    local step_name=$3
+    CURRENT_STEP="$step_name"
+    STEP_START=$SECONDS
+    print_header "Step ${step_num}/${total}: ${step_name}"
+}
+
+# End timing a step
+end_step() {
+    local elapsed=$((SECONDS - STEP_START))
+    print_debug "Completed in ${elapsed}s"
+}
+
+# Show spinner while waiting for a process
+show_progress() {
+    local pid=$1
     local description=$2
-    shift 2
+    local timeout=$3
+    local start=$SECONDS
+    local spinner='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local i=0
 
-    print_debug "Running: $* (timeout: ${timeout}s)"
-
-    if timeout "$timeout" "$@"; then
-        return 0
-    else
-        local exit_code=$?
-        if [[ $exit_code -eq 124 ]]; then
-            print_error "Command timed out after ${timeout}s: $description"
-        else
-            print_error "Command failed (exit $exit_code): $description"
+    while kill -0 "$pid" 2>/dev/null; do
+        local elapsed=$((SECONDS - start))
+        if [[ $elapsed -ge $timeout ]]; then
+            kill -9 "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            return 124
         fi
-        return $exit_code
-    fi
+        printf "\r${GRAY}  %s ${description} (%ds)${NC}  " "${spinner:i++%${#spinner}:1}" "$elapsed"
+        sleep 0.1
+    done
+    printf "\r%-60s\r" " "  # Clear the line
+    wait "$pid" 2>/dev/null
+    return $?
+}
+
+# Show spinner while waiting for a condition
+wait_for_condition() {
+    local description=$1
+    local timeout=$2
+    local check_cmd=$3
+    local start=$SECONDS
+    local spinner='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local i=0
+
+    while true; do
+        local elapsed=$((SECONDS - start))
+        if [[ $elapsed -ge $timeout ]]; then
+            printf "\r%-60s\r" " "
+            return 124
+        fi
+
+        if eval "$check_cmd" 2>/dev/null; then
+            printf "\r%-60s\r" " "
+            return 0
+        fi
+
+        printf "\r${GRAY}  %s ${description} (%ds/${timeout}s)${NC}  " "${spinner:i++%${#spinner}:1}" "$elapsed"
+        sleep 0.5
+    done
 }
 
 # Cleanup handler for Ctrl+C
@@ -98,7 +172,10 @@ cleanup() {
 
     echo ""
     print_warning "Interrupted! Cleaning up..."
-    print_info "Services may be partially started. Run 'pnpm infra:down' to clean up."
+    print_info "Services may be partially started."
+    echo ""
+    print_debug "To clean up: pnpm infra:down"
+    print_debug "To retry:    pnpm infra:up --clean"
     exit 130
 }
 
@@ -117,20 +194,29 @@ ${BOLD}USAGE${NC}
     pnpm infra:up [OPTIONS]
 
 ${BOLD}OPTIONS${NC}
-    ${GREEN}--help${NC}      Show this help message
-    ${GREEN}-h${NC}          Alias for --help
+    ${GREEN}--clean, -c${NC}       Clean up zombie containers before starting
+                      Use this if you had a previous failed start
+
+    ${GREEN}--skip-migrations${NC}
+                      Skip database migrations and seeding
+
+    ${GREEN}--timeout, -t${NC} N   Set timeout for operations in seconds (default: 120)
+
+    ${GREEN}--verbose, -v${NC}     Show detailed debug output
+
+    ${GREEN}--help, -h${NC}        Show this help message
 
 ${BOLD}WHAT IT STARTS${NC}
-    ${GREEN}Docker Services:${NC}
+    ${CYAN}Docker Services:${NC}
       • Redis         - Cache and session storage (port 6379)
       • MinIO         - S3-compatible object storage (port 9000/9001)
 
-    ${GREEN}Supabase Services:${NC}
-      • PostgreSQL    - Database (port 54322)
-      • Auth          - Authentication service
-      • Studio        - Database GUI (port 54323)
+    ${CYAN}Supabase Services:${NC}
+      • PostgreSQL    - Database (port ${SUPABASE_DB_PORT})
+      • Auth          - Authentication service (GoTrue)
+      • Studio        - Database GUI (port ${SUPABASE_STUDIO_PORT})
       • Inbucket      - Email testing (port 54324)
-      • REST API      - PostgREST (port 54321)
+      • REST API      - PostgREST (port ${SUPABASE_API_PORT})
 
 ${BOLD}AFTER STARTUP${NC}
     The script will also:
@@ -141,13 +227,26 @@ ${BOLD}EXAMPLES${NC}
     ${GRAY}# Start all services${NC}
     pnpm infra:up
 
-    ${GRAY}# Start fresh (reset first, then start)${NC}
+    ${GRAY}# Start with cleanup (recommended after failed start)${NC}
+    pnpm infra:up --clean
+
+    ${GRAY}# Start with longer timeout and verbose output${NC}
+    pnpm infra:up --timeout 180 --verbose
+
+    ${GRAY}# Start fresh (full reset first)${NC}
     pnpm infra:down --reset && pnpm infra:up
+
+${BOLD}TROUBLESHOOTING${NC}
+    If startup fails:
+      ${CYAN}1.${NC} Run with --clean flag: ${GREEN}pnpm infra:up --clean${NC}
+      ${CYAN}2.${NC} Check ports: ${GREEN}lsof -i :54321 -i :54322 -i :54323${NC}
+      ${CYAN}3.${NC} Full reset: ${GREEN}pnpm infra:down -rf && pnpm infra:up${NC}
+      ${CYAN}4.${NC} Check Docker: ${GREEN}docker ps -a | grep -E 'supabase|life-assistant'${NC}
 
 ${BOLD}SEE ALSO${NC}
     pnpm infra:down          Stop services
     pnpm infra:down --help   Show stop options
-    pnpm infra:down --reset  Stop and delete all data
+    pnpm infra:down -rf      Stop and delete all data (no confirmation)
 
 EOF
 }
@@ -159,6 +258,28 @@ EOF
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --clean|-c)
+                CLEAN_MODE=true
+                shift
+                ;;
+            --skip-migrations)
+                SKIP_MIGRATIONS=true
+                shift
+                ;;
+            --verbose|-v)
+                VERBOSE_MODE=true
+                shift
+                ;;
+            --timeout|-t)
+                if [[ -z "${2:-}" ]] || [[ ! "$2" =~ ^[0-9]+$ ]]; then
+                    print_error "Timeout must be a positive number"
+                    exit 1
+                fi
+                SUPABASE_TIMEOUT=$2
+                REDIS_TIMEOUT=$((SUPABASE_TIMEOUT / 4))
+                DB_WAIT_TIMEOUT=$((SUPABASE_TIMEOUT / 2))
+                shift 2
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -181,19 +302,20 @@ check_docker() {
     print_info "Checking Docker..."
 
     if ! command -v docker &> /dev/null; then
-        print_error "Docker is not installed. Please install Docker first."
-        print_debug "Visit: https://docs.docker.com/get-docker/"
+        print_error "Docker is not installed"
+        print_debug "Install from: https://docs.docker.com/get-docker/"
         exit 1
     fi
 
     if ! docker info &> /dev/null; then
-        print_error "Docker daemon is not running. Please start Docker first."
+        print_error "Docker daemon is not running"
         print_debug "On Linux: sudo systemctl start docker"
         print_debug "On macOS/Windows: Start Docker Desktop"
         exit 1
     fi
 
     print_success "Docker is running"
+    print_verbose "Docker version: $(docker --version)"
 }
 
 check_docker_compose_file() {
@@ -201,38 +323,166 @@ check_docker_compose_file() {
         print_error "Docker Compose file not found: $DOCKER_COMPOSE_FILE"
         exit 1
     fi
-    print_debug "Docker Compose file: $DOCKER_COMPOSE_FILE"
+    print_verbose "Docker Compose file: $DOCKER_COMPOSE_FILE"
 }
 
 check_supabase_config() {
     local config_file="$PROJECT_ROOT/supabase/config.toml"
     if [[ ! -f "$config_file" ]]; then
         print_error "Supabase config not found: $config_file"
-        print_debug "Run 'npx supabase init' to initialize Supabase"
+        print_debug "Run 'npx supabase init' to initialize"
         exit 1
     fi
-    print_debug "Supabase config: $config_file"
+    print_verbose "Supabase config: $config_file"
+}
+
+check_ports() {
+    print_info "Checking port availability..."
+
+    local ports_in_use=()
+    local check_ports=($SUPABASE_API_PORT $SUPABASE_DB_PORT $SUPABASE_STUDIO_PORT 6379 9000)
+
+    for port in "${check_ports[@]}"; do
+        if lsof -i ":$port" &>/dev/null; then
+            # Check if it's our own container
+            local process
+            process=$(lsof -i ":$port" -t 2>/dev/null | head -1)
+            if [[ -n "$process" ]]; then
+                local process_name
+                process_name=$(ps -p "$process" -o comm= 2>/dev/null || echo "unknown")
+                if [[ ! "$process_name" =~ docker|containerd ]]; then
+                    ports_in_use+=("$port")
+                    print_verbose "Port $port in use by: $process_name (PID: $process)"
+                fi
+            fi
+        fi
+    done
+
+    if [[ ${#ports_in_use[@]} -gt 0 ]]; then
+        print_warning "Some ports may be in use: ${ports_in_use[*]}"
+        print_debug "This might be from a previous run. Try: pnpm infra:up --clean"
+    else
+        print_success "All required ports are available"
+    fi
 }
 
 ensure_supabase_cli() {
     print_info "Checking Supabase CLI..."
 
     if ! command -v npx &> /dev/null; then
-        print_error "npx is not installed. Please install Node.js first."
+        print_error "npx is not installed. Install Node.js first."
         exit 1
     fi
 
-    # Pre-install supabase CLI to avoid interactive prompts
-    # The -y flag auto-accepts the installation
-    print_debug "Ensuring Supabase CLI is available..."
-    if ! npx -y supabase --version &> /dev/null; then
+    print_verbose "Pre-installing Supabase CLI..."
+
+    # Suppress npm warnings by redirecting stderr
+    local version
+    if version=$(npx -y supabase --version 2>/dev/null); then
+        print_success "Supabase CLI ready (v$version)"
+    else
         print_error "Failed to initialize Supabase CLI"
         exit 1
     fi
+}
 
-    local version
-    version=$(npx -y supabase --version 2>/dev/null || echo "unknown")
-    print_success "Supabase CLI ready (v$version)"
+# =============================================================================
+# Cleanup Functions
+# =============================================================================
+
+cleanup_zombie_containers() {
+    print_info "Cleaning up zombie containers..."
+
+    local zombies=0
+
+    # Stop and remove any stopped supabase containers
+    local stopped_containers
+    stopped_containers=$(docker ps -aq --filter "name=supabase" --filter "status=exited" 2>/dev/null || true)
+
+    if [[ -n "$stopped_containers" ]]; then
+        local count
+        count=$(echo "$stopped_containers" | wc -l | tr -d ' ')
+        print_debug "Removing $count stopped Supabase containers"
+        echo "$stopped_containers" | xargs -r docker rm -f &>/dev/null || true
+        zombies=$((zombies + count))
+    fi
+
+    # Stop and remove any stopped life-assistant containers
+    stopped_containers=$(docker ps -aq --filter "name=life-assistant" --filter "status=exited" 2>/dev/null || true)
+
+    if [[ -n "$stopped_containers" ]]; then
+        local count
+        count=$(echo "$stopped_containers" | wc -l | tr -d ' ')
+        print_debug "Removing $count stopped life-assistant containers"
+        echo "$stopped_containers" | xargs -r docker rm -f &>/dev/null || true
+        zombies=$((zombies + count))
+    fi
+
+    # Clean up dangling networks
+    local networks
+    networks=$(docker network ls --filter "name=supabase" -q 2>/dev/null || true)
+    if [[ -n "$networks" ]]; then
+        print_debug "Cleaning up Supabase networks"
+        echo "$networks" | xargs -r docker network rm &>/dev/null || true
+    fi
+
+    if [[ $zombies -gt 0 ]]; then
+        print_success "Cleaned up $zombies zombie containers"
+    else
+        print_success "No zombie containers found"
+    fi
+}
+
+force_stop_running() {
+    print_info "Stopping any running containers..."
+
+    # Stop running supabase containers
+    local running
+    running=$(docker ps -q --filter "name=supabase" 2>/dev/null || true)
+    if [[ -n "$running" ]]; then
+        local count
+        count=$(echo "$running" | wc -l | tr -d ' ')
+        print_debug "Stopping $count running Supabase containers"
+        echo "$running" | xargs -r docker stop -t 5 &>/dev/null || true
+        echo "$running" | xargs -r docker rm -f &>/dev/null || true
+    fi
+
+    # Stop running life-assistant containers
+    running=$(docker ps -q --filter "name=life-assistant" 2>/dev/null || true)
+    if [[ -n "$running" ]]; then
+        local count
+        count=$(echo "$running" | wc -l | tr -d ' ')
+        print_debug "Stopping $count running life-assistant containers"
+        echo "$running" | xargs -r docker stop -t 5 &>/dev/null || true
+        echo "$running" | xargs -r docker rm -f &>/dev/null || true
+    fi
+
+    # Run supabase stop to clean up properly
+    print_debug "Running supabase stop for cleanup"
+    timeout 30 npx -y supabase stop &>/dev/null || true
+
+    print_success "Cleanup complete"
+}
+
+# =============================================================================
+# Service Status Checks
+# =============================================================================
+
+check_supabase_running() {
+    docker ps --filter "name=supabase_db" --filter "status=running" --format "{{.Names}}" 2>/dev/null | grep -q "supabase"
+}
+
+check_redis_ready() {
+    docker exec life-assistant-redis redis-cli ping 2>/dev/null | grep -q "PONG"
+}
+
+check_postgres_ready() {
+    docker exec supabase_db_life-assistant pg_isready -U postgres &>/dev/null
+}
+
+get_running_container_count() {
+    local filter=$1
+    docker ps --filter "name=$filter" --filter "status=running" -q 2>/dev/null | wc -l | tr -d ' '
 }
 
 # =============================================================================
@@ -240,132 +490,216 @@ ensure_supabase_cli() {
 # =============================================================================
 
 start_docker_services() {
-    print_header "Starting Docker Services (Redis + MinIO)"
+    start_step 1 4 "Docker Services (Redis + MinIO)"
 
     print_info "Starting containers..."
-    print_debug "Command: docker compose -f $DOCKER_COMPOSE_FILE up -d"
+    print_debug "Command: docker compose up -d"
 
+    # Start containers
     if ! docker compose -f "$DOCKER_COMPOSE_FILE" up -d 2>&1; then
         print_error "Failed to start Docker services"
-        print_debug "Check docker-compose logs: docker compose -f $DOCKER_COMPOSE_FILE logs"
-        exit 1
+        print_debug "Check logs: docker compose -f $DOCKER_COMPOSE_FILE logs"
+        return 1
     fi
 
-    # Wait for Redis to be healthy
-    print_info "Waiting for Redis to be ready (timeout: ${REDIS_TIMEOUT}s)..."
-    local count=0
+    # Wait for Redis
+    print_info "Waiting for Redis..."
 
-    while [[ $count -lt $REDIS_TIMEOUT ]]; do
-        if docker exec life-assistant-redis redis-cli ping 2>/dev/null | grep -q "PONG"; then
-            print_success "Redis is ready"
-            break
-        fi
-        count=$((count + 1))
-        # Show progress every 5 seconds
-        if [[ $((count % 5)) -eq 0 ]]; then
-            print_debug "Still waiting for Redis... (${count}s)"
-        fi
-        sleep 1
-    done
-
-    if [[ $count -eq $REDIS_TIMEOUT ]]; then
+    if wait_for_condition "Redis starting" "$REDIS_TIMEOUT" "check_redis_ready"; then
+        print_success "Redis is ready"
+    else
         print_error "Redis failed to start within ${REDIS_TIMEOUT}s"
-        print_debug "Check Redis logs: docker logs life-assistant-redis"
-        exit 1
+        print_debug "Check logs: docker logs life-assistant-redis"
+        return 1
     fi
 
-    # Check MinIO is running
-    if docker ps --filter "name=life-assistant-minio" --filter "status=running" | grep -q minio; then
+    # Check MinIO
+    if docker ps --filter "name=life-assistant-minio" --filter "status=running" -q | grep -q .; then
         print_success "MinIO is ready"
     else
         print_error "MinIO failed to start"
-        print_debug "Check MinIO logs: docker logs life-assistant-minio"
-        exit 1
+        print_debug "Check logs: docker logs life-assistant-minio"
+        return 1
     fi
 
-    print_success "Docker services started successfully"
-}
-
-check_supabase_running() {
-    # Check if supabase containers are running by looking for the db container
-    if docker ps --filter "name=supabase_db" --filter "status=running" --format "{{.Names}}" 2>/dev/null | grep -q "supabase"; then
-        return 0
-    fi
-    return 1
+    end_step
+    print_success "Docker services started"
 }
 
 start_supabase() {
-    print_header "Starting Supabase (PostgreSQL + Auth + Studio)"
+    start_step 2 4 "Supabase (PostgreSQL + Auth + Studio)"
 
-    # Check if Supabase is already running
+    # Check if already running
     if check_supabase_running; then
         print_warning "Supabase is already running"
-        print_info "Showing current status..."
-        npx -y supabase status 2>/dev/null || true
+        local count
+        count=$(get_running_container_count "supabase")
+        print_debug "$count Supabase containers active"
+        end_step
         return 0
     fi
 
-    print_info "Starting Supabase services (timeout: ${SUPABASE_TIMEOUT}s)..."
-    print_debug "This may take a few minutes on first run (downloading images)..."
-    print_debug "Command: npx -y supabase start"
+    print_info "Starting Supabase services..."
+    print_debug "This may take 1-2 minutes on first run"
 
-    # Start Supabase with timeout
-    # We use a subshell to capture output while still showing progress
-    local start_output
-    local start_exit_code=0
+    # Run supabase start in background with progress
+    (timeout "$SUPABASE_TIMEOUT" npx -y supabase start 2>&1) &
+    local pid=$!
 
-    # Run supabase start and capture output
-    if start_output=$(timeout "$SUPABASE_TIMEOUT" npx -y supabase start 2>&1); then
-        print_success "Supabase started successfully"
-        echo ""
-        echo "$start_output" | tail -40  # Show the status output
-    else
-        start_exit_code=$?
-
-        if [[ $start_exit_code -eq 124 ]]; then
-            print_error "Supabase start timed out after ${SUPABASE_TIMEOUT}s"
-            print_debug "The images might still be downloading. Try running manually:"
-            print_debug "  npx -y supabase start"
+    if show_progress $pid "Supabase starting" "$SUPABASE_TIMEOUT"; then
+        # Verify it actually started
+        sleep 2
+        if check_supabase_running; then
+            local count
+            count=$(get_running_container_count "supabase")
+            print_success "Supabase started ($count containers)"
         else
-            print_error "Failed to start Supabase (exit code: $start_exit_code)"
-            echo ""
-            echo "$start_output" | tail -20
-            print_debug ""
-            print_debug "Troubleshooting steps:"
-            print_debug "  1. Check if ports are in use: lsof -i :54321 -i :54322 -i :54323"
-            print_debug "  2. Try stopping first: npx -y supabase stop"
-            print_debug "  3. Check Docker logs: docker logs supabase_db_life-assistant"
-            print_debug "  4. Run manually with debug: npx -y supabase start --debug"
+            print_error "Supabase process completed but containers not running"
+            show_supabase_troubleshooting
+            return 1
         fi
-        exit 1
+    else
+        print_error "Supabase start timed out after ${SUPABASE_TIMEOUT}s"
+        show_supabase_troubleshooting
+        return 1
     fi
+
+    # Wait for PostgreSQL to be fully ready
+    print_info "Waiting for PostgreSQL to be ready..."
+
+    if wait_for_condition "PostgreSQL initializing" "$DB_WAIT_TIMEOUT" "check_postgres_ready"; then
+        print_success "PostgreSQL is ready"
+    else
+        print_warning "PostgreSQL health check timed out (may still be initializing)"
+    fi
+
+    end_step
+}
+
+show_supabase_troubleshooting() {
+    echo ""
+    print_info "Troubleshooting steps:"
+    echo ""
+    echo -e "  ${CYAN}1. Check ports:${NC}"
+    echo -e "     lsof -i :$SUPABASE_API_PORT -i :$SUPABASE_DB_PORT -i :$SUPABASE_STUDIO_PORT"
+    echo ""
+    echo -e "  ${CYAN}2. Clean up and retry:${NC}"
+    echo -e "     pnpm infra:up --clean"
+    echo ""
+    echo -e "  ${CYAN}3. Full reset:${NC}"
+    echo -e "     pnpm infra:down -rf && pnpm infra:up"
+    echo ""
+    echo -e "  ${CYAN}4. Check Docker logs:${NC}"
+    echo -e "     docker logs supabase_db_life-assistant"
+    echo ""
+    echo -e "  ${CYAN}5. Run with debug:${NC}"
+    echo -e "     npx supabase start --debug"
+    echo ""
+}
+
+show_supabase_status() {
+    start_step 3 4 "Service Status"
+
+    print_info "Fetching Supabase status..."
+
+    local status_output
+    if status_output=$(npx -y supabase status 2>&1); then
+        echo ""
+        echo "$status_output" | grep -E "(API URL|GraphQL URL|S3 Storage|DB URL|Studio URL|Inbucket URL|JWT secret|anon key|service_role key)" | while read -r line; do
+            echo -e "  ${GREEN}•${NC} $line"
+        done
+        echo ""
+    else
+        print_warning "Could not fetch status (services may still be starting)"
+    fi
+
+    end_step
 }
 
 apply_database_schema() {
-    print_header "Applying Database Schema"
+    start_step 4 4 "Database Schema"
 
+    if [[ "$SKIP_MIGRATIONS" == "true" ]]; then
+        print_warning "Skipping migrations (--skip-migrations flag)"
+        end_step
+        return 0
+    fi
+
+    cd "$PROJECT_ROOT"
+
+    # Apply migrations
     print_info "Running Drizzle migrations..."
     print_debug "Command: pnpm --filter @life-assistant/database db:push"
 
-    # Change to project root for pnpm command
-    cd "$PROJECT_ROOT"
-
-    if pnpm --filter @life-assistant/database db:push 2>&1; then
+    local push_output
+    if push_output=$(pnpm --filter @life-assistant/database db:push 2>&1); then
         print_success "Database schema applied"
+        print_verbose "$push_output"
     else
-        print_warning "Database schema push had issues (may be okay if already applied)"
-        print_debug "Run manually if needed: cd packages/database && pnpm db:push"
+        print_warning "Schema push had issues (may be okay if already applied)"
+        print_verbose "$push_output"
     fi
 
+    # Seed database
     print_info "Running database seed..."
     print_debug "Command: pnpm --filter @life-assistant/database db:seed"
 
-    if pnpm --filter @life-assistant/database db:seed 2>&1; then
+    local seed_output
+    if seed_output=$(pnpm --filter @life-assistant/database db:seed 2>&1); then
         print_success "Database seeded"
+        print_verbose "$seed_output"
     else
-        print_warning "Database seed had issues (may be okay if already seeded)"
-        print_debug "Run manually if needed: cd packages/database && pnpm db:seed"
+        print_warning "Seed had issues (may be okay if already seeded)"
+        print_verbose "$seed_output"
     fi
+
+    end_step
+}
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+show_summary() {
+    local elapsed=$1
+
+    print_header "Infrastructure Ready! (${elapsed}s)"
+
+    echo -e "  ${GREEN}Docker Services:${NC}"
+    echo -e "    Redis:        ${BLUE}localhost:6379${NC}"
+    echo -e "    MinIO:        ${BLUE}localhost:9000${NC} (Console: ${BLUE}localhost:9001${NC})"
+    echo ""
+    echo -e "  ${GREEN}Supabase Services:${NC}"
+    echo -e "    API:          ${BLUE}localhost:${SUPABASE_API_PORT}${NC}"
+    echo -e "    PostgreSQL:   ${BLUE}localhost:${SUPABASE_DB_PORT}${NC}"
+    echo -e "    Studio:       ${BLUE}localhost:${SUPABASE_STUDIO_PORT}${NC}"
+    echo -e "    Inbucket:     ${BLUE}localhost:54324${NC} (dev emails)"
+    echo ""
+
+    if [[ $WARNINGS -gt 0 ]]; then
+        echo -e "  ${YELLOW}Warnings: $WARNINGS${NC}"
+        echo ""
+    fi
+
+    echo -e "  ${CYAN}Next step:${NC} Run ${GREEN}pnpm dev${NC} to start the applications"
+    echo ""
+}
+
+show_failure_summary() {
+    echo ""
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${RED}  Startup Failed${NC}"
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "  Failed during: ${BOLD}$CURRENT_STEP${NC}"
+    echo ""
+    echo -e "  ${CYAN}Quick fixes:${NC}"
+    echo -e "    ${GREEN}pnpm infra:up --clean${NC}     Clean up and retry"
+    echo -e "    ${GREEN}pnpm infra:down -rf${NC}       Full reset"
+    echo ""
+    echo -e "  ${CYAN}For more details:${NC}"
+    echo -e "    ${GREEN}pnpm infra:up -v${NC}          Run with verbose output"
+    echo ""
 }
 
 # =============================================================================
@@ -373,7 +707,6 @@ apply_database_schema() {
 # =============================================================================
 
 main() {
-    # Parse command line arguments
     parse_args "$@"
 
     print_header "Life Assistant - Dev Infrastructure"
@@ -385,29 +718,43 @@ main() {
     check_docker_compose_file
     check_supabase_config
     ensure_supabase_cli
+    check_ports
 
-    # Start services
-    start_docker_services
-    start_supabase
+    # Clean mode: stop everything first
+    if [[ "$CLEAN_MODE" == "true" ]]; then
+        print_header "Cleanup Mode"
+        force_stop_running
+        cleanup_zombie_containers
+    else
+        # Just clean up zombies
+        cleanup_zombie_containers
+    fi
+
+    echo ""
+
+    # Start services with error handling
+    if ! start_docker_services; then
+        show_failure_summary
+        exit 1
+    fi
+
+    if ! start_supabase; then
+        show_failure_summary
+        exit 1
+    fi
+
+    show_supabase_status
     apply_database_schema
 
     local elapsed=$((SECONDS - start_time))
 
     # Final summary
-    print_header "Infrastructure Ready! (${elapsed}s)"
-
-    echo -e "  ${GREEN}Docker Services:${NC}"
-    echo -e "    Redis:        ${BLUE}localhost:6379${NC}"
-    echo -e "    MinIO:        ${BLUE}localhost:9000${NC} (Console: ${BLUE}localhost:9001${NC})"
-    echo ""
-    echo -e "  ${GREEN}Supabase Services:${NC}"
-    echo -e "    API:          ${BLUE}localhost:54321${NC}"
-    echo -e "    PostgreSQL:   ${BLUE}localhost:54322${NC}"
-    echo -e "    Studio:       ${BLUE}localhost:54323${NC}"
-    echo -e "    Inbucket:     ${BLUE}localhost:54324${NC} (dev emails)"
-    echo ""
-    echo -e "  ${YELLOW}Next step:${NC} Run ${GREEN}pnpm dev${NC} to start the applications"
-    echo ""
+    if [[ $ERRORS -eq 0 ]]; then
+        show_summary "$elapsed"
+    else
+        show_failure_summary
+        exit 1
+    fi
 }
 
 # Run main function
