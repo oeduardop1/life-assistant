@@ -12,6 +12,19 @@ interface ApiError {
   data?: unknown;
 }
 
+/**
+ * Standard API response wrapper from TransformInterceptor
+ * @see ENGINEERING.md - API Response Format
+ */
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  meta: {
+    timestamp: string;
+    requestId: string;
+  };
+}
+
 export function useApi() {
   const request = useCallback(async <T>(
     endpoint: string,
@@ -51,7 +64,9 @@ export function useApi() {
         return {} as T;
       }
 
-      return await response.json();
+      // Unwrap API response from TransformInterceptor format
+      const json = await response.json() as ApiResponse<T>;
+      return json.data;
     } catch (error) {
       if (error && typeof error === 'object' && 'status' in error) {
         throw error;

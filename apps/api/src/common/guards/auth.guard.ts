@@ -51,7 +51,7 @@ export class AuthGuard implements CanActivate, OnModuleInit {
         console.warn(`Failed to fetch JWKS: ${String(response.status)}, falling back to HS256`);
         return;
       }
-      const jwks = (await response.json()) as { keys: JWK[] };
+      const jwks = (await response.json()) as { keys?: JWK[] };
       const firstKey = jwks.keys?.[0];
       if (firstKey) {
         // Cache the first public key for ES256

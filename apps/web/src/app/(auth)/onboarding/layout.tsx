@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthContext } from '@/contexts/auth-context';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { OnboardingStepper } from '@/components/onboarding';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { OnboardingStep } from '@/lib/validations/onboarding';
 
 /**
  * OnboardingLayout - Wrapper for all onboarding pages
@@ -18,14 +19,36 @@ import { Skeleton } from '@/components/ui/skeleton';
  *
  * @see SYSTEM_SPECS.md §3.1 for onboarding flow
  */
+/**
+ * Derive the current onboarding step from the URL pathname
+ * This ensures the stepper always reflects the actual page being viewed
+ */
+function getStepFromPathname(pathname: string): OnboardingStep {
+  const segment = pathname.split('/').pop();
+  const validSteps: OnboardingStep[] = ['profile', 'areas', 'telegram', 'tutorial'];
+  if (segment && validSteps.includes(segment as OnboardingStep)) {
+    return segment as OnboardingStep;
+  }
+  return 'profile'; // Default to first step
+}
+
 export default function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isLoading: isAuthLoading } = useAuthContext();
-  const { currentStep, completedSteps, isLoading: isOnboardingLoading, isComplete } = useOnboarding();
+  const { completedSteps, isLoading: isOnboardingLoading, isComplete, fetchStatus } = useOnboarding();
+
+  // Derive current step from URL for immediate visual feedback
+  const currentStep = getStepFromPathname(pathname);
+
+  // Re-fetch onboarding status when pathname changes (after navigation)
+  useEffect(() => {
+    void fetchStatus();
+  }, [pathname, fetchStatus]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

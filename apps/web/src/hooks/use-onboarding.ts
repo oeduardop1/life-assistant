@@ -24,6 +24,19 @@ interface ApiError {
 }
 
 /**
+ * Standard API response wrapper from TransformInterceptor
+ * @see ENGINEERING.md - API Response Format
+ */
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  meta: {
+    timestamp: string;
+    requestId: string;
+  };
+}
+
+/**
  * useOnboarding Hook
  *
  * Provides state management and API calls for the onboarding wizard.
@@ -70,7 +83,9 @@ export function useOnboarding() {
         throw new Error(errorData.message ?? `HTTP ${String(response.status)}`);
       }
 
-      return response.json() as Promise<T>;
+      // Unwrap API response from TransformInterceptor format
+      const json = await response.json() as ApiResponse<T>;
+      return json.data;
     },
     [session?.access_token],
   );

@@ -5,6 +5,23 @@ import { cookies } from 'next/headers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 
 /**
+ * Standard API response wrapper from TransformInterceptor
+ * @see ENGINEERING.md - API Response Format
+ */
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  meta: {
+    timestamp: string;
+    requestId: string;
+  };
+}
+
+interface OnboardingStatus {
+  isComplete: boolean;
+}
+
+/**
  * Auth Callback Route Handler
  *
  * Handles:
@@ -64,7 +81,9 @@ export async function GET(request: Request) {
         });
 
         if (onboardingResponse.ok) {
-          const status = (await onboardingResponse.json()) as { isComplete: boolean };
+          // Unwrap API response from TransformInterceptor format
+          const json = await onboardingResponse.json() as ApiResponse<OnboardingStatus>;
+          const status = json.data;
           if (status.isComplete) {
             return NextResponse.redirect(`${origin}/dashboard`);
           }

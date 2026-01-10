@@ -698,6 +698,51 @@ const logger = app.get(AppLoggerService);
 const logger = await app.resolve(AppLoggerService);
 ```
 
+### 4.2 API Response Format
+
+All API responses are wrapped by the `TransformInterceptor` in a standard format:
+
+```typescript
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;                    // Actual payload
+  meta: {
+    timestamp: string;        // ISO 8601
+    requestId: string;        // UUID for tracing
+  };
+}
+```
+
+**Example response:**
+```json
+{
+  "success": true,
+  "data": {
+    "currentStep": "areas",
+    "completedSteps": ["profile"],
+    "isComplete": false
+  },
+  "meta": {
+    "timestamp": "2026-01-09T12:00:00.000Z",
+    "requestId": "a1b2c3d4-e5f6-..."
+  }
+}
+```
+
+**Frontend handling:**
+
+Frontend utilities (`use-api.ts`, `use-onboarding.ts`) automatically unwrap responses:
+
+```typescript
+// Frontend receives only the data
+const status = await api.get<OnboardingStatus>('/onboarding/status');
+// status = { currentStep: "areas", completedSteps: [...], isComplete: false }
+```
+
+**Implementation:**
+- Backend: `apps/api/src/common/interceptors/transform.interceptor.ts`
+- Types: `apps/api/src/common/types/request.types.ts` (ApiResponse interface)
+
 ---
 
 ## 5) Padrões de Código
