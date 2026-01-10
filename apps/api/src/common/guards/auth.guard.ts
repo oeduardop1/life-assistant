@@ -3,9 +3,10 @@ import {
   ExecutionContext,
   Injectable,
   UnauthorizedException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { jwtVerify } from 'jose';
+import { jwtVerify, importJWK, type JWK } from 'jose';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AppConfigService } from '../../config/config.service';
 import type { AuthenticatedRequest, AuthenticatedUser, JwtPayload } from '../types/request.types';
@@ -14,21 +15,51 @@ import type { AuthenticatedRequest, AuthenticatedUser, JwtPayload } from '../typ
  * AuthGuard - Validates Supabase JWT tokens
  *
  * Features:
- * - Validates JWT signature using SUPABASE_JWT_SECRET
+ * - Validates JWT signature using Supabase JWKS (ES256) or fallback to HS256
  * - Extracts user_id from JWT sub claim
  * - Skips validation for routes marked with @Public()
  * - Attaches user to request object
  */
 @Injectable()
-export class AuthGuard implements CanActivate {
+export class AuthGuard implements CanActivate, OnModuleInit {
   private readonly secretKey: Uint8Array;
+  private cachedPublicKey: CryptoKey | Uint8Array | null = null;
+  private readonly jwksUrl: URL;
 
   constructor(
     private readonly reflector: Reflector,
     private readonly config: AppConfigService,
   ) {
-    // Encode secret as Uint8Array for jose
+    // Encode secret as Uint8Array for jose (fallback for HS256)
     this.secretKey = new TextEncoder().encode(this.config.supabaseJwtSecret);
+    // JWKS endpoint for Supabase Auth
+    this.jwksUrl = new URL(`${this.config.supabaseUrl}/auth/v1/.well-known/jwks.json`);
+  }
+
+  async onModuleInit(): Promise<void> {
+    // Pre-fetch the JWKS on startup
+    await this.initializeJwks();
+  }
+
+  /**
+   * Initialize JWKS key set for ES256 verification
+   */
+  private async initializeJwks(): Promise<void> {
+    try {
+      const response = await fetch(this.jwksUrl.toString());
+      if (!response.ok) {
+        console.warn(`Failed to fetch JWKS: ${String(response.status)}, falling back to HS256`);
+        return;
+      }
+      const jwks = (await response.json()) as { keys: JWK[] };
+      const firstKey = jwks.keys?.[0];
+      if (firstKey) {
+        // Cache the first public key for ES256
+        this.cachedPublicKey = await importJWK(firstKey, 'ES256');
+      }
+    } catch (error) {
+      console.warn(`Failed to initialize JWKS: ${String(error)}, falling back to HS256`);
+    }
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -80,8 +111,22 @@ export class AuthGuard implements CanActivate {
 
   /**
    * Verify JWT token using jose
+   * Tries ES256 (via JWKS) first, falls back to HS256
    */
   private async verifyToken(token: string): Promise<JwtPayload> {
+    // Try ES256 verification first if JWKS is available
+    if (this.cachedPublicKey) {
+      try {
+        const { payload } = await jwtVerify(token, this.cachedPublicKey, {
+          algorithms: ['ES256'],
+        });
+        return payload as unknown as JwtPayload;
+      } catch {
+        // ES256 failed, try HS256 as fallback
+      }
+    }
+
+    // Fallback to HS256 verification
     const { payload } = await jwtVerify(token, this.secretKey, {
       algorithms: ['HS256'],
     });
