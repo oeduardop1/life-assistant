@@ -48,7 +48,7 @@ Registro de uma métrica (peso, gasto, exercício, humor, etc.).
 Sessão de chat com a IA.
 - **Tipos:** `general`, `counselor`, `quick_action`, `decision`, `report`
 - Contém múltiplas mensagens (Message)
-- Contexto mantido via histórico + RAG
+- Contexto mantido via histórico + User Memory + Tool Use (ADR-012)
 
 ### 1.6 Decision (Decisão)
 Decisão estruturada com análise da IA.
@@ -58,10 +58,10 @@ Decisão estruturada com análise da IA.
 - Review agendado após decisão tomada
 
 ### 1.7 Note (Nota)
-Nota no Segundo Cérebro.
-- Markdown com wikilinks `[[Nota]]`
-- Tags, folders, backlinks automáticos
-- Graph view para visualização
+Nota automática gerada pela IA.
+- Markdown estruturado
+- Tags automáticas
+- Relacionada a conversas ou decisões
 
 ### 1.8 Person (Pessoa)
 Contato no CRM pessoal.
@@ -71,7 +71,7 @@ Contato no CRM pessoal.
 
 ### 1.9 Vault Item
 Informação sensível criptografada.
-- **Não indexado** em embeddings/RAG
+- **Não acessível** pela IA sem re-autenticação
 - Requer re-autenticação para acesso
 - Tipos: credential, document, card, note, file
 
@@ -256,26 +256,28 @@ flowchart TB
         F -->|Não| H[Continue to Context]
     end
 
-    subgraph Context["3. CONTEXTO"]
+    subgraph Context["3. CONTEXTO (ADR-012)"]
         H --> I[Histórico Recente]
-        H --> J[RAG - Memória]
-        H --> K[Perfil Usuário]
+        H --> J[User Memory]
+        H --> K[Tools Disponíveis]
         H --> L[Área Atual]
     end
 
-    subgraph Generation["4. GERAÇÃO"]
+    subgraph Generation["4. GERAÇÃO + TOOL LOOP"]
         I --> M[Build Prompt]
         J --> M
         K --> M
         L --> M
-        M --> N[LLM]
-        N --> O[Stream Response]
+        M --> N[LLM com Tools]
+        N --> O{Tool Call?}
+        O -->|Sim| P[Executar Tool]
+        P --> N
+        O -->|Não| Q[Stream Response]
     end
 
     subgraph PostProcess["5. PÓS-PROCESSAMENTO"]
-        O --> P[Save Response]
-        P --> Q[Extract Actions]
-        Q --> R[Update Embeddings\nasync]
+        Q --> R[Save Response]
+        R --> S[Log Tool Calls]
     end
 ```
 
@@ -306,7 +308,8 @@ flowchart TB
 - [ ] Streaming de resposta funcionando
 - [ ] Comandos reconhecidos e executados
 - [ ] Histórico de conversa mantido
-- [ ] RAG buscando contexto relevante
+- [ ] User Memory presente no contexto
+- [ ] Tool calls executando corretamente
 - [ ] Rate limit aplicado corretamente
 - [ ] Diferentes tipos de conversa funcionando
 
@@ -649,98 +652,82 @@ flowchart TB
 
 ---
 
-### 3.6 Segundo Cérebro (Notas)
+### 3.6 Memória (Knowledge Items) — ADR-012
 
-**O que é:** Sistema de notas interconectadas estilo Obsidian.
+**O que é:** Sistema de conhecimento gerenciado automaticamente pela IA.
 
-#### Estrutura de uma Nota
+> **Arquitetura:** Tool Use + Memory Consolidation (ver ADR-012)
+
+#### Estrutura de um Knowledge Item
 
 ```typescript
-interface Note {
+interface KnowledgeItem {
   id: string;
   userId: string;
-  
+
+  // Classificação
+  type: 'fact' | 'preference' | 'memory' | 'insight' | 'person';
+  area?: LifeArea;  // health, financial, career, etc.
+
   // Conteúdo
-  title: string;
-  content: string;           // Markdown
-  excerpt?: string;          // Auto-gerado, primeiros 200 chars
-  
-  // Organização
-  folder?: string;           // Path: "projetos/startup"
+  title?: string;
+  content: string;
+
+  // Rastreabilidade
+  source: 'conversation' | 'user_input' | 'ai_inference';
+  sourceRef?: string;       // conversation_id ou message_id
+  inferenceEvidence?: string;
+
+  // Confiança
+  confidence: number;       // 0.0 - 1.0
+  validatedByUser: boolean;
+
+  // Relacionamentos
+  relatedItems: string[];
   tags: string[];
-  
-  // Links
-  outgoingLinks: string[];   // IDs de notas linkadas
-  backlinks: string[];       // IDs que linkam esta (auto)
-  
-  // Status
-  isPinned: boolean;
-  isArchived: boolean;
-  isTrashed: boolean;
-  trashedAt?: Date;
-  
+
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;         // Soft delete
 }
 ```
 
-#### Sintaxe de Wikilinks
+#### Tipos de Conhecimento
 
-| Sintaxe | Resultado |
-|---------|-----------|
-| `[[Nota]]` | Link para nota "Nota" |
-| `[[Nota\|Texto]]` | Link com texto alternativo |
-| `[[Pasta/Nota]]` | Link para nota em pasta |
-| `#tag` | Tag inline |
+| Tipo | Descrição | Exemplo |
+|------|-----------|---------|
+| `fact` | Informação objetiva | "Mora em São Paulo" |
+| `preference` | Escolha pessoal | "Prefere reuniões pela manhã" |
+| `memory` | Evento significativo | "Casou em 15/03/2018" |
+| `insight` | Padrão inferido | "Gasta mais quando estressado" |
+| `person` | Sobre alguém importante | "João é sócio desde 2020" |
 
-#### Comportamentos de Wikilinks
+#### Níveis de Confiança
+
+| Confiança | Range | Exibição |
+|-----------|-------|----------|
+| Alta | >= 0.8 | ✓ Verde |
+| Média | 0.6 - 0.79 | ○ Amarelo |
+| Baixa | < 0.6 | ? Vermelho |
+
+#### Ações do Usuário
 
 | Ação | Comportamento |
 |------|---------------|
-| Link para nota inexistente | Exibe como link quebrado (vermelho), clicável para criar |
-| Backlinks | Atualizados automaticamente ao salvar |
-| Busca de links | **Case-insensitive** e **accent-insensitive** |
-| Nota deletada | Link permanece visível como órfão (vermelho) |
-
-**Detalhamento:**
-
-- **Case-insensitive:** `[[nota]]` = `[[Nota]]` = `[[NOTA]]`
-- **Accent-insensitive:** `[[Decisão]]` = `[[Decisao]]` = `[[decisao]]`
-- **Títulos únicos:** Globalmente únicos (não por folder)
-- **Link órfão:**
-  - Aparece com estilo diferenciado (sublinhado vermelho ou pontilhado)
-  - Ao clicar, abre modal para criar nova nota com o título
-  - Não quebra o documento, apenas indica que a nota não existe
-
-**Normalização de busca:**
-```
-"Decisão Importante" → "decisao importante" (para busca)
-```
-
-#### Templates de Nota
-
-| Template | Campos |
-|----------|--------|
-| Daily Note | Data, reflexão, gratidão |
-| Meeting | Participantes, pauta, ações |
-| Project | Objetivo, tarefas, prazo |
-| Book | Título, autor, notas, citações |
-| Person | Vincula ao CRM |
+| **Validar** | Marca `validatedByUser: true`, aumenta confidence |
+| **Corrigir** | Atualiza conteúdo, marca `source: 'user_input'` |
+| **Deletar** | Soft delete, item não aparece mais em buscas |
+| **Ver fonte** | Link para conversa original (se aplicável) |
 
 #### Critérios de Aceite
 
-- [ ] Criar nota com Markdown
-- [ ] Editor WYSIWYG funcional
-- [ ] Wikilinks funcionando
-- [ ] Backlinks calculados automaticamente
-- [ ] Pastas e organização
-- [ ] Tags funcionando
-- [ ] Graph view visualizando conexões
-- [ ] Quick switcher (Cmd+K)
-- [ ] Busca full-text
-- [ ] Templates disponíveis
-- [ ] Lixeira com restauração
-- [ ] Notas indexadas para RAG
+- [ ] Lista de knowledge_items por área funciona
+- [ ] Filtros por tipo, confiança, fonte funcionam
+- [ ] Busca por texto funciona
+- [ ] Validar item atualiza flag
+- [ ] Corrigir item atualiza conteúdo
+- [ ] Deletar item remove da visualização
+- [ ] Ver fonte navega para conversa original
 
 ---
 
@@ -820,7 +807,7 @@ interface Person {
 | Criptografia | AES-256-GCM em repouso (ver detalhes abaixo) |
 | Acesso | Requer re-autenticação |
 | Timeout | Sessão expira em 5 min de inatividade |
-| Indexação | **NÃO** incluído em embeddings/RAG |
+| IA | **NÃO** acessível via tools sem re-autenticação |
 | Export | Requer confirmação adicional |
 | Audit | Acesso logado em audit log |
 
@@ -877,7 +864,7 @@ enum VaultCategory {
 - [ ] Re-autenticação ao acessar vault
 - [ ] Timeout de sessão funcionando
 - [ ] Dados criptografados no banco
-- [ ] Vault NÃO aparece em buscas RAG
+- [ ] Vault NÃO acessível via tools de IA
 - [ ] Audit log de acessos
 - [ ] Export com confirmação adicional
 
@@ -1093,7 +1080,7 @@ Que tal uma caminhada de 20min?
 | Contexto | Mensagem | CTA |
 |----------|----------|-----|
 | Sem tracking | "Comece a registrar seu dia!" | "Registrar primeiro peso" |
-| Sem notas | "Seu segundo cérebro está vazio" | "Criar primeira nota" |
+| Sem memória | "A IA ainda está aprendendo sobre você" | "Iniciar conversa" |
 | Sem decisões | "Nenhuma decisão em andamento" | "Nova decisão" |
 | Sem pessoas | "Adicione pessoas importantes" | "Adicionar pessoa" |
 | Sem conversas | "Converse com sua assistente" | "Iniciar conversa" |
@@ -1173,24 +1160,32 @@ Qualquer alteração manual em dados sensíveis exige:
 - Se dados insuficientes: área ignorada ou score parcial
 - Histórico mantido por tempo indefinido
 
-### 5.4 RAG e Memória
+### 5.4 Sistema de Memória (ADR-012)
 
-**Indexado:**
-- Mensagens do usuário (não da IA)
-- Notas do Segundo Cérebro
-- Decisões e análises
-- Perfil e preferências
-- Tracking entries (resumidos)
+> **Arquitetura:** Tool Use + Memory Consolidation (não RAG tradicional).
 
-**NÃO indexado:**
-- Vault (informações sensíveis)
-- Arquivos binários
-- Mensagens deletadas
+**User Memory (sempre no contexto):**
+- Dados compactos do usuário (~500-800 tokens)
+- Nome, idade, localização, ocupação
+- Objetivos e desafios atuais
+- Preferências de comunicação
+- Padrões aprendidos
 
-**Regras de retrieval:**
-- Máximo 5 chunks por query
-- Threshold de similaridade: 0.7
-- Prioridade: recência + relevância
+**Knowledge Items (buscáveis via tools):**
+- Fatos, preferências, insights sobre o usuário
+- Confidence score (0.0 a 1.0)
+- Source tracking (conversa, input, inferência)
+- Buscáveis via tool `search_knowledge`
+
+**Memory Consolidation (job 24h):**
+- Extrai conhecimento de conversas
+- Atualiza user_memories e knowledge_items
+- Cria inferências com confidence >= 0.7
+- Log em memory_consolidations
+
+**NÃO acessível pela IA:**
+- Vault (requer re-autenticação)
+- Dados deletados
 
 ### 5.5 Timezone
 
@@ -1439,7 +1434,8 @@ Comportamento similar ao Telegram.
 - [ ] Streaming de resposta
 - [ ] Comandos reconhecidos
 - [ ] Histórico mantido
-- [ ] RAG funcionando
+- [ ] User Memory no contexto
+- [ ] Tool calls funcionando
 - [ ] Rate limit aplicado
 - [ ] Tipos de conversa
 
@@ -1467,14 +1463,14 @@ Comportamento similar ao Telegram.
 - [ ] Review agendado
 - [ ] Notificação de review
 
-### 8.6 Segundo Cérebro
+### 8.6 Memória (ADR-012)
 
-- [ ] CRUD de notas
-- [ ] Wikilinks e backlinks
-- [ ] Graph view
-- [ ] Quick switcher
-- [ ] Busca full-text
-- [ ] Templates
+- [ ] Lista de knowledge_items
+- [ ] Filtros (área, tipo, confiança)
+- [ ] Busca por texto
+- [ ] Validar item
+- [ ] Corrigir item
+- [ ] Deletar item
 
 ### 8.7 Pessoas (CRM)
 
@@ -1489,7 +1485,7 @@ Comportamento similar ao Telegram.
 - [ ] Re-autenticação
 - [ ] Timeout de sessão
 - [ ] Criptografia
-- [ ] Exclusão do RAG
+- [ ] Não acessível via tools de IA
 - [ ] Audit log
 
 ### 8.9 Metas e Hábitos
@@ -1522,23 +1518,25 @@ Comportamento similar ao Telegram.
 | Termo | Definição |
 |-------|-----------|
 | **Area Score** | Pontuação 0-100 de uma área específica da vida |
-| **Backlink** | Link automático de uma nota que referencia outra |
 | **Conversation** | Sessão de chat com a IA |
 | **Decision** | Decisão estruturada com análise |
 | **Grace Period** | Período de tolerância que não quebra streak |
+| **Knowledge Item** | Fato, preferência ou insight armazenado sobre o usuário |
 | **Life Balance Score** | Pontuação geral 0-100 do equilíbrio de vida |
+| **Memory Consolidation** | Job que extrai conhecimento de conversas (24h) |
 | **Message** | Mensagem individual em uma conversa |
 | **Morning Summary** | Relatório diário enviado pela manhã |
-| **Note** | Nota no Segundo Cérebro |
+| **Note** | Nota automática gerada pela IA |
 | **Person** | Contato no CRM pessoal |
 | **Proactive Check-in** | Mensagem iniciada pela IA |
-| **RAG** | Retrieval Augmented Generation (memória contextual) |
 | **Streak** | Sequência de dias/semanas cumprindo hábito |
+| **Tool Call** | Chamada de função nativa da LLM |
 | **Tracking Entry** | Registro de uma métrica |
+| **User Memory** | Contexto compacto do usuário (~500-800 tokens) |
 | **Vault** | Área segura para informações sensíveis |
 | **Weekly Report** | Relatório semanal com análise |
-| **Wikilink** | Link entre notas no formato `[[Nota]]` |
 
 ---
 
-*Última atualização: Janeiro 2026*
+*Última atualização: 11 Janeiro 2026*
+*Revisão: ADR-012 - Migração de RAG para Tool Use + Memory Consolidation*

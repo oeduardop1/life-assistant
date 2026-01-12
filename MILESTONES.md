@@ -16,7 +16,7 @@
 | Versão | Nome | Foco Principal | Status |
 |--------|------|----------------|--------|
 | **0.x** | Fundação | Infraestrutura base | 🟡 Em andamento |
-| **1.x** | Conselheira | Chat + Decisões + Segundo Cérebro | 🔴 Não iniciado |
+| **1.x** | Conselheira | Chat + Decisões + Memória | 🔴 Não iniciado |
 | **2.x** | Tracker | Métricas + Score + Relatórios | 🔴 Não iniciado |
 | **3.x** | Assistente | Integrações + Automações | 🔴 Não iniciado |
 
@@ -66,7 +66,7 @@
 - **07 Jan 2026:** Milestone concluído com sucesso
 - Turborepo v2+ usa `tasks` em vez de `pipeline` - ENGINEERING.md atualizado
 - Docker images atualizadas para versões mais recentes:
-  - PostgreSQL 17 com pgvector 0.8.0 (`pgvector/pgvector:0.8.0-pg17`)
+  - PostgreSQL 17 (pgvector não é mais necessário — ADR-012)
   - Redis 8 Alpine (`redis:8-alpine`)
   - MinIO via Quay.io (`quay.io/minio/minio:latest`) - minio/minio no Docker Hub descontinuado em Out/2025
 - ESLint 9+ usa flat config (`eslint.config.js`)
@@ -272,7 +272,7 @@
   - [x] **Goals:** goals, goal_milestones, habits, habit_completions, habit_freezes
   - [x] **Integrations:** user_integrations, calendar_events, budgets, subscriptions
   - [x] **System:** audit_logs, notifications, reminders, export_requests
-  - [x] **Embeddings:** embeddings (com pgvector)
+  - [x] **Embeddings:** embeddings (com pgvector) — **DEPRECADO: ADR-012 remove esta tabela**
 - [x] Criar índices conforme `DATA_MODEL.md` §10
 - [x] Configurar RLS policies conforme `ENGINEERING.md` §6
 - [x] Criar migration inicial
@@ -745,14 +745,14 @@
 
 ## Fase 1: Conselheira (v1.x)
 
-> **Objetivo:** Implementar a feature principal de ajudar o usuário a tomar decisões através de chat com IA, sistema de decisões estruturadas e segundo cérebro.
+> **Objetivo:** Implementar a feature principal de ajudar o usuário a tomar decisões através de chat com IA, sistema de decisões estruturadas e memória gerenciada pela IA (ADR-012).
 > **Referências:** `PRODUCT_SPECS.md` §2.1, §6.1, §6.2, §6.3, `AI_SPECS.md`, `SYSTEM_SPECS.md` §3.2, §3.5, §3.6
 
-### M1.1 — Package: AI (LLM Abstraction) 🔴
+### M1.1 — Package: AI (LLM Abstraction + Tool Use) 🔴
 
-**Objetivo:** Criar abstração de LLM que permite trocar provider via ENV.
+**Objetivo:** Criar abstração de LLM com suporte a Tool Use (Function Calling).
 
-**Referências:** `ENGINEERING.md` §8, `AI_SPECS.md` §2
+**Referências:** `ENGINEERING.md` §8, `AI_SPECS.md` §2, `ADR-012`
 
 **Tasks:**
 
@@ -760,22 +760,28 @@
   ```typescript
   interface LLMPort {
     chat(params: ChatParams): Promise<ChatResponse>;
+    chatWithTools(params: ChatWithToolsParams): Promise<ChatWithToolsResponse>;
     stream(params: ChatParams): AsyncIterable<StreamChunk>;
+    streamWithTools(params: ChatWithToolsParams): AsyncIterable<StreamChunk>;
     getInfo(): ProviderInfo;
   }
   ```
-- [ ] Implementar `GeminiAdapter` usando @google/generative-ai
-- [ ] Implementar `ClaudeAdapter` usando @anthropic-ai/sdk (preparar para futuro)
+- [ ] Criar `ToolDefinition` schema com Zod
+- [ ] Implementar `GeminiAdapter` com suporte a Function Calling
+- [ ] Implementar `ClaudeAdapter` com suporte a Tool Use
 - [ ] Criar `LLMFactory` que retorna adapter baseado em ENV
 - [ ] Implementar rate limiting
 - [ ] Implementar retry com backoff exponencial
-- [ ] Criar serviço de embeddings (text-embedding-004)
-- [ ] Testes para ambos adapters
+- [ ] Criar `ToolExecutorService` (executa tools chamadas pela LLM)
+- [ ] Implementar tool loop com max iterations (5)
+- [ ] Testes para ambos adapters (incluindo Tool Use)
 
 **Definition of Done:**
-- [ ] `LLM_PROVIDER=gemini` usa Gemini
-- [ ] `LLM_PROVIDER=claude` usa Claude
+- [ ] `LLM_PROVIDER=gemini` usa Gemini com Tool Use
+- [ ] `LLM_PROVIDER=claude` usa Claude com Tool Use
 - [ ] Streaming funciona
+- [ ] Tool calls são retornados corretamente
+- [ ] Tool loop funciona (LLM → tool → LLM → resposta)
 - [ ] Rate limiting aplicado
 - [ ] Testes passam
 
@@ -827,57 +833,68 @@
 
 ---
 
-### M1.3 — Sistema de Memória (RAG) 🔴
+### M1.3 — Sistema de Memória (Tool Use + Memory Consolidation) 🔴
 
-**Objetivo:** Implementar RAG para contextualização das respostas da IA.
+**Objetivo:** Implementar sistema de memória com Tool Use e consolidação automática.
 
-**Referências:** `AI_SPECS.md` §6, `DATA_MODEL.md` §7 (embeddings)
+**Referências:** `AI_SPECS.md` §6-7, `DATA_MODEL.md` §7, `ADR-012`
 
 **Tasks:**
 
-**Backend:**
-- [ ] Criar módulo `memory`:
-  - [ ] `EmbeddingService` - gerar embeddings de texto
-  - [ ] `IndexingService` - indexar conteúdo no pgvector
-  - [ ] `RetrievalService` - buscar chunks relevantes
-- [ ] Implementar pipeline de indexação:
-  - [ ] Chunking (512 tokens, overlap 50)
-  - [ ] Gerar embedding
-  - [ ] Salvar no pgvector
-- [ ] Implementar retrieval:
-  - [ ] Busca por similaridade
-  - [ ] Threshold de 0.7
-  - [ ] Máximo 5 chunks
-  - [ ] Boost para conteúdo recente
-- [ ] Integrar com chat:
-  - [ ] Buscar contexto relevante antes de chamar LLM
-  - [ ] Adicionar ao system prompt
-- [ ] Criar job para indexação assíncrona
-- [ ] Excluir Vault da indexação (conforme `SYSTEM_SPECS.md` §5.4)
+**Banco de Dados:**
+- [ ] Criar migration para tabela `user_memories`
+- [ ] Criar migration para tabela `knowledge_items`
+- [ ] Criar migration para tabela `memory_consolidations`
+- [ ] Criar enums: `knowledge_item_type`, `knowledge_item_source`, `consolidation_status`
+- [ ] Implementar RLS para novas tabelas
 
-**Conteúdo indexado (conforme `AI_SPECS.md` §6.1):**
-- [ ] Mensagens do usuário (não da IA)
-- [ ] Notas do Segundo Cérebro
-- [ ] Decisões e análises
-- [ ] Perfil e preferências
-- [ ] Tracking entries (resumidos)
+**Backend - Serviços:**
+- [ ] Criar módulo `memory`:
+  - [ ] `UserMemoryService` - CRUD de perfil do usuário
+  - [ ] `KnowledgeItemsService` - CRUD de knowledge items
+  - [ ] `MemoryConsolidationService` - job de consolidação
+  - [ ] `ContextBuilderService` - monta system prompt com memória
+- [ ] Implementar `ContextBuilder`:
+  - [ ] Carregar user_memory (sempre presente, ~500-800 tokens)
+  - [ ] Montar seção de memória do system prompt
+  - [ ] Injetar tools disponíveis no contexto
+
+**Backend - Tools:**
+- [ ] Criar tool `search_knowledge`:
+  - [ ] Busca por texto em knowledge_items
+  - [ ] Filtros por área, tipo, tags
+  - [ ] Ordenação por relevância/data
+- [ ] Criar tool `add_knowledge`:
+  - [ ] Adicionar novo fato/preferência
+  - [ ] Validar com Zod
+  - [ ] Requer confirmação do usuário
+
+**Backend - Memory Consolidation Job:**
+- [ ] Criar job BullMQ `memory-consolidation`:
+  - [ ] Executa a cada 24h por usuário
+  - [ ] Busca mensagens desde última consolidação
+  - [ ] Envia para LLM com prompt de extração
+  - [ ] Parseia resposta JSON estruturada
+  - [ ] Cria/atualiza knowledge_items
+  - [ ] Atualiza user_memory
+  - [ ] Salva registro em memory_consolidations
 
 **Testes:**
 - [ ] Testes unitários:
-  - [ ] Chunking (verifica tamanho e overlap corretos)
-  - [ ] RetrievalService (threshold, max chunks, boost recência)
+  - [ ] ContextBuilderService monta prompt corretamente
+  - [ ] KnowledgeItemsService CRUD funciona
+  - [ ] Tools validam parâmetros com Zod
 - [ ] Testes de integração:
-  - [ ] EmbeddingService gera embeddings corretamente
-  - [ ] IndexingService salva no pgvector
-  - [ ] Busca por similaridade retorna resultados relevantes
-- [ ] Teste que Vault items NUNCA são indexados
+  - [ ] Memory consolidation extrai fatos de conversas
+  - [ ] search_knowledge retorna itens relevantes
+  - [ ] user_memory é atualizado após consolidação
 
 **Definition of Done:**
-- [ ] Embeddings são gerados e salvos
-- [ ] Busca retorna chunks relevantes
-- [ ] Chat usa contexto do RAG
-- [ ] Vault nunca é indexado
-- [ ] Job de indexação funciona
+- [ ] user_memory é sempre incluído no contexto
+- [ ] Tools search_knowledge e add_knowledge funcionam
+- [ ] Memory consolidation roda a cada 24h
+- [ ] Knowledge items são criados/atualizados automaticamente
+- [ ] Usuário pode ver o que a IA sabe (via API)
 - [ ] Testes passam
 
 ---
@@ -987,67 +1004,63 @@
 
 ---
 
-### M1.6 — Segundo Cérebro (Notas) 🔴
+### M1.6 — Memory View (Visualização de Memória) 🔴
 
-**Objetivo:** Implementar sistema de notas com wikilinks e graph view.
+**Objetivo:** Implementar tela para visualizar e gerenciar o que a IA sabe sobre o usuário.
 
-**Referências:** `SYSTEM_SPECS.md` §3.6, `PRODUCT_SPECS.md` §6.2
+**Referências:** `PRODUCT_SPECS.md` §6.2, `ADR-012`
 
 **Tasks:**
 
 **Backend:**
-- [ ] Criar módulo `notes`:
-  - [ ] `NoteController` - CRUD de notas
-  - [ ] `CreateNoteUseCase`
-  - [ ] `UpdateNoteUseCase`
-  - [ ] `SearchNotesUseCase` - busca full-text
-  - [ ] `GetBacklinksUseCase` - notas que linkam para a atual
-  - [ ] `GetGraphDataUseCase` - dados para graph view
-  - [ ] `NoteRepository`
-- [ ] Implementar processamento de wikilinks:
-  - [ ] Parser de `[[Nota]]` e `[[Nota|Texto]]`
-  - [ ] Busca case e accent insensitive
-  - [ ] Atualizar backlinks automaticamente
-- [ ] Implementar pastas/folders
-- [ ] Implementar tags
-- [ ] Implementar lixeira com restauração (30 dias)
-- [ ] Indexar notas para RAG
+- [ ] Criar endpoints de memória:
+  - [ ] `GET /memory` - user_memory + estatísticas
+  - [ ] `GET /memory/items` - lista de knowledge_items com filtros
+  - [ ] `PATCH /memory/items/:id` - corrigir item
+  - [ ] `DELETE /memory/items/:id` - deletar item
+  - [ ] `POST /memory/items/:id/validate` - validar item
+  - [ ] `POST /memory/items` - adicionar item manualmente
+- [ ] Implementar filtros:
+  - [ ] Por área (health, financial, career, etc.)
+  - [ ] Por tipo (fact, preference, insight, person, memory)
+  - [ ] Por confiança (high, medium, low)
+  - [ ] Por fonte (conversation, user_input, ai_inference)
+  - [ ] Por data
+- [ ] Implementar busca full-text em knowledge_items
 
 **Frontend:**
-- [ ] Criar páginas de notas:
-  - [ ] `/notes` - lista com árvore de pastas
-  - [ ] `/notes/[id]` - visualizar nota
-  - [ ] `/notes/[id]/edit` - editar nota
-  - [ ] `/notes/graph` - graph view
+- [ ] Criar página `/memory`:
+  - [ ] Resumo do user_memory (perfil, objetivos, desafios)
+  - [ ] Lista de knowledge_items organizada por área
+  - [ ] Filtros por tipo, confiança, fonte
+  - [ ] Busca por texto
 - [ ] Componentes:
-  - [ ] NoteTree (navegação por pastas)
-  - [ ] NoteEditor (Tiptap com suporte a Markdown e wikilinks)
-  - [ ] NoteViewer (renderização)
-  - [ ] BacklinksList
-  - [ ] GraphView (React Flow)
-  - [ ] QuickSwitcher (Cmd+K com cmdk)
-  - [ ] TagsInput
-- [ ] Implementar templates de nota:
-  - [ ] Daily Note
-  - [ ] Meeting
-  - [ ] Project
-  - [ ] Book
-  - [ ] Person
+  - [ ] MemoryOverview (resumo do perfil)
+  - [ ] KnowledgeItemsList (lista com filtros)
+  - [ ] KnowledgeItemCard (item com ações)
+  - [ ] ConfidenceIndicator (alta/média/baixa)
+  - [ ] EditItemModal (para correções)
+  - [ ] AddItemModal (para adições manuais)
+- [ ] Ações por item:
+  - [ ] Validar (confirmar que está correto)
+  - [ ] Corrigir (editar conteúdo)
+  - [ ] Deletar (remover permanentemente)
+  - [ ] Ver fonte (link para conversa original)
 
 **Testes:**
-- [ ] Testes unitários para parser de wikilinks
-- [ ] Teste E2E: criar nota com wikilink → verificar backlink
+- [ ] Testes unitários para filtros
+- [ ] Teste E2E: validar item → verificar flag
+- [ ] Teste E2E: corrigir item → verificar novo valor
+- [ ] Teste E2E: deletar item → verificar remoção
 
 **Definition of Done:**
-- [ ] CRUD de notas funciona
-- [ ] Wikilinks funcionam (case/accent insensitive)
-- [ ] Backlinks calculados automaticamente
-- [ ] Graph view visualiza conexões
-- [ ] Quick switcher (Cmd+K) funciona
-- [ ] Busca full-text funciona
-- [ ] Templates disponíveis
-- [ ] Lixeira com restauração
-- [ ] Notas indexadas para RAG
+- [ ] Usuário vê todos os knowledge_items
+- [ ] Filtros funcionam (área, tipo, confiança)
+- [ ] Busca por texto funciona
+- [ ] Validar item marca como validado
+- [ ] Corrigir item atualiza conteúdo
+- [ ] Deletar item remove permanentemente
+- [ ] Testes passam
 
 ---
 
@@ -1466,7 +1479,7 @@
   - [ ] Morning summary: configurável (default 07:00), janela de 20 min
   - [ ] Weekly report: domingo 20:00
   - [ ] Monthly report: dia 1, 10:00
-- [ ] Salvar relatórios como notas no Segundo Cérebro (opcional)
+- [ ] Salvar relatórios na Memória (opcional)
 
 **Frontend:**
 - [ ] Criar página `/reports`:
@@ -1648,7 +1661,7 @@
 - [ ] Tipos de item: credential, document, card, note, file
 - [ ] Categorias: personal, financial, work, health, legal
 - [ ] Audit log de acessos
-- [ ] NUNCA indexar no RAG
+- [ ] NUNCA expor via tools de busca (segurança)
 
 **Frontend:**
 - [ ] Criar página `/vault`:
@@ -1675,7 +1688,7 @@
   - [ ] CRUD de vault items via API
   - [ ] Re-autenticação requerida para acesso
   - [ ] Audit log é criado em cada acesso
-  - [ ] Vault items NÃO são indexados no RAG
+  - [ ] Vault items NÃO são acessíveis via search_knowledge tool
 - [ ] Teste de segurança:
   - [ ] Dados estão criptografados no banco
   - [ ] Não é possível acessar sem re-auth após timeout
@@ -1687,7 +1700,7 @@
 - [ ] Re-autenticação requerida
 - [ ] Timeout funciona
 - [ ] Audit log de acessos
-- [ ] Vault não aparece em buscas RAG
+- [ ] Vault não aparece em buscas (search_knowledge)
 - [ ] Testes passam
 
 ---
@@ -1955,5 +1968,5 @@
 
 ---
 
-*Última atualização: 08 Janeiro 2026*
-*Revisão: M0.7 concluído - Autenticação completa com Supabase Auth (email/senha, verificação, reset)*
+*Última atualização: 11 Janeiro 2026*
+*Revisão: ADR-012 - M1.1, M1.3, M1.6 atualizados para Tool Use + Memory Consolidation. Removido RAG/embeddings/pgvector.*

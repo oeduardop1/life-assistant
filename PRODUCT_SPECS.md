@@ -24,7 +24,7 @@
 
 Uma plataforma SaaS com IA integrada que funciona como:
 
-- **Segundo Cérebro** — Armazena e organiza automaticamente tudo sobre a vida do usuário
+- **Memória** — Armazena e organiza automaticamente tudo sobre a vida do usuário
 - **Conselheira** — Ajuda a pensar, analisar situações e tomar decisões
 - **Assistente Pessoal** — Executa tarefas, agenda compromissos, organiza informações
 - **Tracker de Evolução** — Mede progresso em todas as áreas da vida
@@ -35,20 +35,18 @@ A IA conhece profundamente o usuário: seu passado, presente, objetivos futuros,
 
 **Sem um sistema integrado, o usuário:**
 
-- Usa ferramentas fragmentadas (Obsidian, planilhas, apps de hábitos, agendas)
+- Usa ferramentas fragmentadas (planilhas, apps de hábitos, agendas)
 - Perde contexto entre conversas com IAs genéricas
-- Tem atrito para manter um "segundo cérebro" (criar notas, tags, links)
 - Não consegue ver padrões na própria vida ao longo do tempo
 - Toma decisões sem considerar todo o contexto disponível
 - Não tem quem o ajude a pensar com profundidade sobre problemas complexos
 - Esquece compromissos, metas e aprendizados passados
 
-**Dor específica com ferramentas de notas (Obsidian, Notion, etc.):**
-- Complexidade excessiva gera atrito
-- Precisa pensar em estrutura, tags, links manualmente
-- Acaba procrastinando e não registrando informações importantes
-- Perde o benefício do segundo cérebro por falta de consistência
-- Precisa alternar entre múltiplos apps
+**Dor específica com gestão de conhecimento pessoal:**
+- IAs genéricas não lembram de conversas anteriores
+- Precisa repetir contexto toda vez que conversa
+- Não há aprendizado contínuo sobre o usuário
+- Informações importantes ficam perdidas no histórico
 
 ### 1.3 Proposta de valor
 
@@ -56,10 +54,9 @@ A IA conhece profundamente o usuário: seu passado, presente, objetivos futuros,
 
 | Antes (Manual) | Depois (Life Assistant) |
 |----------------|-------------------------|
-| Você cria notas | IA cria automaticamente |
-| Você adiciona tags | IA categoriza |
-| Você cria links | IA conecta contextos |
-| Você lembra de registrar | IA captura das conversas |
+| Você repete contexto toda conversa | IA lembra tudo sobre você |
+| Você precisa organizar | IA organiza automaticamente |
+| Você lembra de registrar | IA extrai informações das conversas |
 | Você busca informações | IA traz contexto relevante |
 | Você analisa sozinho | IA ajuda a pensar |
 | Você gerencia agenda manualmente | IA agenda por comando natural |
@@ -71,7 +68,7 @@ A IA conhece profundamente o usuário: seu passado, presente, objetivos futuros,
 2. **Zero Atrito** — Interação natural por chat (Telegram/WhatsApp) e dashboard (Web)
 3. **Perspectiva Cristã** — Princípios bíblicos integrados ao aconselhamento (opcional)
 4. **Visão Holística** — Todas as áreas da vida conectadas e visíveis
-5. **Segundo Cérebro Integrado** — Graph view, backlinks e notas sem precisar de app externo
+5. **Transparência** — Você vê o que a IA sabe sobre você e pode corrigir
 6. **Rastreabilidade** — Todo número e insight é explicável e rastreável
 
 ### 1.5 North Star
@@ -190,7 +187,7 @@ O usuário pode ajustar a importância de cada área para seu contexto. Os pesos
 - "Quero ter clareza sobre todas as áreas da minha vida em um só lugar"
 - "Quero ajuda para tomar decisões importantes"
 - "Quero trackear minha evolução sem esforço"
-- "Quero que meu segundo cérebro se mantenha sozinho"
+- "Quero uma IA que me conhece e lembra de tudo"
 
 **Dores:**
 - Ferramentas de organização geram atrito
@@ -226,7 +223,7 @@ O usuário pode ajustar a importância de cada área para seu contexto. Os pesos
 
 ### 5.1 Web App (Dashboard)
 
-**Propósito:** Visualização, análise, configurações, conversas longas e Segundo Cérebro.
+**Propósito:** Visualização, análise, configurações e conversas.
 
 **Uso típico:** 1-2x por dia (manhã para planejar, noite para revisar)
 
@@ -236,7 +233,7 @@ O usuário pode ajustar a importância de cada área para seu contexto. Os pesos
 |------|--------|
 | **Dashboard** | Visão geral: scores, destaques, pendências, alertas |
 | **Chat** | Conversas com a IA (todos os modos) |
-| **Segundo Cérebro** | Notas, graph view, backlinks, busca semântica |
+| **Memória** | O que a IA sabe sobre você (fatos, preferências, insights) |
 | **Decisões** | Lista e gestão de problemas/decisões em aberto |
 | **Áreas** | Dashboard detalhado por área da vida |
 | **Tracking** | Registro manual e visualização de métricas |
@@ -296,63 +293,65 @@ O usuário pode ajustar a importância de cada área para seu contexto. Os pesos
 | Histórico de conversas | Acesso a todas as conversas anteriores |
 | Exportação de conversas | Download em .md ou .pdf |
 
-### 6.2 Módulo: Segundo Cérebro
+### 6.2 Módulo: Memória (ADR-012)
 
-O Segundo Cérebro é um sistema integrado de notas e conhecimento pessoal, inspirado no Obsidian mas totalmente dentro do app.
+A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo o que a IA sabe sobre você fica visível e editável.
 
-**Visualização e Navegação:**
+> **Arquitetura:** Tool Use + Memory Consolidation (ver ADR-012)
+
+**Como Funciona:**
+
+1. Você conversa naturalmente com a IA
+2. A cada 24h, um job extrai fatos, preferências e insights das conversas
+3. Os itens extraídos ficam visíveis na tela de Memória
+4. Você pode validar, corrigir ou deletar qualquer item
+5. A IA usa essa memória para contextualizar todas as respostas
+
+**Tipos de Conhecimento:**
+
+| Tipo | Descrição | Exemplo |
+|------|-----------|---------|
+| **Fato** | Informação objetiva sobre você | "Mora em São Paulo" |
+| **Preferência** | Escolhas e gostos pessoais | "Prefere reuniões pela manhã" |
+| **Insight** | Padrão identificado pela IA | "Tende a gastar mais quando estressado" |
+| **Pessoa** | Informação sobre alguém importante | "João é seu sócio desde 2020" |
+| **Memória** | Evento ou experiência significativa | "Casou em 15/03/2018" |
+
+**Visualização:**
 
 | Feature | Descrição |
 |---------|-----------|
-| Árvore de notas | Navegação por pastas/categorias |
-| Visualização de nota | Renderização de Markdown com formatação |
-| Graph View | Visualização das conexões entre notas |
-| Backlinks | Ver todas as notas que linkam para a nota atual |
-| Quick Switcher | Busca rápida para abrir qualquer nota (Cmd+K) |
-| Busca full-text | Encontrar texto em todas as notas |
-| Busca semântica | Encontrar por significado ("aquela vez que pensei em mudar") |
-| Filtros | Por área, período, tags, tipo de nota |
+| Lista de itens | Todos os fatos organizados por área da vida |
+| Indicador de confiança | Mostra certeza da IA (alta/média/baixa) |
+| Fonte do item | De onde a IA extraiu (conversa, inferência) |
+| Filtros | Por área, tipo, confiança, data |
+| Busca | Encontrar qualquer informação por texto |
+| Relacionados | Ver itens conectados a um item específico |
+
+**Gestão:**
+
+| Feature | Descrição |
+|---------|-----------|
+| Validar item | Confirmar que a informação está correta |
+| Corrigir item | Editar informação incorreta |
+| Deletar item | Remover informação que não quer que a IA use |
+| Adicionar item | Informar algo que a IA não sabe |
+| Ver histórico | Quando o item foi criado/atualizado |
 
 **Notas Automáticas:**
 
 | Feature | Descrição |
 |---------|-----------|
-| Diário automático | Resumo do dia gerado pela IA |
-| Notas de decisões | Criadas automaticamente no ciclo de decisões |
-| Notas de pessoas | Atualizadas quando a pessoa é mencionada |
-| Notas de áreas | Dashboards por área da vida |
-| Notas de conversas | Conversas importantes salvas como nota |
-| Aprendizados | Extraídos de livros, cursos, reflexões |
-
-**Notas Manuais:**
-
-| Feature | Descrição |
-|---------|-----------|
-| Criar nota | Usuário pode criar notas livres |
-| Editor Markdown | Editor completo com preview |
-| Wikilinks | Criar links entre notas com [[nome]] |
-| Tags | Adicionar tags para categorização |
-| Templates | Usar templates pré-definidos |
-
-**IA Integrada nas Notas:**
-
-| Feature | Descrição |
-|---------|-----------|
-| Expandir conteúdo | IA expande um parágrafo ou ideia |
-| Resumir nota | IA gera resumo da nota |
-| Sugerir links | IA sugere conexões com outras notas |
-| Criar links automáticos | IA identifica e cria wikilinks |
-| Perguntar sobre nota | "O que eu decidi sobre isso?" |
-| Gerar nota de conversa | Transformar chat em nota estruturada |
+| Nota de decisão | Criada quando uma decisão importante é tomada |
+| Nota de consulta | Resumo preparado para consultas médicas |
+| Nota de relatório | Relatórios semanais/mensais salvos como nota |
 
 **Exportação:**
 
 | Feature | Descrição |
 |---------|-----------|
-| Exportar nota | Download individual em .md |
-| Exportar todas | Download de todas as notas em .zip |
-| Exportar seleção | Escolher período ou categoria |
-| Formato compatível | Obsidian-compatible (frontmatter YAML, wikilinks) |
+| Exportar memória | Download de todos os itens em JSON ou Markdown |
+| Exportar notas | Download de notas automáticas em .md |
 
 ### 6.3 Módulo: Sistema de Decisões
 
@@ -370,7 +369,7 @@ O Segundo Cérebro é um sistema integrado de notas e conhecimento pessoal, insp
 | Aprendizados | Extrair e armazenar lições aprendidas |
 | Lista de pendentes | Ver todas as decisões em aberto com filtros |
 | Lembretes de follow-up | IA pergunta sobre resultado após X tempo |
-| Nota automática | Decisão vira nota no Segundo Cérebro |
+| Nota automática | Decisão gera nota e conhecimento na Memória |
 
 ### 6.4 Módulo: Assistente e Agenda
 
@@ -423,7 +422,7 @@ O Segundo Cérebro é um sistema integrado de notas e conhecimento pessoal, insp
 | Tags e grupos | Família, trabalho, amigos, igreja, etc. |
 | Última interação | Quando falou/viu por último |
 | Sugestão de contato | "Faz 3 meses que você não fala com X" |
-| Nota automática | Pessoa vira nota no Segundo Cérebro |
+| Conhecimento automático | Informações sobre a pessoa vão para Memória |
 
 ### 6.7 Módulo: Saúde
 
@@ -564,7 +563,7 @@ O Segundo Cérebro é um sistema integrado de notas e conhecimento pessoal, insp
 | Livros em andamento | Com progresso (%) |
 | Livros na fila | Want to read |
 | Meta anual de livros | Com progresso |
-| Resumos de livros | Notas e aprendizados (integrado ao Segundo Cérebro) |
+| Resumos de livros | Notas e aprendizados (integrado à Memória) |
 | Cursos em andamento | Com progresso |
 | Cursos concluídos | Histórico |
 | Certificações obtidas | Com datas |
@@ -654,7 +653,7 @@ O Segundo Cérebro é um sistema integrado de notas e conhecimento pessoal, insp
 | Exportação | PDF, Markdown |
 | Envio por email | Automático na frequência escolhida |
 | Comparativo YoY | Mesmo período ano anterior |
-| Salvar como nota | Relatório vira nota no Segundo Cérebro |
+| Salvar como nota | Relatório fica disponível na Memória |
 
 ### 6.18 Módulo: SaaS e Multi-tenancy
 
@@ -782,7 +781,7 @@ NOITE (Web App)
    
 7. Usuário decide e comunica: "Decidi recusar"
    → IA registra decisão com todo o contexto
-   → Nota criada automaticamente no Segundo Cérebro
+   → Fatos e aprendizados salvos na Memória
    
 8. Após 3 meses, IA faz check-in:
    "Faz 3 meses que você recusou a proposta da empresa X.
@@ -791,42 +790,42 @@ NOITE (Web App)
    → Nota da decisão é atualizada com resultado
 ```
 
-### 7.4 Jornada: Explorando o Segundo Cérebro
+### 7.4 Jornada: Explorando a Memória
 
 ```
-1. Usuário acessa "Segundo Cérebro" no menu
+1. Usuário acessa "Memória" no menu
 
-2. Vê a árvore de notas:
-   📁 Diário
-   📁 Decisões
-   📁 Pessoas
-   📁 Áreas
-   📁 Aprendizados
+2. Vê lista de conhecimento organizada por área:
+   💪 Saúde (12 itens)
+   💰 Financeiro (8 itens)
+   👥 Relacionamentos (15 itens)
+   🏢 Profissional (10 itens)
 
-3. Abre o Graph View:
-   - Visualiza todas as conexões
-   - Nota que "Proposta Empresa X" está conectada a:
-     - [[João Silva]] (quem indicou)
-     - [[Financeiro]] (impacto)
-     - [[Família]] (consideração)
-     - [[Decisão: Proposta 2024]] (similar anterior)
+3. Clica em "Financeiro":
+   - Vê todos os fatos: "Orçamento mensal: R$8.000"
+   - Vê preferências: "Prefere investimentos conservadores"
+   - Vê insights: "Tende a gastar mais em semanas estressantes"
+   - Cada item mostra indicador de confiança (alta/média)
 
-4. Clica em "Proposta Empresa X":
-   - Vê a nota completa com toda a análise
-   - Vê backlinks: 3 notas referenciam esta
-   - Vê o resultado e aprendizados
+4. Percebe um item incorreto:
+   - "Salário: R$12.000" (era antes, agora é diferente)
+   - Clica em "Corrigir" e atualiza para "R$15.000"
+   - IA passa a usar o valor correto
 
-5. Usa Quick Switcher (Cmd+K):
-   - Digita "colesterol"
-   - Encontra rapidamente a nota de exames
+5. Busca algo específico:
+   - Digita "colesterol" na busca
+   - Encontra: "Último exame colesterol: 195 mg/dL (Out/25)"
 
-6. Faz busca semântica:
-   - "aquela vez que pensei em mudar de carreira"
-   - IA encontra conversas e decisões relacionadas
+6. Vê um insight interessante:
+   - "Suas semanas com devocional >80% têm
+      gastos impulsivos 30% menores"
+   - Clica em "Ver evidências" para entender
+   - Valida o insight clicando em ✓
 
-7. Cria nota manual:
-   - "Nova ideia de negócio"
-   - Adiciona tags e links para pessoas relacionadas
+7. Adiciona informação manualmente:
+   - Clica em "Adicionar"
+   - "Alergia a dipirona" (fato de saúde)
+   - IA passa a considerar em contextos relevantes
 ```
 
 ### 7.5 Jornada: Preparação para Consulta Médica
@@ -866,8 +865,8 @@ NOITE (Web App)
 4. Após consulta:
    "Como foi a consulta com Dr. Ricardo?"
    → Usuário conta resultado
-   → IA atualiza histórico médico
-   → Nota da consulta criada no Segundo Cérebro
+   → IA atualiza fatos de saúde na Memória
+   → Nota da consulta disponível para referência
 ```
 
 ### 7.6 Jornada: Revisão Semanal
@@ -907,7 +906,7 @@ INSIGHT DA SEMANA 💡
 "Suas semanas com devocional acima de 85% têm
 score de bem-estar 20% maior. Continue assim!"
 
-[Salvar no Segundo Cérebro] [Exportar PDF]
+[Salvar na Memória] [Exportar PDF]
 ```
 
 ---
@@ -956,7 +955,7 @@ A IA não apenas cita versículos, mas aplica sabedoria bíblica contextualmente
 - Versículo do dia personalizado
 - Tracking de devocional com streak
 - Plano de leitura bíblica
-- Reflexões espirituais (integradas ao Segundo Cérebro)
+- Reflexões espirituais (integradas à Memória)
 - Registro de orações (pedidos e respostas)
 - Dízimos e ofertas
 - Frequência na igreja
@@ -1004,8 +1003,8 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 | Telegram/WhatsApp | ✓ | ✓ | ✓ |
 | Dashboard básico | ✓ | ✓ | ✓ |
 | Dashboard completo | - | ✓ | ✓ |
-| Segundo Cérebro | Limitado | Completo | Completo |
-| Graph View | - | ✓ | ✓ |
+| Memória | Limitado | Completo | Completo |
+| Insights automáticos | - | ✓ | ✓ |
 | Sistema de decisões | Limitado | Completo | Completo |
 | Relatórios | Semanal | Todos | Todos |
 | Integrações (Calendar) | - | ✓ | ✓ |
@@ -1049,7 +1048,7 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 | Time to value | < 5 min |
 | Onboarding completion | > 80% |
 | Decisões documentadas | > 2/mês |
-| Notas no Segundo Cérebro | > 10/mês |
+| Itens na Memória | > 20/mês |
 | Score improvement | Positivo |
 
 ### 11.3 Qualidade
@@ -1068,10 +1067,11 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 
 | Termo | Definição |
 |-------|-----------|
-| **Segundo Cérebro** | Sistema integrado de notas com graph view, backlinks e busca semântica |
-| **Graph View** | Visualização das conexões entre notas como um grafo |
-| **Backlinks** | Lista de notas que referenciam a nota atual |
-| **Wikilink** | Link entre notas no formato [[nome da nota]] |
+| **Memória** | Sistema de conhecimento gerenciado automaticamente pela IA (ADR-012) |
+| **Knowledge Item** | Fato, preferência, insight ou memória sobre o usuário |
+| **Confidence** | Nível de certeza da IA sobre uma informação (alta/média/baixa) |
+| **Memory Consolidation** | Job que extrai conhecimento das conversas a cada 24h |
+| **Tool Use** | Arquitetura onde a IA decide quando buscar/atualizar dados |
 | **Vault** | Área segura para informações sensíveis (documentos, credenciais) |
 | **Score** | Pontuação de 0-10 que indica o estado de uma área da vida |
 | **Streak** | Sequência de dias consecutivos realizando uma atividade |
@@ -1081,8 +1081,8 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 | **PR (Personal Record)** | Recorde pessoal em exercício físico |
 | **Check-in Proativo** | Quando a IA inicia conversa para verificar status |
 | **Perspectiva Cristã** | Feature opcional que integra princípios bíblicos |
-| **Quick Switcher** | Atalho (Cmd+K) para buscar e abrir rapidamente qualquer nota |
 
 ---
 
-*Última atualização: Janeiro 2026*
+*Última atualização: 11 Janeiro 2026*
+*Revisão: ADR-012 - Segundo Cérebro simplificado para Memória. Removido Graph View, wikilinks, notas manuais. Adicionado sistema de conhecimento com validação pelo usuário.*

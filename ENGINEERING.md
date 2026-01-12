@@ -22,7 +22,7 @@ Princípios que **não podem ser violados** em nenhuma circunstância:
 |-------|-----------|
 | **Monorepo obrigatório** | Todo código em um único repositório com Turborepo |
 | **Modular Monolith** | Domínios bem separados, mas deploy único por app |
-| **Nada pesado no request HTTP** | Sync, relatórios, embeddings, exports rodam **apenas em jobs** no worker |
+| **Nada pesado no request HTTP** | Sync, relatórios, memory consolidation, exports rodam **apenas em jobs** no worker |
 | **DB é fonte única da verdade** | PostgreSQL com Drizzle. Sem cache como source of truth |
 | **Multi-tenant forte** | `user_id` em toda tabela sensível + **RLS no Postgres** |
 | **Idempotência obrigatória** | Jobs devem ser idempotentes (jobId determinístico, dedupe) |
@@ -112,7 +112,7 @@ Princípios que **não podem ser violados** em nenhuma circunstância:
 │   │  │ Modules   │ │ Services  │ │Controllers│ │  Guards   │            │   │
 │   │  └───────────┘ └───────────┘ └───────────┘ └───────────┘            │   │
 │   │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐            │   │
-│   │  │  BullMQ   │ │ Socket.io │ │  LangChain│ │ Webhooks  │            │   │
+│   │  │  BullMQ   │ │ Socket.io │ │ Tool Use  │ │ Webhooks  │            │   │
 │   │  │  (Jobs)   │ │ (Realtime)│ │   (AI)    │ │(TG/Stripe)│            │   │
 │   │  └───────────┘ └───────────┘ └───────────┘ └───────────┘            │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
@@ -124,8 +124,8 @@ Princípios que **não podem ser violados** em nenhuma circunstância:
 │   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐            │
 │   │    Supabase     │  │  Upstash Redis  │  │  Cloudflare R2  │            │
 │   │  PostgreSQL     │  │  Cache + Queue  │  │  File Storage   │            │
-│   │  + pgvector     │  │  + BullMQ       │  │                 │            │
-│   │  + Auth + RLS   │  │                 │  │                 │            │
+│   │  + Auth + RLS   │  │  + BullMQ       │  │                 │            │
+│   │                 │  │                 │  │                 │            │
 │   └─────────────────┘  └─────────────────┘  └─────────────────┘            │
 └─────────────────────────────────────────────────────────────────────────────┘
            │
@@ -156,11 +156,11 @@ Princípios que **não podem ser violados** em nenhuma circunstância:
 | **Monorepo** | Turborepo | Código compartilhado, builds otimizados |
 | **Frontend** | Next.js + React Query | SSR, performance, DX |
 | **Backend** | NestJS | Módulos, DI, escalável com time |
-| **Database** | PostgreSQL (Supabase) + Drizzle | Confiável, pgvector, RLS |
+| **Database** | PostgreSQL (Supabase) + Drizzle | Confiável, RLS integrado |
 | **Cache** | Redis (Upstash) | Sessions, rate limit, pub/sub, queues |
 | **Real-time** | Socket.io | Chat, notificações em tempo real |
 | **Jobs** | BullMQ | Background processing com Redis |
-| **AI** | Gemini + LangChain | Melhor custo-benefício inicial |
+| **AI** | Gemini/Claude + Tool Use | LLM abstraction com function calling (ADR-012) |
 | **Auth** | Supabase Auth | Social login, JWT, RLS integrado |
 | **Storage** | Cloudflare R2 | Custo baixo, S3-compatible |
 | **Infra** | Vercel + Railway | Managed, auto-scale |
@@ -182,9 +182,7 @@ Princípios que **não podem ser violados** em nenhuma circunstância:
 | next-themes | 0.4.6 | Dark/Light mode |
 | lucide-react | 0.562.0 | Ícones |
 | Playwright | 1.57.0 | E2E testing |
-| Tiptap | - | Editor Markdown (Segundo Cérebro, M1+) |
-| React Flow | - | Graph View (M1+) |
-| cmdk | - | Quick Switcher Cmd+K (M1+) |
+| Tiptap | - | Notas automáticas (M1+) |
 
 #### Decisões Arquiteturais Frontend
 
@@ -264,12 +262,15 @@ app/
 
 ### 2.4 AI/LLM
 
+> **ADR-012:** Arquitetura Tool Use + Memory Consolidation (não RAG).
+
 | Tecnologia | Uso |
 |------------|-----|
-| @google/generative-ai | SDK Gemini |
-| @anthropic-ai/sdk | SDK Claude (futuro) |
-| LangChain.js | Orquestração, RAG |
-| pgvector | Embeddings no PostgreSQL |
+| @google/generative-ai | SDK Gemini com Function Calling |
+| @anthropic-ai/sdk | SDK Claude com Tool Use |
+| Zod | Validação de tool parameters |
+
+**Nota:** LangChain.js e pgvector foram removidos (ver ADR-012). A arquitetura usa Tool Use nativo dos LLMs.
 
 ---
 
@@ -868,7 +869,7 @@ export interface TrackingRepositoryPort {
 |------|-----------|------------|
 | `morning-summary` | Resumo da manhã | Alta |
 | `weekly-report` | Relatório semanal | Média |
-| `process-embeddings` | Gerar embeddings para RAG | Baixa |
+| `memory-consolidation` | Consolidar memória do usuário (ADR-012) | Média |
 | `sync-calendar` | Sync Google Calendar | Média |
 | `proactive-checkin` | Check-ins proativos | Baixa |
 | `notifications` | Envio de notificações | Alta |
@@ -992,14 +993,14 @@ GEMINI_MODEL=gemini-flash  # Usar versão mais recente disponível
 
 ### 9.1 Supabase CLI para Desenvolvimento
 
-O projeto usa Supabase CLI para desenvolvimento local (veja ADR-009). Isso fornece alta paridade com produção (Supabase Cloud) e inclui PostgreSQL com pgvector, Auth API, e captura de emails.
+O projeto usa Supabase CLI para desenvolvimento local (veja ADR-009). Isso fornece alta paridade com produção (Supabase Cloud) e inclui PostgreSQL, Auth API, e captura de emails.
 
 **Portas do Supabase CLI:**
 
 | Serviço | Porta | Descrição |
 |---------|-------|-----------|
 | API | 54321 | REST API e Auth (GoTrue) |
-| PostgreSQL | 54322 | Banco de dados com pgvector |
+| PostgreSQL | 54322 | Banco de dados |
 | Studio | 54323 | Dashboard de administração |
 | Inbucket | 54324 | Captura de emails |
 
@@ -2081,7 +2082,6 @@ RESEND_API_KEY=xxx
 | Evolução | Quando |
 |----------|--------|
 | BullMQ → Temporal | Workflows complexos |
-| pgvector nativo | Antes de vector DB externo |
 | Particionamento de tabelas | Quando tabela atingir >10M rows |
 | Data warehouse | Quando analytics exigir |
 | Microservices | Apenas se necessário (evitar) |
@@ -2208,5 +2208,5 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-*Última atualização: 08 Janeiro 2026*
-*Revisão: Versões de infraestrutura atualizadas para LTS mais recentes (Node.js 24, pnpm 10, Docker Compose v5+)*
+*Última atualização: 11 Janeiro 2026*
+*Revisão: ADR-012 - Removidos LangChain.js e pgvector. AI usa Tool Use nativo. Job process-embeddings substituído por memory-consolidation.*

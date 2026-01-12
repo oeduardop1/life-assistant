@@ -1,6 +1,6 @@
 # Life Assistant AI
 
-> Plataforma SaaS com IA integrada que funciona como segundo cerebro, conselheira, assistente pessoal e tracker de evolucao.
+> Plataforma SaaS com IA integrada que funciona como memória pessoal, conselheira, assistente e tracker de evolução.
 
 ## Pre-requisitos
 
@@ -131,7 +131,7 @@ life-assistant/
 | Servico | Porta | Descricao |
 |---------|-------|-----------|
 | **Supabase API** | 54321 | REST API e Auth (GoTrue) |
-| **PostgreSQL** | 54322 | Banco de dados com pgvector |
+| **PostgreSQL** | 54322 | Banco de dados |
 | **Supabase Studio** | 54323 | Dashboard de administracao |
 | **Inbucket** | 54324 | Captura de emails de desenvolvimento |
 | **Redis** | 6379 | Cache e filas (BullMQ) |
@@ -279,7 +279,7 @@ Para deploy em produção, consulte **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 | `SYSTEM_SPECS.md` | Regras de negocio, fluxos, Definition of Done |
 | `ENGINEERING.md` | Stack tecnica, arquitetura, padroes |
 | `DATA_MODEL.md` | Schema do banco, tabelas, relacionamentos |
-| `AI_SPECS.md` | Comportamento da IA, prompts, RAG |
+| `AI_SPECS.md` | Comportamento da IA, prompts, Tool Use |
 | `INTEGRATIONS_SPECS.md` | APIs externas (Telegram, Stripe, Calendar) |
 | `MILESTONES.md` | Roadmap de desenvolvimento |
 | `TBD_TRACKER.md` | Decisoes pendentes |

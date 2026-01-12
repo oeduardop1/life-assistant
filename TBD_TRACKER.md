@@ -72,14 +72,14 @@ _Pendente_
 |--------|------------|
 | 🔴 Pendente | 0 |
 | 🟡 Em discussão | 0 |
-| 🟢 Resolvido | 0 |
-| **Total** | **0** |
+| 🟢 Resolvido | 2 |
+| **Total** | **2** |
 
 | Prioridade | Quantidade |
 |------------|------------|
 | 🔴 Bloqueante | 0 |
 | 🟡 Alta | 0 |
-| 🟢 Baixa | 0 |
+| 🟢 Baixa | 2 |
 
 ---
 
@@ -140,9 +140,83 @@ Exemplo: fluxos não especificados, textos de UI, comportamentos visuais, etc.
 
 ## 🟢 Resolvidos (Histórico)
 
-_Nenhum item resolvido ainda._
+### [TBD-200] Arquitetura de Memória: RAG vs Tool Use
 
-<!-- 
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🟢 Resolvido |
+| **Prioridade** | 🟢 Baixa (decisão arquitetural, não bloqueante) |
+| **Categoria** | Técnico |
+| **Origem** | Planejamento de AI_SPECS.md |
+| **Data** | 2026-01-11 |
+
+**Contexto:**
+O sistema precisava de uma estratégia para contextualizar as respostas da IA com informações do usuário. Duas abordagens foram consideradas: RAG tradicional (embeddings + busca vetorial) e Tool Use (LLM decide quando buscar).
+
+**Pergunta/Decisão necessária:**
+Qual arquitetura usar para memória e contextualização?
+
+**Opções consideradas:**
+1. **RAG tradicional** - Embeddings com pgvector, busca automática de chunks
+   - Prós: Amplamente documentado, busca semântica
+   - Contras: Chunks aleatórios, custo de embeddings, menor controle
+2. **Tool Use + Memory Consolidation** - LLM decide quando buscar via tools
+   - Prós: Maior controle, menor custo, transparência, inferências
+   - Contras: Depende de boas definições de tools
+
+**Recomendação da IA:**
+Opção 2 - Tool Use oferece mais controle e se alinha com a filosofia de transparência do produto.
+
+**Decisão:**
+✅ Opção 2 - Tool Use + Memory Consolidation (ADR-012)
+
+**Implementação:**
+- Criado ADR-012 documentando a decisão
+- Atualizado AI_SPECS.md, DATA_MODEL.md, ENGINEERING.md, SYSTEM_SPECS.md
+- Removido pgvector e embeddings do stack
+- Milestones M1.1, M1.3, M1.6 atualizados
+
+---
+
+### [TBD-201] Simplificação do Segundo Cérebro
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🟢 Resolvido |
+| **Prioridade** | 🟢 Baixa (decisão de produto, não bloqueante) |
+| **Categoria** | Negócio/UX |
+| **Origem** | PRODUCT_SPECS.md §6.2 |
+| **Data** | 2026-01-11 |
+
+**Contexto:**
+O "Segundo Cérebro" foi originalmente planejado como um sistema completo de notas estilo Obsidian (graph view, wikilinks, pastas, templates). Isso conflita com a proposta "zero friction" do produto.
+
+**Pergunta/Decisão necessária:**
+Manter sistema completo de notas ou simplificar para visualização de memória?
+
+**Opções consideradas:**
+1. **Sistema completo** - Graph View, editor Markdown, wikilinks, templates, pastas
+   - Prós: Feature-rich, familiar para usuários de Obsidian
+   - Contras: Alto atrito, conflita com "zero friction", muito código
+2. **Memory View simplificado** - Lista de fatos com validação/correção
+   - Prós: Zero friction, transparência, alinhado com Tool Use
+   - Contras: Menos features, usuários power podem sentir falta
+
+**Recomendação da IA:**
+Opção 2 - Alinha-se com a proposta de valor "você só conversa, a IA organiza".
+
+**Decisão:**
+✅ Opção 2 - Simplificar para "Memória" com visualização e gestão de knowledge items
+
+**Implementação:**
+- Renomeado "Segundo Cérebro" para "Memória" em PRODUCT_SPECS.md
+- Removido Graph View, wikilinks, pastas, templates, Quick Switcher
+- Adicionado sistema de knowledge items com validação/correção
+- Milestone M1.6 atualizado para "Memory View"
+
+---
+
+<!--
 Mover itens resolvidos para cá com a decisão tomada.
 Manter como histórico para referência futura.
 -->
@@ -205,4 +279,5 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 
 ---
 
-*Última atualização: Janeiro 2026*
+*Última atualização: 11 Janeiro 2026*
+*Revisão: Adicionadas decisões resolvidas TBD-200 (RAG → Tool Use) e TBD-201 (Segundo Cérebro → Memória)*

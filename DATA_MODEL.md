@@ -19,8 +19,10 @@
 
 - **SGBD:** PostgreSQL 16+
 - **ORM:** Drizzle ORM
-- **Extensões:** `uuid-ossp`, `vector` (pgvector)
+- **Extensões:** `uuid-ossp`
 - **Hospedagem:** Supabase
+
+> **Nota (ADR-012):** pgvector foi removido. A arquitetura migrou de RAG para Tool Use + Memory Consolidation.
 
 ### 1.2 Convenções
 
@@ -63,23 +65,25 @@ erDiagram
     users ||--o{ budgets : has
     users ||--o{ subscriptions : has
     users ||--o{ export_requests : has
+    users ||--|| user_memories : has
+    users ||--o{ knowledge_items : has
+    users ||--o{ memory_consolidations : has
 
     habits ||--o{ habit_freezes : has
 
     goals ||--o{ tracking_entries : updates
 
     conversations ||--o{ messages : contains
-    
+
     decisions ||--o{ decision_options : has
     decisions ||--o{ decision_criteria : has
-    
-    notes ||--o{ note_links : from
-    notes ||--o{ note_links : to
-    
+
+    notes ||--o{ knowledge_items : generates
+
     people ||--o{ person_interactions : has
-    
+
     habits ||--o{ habit_completions : has
-    
+
     goals ||--o{ goal_milestones : has
 
     users {
@@ -142,13 +146,69 @@ erDiagram
         string title
         text content
         string excerpt
-        string folder
         array tags
         boolean is_pinned
         boolean is_archived
+        boolean auto_generated
         timestamp deleted_at
         timestamp created_at
         timestamp updated_at
+    }
+
+    user_memories {
+        uuid id PK
+        uuid user_id FK UK
+        string name
+        integer age
+        string location
+        string occupation
+        text family_context
+        array current_goals
+        array current_challenges
+        array top_of_mind
+        array values
+        string communication_style
+        string timezone
+        jsonb learned_patterns
+        integer version
+        timestamp last_consolidated_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    knowledge_items {
+        uuid id PK
+        uuid user_id FK
+        string type
+        string area
+        string title
+        text content
+        string source
+        uuid source_ref
+        text inference_evidence
+        real confidence
+        boolean validated_by_user
+        array related_items
+        array tags
+        timestamp deleted_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    memory_consolidations {
+        uuid id PK
+        uuid user_id FK
+        timestamp consolidated_from
+        timestamp consolidated_to
+        integer messages_processed
+        integer facts_created
+        integer facts_updated
+        integer inferences_created
+        jsonb memory_updates
+        jsonb raw_output
+        string status
+        text error_message
+        timestamp created_at
     }
     
     decisions {
@@ -426,6 +486,30 @@ CREATE TYPE user_plan AS ENUM (
   'pro',
   'premium'
 );
+
+-- Tipo de knowledge item (ADR-012)
+CREATE TYPE knowledge_item_type AS ENUM (
+  'fact',
+  'preference',
+  'memory',
+  'insight',
+  'person'
+);
+
+-- Fonte de knowledge item (ADR-012)
+CREATE TYPE knowledge_item_source AS ENUM (
+  'conversation',
+  'user_input',
+  'ai_inference',
+  'onboarding'
+);
+
+-- Status de consolidação de memória (ADR-012)
+CREATE TYPE consolidation_status AS ENUM (
+  'completed',
+  'failed',
+  'partial'
+);
 ```
 
 ### 3.2 Drizzle ORM Enums
@@ -509,6 +593,19 @@ export const exerciseTypeEnum = pgEnum('exercise_type', [
 
 export const userPlanEnum = pgEnum('user_plan', [
   'free', 'pro', 'premium'
+]);
+
+// ADR-012: Tool Use + Memory Consolidation
+export const knowledgeItemTypeEnum = pgEnum('knowledge_item_type', [
+  'fact', 'preference', 'memory', 'insight', 'person'
+]);
+
+export const knowledgeItemSourceEnum = pgEnum('knowledge_item_source', [
+  'conversation', 'user_input', 'ai_inference', 'onboarding'
+]);
+
+export const consolidationStatusEnum = pgEnum('consolidation_status', [
+  'completed', 'failed', 'partial'
 ]);
 ```
 
@@ -835,7 +932,11 @@ export type LifeBalanceHistory = typeof lifeBalanceHistory.$inferSelect;
 export type NewLifeBalanceHistory = typeof lifeBalanceHistory.$inferInsert;
 ```
 
-### 4.5 Notes (Segundo Cérebro)
+### 4.5 Notes (Simplificado - ADR-012)
+
+> **Nota (ADR-012):** A tabela notes foi simplificada. Folders e wikilinks foram removidos.
+> Notas são usadas para conteúdo longo estruturado (decisões, relatórios).
+> Fatos granulares são armazenados em `knowledge_items`.
 
 ```typescript
 // packages/database/src/schema/notes.ts
@@ -846,53 +947,196 @@ import { users } from './users';
 export const notes = pgTable('notes', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  
+
   // Content
   title: varchar('title', { length: 500 }).notNull(),
   content: text('content').notNull().default(''),
   excerpt: varchar('excerpt', { length: 500 }),
-  
-  // Organization
-  folder: varchar('folder', { length: 255 }),
+
+  // Organization (simplified - no folders)
   tags: jsonb('tags').notNull().default([]), // string[]
-  
+
   // Status
   isPinned: boolean('is_pinned').notNull().default(false),
   isArchived: boolean('is_archived').notNull().default(false),
-  
+
+  // Auto-generated flag (ADR-012)
+  autoGenerated: boolean('auto_generated').notNull().default(true),
+
   // Soft delete (trash)
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
-  
+
   // Timestamps
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   userIdIdx: index('notes_user_id_idx').on(table.userId),
-  userIdFolderIdx: index('notes_user_id_folder_idx').on(table.userId, table.folder),
   titleIdx: index('notes_title_idx').on(table.title),
-}));
-
-// Links between notes (wikilinks)
-export const noteLinks = pgTable('note_links', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  
-  sourceNoteId: uuid('source_note_id').notNull().references(() => notes.id, { onDelete: 'cascade' }),
-  targetNoteId: uuid('target_note_id').notNull().references(() => notes.id, { onDelete: 'cascade' }),
-  
-  // Link text (if different from title)
-  linkText: varchar('link_text', { length: 255 }),
-  
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => ({
-  sourceIdx: index('note_links_source_idx').on(table.sourceNoteId),
-  targetIdx: index('note_links_target_idx').on(table.targetNoteId),
 }));
 
 // Types
 export type Note = typeof notes.$inferSelect;
 export type NewNote = typeof notes.$inferInsert;
-export type NoteLink = typeof noteLinks.$inferSelect;
-export type NewNoteLink = typeof noteLinks.$inferInsert;
+```
+
+### 4.5.1 User Memories (ADR-012)
+
+> **Propósito:** Contexto compacto do usuário (~500-800 tokens) sempre presente no system prompt da IA.
+
+```typescript
+// packages/database/src/schema/user-memories.ts
+
+import { pgTable, uuid, varchar, text, integer, decimal, boolean, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
+import { users } from './users';
+
+export const userMemories = pgTable('user_memories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Basic info
+  name: varchar('name', { length: 100 }),
+  age: integer('age'),
+  location: varchar('location', { length: 255 }),
+  occupation: varchar('occupation', { length: 255 }),
+  familyContext: text('family_context'),
+
+  // Current context
+  currentGoals: jsonb('current_goals').notNull().default([]), // string[]
+  currentChallenges: jsonb('current_challenges').notNull().default([]), // string[]
+  topOfMind: jsonb('top_of_mind').notNull().default([]), // string[]
+
+  // Preferences
+  values: jsonb('values').notNull().default([]), // string[]
+  communicationStyle: varchar('communication_style', { length: 50 }),
+  feedbackPreferences: text('feedback_preferences'),
+  christianPerspective: boolean('christian_perspective').notNull().default(false),
+
+  // System
+  timezone: varchar('timezone', { length: 50 }).notNull().default('America/Sao_Paulo'),
+  learnedPatterns: jsonb('learned_patterns').notNull().default([]),
+  // [{ pattern: string, confidence: number, evidence: string }]
+
+  // Tracking context
+  monthlyBudget: decimal('monthly_budget', { precision: 10, scale: 2 }),
+  currentWeight: decimal('current_weight', { precision: 5, scale: 2 }),
+  targetWeight: decimal('target_weight', { precision: 5, scale: 2 }),
+
+  // Versioning
+  version: integer('version').notNull().default(1),
+  lastConsolidatedAt: timestamp('last_consolidated_at', { withTimezone: true }),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('user_memories_user_id_idx').on(table.userId),
+}));
+
+// Types
+export type UserMemory = typeof userMemories.$inferSelect;
+export type NewUserMemory = typeof userMemories.$inferInsert;
+```
+
+### 4.5.2 Knowledge Items (ADR-012)
+
+> **Propósito:** Fatos granulares buscáveis via tool `search_knowledge`.
+
+```typescript
+// packages/database/src/schema/knowledge-items.ts
+
+import { pgTable, uuid, varchar, text, real, boolean, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
+import { knowledgeItemTypeEnum, knowledgeItemSourceEnum, lifeAreaEnum } from './enums';
+import { users } from './users';
+
+export const knowledgeItems = pgTable('knowledge_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Classification
+  type: knowledgeItemTypeEnum('type').notNull(), // 'fact', 'preference', 'memory', 'insight', 'person'
+  area: lifeAreaEnum('area'), // 'health', 'finance', 'relationships', etc.
+
+  // Content
+  title: varchar('title', { length: 255 }),
+  content: text('content').notNull(),
+
+  // Traceability
+  source: knowledgeItemSourceEnum('source').notNull(), // 'conversation', 'user_input', 'ai_inference', 'onboarding'
+  sourceRef: uuid('source_ref'), // conversation_id or message_id
+  inferenceEvidence: text('inference_evidence'), // For AI inferences: supporting evidence
+
+  // Confidence
+  confidence: real('confidence').notNull().default(1.0), // 0.0 to 1.0
+  validatedByUser: boolean('validated_by_user').notNull().default(false),
+
+  // Relationships
+  relatedItems: jsonb('related_items').notNull().default([]), // uuid[]
+  tags: jsonb('tags').notNull().default([]), // string[]
+
+  // For type='person'
+  personMetadata: jsonb('person_metadata'), // { relationship, birthday, etc. }
+
+  // Soft delete
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('knowledge_items_user_id_idx').on(table.userId),
+  userIdTypeIdx: index('knowledge_items_user_id_type_idx').on(table.userId, table.type),
+  userIdAreaIdx: index('knowledge_items_user_id_area_idx').on(table.userId, table.area),
+  sourceIdx: index('knowledge_items_source_idx').on(table.source),
+}));
+
+// Types
+export type KnowledgeItem = typeof knowledgeItems.$inferSelect;
+export type NewKnowledgeItem = typeof knowledgeItems.$inferInsert;
+```
+
+### 4.5.3 Memory Consolidations (ADR-012)
+
+> **Propósito:** Log de consolidações para auditoria e debugging.
+
+```typescript
+// packages/database/src/schema/memory-consolidations.ts
+
+import { pgTable, uuid, integer, timestamp, jsonb, text, index } from 'drizzle-orm/pg-core';
+import { consolidationStatusEnum } from './enums';
+import { users } from './users';
+
+export const memoryConsolidations = pgTable('memory_consolidations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Period consolidated
+  consolidatedFrom: timestamp('consolidated_from', { withTimezone: true }).notNull(),
+  consolidatedTo: timestamp('consolidated_to', { withTimezone: true }).notNull(),
+
+  // Statistics
+  messagesProcessed: integer('messages_processed').notNull().default(0),
+  factsCreated: integer('facts_created').notNull().default(0),
+  factsUpdated: integer('facts_updated').notNull().default(0),
+  inferencesCreated: integer('inferences_created').notNull().default(0),
+  memoryUpdates: jsonb('memory_updates').notNull().default({}),
+
+  // Details
+  rawOutput: jsonb('raw_output'), // Full LLM output for debugging
+
+  // Status
+  status: consolidationStatusEnum('status').notNull().default('completed'),
+  errorMessage: text('error_message'),
+
+  // Timestamp
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('memory_consolidations_user_id_idx').on(table.userId),
+  createdAtIdx: index('memory_consolidations_created_at_idx').on(table.createdAt),
+}));
+
+// Types
+export type MemoryConsolidation = typeof memoryConsolidations.$inferSelect;
+export type NewMemoryConsolidation = typeof memoryConsolidations.$inferInsert;
 ```
 
 ### 4.6 Decisions
@@ -1645,52 +1889,10 @@ export type HabitFreeze = typeof habitFreezes.$inferSelect;
 export type NewHabitFreeze = typeof habitFreezes.$inferInsert;
 ```
 
-### 4.18 Embeddings (RAG)
+### ~~4.18 Embeddings (RAG)~~ — REMOVIDO (ADR-012)
 
-> **Nota sobre dimensão:** Usamos `vector(768)` para compatibilidade com o modelo de embeddings do Google (text-embedding-004).
-> Se houver migração para outro provider, será necessário re-indexar todos os embeddings.
-
-```typescript
-// packages/database/src/schema/embeddings.ts
-
-import { pgTable, uuid, varchar, text, timestamp, index, customType } from 'drizzle-orm/pg-core';
-import { users } from './users';
-
-// Custom type for vector (768 dimensões - Google text-embedding-004)
-// Se mudar de provider, será necessário migração de todos os vetores
-const vector = customType<{ data: number[] }>({
-  dataType() {
-    return 'vector(768)';
-  },
-});
-
-export const embeddings = pgTable('embeddings', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  
-  // Source
-  sourceType: varchar('source_type', { length: 50 }).notNull(), // 'message', 'note', 'decision', 'tracking', 'person'
-  sourceId: uuid('source_id').notNull(),
-  
-  // Content
-  content: text('content').notNull(),
-  chunkIndex: varchar('chunk_index', { length: 10 }).notNull().default('0'),
-  
-  // Vector
-  embedding: vector('embedding').notNull(),
-  
-  // Timestamps
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => ({
-  userIdIdx: index('embeddings_user_id_idx').on(table.userId),
-  sourceIdx: index('embeddings_source_idx').on(table.sourceType, table.sourceId),
-  // Vector index created separately via SQL
-}));
-
-// Types
-export type Embedding = typeof embeddings.$inferSelect;
-export type NewEmbedding = typeof embeddings.$inferInsert;
-```
+> **REMOVIDO (ADR-012):** A tabela embeddings foi removida. A arquitetura migrou de RAG para Tool Use + Memory Consolidation.
+> Conhecimento do usuário é armazenado em `knowledge_items` e buscado via tool `search_knowledge`.
 
 ### 4.19 Audit Log
 
@@ -1764,39 +1966,39 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
-### 5.2 Vector Search (Embeddings)
+### ~~5.2 Vector Search (Embeddings)~~ — REMOVIDO (ADR-012)
+
+> **REMOVIDO (ADR-012):** Vector search foi removido junto com a tabela embeddings.
+> A busca agora é feita via tool `search_knowledge` que faz query em `knowledge_items`.
+
+### 5.2 Full-Text Search (Knowledge Items)
 
 ```sql
--- Índice HNSW para busca de similaridade
-CREATE INDEX embeddings_vector_idx ON embeddings 
-USING hnsw (embedding vector_cosine_ops);
+-- Índice para busca full-text em knowledge_items
+CREATE INDEX knowledge_items_content_search_idx ON knowledge_items
+USING gin(to_tsvector('portuguese', COALESCE(title, '') || ' ' || content));
 
--- Função de busca semântica
-CREATE OR REPLACE FUNCTION search_embeddings(
+-- Função de busca em knowledge
+CREATE OR REPLACE FUNCTION search_knowledge(
   p_user_id uuid,
-  p_query_embedding vector(768),  -- 768 dimensões (Google text-embedding-004)
-  p_limit int DEFAULT 5,
-  p_threshold float DEFAULT 0.7
+  p_query text,
+  p_type varchar DEFAULT NULL,
+  p_area varchar DEFAULT NULL,
+  p_limit int DEFAULT 10
 )
-RETURNS TABLE (
-  id uuid,
-  source_type varchar,
-  source_id uuid,
-  content text,
-  similarity float
-) AS $$
+RETURNS SETOF knowledge_items AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
-    e.id,
-    e.source_type,
-    e.source_id,
-    e.content,
-    1 - (e.embedding <=> p_query_embedding) as similarity
-  FROM embeddings e
-  WHERE e.user_id = p_user_id
-    AND 1 - (e.embedding <=> p_query_embedding) >= p_threshold
-  ORDER BY e.embedding <=> p_query_embedding
+  SELECT *
+  FROM knowledge_items
+  WHERE user_id = p_user_id
+    AND deleted_at IS NULL
+    AND (p_type IS NULL OR type = p_type::knowledge_item_type)
+    AND (p_area IS NULL OR area = p_area::life_area)
+    AND to_tsvector('portuguese', COALESCE(title, '') || ' ' || content) @@ plainto_tsquery('portuguese', p_query)
+  ORDER BY
+    ts_rank(to_tsvector('portuguese', COALESCE(title, '') || ' ' || content), plainto_tsquery('portuguese', p_query)) DESC,
+    confidence DESC
   LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql;
@@ -1834,7 +2036,6 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE life_balance_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE note_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE decisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE decision_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE decision_criteria ENABLE ROW LEVEL SECURITY;
@@ -1850,13 +2051,16 @@ ALTER TABLE habit_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_integrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE embeddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE export_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE habit_freezes ENABLE ROW LEVEL SECURITY;
+-- Memory System (ADR-012)
+ALTER TABLE user_memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE knowledge_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memory_consolidations ENABLE ROW LEVEL SECURITY;
 ```
 
 ### 6.2 Policies
@@ -1899,11 +2103,6 @@ CREATE POLICY "Users can only access own scores" ON life_balance_history
 CREATE POLICY "Users can only access own notes" ON notes
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
-CREATE POLICY "Users can only access own note_links" ON note_links
-  FOR ALL USING (
-    source_note_id IN (SELECT id FROM notes WHERE user_id = (SELECT auth.user_id()))
-  );
-
 CREATE POLICY "Users can only access own decisions" ON decisions
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
@@ -1938,9 +2137,6 @@ CREATE POLICY "Users can only access own reminders" ON reminders
 CREATE POLICY "Users can only access own integrations" ON user_integrations
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
-CREATE POLICY "Users can only access own embeddings" ON embeddings
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
-
 CREATE POLICY "Users can only access own audit logs" ON audit_logs
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
@@ -1957,6 +2153,16 @@ CREATE POLICY "Users can only access own export requests" ON export_requests
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own habit freezes" ON habit_freezes
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+-- Memory System (ADR-012)
+CREATE POLICY "Users can only access own user_memories" ON user_memories
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+CREATE POLICY "Users can only access own knowledge_items" ON knowledge_items
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+CREATE POLICY "Users can only access own memory_consolidations" ON memory_consolidations
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 ```
 
@@ -2023,6 +2229,15 @@ CREATE TRIGGER update_reminders_updated_at
 
 CREATE TRIGGER update_integrations_updated_at
   BEFORE UPDATE ON user_integrations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Memory System (ADR-012)
+CREATE TRIGGER update_user_memories_updated_at
+  BEFORE UPDATE ON user_memories
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER update_knowledge_items_updated_at
+  BEFORE UPDATE ON knowledge_items
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 ```
 
@@ -2112,7 +2327,7 @@ CREATE TRIGGER update_habit_streak_trigger
 // packages/database/src/seed/index.ts
 
 import { db } from '../client';
-import { users, conversations, messages, trackingEntries, notes } from '../schema';
+import { users, conversations, messages, trackingEntries, notes, userMemories, knowledgeItems } from '../schema';
 
 async function seed() {
   console.log('🌱 Seeding database...');
@@ -2177,24 +2392,62 @@ async function seed() {
     },
   ]);
   
-  // Create sample notes
+  // Create sample notes (auto-generated)
   await db.insert(notes).values([
     {
       userId: user.id,
-      title: 'Bem-vindo ao Segundo Cérebro',
-      content: '# Bem-vindo!\n\nEste é seu espaço para organizar pensamentos, ideias e conhecimento.\n\n## Como usar\n\n- Crie notas livremente\n- Use [[wikilinks]] para conectar ideias\n- Use #tags para categorizar',
-      folder: null,
-      tags: ['tutorial', 'welcome'],
+      title: 'Análise: Decisão de carreira',
+      content: '# Análise de Decisão\n\nO usuário está considerando mudar de emprego.\n\n## Fatores considerados\n- Salário\n- Qualidade de vida\n- Crescimento profissional',
+      autoGenerated: true,
+      relatedConversationId: conversation.id,
+      tags: ['análise', 'carreira'],
+    },
+  ]);
+
+  // Create user memory (ADR-012)
+  await db.insert(userMemories).values({
+    userId: user.id,
+    name: 'Usuário Teste',
+    age: 35,
+    location: 'São Paulo, Brasil',
+    occupation: 'Desenvolvedor de Software',
+    currentGoals: ['Melhorar saúde', 'Poupar dinheiro'],
+    currentChallenges: ['Falta de tempo', 'Sedentarismo'],
+    topOfMind: ['Preparar apresentação sexta'],
+    communicationStyle: 'direct',
+    christianPerspective: false,
+    timezone: 'America/Sao_Paulo',
+  });
+
+  // Create sample knowledge items (ADR-012)
+  await db.insert(knowledgeItems).values([
+    {
+      userId: user.id,
+      type: 'fact',
+      area: 'health',
+      content: 'Peso atual: 82.5kg, meta: 78kg',
+      source: 'user_input',
+      confidence: 1.0,
     },
     {
       userId: user.id,
-      title: 'Metas 2026',
-      content: '# Metas para 2026\n\n## Saúde\n- Manter peso saudável\n- Exercício 3x/semana\n\n## Financeiro\n- Reserva de emergência\n- Investir 20% da renda',
-      folder: 'Planejamento',
-      tags: ['metas', 'planejamento'],
+      type: 'preference',
+      area: 'work',
+      content: 'Prefere trabalhar pela manhã, mais produtivo entre 8h-12h',
+      source: 'ai_inference',
+      inferenceEvidence: 'Mencionou 3x em conversas diferentes',
+      confidence: 0.85,
+    },
+    {
+      userId: user.id,
+      type: 'person',
+      content: 'Maria é sua esposa, casados há 5 anos',
+      source: 'conversation',
+      personMetadata: { name: 'Maria', relationship: 'spouse' },
+      confidence: 1.0,
     },
   ]);
-  
+
   console.log('✅ Seed completed!');
 }
 
@@ -2212,8 +2465,7 @@ seed().catch(console.error);
 | `messages` | Mensagens das conversas | ✅ |
 | `tracking_entries` | Registros de métricas | ✅ |
 | `life_balance_history` | Histórico de scores | ✅ |
-| `notes` | Notas do Segundo Cérebro | ✅ |
-| `note_links` | Links entre notas | ✅ |
+| `notes` | Notas automáticas (análises, decisões) | ✅ |
 | `decisions` | Decisões estruturadas | ✅ |
 | `decision_options` | Opções de decisão | ✅ |
 | `decision_criteria` | Critérios de decisão | ✅ |
@@ -2229,15 +2481,18 @@ seed().catch(console.error);
 | `notifications` | Notificações | ✅ |
 | `reminders` | Lembretes | ✅ |
 | `user_integrations` | Integrações externas | ✅ |
-| `embeddings` | Embeddings para RAG | ✅ |
 | `audit_logs` | Logs de auditoria | ✅ |
 | `calendar_events` | Eventos do Google Calendar sincronizados | ✅ |
 | `budgets` | Orçamentos mensais por categoria | ✅ |
 | `subscriptions` | Cópia local das assinaturas Stripe | ✅ |
 | `export_requests` | Solicitações de export LGPD | ✅ |
 | `habit_freezes` | Congelamento de streaks de hábitos | ✅ |
+| **Memory System (ADR-012)** | | |
+| `user_memories` | Contexto compacto do usuário (~500-800 tokens) | ✅ |
+| `knowledge_items` | Fatos, preferências, insights do usuário | ✅ |
+| `memory_consolidations` | Log de consolidações de memória | ✅ |
 
-**Total: 29 tabelas**
+**Total: 30 tabelas**
 
 ---
 
@@ -2270,7 +2525,7 @@ packages/database/
 │   │   ├── subscriptions.ts  # Cópia local Stripe
 │   │   ├── exports.ts        # Solicitações LGPD
 │   │   ├── habit-freezes.ts  # Congelamento de streaks
-│   │   ├── embeddings.ts
+│   │   ├── memory.ts         # user_memories, knowledge_items, memory_consolidations (ADR-012)
 │   │   └── audit.ts
 │   ├── migrations/
 │   │   └── 0001_initial.sql
@@ -2317,5 +2572,5 @@ pnpm drizzle-kit studio
 
 ---
 
-*Última atualização: 07 Janeiro 2026*
-*Revisão: RLS policies atualizadas com otimização (SELECT auth.user_id()), drizzle.config.ts com dotenv*
+*Última atualização: 11 Janeiro 2026*
+*Revisão: ADR-012 - Migração de RAG para Tool Use + Memory Consolidation. Removidas tabelas embeddings e note_links. Adicionadas tabelas user_memories, knowledge_items, memory_consolidations. Removido pgvector.*

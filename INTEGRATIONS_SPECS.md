@@ -1742,22 +1742,35 @@ CREATE TRIGGER on_auth_user_verified
 ```typescript
 // packages/config/src/ai.ts
 
+// ADR-012: Tool Use + Memory Consolidation (não RAG)
 export const aiConfig = {
-  provider: process.env.AI_PROVIDER || 'google', // 'google' | 'openai' | 'anthropic'
-  
+  provider: process.env.AI_PROVIDER || 'google', // 'google' | 'anthropic'
+
   google: {
     apiKey: process.env.GOOGLE_AI_API_KEY!,
     models: {
-      chat: 'gemini-flash',        // Usar versão mais recente disponível
+      chat: 'gemini-flash',        // Usar versão mais recente disponível - com Tool Use
       analysis: 'gemini-pro',      // Usar versão mais recente disponível
-      embedding: 'text-embedding-004',
       vision: 'gemini-flash',      // Usar versão mais recente disponível
     },
     // Configurações
     defaultTemperature: 0.7,
     maxOutputTokens: 4096,
+    // Tool Use config
+    toolConfig: {
+      functionCallingConfig: {
+        mode: 'AUTO',  // AUTO | ANY | NONE
+      },
+    },
   },
-  
+
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY!,
+    models: {
+      chat: 'claude-sonnet-4-20250514', // Usar versão mais recente disponível - com Tool Use
+    },
+  },
+
   // Rate limits
   rateLimits: {
     requestsPerMinute: 60,
@@ -1880,16 +1893,57 @@ class AIService {
     }
   }
   
-  // Gerar embedding
-  async embed(text: string): Promise<number[]> {
+  // ADR-012: Chat com Tool Use (Function Calling)
+  async chatWithTools(
+    messages: ChatMessage[],
+    tools: ToolDefinition[],
+    options: ChatOptions = {}
+  ): Promise<ChatWithToolsResponse> {
     const model = this.genAI.getGenerativeModel({
-      model: aiConfig.google.models.embedding,
+      model: aiConfig.google.models.chat,
+      tools: tools.map(t => ({
+        functionDeclarations: [{
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters,
+        }],
+      })),
+      ...aiConfig.google.toolConfig,
     });
-    
-    const result = await model.embedContent(text);
-    return result.embedding.values;
+
+    const systemPrompt = messages.find(m => m.role === 'system')?.content;
+    const chatMessages = messages.filter(m => m.role !== 'system');
+
+    const chat = model.startChat({
+      history: chatMessages.slice(0, -1).map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        parts: [{ text: m.content }],
+      })),
+      generationConfig: {
+        temperature: options.temperature ?? aiConfig.google.defaultTemperature,
+        maxOutputTokens: options.maxTokens ?? aiConfig.google.maxOutputTokens,
+      },
+      systemInstruction: systemPrompt,
+    });
+
+    const lastMessage = chatMessages[chatMessages.length - 1];
+    const result = await chat.sendMessage(lastMessage.content);
+    const response = result.response;
+
+    // Extrair tool calls se existirem
+    const toolCalls = response.functionCalls()?.map(fc => ({
+      id: crypto.randomUUID(),
+      name: fc.name,
+      arguments: fc.args,
+    }));
+
+    return {
+      content: response.text() || null,
+      toolCalls: toolCalls || [],
+      finishReason: toolCalls?.length ? 'tool_calls' : 'stop',
+    };
   }
-  
+
   // Analisar imagem
   async analyzeImage(
     imageBuffer: Buffer,
@@ -1963,11 +2017,32 @@ export function createAIService(): AIServiceInterface {
   }
 }
 
-// Interface comum
+// Interface comum (ADR-012: Tool Use + Memory Consolidation)
 interface AIServiceInterface {
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
+  chatWithTools(messages: ChatMessage[], tools: ToolDefinition[], options?: ChatOptions): Promise<ChatWithToolsResponse>;
   chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string>;
-  embed(text: string): Promise<number[]>;
+  analyzeImage(imageBuffer: Buffer, prompt: string, mimeType?: string): Promise<string>;
+  transcribeAudio(audioBuffer: Buffer, mimeType?: string): Promise<string>;
+}
+
+// Tipos para Tool Use
+interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>; // JSON Schema
+}
+
+interface ChatWithToolsResponse {
+  content: string | null;
+  toolCalls: ToolCall[];
+  finishReason: 'stop' | 'tool_calls' | 'error';
+}
+
+interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
 }
 ```
 
@@ -2008,11 +2083,13 @@ class AIRateLimiter {
 
 - [ ] Chat completion funciona
 - [ ] Streaming funciona
-- [ ] Embeddings são gerados
+- [ ] **Tool Use (Function Calling) funciona** (ADR-012)
+- [ ] **Tool calls são retornados corretamente**
+- [ ] **Tool results podem ser enviados de volta**
 - [ ] Análise de imagem funciona
 - [ ] Transcrição de áudio funciona
 - [ ] Rate limiting aplicado
-- [ ] Fallback para outro provider funciona
+- [ ] Fallback para outro provider funciona (com Tool Use)
 
 ---
 
@@ -2473,10 +2550,11 @@ async function checkIntegrationHealth(): Promise<IntegrationHealth[]> {
 - [ ] Recuperação de senha funciona
 - [ ] Refresh token funciona
 
-## Google AI (Gemini)
+## Google AI (Gemini) - ADR-012
 - [ ] Chat completion funciona
 - [ ] Streaming funciona
-- [ ] Embeddings funcionam
+- [ ] **Tool Use (Function Calling) funciona**
+- [ ] **Tool calls retornam corretamente**
 - [ ] Análise de imagem funciona
 - [ ] Rate limiting aplicado
 
@@ -2506,5 +2584,5 @@ async function checkIntegrationHealth(): Promise<IntegrationHealth[]> {
 
 ---
 
-*Última atualização: 06 Janeiro 2026*
-*Revisão: Removidas versões fixas de APIs de terceiros; usar sempre versão mais recente*
+*Última atualização: 11 Janeiro 2026*
+*Revisão: ADR-012 - Arquitetura Tool Use + Memory Consolidation. Removido embed(), adicionado chatWithTools() com Function Calling. Removido modelo de embedding.*

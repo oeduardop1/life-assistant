@@ -62,6 +62,8 @@ A IA do Life Assistant é uma **assistente pessoal de vida** que ajuda o usuári
 
 ### 2.1 Componentes
 
+> **ADR-012:** Arquitetura Tool Use + Memory Consolidation (não RAG).
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              USER INPUT                                      │
@@ -70,40 +72,34 @@ A IA do Life Assistant é uma **assistente pessoal de vida** que ajuda o usuári
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                          INTENT CLASSIFIER                                   │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
-│   │   Command   │  │    Chat     │  │   Action    │  │   Query     │       │
-│   │  /peso 82   │  │  conversa   │  │  registrar  │  │  perguntar  │       │
-│   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
 │                          CONTEXT BUILDER                                     │
 │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
-│   │   Profile   │  │   History   │  │     RAG     │  │   Current   │       │
-│   │  do usuário │  │  recente    │  │  (memória)  │  │   state     │       │
+│   │ User Memory │  │   History   │  │   Current   │  │   Tools     │       │
+│   │ (~500-800t) │  │  recente    │  │   state     │  │ Available   │       │
 │   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                          PROMPT COMPOSER                                     │
-│   System Prompt + Context + Conversation History + User Message             │
+│   System Prompt + User Memory + Tools + Conversation History + Message      │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              LLM PROVIDER                                    │
-│                        (Gemini / Claude / etc)                              │
+│                         LLM + TOOL LOOP                                      │
+│   ┌──────────────────────────────────────────────────────────────────┐     │
+│   │  LLM (Gemini/Claude) → Tool Call? → Execute → Result → LLM...   │     │
+│   │                         (max 5 iterations)                       │     │
+│   └──────────────────────────────────────────────────────────────────┘     │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                          RESPONSE PROCESSOR                                  │
+│                          RESPONSE HANDLER                                    │
 │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
-│   │   Extract   │  │   Format    │  │   Actions   │  │   Stream    │       │
-│   │   actions   │  │   response  │  │   queue     │  │   to user   │       │
+│   │   Format    │  │   Log Tool  │  │   Stream    │  │   Async     │       │
+│   │   response  │  │   Calls     │  │   to user   │  │   Actions   │       │
 │   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -112,51 +108,73 @@ A IA do Life Assistant é uma **assistente pessoal de vida** que ajuda o usuári
 
 ```mermaid
 flowchart TB
-    A[Input do Usuário] --> B{Classificar Intent}
-    
-    B -->|Comando| C[Executar Comando]
-    B -->|Ação implícita| D[Extrair Dados + Executar]
-    B -->|Conversa| E[Gerar Resposta]
-    B -->|Query| F[Buscar + Responder]
-    
-    C --> G[Confirmar Ação]
-    D --> G
-    
-    E --> H[Construir Contexto]
-    F --> H
-    
-    H --> I[RAG: Buscar Memória]
-    I --> J[Compor Prompt]
-    J --> K[Chamar LLM]
-    K --> L[Processar Resposta]
-    L --> M[Extrair Ações]
-    M --> N[Responder Usuário]
-    
-    G --> N
+    A[Input do Usuário] --> B[Construir Contexto]
+
+    B --> C[User Memory: sempre presente ~500-800 tokens]
+    B --> D[Histórico da Conversa]
+    B --> E[Tools Disponíveis]
+
+    C --> F[Compor System Prompt]
+    D --> F
+    E --> F
+
+    F --> G[Chamar LLM com Tools]
+
+    G --> H{LLM quer chamar Tool?}
+    H -->|Sim| I[Executar Tool]
+    I --> J{Tool requer confirmação?}
+    J -->|Sim| K[Aguardar confirmação do usuário]
+    J -->|Não| L[Retornar resultado ao LLM]
+    K -->|Confirmado| L
+    L --> G
+
+    H -->|Não| M[Responder Usuário]
+
+    subgraph "Tool Loop (max 5 iterações)"
+        H
+        I
+        J
+        K
+        L
+    end
 ```
 
 ### 2.3 Estratégia de LLM Provider
 
-> **Princípio:** O sistema é agnóstico de provider. Qualquer LLM compatível pode ser usado.
+> **Princípio:** O sistema é agnóstico de provider. Qualquer LLM compatível com Tool Use pode ser usado.
 
 #### Provider Atual
-- **LLM Principal:** Gemini (Google)
-- **Embeddings:** Google text-embedding-004 (768 dimensões)
+- **LLM Principal:** Gemini (Google) com Tool Use (Function Calling)
+- **Fallback:** Claude (Anthropic) com Tool Use
+
+> **ADR-012:** Embeddings não são mais usados. Ver §6 Tool Use Architecture.
 
 #### Arquitetura de Abstração
 
 ```typescript
-// Interface genérica para LLM
+// Interface genérica para LLM com Tool Use
 interface LLMPort {
   chat(messages: Message[], options?: ChatOptions): Promise<ChatResponse>;
+  chatWithTools(messages: Message[], tools: ToolDefinition[], options?: ChatOptions): Promise<ChatWithToolsResponse>;
   stream(messages: Message[], options?: ChatOptions): AsyncIterable<StreamChunk>;
+  streamWithTools(messages: Message[], tools: ToolDefinition[], options?: ChatOptions): AsyncIterable<StreamChunk>;
   countTokens(text: string): Promise<number>;
+}
+
+interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: ZodSchema;  // Validação com Zod
+  requiresConfirmation?: boolean;
+}
+
+interface ChatWithToolsResponse extends ChatResponse {
+  toolCalls?: ToolCall[];
 }
 
 // Implementações específicas (Adapters)
 class GeminiAdapter implements LLMPort { /* ... */ }
 class ClaudeAdapter implements LLMPort { /* ... */ }
-class OpenAIAdapter implements LLMPort { /* ... */ }
 
 // Factory para criar o adapter correto
 const llm = LLMFactory.create(config.llmProvider);
@@ -255,43 +273,45 @@ A IA deve adaptar seu tom baseado em:
 
 ### 4.1 System Prompt Base
 
+> **ADR-012:** O system prompt agora inclui user_memory (sempre presente) e tools disponíveis.
+
 ```markdown
 Você é uma assistente pessoal de vida chamada internamente de Aria. Seu papel é ajudar {user_name} a viver uma vida mais equilibrada, organizada e significativa.
 
 ## Sobre você
 - Você é empática, gentil e nunca julga
-- Você conhece bem o usuário através do contexto fornecido
+- Você conhece bem o usuário através da memória fornecida abaixo
 - Você é prática e foca em ações concretas
 - Você celebra conquistas e apoia nos momentos difíceis
 - Você usa um tom informal e amigável (tratando por "você")
 
 ## Suas capacidades
-- Conversar sobre qualquer área da vida do usuário
-- Registrar métricas quando o usuário mencionar (peso, gastos, humor, etc.)
-- Analisar padrões e oferecer insights personalizados
-- Ajudar em tomadas de decisão
-- Lembrar de compromissos e pessoas importantes
-- Gerar relatórios e resumos
+Você tem acesso a tools para executar ações. Use-os quando necessário:
+- **record_metric**: Registrar métricas (peso, gastos, humor, etc.)
+- **search_knowledge**: Buscar fatos sobre o usuário quando precisar de contexto adicional
+- **add_knowledge**: Registrar novo fato aprendido sobre o usuário
+- **create_note**: Criar nota automática (análise, decisão, etc.)
+- **create_reminder**: Criar lembrete
+- **get_tracking_history**: Obter histórico de métricas
+- **update_person**: Atualizar informações de pessoa do CRM
 
 ## Regras importantes
-1. NUNCA invente informações que não estão no contexto
+1. NUNCA invente informações que não estão na memória ou contexto
 2. NUNCA dê diagnósticos médicos ou psicológicos
 3. NUNCA julgue ou critique escolhas do usuário
-4. SEMPRE confirme antes de executar ações importantes
-5. Se não souber algo, admita honestamente
+4. Tools que requerem confirmação aguardarão aprovação do usuário
+5. Se não souber algo, use search_knowledge ou admita honestamente
 6. Use emojis com moderação (1-2 por mensagem quando apropriado)
 7. Seja concisa - vá ao ponto
+
+## Memória do Usuário
+{user_memory}
 
 ## Contexto atual
 - Data/Hora: {current_datetime}
 - Timezone: {user_timezone}
 - Life Balance Score: {life_balance_score}/100
 {additional_context}
-
-## Formato de resposta
-Responda de forma natural e conversacional. Se identificar uma ação a ser tomada (registrar peso, criar nota, etc.), inclua no final:
-
-<action type="[tipo]" data="[dados em JSON]" />
 ```
 
 ### 4.2 System Prompt - Modo Conselheira
@@ -535,96 +555,382 @@ interface ReminderExtraction {
 
 ---
 
-## 6) RAG (Retrieval Augmented Generation)
+## 6) Tool Use Architecture
 
-### 6.1 O que é Indexado
+> **ADR-012:** Substituímos RAG tradicional por Tool Use + Memory Consolidation.
+> A LLM decide quando buscar dados via function calling, não há injeção automática de chunks.
 
-| Fonte | Indexado | Chunking |
-|-------|----------|----------|
-| Mensagens do usuário | ✅ Sim | Por mensagem |
-| Mensagens da IA | ❌ Não | - |
-| Notas | ✅ Sim | Por parágrafo (512 tokens) |
-| Decisões | ✅ Sim | Por seção |
-| Tracking (resumo) | ✅ Sim | Por semana |
-| Perfil | ✅ Sim | Documento único |
-| Pessoas (CRM) | ✅ Sim | Por pessoa |
-| Vault | ❌ **NUNCA** | - |
+### 6.1 Conceito
 
-### 6.2 Pipeline de Indexação
-
-```mermaid
-flowchart LR
-    A[Conteúdo] --> B[Preprocessar]
-    B --> C[Chunk]
-    C --> D[Gerar Embedding]
-    D --> E[Armazenar pgvector]
-    
-    B --> |Limpar HTML| B
-    B --> |Normalizar texto| B
-    C --> |512 tokens| C
-    C --> |Overlap 50 tokens| C
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         ARQUITETURA DE MEMÓRIA                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────┐ │
+│  │  User Memory    │    │ Knowledge Items │    │   Memory Consolidation  │ │
+│  │  (SEMPRE)       │    │ (SOB DEMANDA)   │    │   (JOB ASSÍNCRONO)      │ │
+│  ├─────────────────┤    ├─────────────────┤    ├─────────────────────────┤ │
+│  │ ~500-800 tokens │    │ Buscáveis via   │    │ Roda a cada 24h         │ │
+│  │ no system prompt│    │ search_knowledge│    │ Extrai fatos de         │ │
+│  │                 │    │                 │    │ conversas anteriores    │ │
+│  └────────┬────────┘    └────────┬────────┘    └───────────┬─────────────┘ │
+│           │                      │                         │               │
+│           ▼                      ▼                         ▼               │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                           user_memories                              │   │
+│  │                        knowledge_items                               │   │
+│  │                     memory_consolidations                            │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                              (PostgreSQL)                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.3 Configuração de Embedding
+**Vantagens sobre RAG tradicional:**
+- LLM tem controle sobre o que buscar (não chunks aleatórios por similaridade)
+- Menor custo (não processa embeddings a cada mensagem)
+- Contexto mais relevante e estruturado
+- Inferências automáticas com confidence tracking
+- Transparência para o usuário (pode ver e corrigir o que a IA aprendeu)
 
-> **Estratégia flexível:** O sistema é projetado para permitir troca de provider de embeddings.
-> A migração requer re-indexação completa de todos os vetores existentes.
+### 6.2 Tool Definitions
 
 ```typescript
-interface EmbeddingConfig {
-  // Provider inicial: Google (text-embedding-004)
-  // Dimensão: 768 (compatível com Google Vertex AI)
-  // Se mudar provider: necessário migração de todos os vetores
-  model: 'text-embedding-004'; // Google - pode mudar para Voyage AI (recomendado pela Anthropic) no futuro
-  dimensions: 768;             // 768 para Google, 1024 para Voyage, 1536 para OpenAI
-  chunkSize: 512;              // tokens
-  chunkOverlap: 50;            // tokens
-  minChunkSize: 100;           // tokens mínimos para indexar
+// packages/api/src/modules/ai/tools/definitions.ts
+
+import { z } from 'zod';
+
+export const tools: ToolDefinition[] = [
+  // ========== READ TOOLS (sem confirmação) ==========
+  {
+    name: 'search_knowledge',
+    description: 'Busca fatos, preferências ou insights sobre o usuário. Use quando precisar de contexto adicional não presente na memória.',
+    parameters: z.object({
+      query: z.string().describe('O que buscar'),
+      type: z.enum(['fact', 'preference', 'memory', 'insight', 'person']).optional(),
+      area: z.enum(['health', 'finance', 'relationships', 'work', 'spirituality', 'leisure', 'personal_development', 'mental_health']).optional(),
+      limit: z.number().max(10).default(5),
+    }),
+    requiresConfirmation: false,
+  },
+  {
+    name: 'get_tracking_history',
+    description: 'Obtém histórico de métricas do usuário (peso, gastos, humor, etc.)',
+    parameters: z.object({
+      type: z.string().describe('Tipo de métrica: weight, expense, mood, water, etc.'),
+      days: z.number().max(90).default(30),
+    }),
+    requiresConfirmation: false,
+  },
+  {
+    name: 'get_person',
+    description: 'Obtém informações sobre uma pessoa do CRM do usuário',
+    parameters: z.object({
+      name: z.string().describe('Nome da pessoa'),
+    }),
+    requiresConfirmation: false,
+  },
+
+  // ========== WRITE TOOLS (requerem confirmação) ==========
+  {
+    name: 'record_metric',
+    description: 'Registra uma métrica do usuário. SEMPRE confirme os dados antes de chamar.',
+    parameters: z.object({
+      type: z.string().describe('Tipo: weight, expense, mood, water, sleep, exercise'),
+      value: z.number(),
+      unit: z.string().optional(),
+      date: z.string().describe('ISO date string'),
+      category: z.string().optional().describe('Para expenses: categoria'),
+      notes: z.string().optional(),
+    }),
+    requiresConfirmation: true,
+  },
+  {
+    name: 'add_knowledge',
+    description: 'Adiciona um novo fato aprendido sobre o usuário. Use para registrar preferências, fatos importantes, ou insights.',
+    parameters: z.object({
+      type: z.enum(['fact', 'preference', 'memory', 'insight', 'person']),
+      content: z.string().describe('O fato a ser registrado'),
+      area: z.enum(['health', 'finance', 'relationships', 'work', 'spirituality', 'leisure', 'personal_development', 'mental_health']).optional(),
+      confidence: z.number().min(0).max(1).default(0.9),
+    }),
+    requiresConfirmation: true,
+  },
+  {
+    name: 'create_reminder',
+    description: 'Cria um lembrete para o usuário',
+    parameters: z.object({
+      title: z.string(),
+      datetime: z.string().describe('ISO datetime string'),
+      notes: z.string().optional(),
+    }),
+    requiresConfirmation: true,
+  },
+  {
+    name: 'update_person',
+    description: 'Atualiza informações de uma pessoa no CRM do usuário',
+    parameters: z.object({
+      name: z.string(),
+      updates: z.object({
+        relationship: z.string().optional(),
+        notes: z.string().optional(),
+        birthday: z.string().optional(),
+        preferences: z.record(z.string()).optional(),
+      }),
+    }),
+    requiresConfirmation: true,
+  },
+];
+```
+
+### 6.3 Tool Loop
+
+```typescript
+// packages/api/src/modules/ai/services/chat.service.ts
+
+async function chatWithToolLoop(
+  messages: Message[],
+  userMemory: UserMemory,
+  maxIterations: number = 5
+): Promise<ChatResponse> {
+  let iterations = 0;
+  let currentMessages = [...messages];
+
+  while (iterations < maxIterations) {
+    iterations++;
+
+    const response = await llm.chatWithTools(
+      currentMessages,
+      tools,
+      { systemPrompt: buildSystemPrompt(userMemory) }
+    );
+
+    // Se não há tool calls, retornar resposta final
+    if (!response.toolCalls?.length) {
+      return response;
+    }
+
+    // Executar cada tool call
+    for (const toolCall of response.toolCalls) {
+      const tool = tools.find(t => t.name === toolCall.name);
+
+      if (tool?.requiresConfirmation) {
+        // Aguardar confirmação do usuário
+        return {
+          ...response,
+          pendingConfirmation: {
+            toolCall,
+            message: `Confirma ${formatToolAction(toolCall)}?`,
+          },
+        };
+      }
+
+      // Executar tool
+      const result = await toolExecutor.execute(toolCall);
+
+      // Adicionar resultado às mensagens
+      currentMessages.push({
+        role: 'tool',
+        toolCallId: toolCall.id,
+        content: JSON.stringify(result),
+      });
+    }
+  }
+
+  throw new Error('Max tool iterations reached');
 }
 ```
 
-**Plano de migração de embeddings:**
-1. Alterar configuração do provider
-2. Criar nova tabela/índice para novos vetores
-3. Re-processar todo conteúdo existente em background
-4. Validar qualidade das buscas
-5. Swap para nova tabela
-6. Remover tabela antiga
-
-### 6.4 Retrieval
+### 6.4 Tool Executor Service
 
 ```typescript
-interface RetrievalConfig {
-  maxChunks: 5;                    // máximo de chunks retornados
-  similarityThreshold: 0.7;        // mínimo de similaridade
-  recencyBoost: 0.1;               // boost para conteúdo recente
-  recencyWindow: 7;                // dias para boost
+// packages/api/src/modules/ai/services/tool-executor.service.ts
+
+@Injectable()
+export class ToolExecutorService {
+  constructor(
+    private readonly trackingService: TrackingService,
+    private readonly knowledgeService: KnowledgeService,
+    private readonly reminderService: ReminderService,
+    private readonly peopleService: PeopleService,
+  ) {}
+
+  async execute(toolCall: ToolCall): Promise<ToolResult> {
+    const tool = tools.find(t => t.name === toolCall.name);
+    if (!tool) throw new Error(`Unknown tool: ${toolCall.name}`);
+
+    // Validar parâmetros com Zod
+    const params = tool.parameters.parse(toolCall.arguments);
+
+    // Executar e logar
+    const startTime = Date.now();
+    try {
+      const result = await this.executeByName(toolCall.name, params);
+      await this.logToolCall(toolCall, result, Date.now() - startTime);
+      return { success: true, data: result };
+    } catch (error) {
+      await this.logToolCall(toolCall, null, Date.now() - startTime, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  private async executeByName(name: string, params: any): Promise<any> {
+    switch (name) {
+      case 'search_knowledge':
+        return this.knowledgeService.search(params);
+      case 'get_tracking_history':
+        return this.trackingService.getHistory(params);
+      case 'record_metric':
+        return this.trackingService.record(params);
+      case 'add_knowledge':
+        return this.knowledgeService.add(params);
+      case 'create_reminder':
+        return this.reminderService.create(params);
+      // ... outros tools
+    }
+  }
 }
 ```
 
-### 6.5 Prompt de Contexto RAG
+---
+
+## 6.5) Memory Consolidation
+
+> **ADR-012:** Job assíncrono que extrai conhecimento de conversas a cada 24h.
+
+### 6.5.1 Conceito
+
+A Memory Consolidation é um job BullMQ que:
+1. Processa todas as conversas das últimas 24h
+2. Usa LLM para extrair fatos, preferências e inferências
+3. Atualiza `user_memories` e `knowledge_items`
+4. Registra log em `memory_consolidations`
+
+### 6.5.2 Prompt de Consolidação
 
 ```markdown
-## Memória Relevante
-Os seguintes trechos da memória do usuário são relevantes para esta conversa:
+## Tarefa: Consolidar Memória do Usuário
 
-{retrieved_chunks}
+Analise as conversas recentes e extraia informações para atualizar a memória do usuário.
 
-Use essas informações para personalizar sua resposta, mas:
-- NÃO mencione que está acessando "memória" ou "contexto"
-- Integre naturalmente como se você simplesmente conhecesse o usuário
-- Se a informação for antiga, considere que pode ter mudado
+### Conversas das últimas 24h:
+{conversations}
+
+### Memória atual do usuário:
+{current_user_memory}
+
+### Knowledge Items existentes:
+{existing_knowledge_items}
+
+### Instruções:
+1. Identifique NOVOS fatos, preferências ou insights sobre o usuário
+2. Identifique atualizações para fatos existentes
+3. Faça inferências quando houver padrões (mínimo 3 ocorrências)
+4. Atribua confidence score para cada item
+
+### Formato de saída (JSON):
+{
+  "memory_updates": {
+    "name": "atualização se mencionado",
+    "current_goals": ["novos goals se identificados"],
+    "current_challenges": ["novos challenges se identificados"],
+    "top_of_mind": ["prioridades atuais"],
+    "learned_patterns": ["padrões identificados"]
+  },
+  "new_knowledge_items": [
+    {
+      "type": "fact|preference|insight|person",
+      "area": "health|finance|work|...",
+      "content": "descrição do fato",
+      "confidence": 0.9,
+      "source": "conversation",
+      "inference_evidence": "evidência se for inferência"
+    }
+  ],
+  "updated_knowledge_items": [
+    {
+      "id": "uuid do item existente",
+      "content": "conteúdo atualizado",
+      "confidence": 0.95
+    }
+  ]
+}
+
+### Regras:
+- Confidence >= 0.7 para inferências
+- Confidence >= 0.9 para fatos explícitos
+- NÃO crie duplicatas de knowledge_items existentes
+- Padrões requerem mínimo 3 ocorrências
 ```
 
-### 6.6 Estratégia de Retrieval por Intent
+### 6.5.3 Job Implementation
 
-| Intent | Estratégia |
-|--------|------------|
-| CHAT_GENERAL | Top 3 mais relevantes + última semana |
-| CHAT_COUNSELOR | Top 5 mais relevantes (mais contexto) |
-| QUERY_DATA | Busca específica por tipo de dado |
-| START_DECISION | Decisões passadas similares |
-| TRACK_METRIC | Últimos registros do mesmo tipo |
+```typescript
+// packages/api/src/jobs/memory-consolidation.processor.ts
+
+@Processor('memory-consolidation')
+export class MemoryConsolidationProcessor {
+  constructor(
+    private readonly conversationService: ConversationService,
+    private readonly userMemoryService: UserMemoryService,
+    private readonly knowledgeService: KnowledgeService,
+    private readonly llm: LLMPort,
+  ) {}
+
+  @Process()
+  async consolidate(job: Job<{ userId: string }>) {
+    const { userId } = job.data;
+
+    // 1. Buscar conversas das últimas 24h
+    const conversations = await this.conversationService.getRecent(userId, 24);
+    if (conversations.length === 0) return;
+
+    // 2. Buscar memória e knowledge atuais
+    const currentMemory = await this.userMemoryService.get(userId);
+    const existingKnowledge = await this.knowledgeService.getAll(userId);
+
+    // 3. Chamar LLM para consolidar
+    const prompt = buildConsolidationPrompt(conversations, currentMemory, existingKnowledge);
+    const response = await this.llm.chat([{ role: 'user', content: prompt }]);
+    const result = parseConsolidationResponse(response);
+
+    // 4. Aplicar atualizações
+    await this.userMemoryService.update(userId, result.memory_updates);
+    await this.knowledgeService.createMany(userId, result.new_knowledge_items);
+    await this.knowledgeService.updateMany(result.updated_knowledge_items);
+
+    // 5. Registrar consolidação
+    await this.logConsolidation(userId, conversations.length, result);
+  }
+}
+```
+
+### 6.5.4 Scheduling
+
+```typescript
+// packages/api/src/jobs/memory-consolidation.scheduler.ts
+
+@Injectable()
+export class MemoryConsolidationScheduler {
+  constructor(
+    @InjectQueue('memory-consolidation')
+    private readonly queue: Queue,
+    private readonly userService: UserService,
+  ) {}
+
+  // Roda a cada 24h às 3:00 AM do timezone do usuário
+  @Cron('0 3 * * *')
+  async scheduleConsolidations() {
+    const users = await this.userService.getActiveUsers();
+
+    for (const user of users) {
+      await this.queue.add({ userId: user.id }, {
+        delay: this.calculateDelayForTimezone(user.timezone),
+      });
+    }
+  }
+}
+```
 
 ---
 
@@ -915,87 +1221,84 @@ Fingir que sabe algo que não sabe
 
 ---
 
-## 9) Ações Extraídas
+## 9) Tool Calls (antes "Ações Extraídas")
 
-### 9.1 Formato de Ação
+> **ADR-012:** Ações são executadas via Tool Calls nativos (function calling), não mais via parsing de XML.
+> Ver §6 Tool Use Architecture para detalhes de implementação.
 
-```typescript
-interface ExtractedAction {
-  type: ActionType;
-  data: Record<string, any>;
-  confidence: number;
-  requiresConfirmation: boolean;
-}
+### 9.1 Categorias de Tools
 
-enum ActionType {
-  TRACK_WEIGHT = 'track_weight',
-  TRACK_WATER = 'track_water',
-  TRACK_EXPENSE = 'track_expense',
-  TRACK_EXERCISE = 'track_exercise',
-  TRACK_MOOD = 'track_mood',
-  TRACK_SLEEP = 'track_sleep',
-  CREATE_NOTE = 'create_note',
-  CREATE_REMINDER = 'create_reminder',
-  CREATE_DECISION = 'create_decision',
-  UPDATE_PERSON = 'update_person',
-  LOG_INTERACTION = 'log_interaction',
-}
-```
+| Categoria | Tools | Confirmação |
+|-----------|-------|-------------|
+| **Read** | `search_knowledge`, `get_tracking_history`, `get_person` | ❌ Não |
+| **Write** | `record_metric`, `add_knowledge`, `create_reminder`, `update_person` | ✅ Sim |
+| **Command** | Comandos explícitos `/peso 82` | ❌ Não |
 
 ### 9.2 Regras de Confirmação
 
-| Ação | Requer Confirmação |
-|------|-------------------|
-| Registrar métrica (comando explícito `/peso`) | ❌ Não (reversível) |
-| Registrar métrica (via conversa) | ✅ Sim (ver 9.2.1) |
-| Criar nota | ❌ Não (reversível) |
-| Criar lembrete | ❌ Não (reversível) |
-| Criar decisão | ✅ Sim |
-| Deletar qualquer coisa | ✅ Sim |
-| Modificar configurações | ✅ Sim |
-
-#### 9.2.1 Tracking via Conversa (IA Confirma)
-
-Quando o usuário menciona métricas em conversa natural (sem comandos explícitos), a IA **sempre** deve confirmar antes de registrar.
-
-**Fluxo:**
-```
-Usuário: "Pesei 82kg hoje de manhã"
-IA: "Vou registrar seu peso de 82kg para hoje (06/01/2026). Confirma? 👍"
-Usuário: "Sim" / "Confirma" / "Ok" / 👍
-IA: "Pronto! Peso de 82kg registrado ✓"
-```
-
-**Correções permitidas:**
-```
-Usuário: "Pesei 82kg hoje de manhã"
-IA: "Vou registrar seu peso de 82kg para hoje (06/01/2026). Confirma? 👍"
-Usuário: "Na verdade foi ontem"
-IA: "Entendido! Vou registrar seu peso de 82kg para ontem (05/01/2026). Confirma?"
-```
-
-**Dados confirmáveis:**
-- Valor (`82kg` → `82.5kg`)
-- Data (`hoje` → `ontem`)
-- Categoria (para gastos: `mercado` → `restaurante`)
-- Unidade (`kg` → `lb`)
+| Tool | Requer Confirmação | Motivo |
+|------|-------------------|--------|
+| `search_knowledge` | ❌ Não | Apenas leitura |
+| `get_tracking_history` | ❌ Não | Apenas leitura |
+| `get_person` | ❌ Não | Apenas leitura |
+| `record_metric` | ✅ Sim | Modifica dados |
+| `add_knowledge` | ✅ Sim | Modifica dados |
+| `create_reminder` | ✅ Sim | Cria agendamento |
+| `update_person` | ✅ Sim | Modifica dados |
 
 **Exceções (não requer confirmação):**
 - Comandos explícitos: `/peso 82`, `/agua 500ml`
 - Usuário já confirmou na mesma mensagem: "anota 82kg de peso"
 
-### 9.3 Output de Ação na Resposta
+### 9.3 Fluxo de Confirmação
 
-```markdown
-Resposta normal da IA para o usuário...
+```
+Usuário: "Pesei 82kg hoje de manhã"
 
-<action type="track_weight" confidence="0.95">
-{
-  "value": 82.5,
-  "unit": "kg",
-  "date": "2026-01-06T10:30:00Z"
+[LLM chama tool: record_metric com requiresConfirmation=true]
+
+IA: "Vou registrar seu peso de 82kg para hoje (06/01/2026). Confirma? 👍"
+
+[Sistema aguarda resposta do usuário]
+
+Usuário: "Sim"
+
+[Sistema executa tool com parâmetros confirmados]
+
+IA: "Pronto! Peso de 82kg registrado ✓"
+```
+
+### 9.4 Correções Pré-Confirmação
+
+```
+Usuário: "Pesei 82kg hoje de manhã"
+IA: "Vou registrar seu peso de 82kg para hoje (06/01/2026). Confirma? 👍"
+Usuário: "Na verdade foi ontem"
+
+[LLM corrige parâmetros e chama tool novamente com nova data]
+
+IA: "Entendido! Vou registrar seu peso de 82kg para ontem (05/01/2026). Confirma?"
+```
+
+**Dados que podem ser corrigidos:**
+- Valor (`82kg` → `82.5kg`)
+- Data (`hoje` → `ontem`)
+- Categoria (para gastos: `mercado` → `restaurante`)
+- Unidade (`kg` → `lb`)
+
+### 9.5 Persistência de Confirmação Pendente
+
+```typescript
+// Quando há tool call pendente de confirmação
+interface ConversationState {
+  pendingToolCall?: {
+    toolName: string;
+    params: Record<string, any>;
+    message: string;  // Mensagem que foi mostrada ao usuário
+    createdAt: Date;
+    expiresAt: Date;  // 5 minutos
+  };
 }
-</action>
 ```
 
 ---
@@ -1186,7 +1489,7 @@ interface QualityEvaluation {
 ### Performance
 - [ ] Response time < 3s
 - [ ] Streaming funcionando
-- [ ] RAG retornando chunks relevantes
+- [ ] Tool calls executando corretamente
 
 ### Testes
 - [ ] Testes de intent (casos de teste)
@@ -1201,19 +1504,22 @@ interface QualityEvaluation {
 
 | Termo | Definição |
 |-------|-----------|
-| **Chunking** | Dividir texto em pedaços para indexação |
-| **Embedding** | Representação vetorial de texto |
+| **Confidence** | Nível de certeza da IA sobre uma informação (0.0 a 1.0) |
 | **Guardrail** | Limite de segurança para respostas |
-| **Intent** | Intenção identificada na mensagem |
+| **Knowledge Item** | Fato, preferência ou insight armazenado sobre o usuário |
 | **LLM** | Large Language Model (Gemini, Claude, etc.) |
+| **Memory Consolidation** | Job que extrai conhecimento de conversas a cada 24h |
 | **Persona** | Personalidade definida para a IA |
 | **Prompt** | Instrução enviada ao modelo |
-| **RAG** | Retrieval Augmented Generation |
-| **Retrieval** | Busca de informações relevantes |
 | **Streaming** | Envio de resposta em tempo real |
 | **System Prompt** | Prompt base que define comportamento |
 | **Token** | Unidade de texto processada pelo LLM |
+| **Tool Call** | Chamada de função nativa da LLM (function calling) |
+| **Tool Loop** | Ciclo de execução de tools até resposta final |
+| **Tool Use** | Arquitetura onde LLM decide quando chamar funções |
+| **User Memory** | Contexto compacto do usuário (~500-800 tokens) |
 
 ---
 
-*Última atualização: Janeiro 2026*
+*Última atualização: 11 Janeiro 2026*
+*Revisão: ADR-012 - Migração de RAG para Tool Use + Memory Consolidation*
