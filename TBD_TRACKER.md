@@ -70,16 +70,16 @@ _Pendente_
 
 | Status | Quantidade |
 |--------|------------|
-| 🔴 Pendente | 0 |
+| 🔴 Pendente | 5 |
 | 🟡 Em discussão | 0 |
 | 🟢 Resolvido | 3 |
-| **Total** | **3** |
+| **Total** | **8** |
 
 | Prioridade | Quantidade |
 |------------|------------|
 | 🔴 Bloqueante | 0 |
 | 🟡 Alta | 0 |
-| 🟢 Baixa | 3 |
+| 🟢 Baixa | 8 |
 
 ---
 
@@ -96,9 +96,173 @@ Exemplo: credenciais faltando, decisão crítica de arquitetura, etc.
 
 ## 🟡 Decisões de Negócio
 
-_Nenhum item pendente no momento._
+> **Nota:** Estes itens são para decisão futura, caso o produto vá para o mercado.
+> Foco atual: validação pessoal do produto.
 
-<!-- 
+### [TBD-100] Definição de Preços dos Planos
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🔴 Pendente |
+| **Prioridade** | 🟢 Baixa (decidir antes de ir ao mercado) |
+| **Categoria** | Negócio |
+| **Origem** | PRODUCT_SPECS.md §10.1 |
+| **Data** | 2026-01-12 |
+
+**Contexto:**
+Os planos Free/Pro/Premium estão documentados com features e limites, mas não há valores definidos em R$ ou USD.
+
+**Pergunta/Decisão necessária:**
+Qual o preço de cada plano? Considerar:
+- Preço Pro mensal/anual
+- Preço Premium mensal/anual
+- Desconto para pagamento anual (se houver)
+- Moeda (BRL, USD, ou ambos)
+
+**Opções consideradas:**
+1. **Preço único global (USD)** — Simplifica, mas pode ser caro para BR
+2. **Preço regionalizado (BRL para BR, USD para outros)** — Mais acessível, mais complexo
+3. **Paridade de poder de compra (PPP)** — Desconto automático por país
+
+**Recomendação da IA:**
+Definir após validação pessoal. Pesquisar preços de competidores (Notion AI, ChatGPT Plus, etc.) como referência.
+
+**Decisão:**
+_Pendente — decidir antes de lançamento público_
+
+---
+
+### [TBD-101] Duração do Período Trial
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🔴 Pendente |
+| **Prioridade** | 🟢 Baixa (decidir antes de ir ao mercado) |
+| **Categoria** | Negócio |
+| **Origem** | PRODUCT_SPECS.md §10.1 |
+| **Data** | 2026-01-12 |
+
+**Contexto:**
+PRODUCT_SPECS menciona "Trial" mas não especifica duração ou condições.
+
+**Pergunta/Decisão necessária:**
+- Duração do trial (7, 14, 30 dias?)
+- Requer cartão de crédito para iniciar?
+- Trial de qual plano (Pro ou Premium)?
+- Comportamento após trial expirar (downgrade automático para Free?)
+
+**Opções consideradas:**
+1. **7 dias sem cartão** — Baixa fricção, conversão menor
+2. **14 dias com cartão** — Maior fricção, conversão maior
+3. **30 dias sem cartão** — Muito generoso, pode atrair freeloaders
+
+**Recomendação da IA:**
+14 dias sem cartão parece equilibrado. Stripe suporta trials facilmente.
+
+**Decisão:**
+_Pendente — decidir antes de lançamento público_
+
+---
+
+### [TBD-102] Ciclo de Cobrança
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🔴 Pendente |
+| **Prioridade** | 🟢 Baixa (decidir antes de ir ao mercado) |
+| **Categoria** | Negócio |
+| **Origem** | INTEGRATIONS_SPECS.md §7.3 (Stripe) |
+| **Data** | 2026-01-12 |
+
+**Contexto:**
+Não está definido se a cobrança será mensal, anual, ou ambos.
+
+**Pergunta/Decisão necessária:**
+- Oferecer apenas mensal?
+- Oferecer mensal + anual?
+- Se anual, qual desconto? (tipicamente 15-20%)
+- Permitir troca de ciclo a qualquer momento?
+
+**Opções consideradas:**
+1. **Apenas mensal** — Simples, menor comprometimento do usuário
+2. **Mensal + anual com 20% desconto** — Padrão de mercado, melhora LTV
+3. **Apenas anual** — Maior comprometimento, pode afastar usuários
+
+**Recomendação da IA:**
+Opção 2 é o padrão SaaS. Stripe suporta ambos nativamente.
+
+**Decisão:**
+_Pendente — decidir antes de lançamento público_
+
+---
+
+### [TBD-103] Política de Cancelamento e Reembolso
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🔴 Pendente |
+| **Prioridade** | 🟢 Baixa (decidir antes de ir ao mercado) |
+| **Categoria** | Negócio |
+| **Origem** | Requisito legal e de UX |
+| **Data** | 2026-01-12 |
+
+**Contexto:**
+Não há política documentada sobre cancelamento e reembolso.
+
+**Pergunta/Decisão necessária:**
+- Cancelamento imediato ou no fim do ciclo?
+- Reembolso pro-rata para cancelamentos?
+- Período de arrependimento (CDC Brasil: 7 dias)?
+- O que acontece com dados após cancelamento?
+
+**Opções consideradas:**
+1. **Cancelamento no fim do ciclo, sem reembolso** — Simples, padrão
+2. **Cancelamento imediato com reembolso pro-rata** — Mais justo, mais complexo
+3. **Reembolso total em 7 dias, depois sem reembolso** — Equilibrado, legal no BR
+
+**Recomendação da IA:**
+Opção 3 atende CDC brasileiro e é justo. Dados podem ser mantidos por 30 dias após cancelamento para possível reativação.
+
+**Decisão:**
+_Pendente — decidir antes de lançamento público_
+
+---
+
+### [TBD-104] Análise Competitiva e Posicionamento
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🔴 Pendente |
+| **Prioridade** | 🟢 Baixa (decidir antes de ir ao mercado) |
+| **Categoria** | Negócio |
+| **Origem** | Planejamento de go-to-market |
+| **Data** | 2026-01-12 |
+
+**Contexto:**
+Não há análise documentada de competidores ou posicionamento de mercado.
+
+**Pergunta/Decisão necessária:**
+- Quem são os competidores diretos e indiretos?
+- Como o Life Assistant se diferencia?
+- Qual o posicionamento de preço (premium, mid-market, budget)?
+- Qual o público-alvo prioritário para lançamento?
+
+**Competidores potenciais a analisar:**
+- **IA Genérica:** ChatGPT Plus, Claude Pro, Gemini Advanced
+- **Assistentes de vida:** Notion AI, Mem.ai, Reflect
+- **Tracking:** Daylio, Fabulous, Habitica
+- **Finanças pessoais:** Mobills, Organizze, YNAB
+- **Nicho cristão:** ?
+
+**Recomendação da IA:**
+Criar documento separado `COMPETITIVE_ANALYSIS.md` quando for para o mercado. O diferencial principal (memória persistente + perspectiva cristã) é único.
+
+**Decisão:**
+_Pendente — realizar análise antes de lançamento público_
+
+---
+
+<!--
 Adicionar aqui itens que precisam de decisão do product owner.
 Exemplo: regras de negócio, limites, comportamentos de UX, etc.
 -->
@@ -323,4 +487,4 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 ---
 
 *Última atualização: 12 Janeiro 2026*
-*Revisão: Adicionado TBD-202 (Tool Use Examples — input_examples)*
+*Revisão: Adicionados TBDs de negócio (TBD-100 a TBD-104) para decisão futura antes de go-to-market*
