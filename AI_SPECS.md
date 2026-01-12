@@ -1392,8 +1392,8 @@ interface FallbackStrategy {
 
 | Falha | Comportamento |
 |-------|---------------|
-| RAG indisponível | Responder sem contexto histórico |
-| Embedding falhou | Não indexar, responder normalmente |
+| Tool call falhou | Retry 1x, responder sem contexto se persistir |
+| Memory indisponível | Responder sem contexto histórico |
 | LLM timeout | Retry com prompt menor |
 | LLM error | Fallback response + log |
 
@@ -1423,7 +1423,8 @@ const errorMessages = {
 | Action extraction | Ações extraídas corretamente | > 90% |
 | User satisfaction | Thumbs up/down | > 80% positivo |
 | Fallback rate | Respostas de fallback | < 5% |
-| RAG relevance | Chunks úteis / total | > 70% |
+| Tool success rate | Tool calls bem sucedidas | > 95% |
+| Memory relevance | Contexto útil retornado | > 70% |
 
 ### 11.2 Logging para Análise
 
@@ -1438,9 +1439,9 @@ interface AIInteractionLog {
   intent: IntentCategory;
   intentConfidence: number;
   
-  // Context
-  ragChunksUsed: number;
-  ragRelevanceScore: number;
+  // Context (Tool Use + Memory)
+  toolsUsed: string[];
+  memoryContextRetrieved: number;
   contextTokens: number;
   
   // Output

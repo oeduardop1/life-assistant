@@ -29,7 +29,6 @@ export default defineConfig({
         'src/schema/calendar.ts',
         'src/schema/conversations.ts',
         'src/schema/decisions.ts',
-        'src/schema/embeddings.ts',
         'src/schema/exports.ts',
         'src/schema/goals.ts',
         'src/schema/habit-freezes.ts',
