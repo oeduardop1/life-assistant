@@ -166,6 +166,7 @@ interface ToolDefinition {
   description: string;
   parameters: ZodSchema;  // Validação com Zod
   requiresConfirmation?: boolean;
+  inputExamples?: Record<string, unknown>[];  // Tool Use Examples (Claude beta)
 }
 
 interface ChatWithToolsResponse extends ChatResponse {
@@ -201,6 +202,35 @@ const llm = LLMFactory.create(config.llmProvider);
 - Troca de provider sem refatoração de código
 - Fallback automático se provider falhar
 - Otimização de custo por tipo de tarefa (ex: usar modelo menor para classificação de intent)
+
+### 2.4 Tool Use Examples
+
+> **Referência:** Artigo Anthropic "Advanced Tool Use" — accuracy de tool calls 72% → 90%
+
+O campo `inputExamples` melhora significativamente a accuracy de tool calls fornecendo exemplos concretos de uso.
+
+#### Por que usar exemplos?
+
+- Clarifica parâmetros condicionais (ex: `category` só para expenses)
+- Demonstra formatos esperados (ISO date, units)
+- Mostra combinações válidas de parâmetros opcionais
+- Reduz erros de parsing em inputs ambíguos
+
+#### Estratégia por Provider
+
+| Provider | Campo | Implementação |
+|----------|-------|---------------|
+| **Claude** | `input_examples` | Nativo (beta header: `advanced-tool-use-2025-11-20`) |
+| **Gemini** | N/A | Workaround: enriquecer description com exemplos inline |
+
+#### Boas Práticas
+
+1. **2-4 exemplos por tool** — suficiente para cobrir casos principais
+2. **Mostrar parâmetros opcionais** — alguns exemplos com, outros sem
+3. **Casos diferentes** — variar valores de enums (ex: `type="weight"` vs `type="expense"`)
+4. **Exemplos válidos** — devem passar validação do schema
+
+Ver `ENGINEERING.md` §8.5 para detalhes de implementação por adapter.
 
 ---
 
@@ -612,6 +642,11 @@ export const tools: ToolDefinition[] = [
       limit: z.number().max(10).default(5),
     }),
     requiresConfirmation: false,
+    inputExamples: [
+      { query: "objetivo de peso", type: "fact", area: "health" },
+      { query: "preferências alimentares", type: "preference" },
+      { query: "Maria", type: "person", limit: 1 },
+    ],
   },
   {
     name: 'get_tracking_history',
@@ -621,6 +656,11 @@ export const tools: ToolDefinition[] = [
       days: z.number().max(90).default(30),
     }),
     requiresConfirmation: false,
+    inputExamples: [
+      { type: "weight", days: 30 },
+      { type: "expense", days: 7 },
+      { type: "mood", days: 14 },
+    ],
   },
   {
     name: 'get_person',
@@ -629,6 +669,10 @@ export const tools: ToolDefinition[] = [
       name: z.string().describe('Nome da pessoa'),
     }),
     requiresConfirmation: false,
+    inputExamples: [
+      { name: "Maria" },
+      { name: "João da Silva" },
+    ],
   },
 
   // ========== WRITE TOOLS (requerem confirmação) ==========
@@ -644,6 +688,16 @@ export const tools: ToolDefinition[] = [
       notes: z.string().optional(),
     }),
     requiresConfirmation: true,
+    inputExamples: [
+      // Peso - com unit
+      { type: "weight", value: 82.5, unit: "kg", date: "2026-01-12" },
+      // Gasto - com category
+      { type: "expense", value: 150, date: "2026-01-12", category: "food", notes: "Mercado semanal" },
+      // Humor - sem unit, sem category
+      { type: "mood", value: 7, date: "2026-01-12" },
+      // Água - unit diferente
+      { type: "water", value: 2000, unit: "ml", date: "2026-01-12" },
+    ],
   },
   {
     name: 'add_knowledge',
@@ -655,6 +709,11 @@ export const tools: ToolDefinition[] = [
       confidence: z.number().min(0).max(1).default(0.9),
     }),
     requiresConfirmation: true,
+    inputExamples: [
+      { type: "fact", content: "Trabalha como desenvolvedor", area: "work", confidence: 1.0 },
+      { type: "preference", content: "Prefere acordar cedo", area: "health", confidence: 0.9 },
+      { type: "insight", content: "Gasta mais quando estressado", area: "finance", confidence: 0.7 },
+    ],
   },
   {
     name: 'create_reminder',
@@ -665,6 +724,10 @@ export const tools: ToolDefinition[] = [
       notes: z.string().optional(),
     }),
     requiresConfirmation: true,
+    inputExamples: [
+      { title: "Reunião com cliente", datetime: "2026-01-15T10:00:00-03:00" },
+      { title: "Tomar remédio", datetime: "2026-01-12T08:00:00-03:00", notes: "Antibiótico" },
+    ],
   },
   {
     name: 'update_person',
@@ -679,6 +742,11 @@ export const tools: ToolDefinition[] = [
       }),
     }),
     requiresConfirmation: true,
+    inputExamples: [
+      { name: "Maria", updates: { relationship: "esposa", birthday: "1990-05-15" } },
+      { name: "João", updates: { notes: "Prefere reuniões pela manhã" } },
+      { name: "Ana", updates: { preferences: { "presente_ideal": "livros" } } },
+    ],
   },
 ];
 ```
@@ -1521,5 +1589,5 @@ interface QualityEvaluation {
 
 ---
 
-*Última atualização: 11 Janeiro 2026*
-*Revisão: ADR-012 - Migração de RAG para Tool Use + Memory Consolidation*
+*Última atualização: 12 Janeiro 2026*
+*Revisão: Adicionado §2.4 Tool Use Examples + inputExamples em todas as 7 tools §6.2*

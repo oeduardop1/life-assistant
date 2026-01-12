@@ -766,7 +766,11 @@
     getInfo(): ProviderInfo;
   }
   ```
-- [ ] Criar `ToolDefinition` schema com Zod
+- [ ] Criar `ToolDefinition` schema com Zod (incluir `inputExamples`)
+- [ ] **Implementar Tool Use Examples por provider:**
+  - [ ] Claude: usar campo `input_examples` com beta header `advanced-tool-use-2025-11-20`
+  - [ ] Gemini: criar método `enrichDescriptionWithExamples()` para workaround
+  - [ ] Adicionar exemplos para todas as 7 tools conforme `AI_SPECS.md` §6.2
 - [ ] Implementar `GeminiAdapter` com suporte a Function Calling
 - [ ] Implementar `ClaudeAdapter` com suporte a Tool Use
 - [ ] Criar `LLMFactory` que retorna adapter baseado em ENV
@@ -782,6 +786,10 @@
 - [ ] Streaming funciona
 - [ ] Tool calls são retornados corretamente
 - [ ] Tool loop funciona (LLM → tool → LLM → resposta)
+- [ ] **Tool Use Examples funcionam corretamente:**
+  - [ ] Claude recebe `input_examples` via API
+  - [ ] Gemini recebe description enriquecida com exemplos
+  - [ ] Todas as 7 tools têm 2-4 exemplos definidos
 - [ ] Rate limiting aplicado
 - [ ] Testes passam
 
@@ -1968,5 +1976,5 @@
 
 ---
 
-*Última atualização: 11 Janeiro 2026*
-*Revisão: ADR-012 - M1.1, M1.3, M1.6 atualizados para Tool Use + Memory Consolidation. Removido RAG/embeddings/pgvector.*
+*Última atualização: 12 Janeiro 2026*
+*Revisão: M1.1 atualizado com tasks de Tool Use Examples (inputExamples) por provider*

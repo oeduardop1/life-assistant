@@ -72,14 +72,14 @@ _Pendente_
 |--------|------------|
 | 🔴 Pendente | 0 |
 | 🟡 Em discussão | 0 |
-| 🟢 Resolvido | 2 |
-| **Total** | **2** |
+| 🟢 Resolvido | 3 |
+| **Total** | **3** |
 
 | Prioridade | Quantidade |
 |------------|------------|
 | 🔴 Bloqueante | 0 |
 | 🟡 Alta | 0 |
-| 🟢 Baixa | 2 |
+| 🟢 Baixa | 3 |
 
 ---
 
@@ -216,6 +216,49 @@ Opção 2 - Alinha-se com a proposta de valor "você só conversa, a IA organiza
 
 ---
 
+### [TBD-202] Tool Use Examples (input_examples)
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🟢 Resolvido |
+| **Prioridade** | 🟢 Baixa |
+| **Categoria** | Técnico |
+| **Origem** | Artigo Anthropic "Advanced Tool Use" |
+| **Data** | 2026-01-12 |
+
+**Contexto:**
+Artigo da Anthropic apresenta feature `input_examples` para melhorar accuracy de tool calls de 72% para 90%.
+
+**Pergunta/Decisão necessária:**
+Como implementar Tool Use Examples considerando que Gemini não suporta nativamente?
+
+**Opções consideradas:**
+1. **Só Claude** - Implementar apenas para Claude, ignorar Gemini
+   - Prós: Simples
+   - Contras: Não aproveita feature no provider principal atual
+2. **Dual strategy** - Claude usa nativo, Gemini usa workaround (enriquecer description)
+   - Prós: Aproveita feature nativa no Claude e mantém compatibilidade com Gemini
+   - Contras: Código específico por provider
+3. **Não implementar** - Esperar Gemini suportar nativamente
+   - Prós: Sem complexidade adicional
+   - Contras: Não aproveita melhoria de accuracy
+
+**Recomendação da IA:**
+Opção 2 - Dual strategy. Aproveita feature nativa no Claude e mantém compatibilidade com Gemini.
+
+**Decisão:**
+✅ Opção 2 - Implementar estratégia dual:
+- Claude: usar campo `input_examples` com beta header `advanced-tool-use-2025-11-20`
+- Gemini: enriquecer description com exemplos inline via `enrichDescriptionWithExamples()`
+
+**Implementação:**
+- ENGINEERING.md §8.2 (interface ToolDefinition) + §8.5 (nova seção)
+- AI_SPECS.md §2.4 (nova seção) + §6.2 (exemplos em todas 7 tools)
+- INTEGRATIONS_SPECS.md §6.4 (interface) + §6.7 (nova seção)
+- MILESTONES.md M1.1 (nova task)
+
+---
+
 <!--
 Mover itens resolvidos para cá com a decisão tomada.
 Manter como histórico para referência futura.
@@ -279,5 +322,5 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 
 ---
 
-*Última atualização: 11 Janeiro 2026*
-*Revisão: Adicionadas decisões resolvidas TBD-200 (RAG → Tool Use) e TBD-201 (Segundo Cérebro → Memória)*
+*Última atualização: 12 Janeiro 2026*
+*Revisão: Adicionado TBD-202 (Tool Use Examples — input_examples)*

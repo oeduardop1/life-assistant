@@ -935,7 +935,9 @@ Trocar de LLM (Gemini ↔ Claude) mudando **apenas variáveis de ambiente**, sem
 
 export interface LLMPort {
   chat(params: ChatParams): Promise<ChatResponse>;
+  chatWithTools(params: ChatWithToolsParams): Promise<ChatWithToolsResponse>;
   stream(params: ChatParams): AsyncIterable<StreamChunk>;
+  streamWithTools(params: ChatWithToolsParams): AsyncIterable<StreamChunk>;
   getInfo(): ProviderInfo;
 }
 
@@ -950,6 +952,30 @@ export interface ChatResponse {
   content: string;
   usage: { inputTokens: number; outputTokens: number };
   finishReason: 'stop' | 'length' | 'tool_calls';
+}
+
+// Tool Use (ADR-012)
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: ZodSchema;
+  requiresConfirmation?: boolean;
+  inputExamples?: Record<string, unknown>[];  // Tool Use Examples (Claude beta)
+}
+
+export interface ChatWithToolsParams extends ChatParams {
+  tools: ToolDefinition[];
+  toolChoice?: 'auto' | 'required' | 'none';
+}
+
+export interface ChatWithToolsResponse extends ChatResponse {
+  toolCalls?: ToolCall[];
+}
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
 }
 ```
 
@@ -986,6 +1012,67 @@ GEMINI_MODEL=gemini-flash  # Usar versão mais recente disponível
 # ANTHROPIC_API_KEY=xxx
 # CLAUDE_MODEL=claude-sonnet  # Usar versão mais recente disponível
 ```
+
+### 8.5 Tool Use Examples (Provider-Specific)
+
+> **Referência:** Artigo Anthropic "Advanced Tool Use" (2025) - accuracy 72% → 90%
+
+O campo `inputExamples` na interface `ToolDefinition` melhora accuracy de tool calls fornecendo exemplos concretos de uso.
+
+#### Disponibilidade por Provider
+
+| Provider | Suporte | Requisitos |
+|----------|---------|------------|
+| Claude | ✅ Nativo | Beta header: `advanced-tool-use-2025-11-20` |
+| Gemini | ❌ Workaround | Enriquecer description com exemplos inline |
+
+#### Implementação nos Adapters
+
+```typescript
+// ClaudeAdapter - usa feature nativa (beta)
+async chatWithTools(params: ChatWithToolsParams) {
+  return this.client.messages.create({
+    model: this.model,
+    betas: ["advanced-tool-use-2025-11-20"],
+    tools: params.tools.map(t => ({
+      name: t.name,
+      description: t.description,
+      input_schema: zodToJsonSchema(t.parameters),
+      input_examples: t.inputExamples,  // Passa direto para API
+    })),
+    messages: params.messages,
+  });
+}
+
+// GeminiAdapter - enriquece description (workaround)
+async chatWithTools(params: ChatWithToolsParams) {
+  const enrichedTools = params.tools.map(t => ({
+    functionDeclarations: [{
+      name: t.name,
+      description: this.enrichDescription(t.description, t.inputExamples),
+      parameters: zodToJsonSchema(t.parameters),
+    }],
+  }));
+  // ...
+}
+
+private enrichDescription(desc: string, examples?: Record<string, unknown>[]): string {
+  if (!examples?.length) return desc;
+  const examplesText = examples
+    .map((ex, i) => `Example ${i + 1}: ${JSON.stringify(ex)}`)
+    .join('\n');
+  return `${desc}\n\nUsage examples:\n${examplesText}`;
+}
+```
+
+#### Boas Práticas
+
+1. **2-4 exemplos por tool** - suficiente para cobrir casos principais
+2. **Mostrar parâmetros opcionais** - alguns exemplos com, outros sem
+3. **Casos diferentes** - variar valores de enums (ex: `type="weight"` vs `type="expense"`)
+4. **Exemplos válidos** - devem passar validação do schema Zod
+
+Ver `AI_SPECS.md` §6.2 para exemplos completos de cada tool.
 
 ---
 

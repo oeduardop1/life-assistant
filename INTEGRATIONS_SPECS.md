@@ -1904,7 +1904,8 @@ class AIService {
       tools: tools.map(t => ({
         functionDeclarations: [{
           name: t.name,
-          description: t.description,
+          // Gemini: enriquecer description com exemplos (não suporta input_examples nativo)
+          description: this.enrichDescriptionWithExamples(t.description, t.inputExamples),
           parameters: t.parameters,
         }],
       })),
@@ -1988,6 +1989,21 @@ class AIService {
     
     return result.response.text();
   }
+
+  // Método auxiliar para Gemini (não suporta input_examples nativo)
+  // Ver ENGINEERING.md §8.5 para detalhes
+  private enrichDescriptionWithExamples(
+    description: string,
+    examples?: Record<string, unknown>[]
+  ): string {
+    if (!examples?.length) return description;
+
+    const examplesText = examples
+      .map((ex, i) => `Example ${i + 1}: ${JSON.stringify(ex)}`)
+      .join('\n');
+
+    return `${description}\n\nUsage examples:\n${examplesText}`;
+  }
 }
 
 export const aiService = new AIService();
@@ -2031,6 +2047,7 @@ interface ToolDefinition {
   name: string;
   description: string;
   parameters: Record<string, unknown>; // JSON Schema
+  inputExamples?: Record<string, unknown>[];  // Tool Use Examples
 }
 
 interface ChatWithToolsResponse {
@@ -2086,10 +2103,75 @@ class AIRateLimiter {
 - [ ] **Tool Use (Function Calling) funciona** (ADR-012)
 - [ ] **Tool calls são retornados corretamente**
 - [ ] **Tool results podem ser enviados de volta**
+- [ ] **inputExamples são processados corretamente por provider:**
+  - [ ] Claude: passa `input_examples` com beta header
+  - [ ] Gemini: enriquece description com exemplos
 - [ ] Análise de imagem funciona
 - [ ] Transcrição de áudio funciona
 - [ ] Rate limiting aplicado
 - [ ] Fallback para outro provider funciona (com Tool Use)
+
+### 6.7 Tool Use Examples (Estratégia por Provider)
+
+> **Referência:** Artigo Anthropic "Advanced Tool Use" — accuracy 72% → 90%
+
+O campo `inputExamples` melhora accuracy de tool calls fornecendo exemplos concretos.
+Ver `ENGINEERING.md` §8.5 para arquitetura completa e `AI_SPECS.md` §2.4 para boas práticas.
+
+#### Claude (Anthropic)
+
+- **Suporte:** Nativo (beta)
+- **Beta header:** `advanced-tool-use-2025-11-20`
+- **Campo:** `input_examples` na definição da tool
+- **Custo:** ~20-50 tokens por exemplo simples
+
+```typescript
+// ClaudeAdapter
+const response = await client.messages.create({
+  model: "claude-sonnet-4-5",
+  betas: ["advanced-tool-use-2025-11-20"],
+  tools: tools.map(t => ({
+    name: t.name,
+    description: t.description,
+    input_schema: zodToJsonSchema(t.parameters),
+    input_examples: t.inputExamples,  // Passa direto para API
+  })),
+  messages,
+});
+```
+
+#### Gemini (Google)
+
+- **Suporte:** Não nativo
+- **Workaround:** Enriquecer `description` com exemplos inline
+- **Implementação:** Método `enrichDescriptionWithExamples()` (§6.3)
+
+```typescript
+// GeminiAdapter - já implementado em §6.3
+const enrichedDescription = this.enrichDescriptionWithExamples(
+  tool.description,
+  tool.inputExamples
+);
+// Resultado: "Descrição original\n\nUsage examples:\nExample 1: {...}"
+```
+
+#### Factory Pattern
+
+```typescript
+export function formatToolsForProvider(
+  tools: ToolDefinition[],
+  provider: 'claude' | 'gemini'
+): FormattedTools {
+  if (provider === 'claude') {
+    return tools.map(t => ({
+      ...t,
+      input_examples: t.inputExamples,
+    }));
+  }
+  // Gemini: enriquecer description (feito automaticamente no adapter)
+  return tools;
+}
+```
 
 ---
 
@@ -2584,5 +2666,5 @@ async function checkIntegrationHealth(): Promise<IntegrationHealth[]> {
 
 ---
 
-*Última atualização: 11 Janeiro 2026*
-*Revisão: ADR-012 - Arquitetura Tool Use + Memory Consolidation. Removido embed(), adicionado chatWithTools() com Function Calling. Removido modelo de embedding.*
+*Última atualização: 12 Janeiro 2026*
+*Revisão: Adicionado §6.7 Tool Use Examples Strategy + inputExamples na interface + enrichDescriptionWithExamples() para Gemini workaround*
