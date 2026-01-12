@@ -60,7 +60,6 @@ describe('Migrations Integration Tests', () => {
         'budgets',
         'subscriptions',
         'export_requests',
-        'embeddings',
         'audit_logs',
       ];
 
@@ -237,13 +236,6 @@ describe('Migrations Integration Tests', () => {
       expect(result.rows.length).toBe(1);
     });
 
-    it('should have vector extension for embeddings', async () => {
-      const result = await pool.query(`
-        SELECT extname FROM pg_extension WHERE extname = 'vector'
-      `);
-
-      expect(result.rows.length).toBe(1);
-    });
   });
 
   describe('RLS enabled', () => {

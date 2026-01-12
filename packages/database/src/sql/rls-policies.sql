@@ -43,7 +43,6 @@ ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE export_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE embeddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
@@ -127,10 +126,6 @@ CREATE POLICY "Users can only access own subscriptions" ON subscriptions
 
 -- Export requests
 CREATE POLICY "Users can only access own export_requests" ON export_requests
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
-
--- Embeddings
-CREATE POLICY "Users can only access own embeddings" ON embeddings
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 -- Audit logs

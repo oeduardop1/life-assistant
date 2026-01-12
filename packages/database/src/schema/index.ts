@@ -25,5 +25,4 @@ export * from './budgets';
 export * from './subscriptions';
 export * from './exports';
 export * from './habit-freezes';
-export * from './embeddings';
 export * from './audit';

@@ -165,11 +165,6 @@ CREATE TRIGGER update_habit_streak_trigger
 CREATE INDEX notes_content_search_idx ON notes
 USING gin(to_tsvector('portuguese', title || ' ' || content));
 
--- Vector index for embeddings (HNSW for cosine similarity)
--- Requires pgvector extension
-CREATE INDEX embeddings_vector_idx ON embeddings
-USING hnsw (embedding vector_cosine_ops);
-
 -- GIN indexes for JSONB fields
 CREATE INDEX idx_user_preferences_gin ON users USING GIN (preferences);
 CREATE INDEX idx_people_preferences_gin ON people USING GIN (preferences);

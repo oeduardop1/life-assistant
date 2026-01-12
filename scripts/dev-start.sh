@@ -636,22 +636,24 @@ apply_database_schema() {
     # Apply migrations
     print_info "Running Drizzle migrations..."
     print_debug "Command: pnpm --filter @life-assistant/database db:push"
+    echo ""
+    echo -e "  ${YELLOW}⚠ NOTE: Drizzle may ask for confirmation on schema changes.${NC}"
+    echo -e "  ${YELLOW}  If prompted, type 'yes' to confirm destructive changes.${NC}"
+    echo ""
 
+    # Run db:push INTERACTIVELY (don't capture output)
+    # This allows the user to see and respond to Drizzle prompts
     local push_exit_code=0
-    local push_output
-    push_output=$(pnpm --filter @life-assistant/database db:push 2>&1) || push_exit_code=$?
+    pnpm --filter @life-assistant/database db:push || push_exit_code=$?
 
     if [[ $push_exit_code -eq 0 ]]; then
         print_success "Database schema applied"
-        # Show output only in verbose mode on success
-        print_verbose "$push_output"
     else
         print_warning "Schema push had issues (exit code: $push_exit_code)"
-        # Always show output on warning to help debugging
-        if [[ -n "$push_output" ]]; then
-            echo -e "${GRAY}$push_output${NC}"
-        fi
+        print_debug "You may need to run manually: pnpm --filter @life-assistant/database db:push"
     fi
+
+    echo ""
 
     # Seed database
     print_info "Running database seed..."

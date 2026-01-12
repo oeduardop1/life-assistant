@@ -31,7 +31,6 @@ import {
   budgets,
   subscriptions,
   exportRequests,
-  embeddings,
   auditLogs,
   // Types
   type User,
@@ -88,8 +87,6 @@ import {
   type NewSubscription,
   type ExportRequest,
   type NewExportRequest,
-  type Embedding,
-  type NewEmbedding,
   type AuditLog,
   type NewAuditLog,
 } from './index';
@@ -593,28 +590,6 @@ describe('tables', () => {
     });
   });
 
-  describe('embeddings table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(embeddings)).toBe('embeddings');
-    });
-
-    it('should have required columns', () => {
-      expect(embeddings.id).toBeDefined();
-      expect(embeddings.userId).toBeDefined();
-      expect(embeddings.sourceType).toBeDefined();
-      expect(embeddings.sourceId).toBeDefined();
-      expect(embeddings.content).toBeDefined();
-      expect(embeddings.embedding).toBeDefined();
-    });
-
-    it('should export Embedding and NewEmbedding types', () => {
-      const embed: Embedding = {} as Embedding;
-      const newEmbed: NewEmbedding = {} as NewEmbedding;
-      expect(embed).toBeDefined();
-      expect(newEmbed).toBeDefined();
-    });
-  });
-
   describe('auditLogs table', () => {
     it('should have correct table name', () => {
       expect(getTableName(auditLogs)).toBe('audit_logs');
@@ -665,10 +640,9 @@ describe('tables', () => {
         budgets,
         subscriptions,
         exportRequests,
-        embeddings,
         auditLogs,
       ];
-      expect(allTables).toHaveLength(29);
+      expect(allTables).toHaveLength(28);
     });
   });
 });

@@ -70,13 +70,12 @@ describe('client', () => {
       expect(schema.budgets).toBeDefined();
       expect(schema.subscriptions).toBeDefined();
       expect(schema.exportRequests).toBeDefined();
-      expect(schema.embeddings).toBeDefined();
       expect(schema.auditLogs).toBeDefined();
     });
 
-    it('should export 29 tables and 21 enums in schema', () => {
+    it('should export 28 tables and 21 enums in schema', () => {
       const schemaKeys = Object.keys(schema);
-      // 29 tables + 21 enums + 5 additional exports (types, preferences, etc)
+      // 28 tables + 21 enums + 5 additional exports (types, preferences, etc)
       expect(schemaKeys.length).toBeGreaterThanOrEqual(50);
     });
   });
