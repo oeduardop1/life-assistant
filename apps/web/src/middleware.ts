@@ -12,6 +12,7 @@ const publicRoutes = [
   '/reset-password',
   '/verify-email',
   '/callback',
+  '/callback-recovery',
 ];
 
 /**
@@ -39,6 +40,20 @@ const authRoutes = ['/login', '/signup'];
  * @see https://supabase.com/docs/guides/auth/server-side/nextjs
  */
 export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  // IMPORTANT: Handle password reset codes that arrive on root URL
+  // This happens when Supabase falls back to Site URL instead of our redirectTo
+  // (e.g., when redirectTo is not in the allowed Redirect URLs list)
+  // URL pattern: /?code=xxx or /?code=xxx&type=recovery
+  if (pathname === '/' && searchParams.has('code')) {
+    const code = searchParams.get('code');
+    const url = request.nextUrl.clone();
+    url.pathname = '/callback-recovery';
+    url.search = `?code=${code}`;
+    return NextResponse.redirect(url);
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -72,8 +87,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
 
   // Check if the current route is public
   const isPublicRoute = publicRoutes.some(

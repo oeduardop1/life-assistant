@@ -33,6 +33,7 @@ describe('AuthGuard', () => {
 
     configService = {
       supabaseJwtSecret: 'super-secret-jwt-token-with-at-least-32-characters-for-testing',
+      supabaseUrl: 'https://test-project.supabase.co',
     } as AppConfigService;
 
     authGuard = new AuthGuard(reflector, configService);
