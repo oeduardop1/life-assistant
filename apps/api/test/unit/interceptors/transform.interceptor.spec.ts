@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { of } from 'rxjs';
 import { TransformInterceptor } from '../../../src/common/interceptors/transform.interceptor.js';
 
@@ -8,9 +9,14 @@ describe('TransformInterceptor', () => {
   let mockExecutionContext: ExecutionContext;
   let mockCallHandler: CallHandler;
   let mockRequest: { requestId: string };
+  let mockReflector: Reflector;
 
   beforeEach(() => {
-    interceptor = new TransformInterceptor();
+    mockReflector = {
+      getAllAndOverride: vi.fn().mockReturnValue(false), // Don't skip transform by default
+    } as unknown as Reflector;
+
+    interceptor = new TransformInterceptor(mockReflector);
 
     mockRequest = {
       requestId: 'req-123',
@@ -20,6 +26,8 @@ describe('TransformInterceptor', () => {
       switchToHttp: vi.fn().mockReturnValue({
         getRequest: vi.fn().mockReturnValue(mockRequest),
       }),
+      getHandler: vi.fn(),
+      getClass: vi.fn(),
     } as unknown as ExecutionContext;
 
     mockCallHandler = {
@@ -142,5 +150,24 @@ describe('TransformInterceptor', () => {
         requestId: undefined,
       },
     });
+  });
+
+  it('should_skip_transform_when_decorator_is_present', async () => {
+    // Mock reflector to return true for SkipTransform
+    vi.mocked(mockReflector.getAllAndOverride).mockReturnValue(true);
+
+    const rawData = { id: 1, name: 'test' };
+    mockCallHandler.handle = vi.fn().mockReturnValue(of(rawData));
+
+    const observable = interceptor.intercept(mockExecutionContext, mockCallHandler);
+
+    const result = await new Promise((resolve) => {
+      observable.subscribe({
+        next: (value) => resolve(value),
+      });
+    });
+
+    // Should return raw data without wrapping
+    expect(result).toEqual(rawData);
   });
 });

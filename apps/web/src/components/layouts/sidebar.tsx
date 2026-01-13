@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Settings } from 'lucide-react';
+import { Home, MessageSquare, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,6 +13,11 @@ const navigation = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: Home,
+  },
+  {
+    name: 'Chat',
+    href: '/chat',
+    icon: MessageSquare,
   },
   {
     name: 'Configurações',
@@ -44,7 +49,7 @@ export function Sidebar() {
         <ScrollArea className="flex-1 p-4">
           <nav className="space-y-2" data-testid="sidebar-nav">
             {navigation.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}

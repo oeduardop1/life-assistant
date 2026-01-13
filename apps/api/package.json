@@ -16,6 +16,7 @@
     "test:integration": "vitest run --config vitest.config.integration.ts"
   },
   "dependencies": {
+    "@life-assistant/ai": "workspace:*",
     "@life-assistant/config": "workspace:*",
     "@life-assistant/database": "workspace:*",
     "@life-assistant/shared": "workspace:*",

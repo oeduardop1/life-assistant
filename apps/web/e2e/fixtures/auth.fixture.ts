@@ -10,6 +10,7 @@ import {
   ResetPasswordPage,
   DashboardPage,
   OnboardingPage,
+  ChatPage,
 } from '../pages';
 
 /**
@@ -31,6 +32,7 @@ type AuthFixtures = {
   resetPasswordPage: ResetPasswordPage;
   dashboardPage: DashboardPage;
   onboardingPage: OnboardingPage;
+  chatPage: ChatPage;
   authenticatedPage: Page;
   // Onboarding user fixtures (user with pending onboarding)
   onboardingUserPage: Page;
@@ -87,6 +89,14 @@ export const test = base.extend<AuthFixtures>({
   onboardingPage: async ({ page }, use) => {
     const onboardingPage = new OnboardingPage(page);
     await use(onboardingPage);
+  },
+
+  /**
+   * Chat page object fixture
+   */
+  chatPage: async ({ page }, use) => {
+    const chatPage = new ChatPage(page);
+    await use(chatPage);
   },
 
   /**

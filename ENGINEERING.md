@@ -859,6 +859,80 @@ export interface TrackingRepositoryPort {
 }
 ```
 
+### 6.4 Rate Limiting Distribuído
+
+Para ambientes com múltiplas instâncias (Railway, Vercel), usar storage Redis:
+
+#### Dependência
+
+```bash
+pnpm --filter api add @nest-lab/throttler-storage-redis ioredis
+```
+
+#### Configuração
+
+```typescript
+// apps/api/src/app.module.ts
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import Redis from 'ioredis';
+
+const redis = new Redis(process.env.REDIS_URL);
+
+ThrottlerModule.forRoot({
+  throttlers: [
+    { name: 'short', ttl: 1000, limit: 10 },
+    { name: 'medium', ttl: 60000, limit: 100 },
+    { name: 'long', ttl: 3600000, limit: 1000 },
+  ],
+  storage: new ThrottlerStorageRedisService(redis),
+}),
+```
+
+#### ThrottlerBehindProxyGuard
+
+Para apps atrás de proxy (Railway, Vercel), extrair IP real do `X-Forwarded-For`:
+
+```typescript
+// apps/api/src/common/guards/throttler-behind-proxy.guard.ts
+import { Injectable } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
+
+@Injectable()
+export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
+  protected async getTracker(req: Record<string, any>): Promise<string> {
+    // Extrair IP do X-Forwarded-For quando atrás de proxy
+    return req.ips.length ? req.ips[0] : req.ip;
+  }
+}
+```
+
+#### Rate Limits por Plano
+
+Conforme `SYSTEM_SPECS.md` §2.6:
+
+| Plano | Msg/minuto | Msg/hora | Msg/dia |
+|-------|------------|----------|---------|
+| Free | 5 | 30 | 20 |
+| Pro | 10 | 100 | 100 |
+| Premium | 20 | Ilimitado | Ilimitado |
+
+```typescript
+// Decorator customizado por plano
+@Injectable()
+export class ChatThrottlerGuard extends ThrottlerBehindProxyGuard {
+  protected async getLimit(context: ExecutionContext): Promise<number> {
+    const user = context.switchToHttp().getRequest().user;
+    const limits = {
+      free: { minute: 5, hour: 30, day: 20 },
+      pro: { minute: 10, hour: 100, day: 100 },
+      premium: { minute: 20, hour: Infinity, day: Infinity },
+    };
+    return limits[user.plan]?.minute ?? limits.free.minute;
+  }
+}
+```
+
 ---
 
 ## 7) Jobs e Filas (BullMQ)

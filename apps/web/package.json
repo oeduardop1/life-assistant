@@ -45,6 +45,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "@radix-ui/react-alert-dialog": "^1.1.15",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

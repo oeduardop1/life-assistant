@@ -812,7 +812,7 @@
 
 ---
 
-### M1.2 — Módulo: Chat Básico 🔴
+### M1.2 — Módulo: Chat Básico 🟢
 
 **Objetivo:** Implementar chat com IA com streaming de resposta.
 
@@ -821,40 +821,73 @@
 **Tasks:**
 
 **Backend:**
-- [ ] Criar módulo `chat` com Clean Architecture:
-  - [ ] `ChatController` - POST /chat/messages, GET /chat/conversations
-  - [ ] `SendMessageUseCase` - orquestra envio de mensagem
-  - [ ] `ConversationRepository` - CRUD de conversas
-  - [ ] `MessageRepository` - CRUD de mensagens
-- [ ] Implementar streaming via Server-Sent Events (SSE)
-- [ ] Implementar system prompt base conforme `AI_SPECS.md` §4.1
-- [ ] Implementar rate limiting por plano (conforme `SYSTEM_SPECS.md` §2.6)
-- [ ] Salvar mensagens no banco
-- [ ] Implementar tipos de conversa: general, counselor
+- [x] Criar módulo `chat` com Clean Architecture:
+  - [x] `ChatController` - endpoints REST + SSE
+  - [x] `ChatService` - orquestra envio de mensagem e streaming
+  - [x] `ConversationRepository` - CRUD de conversas
+  - [x] `MessageRepository` - CRUD de mensagens
+  - [x] `ContextBuilderService` - monta system prompt
+- [x] Implementar endpoints REST:
+  - [x] POST /chat/conversations - criar conversa
+  - [x] GET /chat/conversations - listar conversas
+  - [x] GET /chat/conversations/:id - detalhes da conversa
+  - [x] GET /chat/conversations/:id/messages - histórico de mensagens
+  - [x] POST /chat/conversations/:id/messages - enviar mensagem
+  - [x] DELETE /chat/conversations/:id - soft delete (90 dias retenção)
+- [x] Implementar DTOs com class-validator
+- [x] Implementar streaming via Server-Sent Events (SSE)
+- [x] Implementar system prompt base conforme `AI_SPECS.md` §4.1
+- [ ] ~~Implementar rate limiting por plano~~ → Migrado para **M3.6**
+- [x] Salvar mensagens no banco
+- [x] Implementar tipos de conversa: general, counselor
+- [x] Implementar `@SkipTransform()` decorator para SSE
+- [x] Implementar `SseAuthGuard` para autenticação via query param
 
 **Frontend:**
-- [ ] Criar página `/chat`:
-  - [ ] Lista de conversas (sidebar)
-  - [ ] Área de mensagens com scroll
-  - [ ] Input de mensagem
-  - [ ] Botão enviar
-- [ ] Implementar streaming de resposta (SSE)
-- [ ] Implementar typing indicator
-- [ ] Implementar auto-scroll
-- [ ] Criar nova conversa
-- [ ] Histórico de conversas
+- [x] Criar página `/chat`:
+  - [x] Lista de conversas (sidebar)
+  - [x] Área de mensagens com scroll
+  - [x] Input de mensagem
+  - [x] Botão enviar
+- [x] Implementar streaming de resposta (SSE)
+- [x] Implementar typing indicator
+- [x] Implementar auto-scroll
+- [x] Criar nova conversa
+- [x] Histórico de conversas
+- [x] Implementar empty state (sem conversas)
+- [x] Implementar loading states
+- [x] Implementar error handling (rate limit, LLM errors)
+- [x] Adicionar link Chat no sidebar de navegação
+- [x] Persistência de conversa via URL (?c=conversationId)
 
 **Testes:**
-- [ ] Teste unitário: SendMessageUseCase
-- [ ] Teste integração: API de chat
-- [ ] Teste E2E: enviar mensagem e receber resposta
+- [x] Testes unitários:
+  - [x] ChatService (streaming, error handling)
+  - [x] ConversationRepository
+  - [x] MessageRepository
+  - [x] ContextBuilderService
+- [x] Testes de integração:
+  - [x] API de chat (CRUD + mensagens)
+  - [ ] ~~Rate limiting~~ → Migrado para **M3.6**
+  - [x] SSE streaming
+- [x] Testes E2E:
+  - [x] Enviar mensagem e receber resposta com streaming
+  - [x] Criar nova conversa
+  - [x] Alternar entre conversas
+  - [ ] ~~Rate limit error handling~~ → Migrado para **M3.6**
 
 **Definition of Done:**
-- [ ] Usuário envia mensagem e recebe resposta com streaming
-- [ ] Histórico de conversa é mantido
-- [ ] Rate limit funciona por plano
-- [ ] Múltiplas conversas funcionam
-- [ ] Testes passam
+- [x] Usuário envia mensagem e recebe resposta com streaming
+- [x] Histórico de conversa é mantido
+- [x] Múltiplas conversas funcionam
+- [x] Testes passam
+
+**Notas (13 Janeiro 2026):**
+- Chat funcional com streaming SSE via `@life-assistant/ai` package
+- Autenticação SSE via query param token (EventSource não suporta headers)
+- `@SkipTransform()` decorator criado para bypass do `TransformInterceptor` em SSE
+- URL-based state: conversa persiste em refresh via `?c=conversationId`
+- **Tasks de rate limiting migradas para M3.6 (Stripe/Pagamentos)** — rate limiting depende de definição de planos de negócio (Free/Pro/Premium), que será implementado junto com billing
 
 ---
 
@@ -1818,6 +1851,23 @@
   - [ ] Dia 25: email "Última chance! Seus dados serão removidos em 5 dias."
 - [ ] Criar template de email para lembretes de onboarding
 
+**Backend - Data Retention & Purge Jobs (Per `SYSTEM_SPECS.md` §2.5, `ADR-010`):**
+- [ ] Criar job `purge-soft-deleted-users`:
+  - [ ] Executar diariamente
+  - [ ] Hard delete registros com `deletedAt > 30 dias`
+  - [ ] Cascade delete de dados relacionados (conversations, messages, etc.)
+- [ ] Criar job `purge-soft-deleted-conversations`:
+  - [ ] Executar diariamente
+  - [ ] Hard delete registros com `deletedAt > 90 dias`
+  - [ ] Enviar email de aviso 5 dias antes (dia 85)
+- [ ] Criar job `purge-soft-deleted-notes`:
+  - [ ] Executar diariamente
+  - [ ] Hard delete registros com `deletedAt > 30 dias`
+  - [ ] Enviar email de aviso 5 dias antes (dia 25)
+- [ ] Criar templates de email para avisos de purge:
+  - [ ] "Suas conversas serão excluídas permanentemente em 5 dias"
+  - [ ] "Suas notas serão excluídas permanentemente em 5 dias"
+
 **Frontend:**
 - [ ] Página `/settings/notifications`:
   - [ ] Configurar canais (push, telegram, email)
@@ -1842,9 +1892,14 @@
   - [ ] Respeito ao quiet hours
   - [ ] Preferências por tipo
   - [ ] Job de notificação de onboarding abandonado envia emails nos dias corretos
+  - [ ] Job de purge users (soft deleted > 30 dias)
+  - [ ] Job de purge conversations (soft deleted > 90 dias)
+  - [ ] Job de purge notes (soft deleted > 30 dias)
+  - [ ] Email de aviso pré-purge enviado 5 dias antes
 - [ ] Testes unitários:
   - [ ] Lógica de check-in proativo (dias sem tracking, queda de humor, etc.)
   - [ ] Validação de preferências
+  - [ ] Cálculo de data de purge (30/90 dias)
 - [ ] Teste E2E: configurar preferências → receber notificação do tipo configurado
 - [ ] Teste E2E: verificar quiet hours bloqueia notificação
 
@@ -1854,6 +1909,8 @@
 - [ ] Check-ins proativos funcionam
 - [ ] Preferências configuráveis
 - [ ] Notificações de onboarding abandonado enviadas nos dias corretos
+- [ ] Jobs de purge executam corretamente (users 30d, conversations 90d, notes 30d)
+- [ ] Emails de aviso pré-purge enviados 5 dias antes
 - [ ] Testes passam
 
 ---
@@ -1872,7 +1929,11 @@
   - [ ] Webhook handlers (subscription events)
   - [ ] Portal de billing
 - [ ] Implementar planos: Free, Pro, Premium
-- [ ] Aplicar limites por plano
+- [ ] Aplicar limites por plano:
+  - [ ] Rate limiting de mensagens por plano (migrado de M1.2)
+  - [ ] Usar Redis (Upstash) para storage distribuído
+  - [ ] Implementar ThrottlerBehindProxyGuard para Railway/Vercel
+  - [ ] Limites conforme `SYSTEM_SPECS.md` §2.6
 - [ ] Notificar falhas de pagamento
 
 **Frontend:**
@@ -1983,6 +2044,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-13 | M1.2 | Concluído | Chat básico com SSE streaming, 6 endpoints REST, @SseAuth decorator, @SkipTransform decorator, persistência URL, dialog de confirmação de exclusão, 193 testes. Rate limiting → M3.6, data purge jobs → M3.5 |
 | 2026-01-12 | M1.1 | Concluído | Package AI com LLM abstraction + Tool Use: GeminiAdapter, ClaudeAdapter, LLMFactory, rate limiting, retry, tool loop, 162 testes |
 | 2026-01-08 | M0.7 | Concluído | Auth completo com Supabase: 8 endpoints, AuthProvider, middleware, 31 integration tests, 16 E2E specs, Page Objects, scripts infra |
 | 2026-01-07 | M0.6 | Concluído | App web Next.js 16 com Turbopack, Tailwind v4, shadcn/ui, React Query, Zustand, Playwright E2E (12 testes), ADR-008 (Database Type Encapsulation) |
@@ -1994,5 +2056,5 @@
 
 ---
 
-*Última atualização: 12 Janeiro 2026*
-*Revisão: M1.1 concluído com 162 testes - Package AI implementado com GeminiAdapter, ClaudeAdapter, Tool Use, rate limiting, retry*
+*Última atualização: 13 Janeiro 2026*
+*Revisão: M1.2 concluído - Chat básico com SSE streaming, 6 endpoints REST, autenticação SSE, persistência URL, dialog de confirmação de exclusão, 193 testes. Rate limiting migrado para M3.6. Jobs de data purge (soft delete → hard delete) adicionados ao M3.5.*
