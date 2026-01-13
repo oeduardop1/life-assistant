@@ -743,6 +743,50 @@
 
 ---
 
+### M0.10 — Test Infrastructure 🟢
+
+**Objetivo:** Implementar infraestrutura robusta de testes para desenvolvimento sustentável.
+
+**Referências:** `ENGINEERING.md` §11.5, `ADR-011`, `ADR-013`
+
+**Completed:** 13 Jan 2026
+
+**Contexto:**
+Durante desenvolvimento, foram identificados problemas de gerenciamento de dados de teste:
+1. Seed de tracking entries não é idempotente (cria duplicatas a cada execução)
+2. Testes E2E criam usuários `test-{timestamp}@example.com` que acumulam no banco
+3. Opção de usar `--reset --force` descarta dados de desenvolvimento válidos
+
+**Tasks:**
+
+**Seed Idempotente:**
+- [x] Adicionar IDs determinísticos para tracking entries no seed
+- [x] Verificar idempotência executando seed 2x sem duplicatas
+
+**E2E Teardown:**
+- [x] Criar `apps/web/e2e/setup/global-teardown.ts`
+- [x] Implementar cleanup de usuários dinâmicos (`test-*@example.com`)
+- [x] Preservar usuários fixos (`test@example.com`, `onboarding@example.com`)
+- [x] Configurar `globalTeardown` no `playwright.config.ts`
+
+**Documentação:**
+- [x] Criar ADR-013: Test Data Management
+- [x] Documentar padrões de teste em `ENGINEERING.md` §11.5
+
+**Definition of Done:**
+- [x] Seed pode ser executado múltiplas vezes sem criar duplicatas
+- [x] Testes E2E limpam usuários dinâmicos após execução
+- [x] `pnpm test` e `pnpm test:e2e` passam
+- [x] ADR-013 aprovado e commitado
+
+**Notas:**
+- IDs determinísticos seguem padrão `00000000-0000-4000-8000-00000000000X`
+- Novos IDs para tracking: 0008 (weight), 0009 (water), 0010 (mood)
+- Teardown usa regex `/^test-\d+@example\.com$/` para identificar usuários dinâmicos
+- Usuários fixos (`test@example.com`, `onboarding@example.com`) preservados para performance
+
+---
+
 ## Fase 1: Conselheira (v1.x)
 
 > **Objetivo:** Implementar a feature principal de ajudar o usuário a tomar decisões através de chat com IA, sistema de decisões estruturadas e memória gerenciada pela IA (ADR-012).

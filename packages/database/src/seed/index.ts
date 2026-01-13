@@ -31,14 +31,17 @@ import {
 import { defaultUserPreferences } from '../schema/preferences';
 
 // Deterministic UUIDs for test data
-// These IDs will be consistent across runs
+// These IDs will be consistent across runs (see ADR-013)
 export const TEST_USER_ID = '00000000-0000-4000-8000-000000000001';
-export const TEST_ONBOARDING_USER_ID = '00000000-0000-4000-8000-000000000007';
 export const TEST_CONVERSATION_ID = '00000000-0000-4000-8000-000000000002';
 export const TEST_NOTE_1_ID = '00000000-0000-4000-8000-000000000003';
 export const TEST_NOTE_2_ID = '00000000-0000-4000-8000-000000000004';
 export const TEST_HABIT_ID = '00000000-0000-4000-8000-000000000005';
 export const TEST_GOAL_ID = '00000000-0000-4000-8000-000000000006';
+export const TEST_ONBOARDING_USER_ID = '00000000-0000-4000-8000-000000000007';
+export const TEST_TRACKING_WEIGHT_ID = '00000000-0000-4000-8000-000000000008';
+export const TEST_TRACKING_WATER_ID = '00000000-0000-4000-8000-000000000009';
+export const TEST_TRACKING_MOOD_ID = '00000000-0000-4000-8000-000000000010';
 
 export async function seed() {
   console.log('Seeding database...');
@@ -105,10 +108,11 @@ export async function seed() {
   ];
   await db.insert(messages).values(testMessages).onConflictDoNothing();
 
-  // Create sample tracking entries
+  // Create sample tracking entries (with deterministic IDs for idempotency - see ADR-013)
   console.log('Creating sample tracking entries...');
   const testTrackingEntries: NewTrackingEntry[] = [
     {
+      id: TEST_TRACKING_WEIGHT_ID,
       userId: TEST_USER_ID,
       type: 'weight',
       area: 'health',
@@ -117,6 +121,7 @@ export async function seed() {
       entryDate: todayStr,
     },
     {
+      id: TEST_TRACKING_WATER_ID,
       userId: TEST_USER_ID,
       type: 'water',
       area: 'health',
@@ -125,6 +130,7 @@ export async function seed() {
       entryDate: todayStr,
     },
     {
+      id: TEST_TRACKING_MOOD_ID,
       userId: TEST_USER_ID,
       type: 'mood',
       area: 'mental_health',

@@ -18,6 +18,9 @@ export default defineConfig({
   // Note: Requires Supabase and test user to be available
   globalSetup: process.env.SKIP_GLOBAL_SETUP ? undefined : './e2e/setup/global-setup.ts',
 
+  // Global teardown for cleaning up dynamic test users (see ADR-013)
+  globalTeardown: process.env.SKIP_GLOBAL_SETUP ? undefined : './e2e/setup/global-teardown.ts',
+
   use: {
     baseURL,
     trace: 'on-first-retry',

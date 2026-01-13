@@ -1727,6 +1727,61 @@ pnpm --filter web test:e2e:report
           retention-days: 7
 ```
 
+### 11.5 Gerenciamento de Dados de Teste
+
+> **Referência:** ADR-013 - Test Data Management
+
+#### IDs Determinísticos
+
+O seed usa UUIDs fixos para garantir idempotência. Novos dados de teste devem seguir o padrão:
+
+```typescript
+// packages/database/src/seed/index.ts
+export const TEST_USER_ID = '00000000-0000-4000-8000-000000000001';
+export const TEST_CONVERSATION_ID = '00000000-0000-4000-8000-000000000002';
+// ... continuar sequência para novos dados
+export const TEST_TRACKING_WEIGHT_ID = '00000000-0000-4000-8000-000000000008';
+```
+
+| Padrão | Formato |
+|--------|---------|
+| Base | `00000000-0000-4000-8000-00000000000X` |
+| Incremento | Usar próximo número disponível (ex: 0011, 0012...) |
+
+#### Global Setup e Teardown
+
+```
+apps/web/e2e/setup/
+├── global-setup.ts      # Cria usuários de teste e auth state
+└── global-teardown.ts   # Remove usuários dinâmicos (test-*@example.com)
+```
+
+| Usuário | Email | Comportamento |
+|---------|-------|---------------|
+| Fixo | `test@example.com` | Preservado entre runs |
+| Fixo | `onboarding@example.com` | Preservado entre runs |
+| Dinâmico | `test-{timestamp}@example.com` | Removido no teardown |
+
+#### Variáveis de Ambiente
+
+```bash
+# Pular setup/teardown (útil para debug rápido)
+SKIP_GLOBAL_SETUP=true pnpm --filter web test:e2e
+
+# Credenciais customizadas
+TEST_USER_EMAIL=custom@example.com
+TEST_USER_PASSWORD=custompassword
+```
+
+#### Boas Práticas
+
+| Regra | Descrição |
+|-------|-----------|
+| **IDs fixos no seed** | Sempre usar IDs determinísticos para dados do seed |
+| **Usuários dinâmicos** | Testes de signup devem usar padrão `test-{timestamp}@example.com` |
+| **Não modificar fixos** | Nunca alterar dados dos usuários fixos em testes |
+| **Cleanup automático** | O teardown remove apenas usuários dinâmicos |
+
 ---
 
 ## 12) CI/CD
