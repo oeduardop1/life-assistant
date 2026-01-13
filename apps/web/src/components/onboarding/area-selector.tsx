@@ -26,13 +26,13 @@ const AREA_CONFIG: Record<
 > = {
   [LifeArea.HEALTH]: {
     icon: Heart,
-    label: 'Saude',
-    description: 'Exercicios, alimentacao, sono',
+    label: 'Saúde',
+    description: 'Exercícios, alimentação, sono',
   },
   [LifeArea.FINANCIAL]: {
     icon: DollarSign,
-    label: 'Financas',
-    description: 'Orcamento, investimentos, metas',
+    label: 'Finanças',
+    description: 'Orçamento, investimentos, metas',
   },
   [LifeArea.CAREER]: {
     icon: Briefcase,
@@ -42,12 +42,12 @@ const AREA_CONFIG: Record<
   [LifeArea.RELATIONSHIPS]: {
     icon: Users,
     label: 'Relacionamentos',
-    description: 'Familia, amigos, parceiros',
+    description: 'Família, amigos, parceiros',
   },
   [LifeArea.SPIRITUALITY]: {
     icon: Sparkles,
     label: 'Espiritualidade',
-    description: 'Fe, meditacao, proposito',
+    description: 'Fé, meditação, propósito',
   },
   [LifeArea.PERSONAL_GROWTH]: {
     icon: TrendingUp,
@@ -56,8 +56,8 @@ const AREA_CONFIG: Record<
   },
   [LifeArea.MENTAL_HEALTH]: {
     icon: Brain,
-    label: 'Saude Mental',
-    description: 'Emocoes, bem-estar psicologico',
+    label: 'Saúde Mental',
+    description: 'Emoções, bem-estar psicológico',
   },
   [LifeArea.LEISURE]: {
     icon: Gamepad2,
@@ -99,7 +99,7 @@ export function AreaSelector({
         return prev.filter((a) => a !== area);
       }
       if (prev.length >= MAX_AREAS) {
-        setError(`Voce pode selecionar no maximo ${String(MAX_AREAS)} areas`);
+        setError(`Você pode selecionar no máximo ${String(MAX_AREAS)} áreas`);
         return prev;
       }
       return [...prev, area];
@@ -108,7 +108,7 @@ export function AreaSelector({
 
   const handleSubmit = async () => {
     if (selected.length < MIN_AREAS) {
-      setError(`Selecione pelo menos ${String(MIN_AREAS)} areas da vida`);
+      setError(`Selecione pelo menos ${String(MIN_AREAS)} áreas da vida`);
       return;
     }
     await onSubmit({ areas: selected });
@@ -118,7 +118,7 @@ export function AreaSelector({
     <div className="space-y-6">
       <div className="text-center">
         <p className="text-muted-foreground">
-          Selecione de {MIN_AREAS} a {MAX_AREAS} areas que voce quer focar.
+          Selecione de {MIN_AREAS} a {MAX_AREAS} áreas que você quer focar.
           <br />
           <span className="text-sm">
             Selecionadas: {selected.length}/{MAX_AREAS}

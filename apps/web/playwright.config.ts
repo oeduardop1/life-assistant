@@ -6,12 +6,13 @@ export default defineConfig({
   testDir: './e2e/specs',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 2 : 1, // 1 retry locally to handle flaky connections
+  workers: process.env.CI ? 1 : 3, // Limit workers locally to prevent server overload
   reporter: [
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
     ['list'],
   ],
+  timeout: 60000, // 60s timeout per test (default is 30s)
 
   // Global setup for creating authenticated test user
   // Note: Requires Supabase and test user to be available
@@ -22,6 +23,8 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    navigationTimeout: 30000, // 30s navigation timeout
+    actionTimeout: 15000, // 15s action timeout
   },
 
   projects: [

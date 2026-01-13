@@ -83,11 +83,15 @@ export class OnboardingPage {
 
   /**
    * Select life areas (step 2)
-   * @param areaLabels Array of area labels to select (e.g., ['Saude', 'Financas', 'Carreira'])
+   * @param areaLabels Array of area labels to select (e.g., ['Saúde', 'Finanças', 'Carreira'])
    */
   async selectAreas(areaLabels: string[]) {
     for (const label of areaLabels) {
-      const areaCard = this.page.locator('button').filter({ hasText: label });
+      // Use a more specific locator to find the exact label text within the button
+      // The label is in a span with font-medium class
+      const areaCard = this.page.locator('button').filter({
+        has: this.page.locator('span.font-medium', { hasText: new RegExp(`^${label}$`) }),
+      });
       await areaCard.click();
     }
   }

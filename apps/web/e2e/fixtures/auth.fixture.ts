@@ -13,6 +13,15 @@ import {
 } from '../pages';
 
 /**
+ * Onboarding test user credentials
+ * Must match the values in global-setup.ts
+ */
+export const ONBOARDING_USER = {
+  email: 'onboarding@example.com',
+  password: 'testpassword123',
+};
+
+/**
  * Custom fixtures for authentication testing
  */
 type AuthFixtures = {
@@ -23,6 +32,9 @@ type AuthFixtures = {
   dashboardPage: DashboardPage;
   onboardingPage: OnboardingPage;
   authenticatedPage: Page;
+  // Onboarding user fixtures (user with pending onboarding)
+  onboardingUserPage: Page;
+  onboardingUserLoginPage: LoginPage;
 };
 
 /**
@@ -100,6 +112,40 @@ export const test = base.extend<AuthFixtures>({
     const page = await context.newPage();
     await use(page);
     await context.close();
+  },
+
+  /**
+   * Onboarding user page fixture
+   * Uses saved storage state for the onboarding user (pending onboarding)
+   * Falls back to fresh page if auth state doesn't exist
+   */
+  onboardingUserPage: async ({ browser }, use) => {
+    const fs = await import('fs');
+    const authStatePath = 'e2e/.auth/onboarding-user.json';
+
+    let context;
+    if (fs.existsSync(authStatePath)) {
+      // Use saved auth state
+      context = await browser.newContext({
+        storageState: authStatePath,
+      });
+    } else {
+      // Create new context without auth state
+      context = await browser.newContext();
+    }
+
+    const page = await context.newPage();
+    await use(page);
+    await context.close();
+  },
+
+  /**
+   * Login page fixture for onboarding user
+   * Creates a fresh page for the onboarding user to login
+   */
+  onboardingUserLoginPage: async ({ page }, use) => {
+    const loginPage = new LoginPage(page);
+    await use(loginPage);
   },
 });
 

@@ -31,17 +31,17 @@ test.describe('Signup Flow', () => {
   test('should_show_error_for_existing_email', async ({ signupPage, page }) => {
     await signupPage.goto();
 
-    // Use an email that likely already exists
-    await signupPage.signup('Test User', 'existing@example.com', 'password123');
+    // Use an email that already exists (test@example.com from seed - has confirmed email)
+    await signupPage.signup('Test User', 'test@example.com', 'password123');
 
-    // Check for error toast/message
-    // Note: The actual error handling depends on how your app shows errors
-    // This might be a toast notification or inline error
+    // Supabase returns error for existing confirmed emails: "User already registered"
+    // This reveals email existence but is the standard Supabase behavior
+    // The error toast should appear and page stays on signup
     const errorToast = page.locator('[data-sonner-toast][data-type="error"]');
-    await expect(errorToast).toBeVisible({ timeout: 5000 }).catch(() => {
-      // If no toast, check that we're still on signup page (not redirected)
-      expect(page.url()).toContain('/signup');
-    });
+    await expect(errorToast).toBeVisible({ timeout: 10000 });
+
+    // Should still be on signup page
+    expect(page.url()).toContain('/signup');
   });
 
   test('should_show_validation_errors', async ({ signupPage }) => {
@@ -112,48 +112,48 @@ test.describe('Login Flow', () => {
 // Logout Flow Tests
 // =========================================================================
 test.describe('Logout Flow', () => {
-  test('should_logout_and_redirect_to_home', async ({ authenticatedPage }) => {
-    const page = authenticatedPage;
+  // These tests login fresh to avoid session invalidation by other parallel tests
+  test('should_logout_and_redirect_to_login', async ({ loginPage, page }) => {
+    // Login fresh to get a valid session
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
 
-    // Navigate to dashboard (assumes user is authenticated)
-    await page.goto('/dashboard');
+    // Wait for dashboard content to load (indicates successful auth)
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({ timeout: 15000 });
 
-    // Wait for page to load
-    await page.waitForSelector('[data-testid="header"]', { timeout: 10000 });
-
-    // Click logout button
+    // Wait for and click logout button (web-first assertion)
     const logoutButton = page.getByTestId('logout-button');
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click();
+    await expect(logoutButton).toBeVisible({ timeout: 5000 });
+    await logoutButton.click();
 
-      // Should redirect to home page
-      await expect(page).toHaveURL('/', { timeout: 5000 });
-    }
+    // Should redirect to login page after logout
+    // (AppLayout redirects unauthenticated users to login)
+    await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
   });
 
-  test('should_clear_auth_state_after_logout', async ({ authenticatedPage }) => {
-    const page = authenticatedPage;
+  test('should_clear_auth_state_after_logout', async ({ loginPage, page }) => {
+    // Login fresh to get a valid session
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
 
-    // Navigate to dashboard
-    await page.goto('/dashboard');
-
-    // Wait for page to load
-    await page.waitForSelector('[data-testid="header"]', { timeout: 10000 });
+    // Wait for dashboard content to load
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({ timeout: 15000 });
 
     // Click logout button
     const logoutButton = page.getByTestId('logout-button');
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click();
+    await expect(logoutButton).toBeVisible({ timeout: 5000 });
+    await logoutButton.click();
 
-      // Wait for logout to complete
-      await expect(page).toHaveURL('/', { timeout: 5000 });
+    // Wait for logout to complete (redirects to login)
+    await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
 
-      // Try to access protected page
-      await page.goto('/dashboard');
+    // Try to access protected page again
+    await page.goto('/dashboard');
 
-      // Should be redirected to login
-      await expect(page).toHaveURL(/\/login/);
-    }
+    // Should still be redirected to login (auth cleared)
+    await expect(page).toHaveURL(/\/login/);
   });
 });
 
@@ -161,14 +161,13 @@ test.describe('Logout Flow', () => {
 // Password Reset Flow Tests
 // =========================================================================
 test.describe('Password Reset Flow', () => {
-  test('should_submit_forgot_password_request', async ({ forgotPasswordPage }) => {
+  test('should_submit_forgot_password_request', async ({ forgotPasswordPage, page }) => {
     await forgotPasswordPage.goto();
 
     await forgotPasswordPage.requestPasswordReset('test@example.com');
 
-    // Should show success message
-    const isSuccess = await forgotPasswordPage.isSuccessDisplayed();
-    expect(isSuccess).toBe(true);
+    // Should show success message (web-first assertion - waits for element)
+    await expect(page.getByTestId('forgot-success')).toBeVisible({ timeout: 10000 });
   });
 
   test('should_show_validation_error_for_invalid_email', async ({ forgotPasswordPage, page }) => {
@@ -234,12 +233,17 @@ test.describe('Protected Routes', () => {
 // Authenticated User Redirect Tests
 // =========================================================================
 test.describe('Authenticated User Redirects', () => {
+  // These tests login fresh to avoid session invalidation by other parallel tests
   test('should_redirect_from_login_to_dashboard_when_authenticated', async ({
-    authenticatedPage,
+    loginPage,
+    page,
   }) => {
-    const page = authenticatedPage;
+    // First, login to establish authenticated state
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
 
-    // Try to access login page when already authenticated
+    // Now try to access login page when already authenticated
     await page.goto('/login');
 
     // Should redirect to dashboard
@@ -247,11 +251,15 @@ test.describe('Authenticated User Redirects', () => {
   });
 
   test('should_redirect_from_signup_to_dashboard_when_authenticated', async ({
-    authenticatedPage,
+    loginPage,
+    page,
   }) => {
-    const page = authenticatedPage;
+    // First, login to establish authenticated state
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
 
-    // Try to access signup page when already authenticated
+    // Now try to access signup page when already authenticated
     await page.goto('/signup');
 
     // Should redirect to dashboard

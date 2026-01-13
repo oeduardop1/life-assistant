@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/auth.fixture';
 
 test.describe('Smoke Tests', () => {
   test('should_load_homepage_successfully', async ({ page }) => {
@@ -44,11 +44,14 @@ test.describe('Smoke Tests', () => {
     }
   });
 
-  test('should_toggle_sidebar_successfully', async ({ page }) => {
-    await page.goto('/dashboard');
+  test('should_toggle_sidebar_successfully', async ({ loginPage, page }) => {
+    // Login first to access dashboard
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
 
     // Wait for page to load
-    await expect(page.getByTestId('dashboard-title')).toBeVisible();
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({ timeout: 5000 });
 
     // Sidebar should be visible initially
     const sidebar = page.getByTestId('sidebar');
