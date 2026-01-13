@@ -748,7 +748,7 @@
 > **Objetivo:** Implementar a feature principal de ajudar o usuário a tomar decisões através de chat com IA, sistema de decisões estruturadas e memória gerenciada pela IA (ADR-012).
 > **Referências:** `PRODUCT_SPECS.md` §2.1, §6.1, §6.2, §6.3, `AI_SPECS.md`, `SYSTEM_SPECS.md` §3.2, §3.5, §3.6
 
-### M1.1 — Package: AI (LLM Abstraction + Tool Use) 🔴
+### M1.1 — Package: AI (LLM Abstraction + Tool Use) 🟢
 
 **Objetivo:** Criar abstração de LLM com suporte a Tool Use (Function Calling).
 
@@ -756,7 +756,7 @@
 
 **Tasks:**
 
-- [ ] Criar interface `LLMPort` conforme `ENGINEERING.md` §8.2:
+- [x] Criar interface `LLMPort` conforme `ENGINEERING.md` §8.2:
   ```typescript
   interface LLMPort {
     chat(params: ChatParams): Promise<ChatResponse>;
@@ -766,32 +766,49 @@
     getInfo(): ProviderInfo;
   }
   ```
-- [ ] Criar `ToolDefinition` schema com Zod (incluir `inputExamples`)
-- [ ] **Implementar Tool Use Examples por provider:**
-  - [ ] Claude: usar campo `input_examples` com beta header `advanced-tool-use-2025-11-20`
-  - [ ] Gemini: criar método `enrichDescriptionWithExamples()` para workaround
-  - [ ] Adicionar exemplos para todas as 7 tools conforme `AI_SPECS.md` §6.2
-- [ ] Implementar `GeminiAdapter` com suporte a Function Calling
-- [ ] Implementar `ClaudeAdapter` com suporte a Tool Use
-- [ ] Criar `LLMFactory` que retorna adapter baseado em ENV
-- [ ] Implementar rate limiting
-- [ ] Implementar retry com backoff exponencial
-- [ ] Criar `ToolExecutorService` (executa tools chamadas pela LLM)
-- [ ] Implementar tool loop com max iterations (5)
-- [ ] Testes para ambos adapters (incluindo Tool Use)
+- [x] Criar `ToolDefinition` schema com Zod (incluir `inputExamples`)
+- [x] **Implementar Tool Use Examples por provider:**
+  - [x] Claude: usar campo `input_examples` com beta header `advanced-tool-use-2025-11-20`
+  - [x] Gemini: criar método `enrichDescriptionWithExamples()` para workaround
+  - [x] Adicionar exemplos para todas as 7 tools conforme `AI_SPECS.md` §6.2
+- [x] Implementar `GeminiAdapter` com suporte a Function Calling
+- [x] Implementar `ClaudeAdapter` com suporte a Tool Use
+- [x] Criar `LLMFactory` que retorna adapter baseado em ENV
+- [x] Implementar rate limiting
+- [x] Implementar retry com backoff exponencial
+- [x] Criar `ToolExecutorService` (executa tools chamadas pela LLM)
+- [x] Implementar tool loop com max iterations (5)
+- [x] Testes para ambos adapters (incluindo Tool Use)
+- [x] Criar `zod-to-gemini.ts` (conversor Zod → Gemini Type)
+- [x] Criar `examples-enricher.ts` (workaround inputExamples para Gemini)
+- [x] Criar `message.schema.ts` (tipos Message, ChatParams, etc.)
+- [x] Criar `ai.errors.ts` (erros customizados do módulo AI)
 
 **Definition of Done:**
-- [ ] `LLM_PROVIDER=gemini` usa Gemini com Tool Use
-- [ ] `LLM_PROVIDER=claude` usa Claude com Tool Use
-- [ ] Streaming funciona
-- [ ] Tool calls são retornados corretamente
-- [ ] Tool loop funciona (LLM → tool → LLM → resposta)
-- [ ] **Tool Use Examples funcionam corretamente:**
-  - [ ] Claude recebe `input_examples` via API
-  - [ ] Gemini recebe description enriquecida com exemplos
-  - [ ] Todas as 7 tools têm 2-4 exemplos definidos
-- [ ] Rate limiting aplicado
-- [ ] Testes passam
+- [x] `LLM_PROVIDER=gemini` usa Gemini com Tool Use
+- [x] `LLM_PROVIDER=claude` usa Claude com Tool Use
+- [x] Streaming funciona
+- [x] Tool calls são retornados corretamente
+- [x] Tool loop funciona (LLM → tool → LLM → resposta)
+- [x] **Tool Use Examples funcionam corretamente:**
+  - [x] Claude recebe `input_examples` via API
+  - [x] Gemini recebe description enriquecida com exemplos
+  - [x] Todas as 7 tools têm 2-4 exemplos definidos
+- [x] Rate limiting aplicado
+- [x] Testes passam
+
+**Notas (2025-01-12):**
+- Package `@life-assistant/ai` implementado em `packages/ai/`
+- Adapters: `GeminiAdapter` (Google GenAI SDK) e `ClaudeAdapter` (Anthropic SDK)
+- Factory: `createLLM()` e `createLLMFromEnv()` para criação baseada em ENV vars
+- Tool Use Examples: Claude usa beta header `advanced-tool-use-2025-11-20`, Gemini usa `enrichDescriptionWithExamples()`
+- Rate limiting com token bucket algorithm
+- Retry com backoff exponencial (1s, 2s, 4s)
+- Tool loop com max 5 iterações e suporte a confirmação
+- **Cobertura de testes: 162 testes passando**
+  - adapters: claude.adapter.test.ts (21 testes), gemini.adapter.test.ts (26 testes)
+  - services: tool-loop.service.test.ts (19 testes), tool-executor.service.test.ts (12 testes), llm.factory.test.ts (16 testes)
+  - utils: rate-limiter.test.ts (14 testes), retry.test.ts (20 testes), zod-to-gemini.test.ts (23 testes), examples-enricher.test.ts (11 testes)
 
 ---
 
@@ -1966,6 +1983,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-12 | M1.1 | Concluído | Package AI com LLM abstraction + Tool Use: GeminiAdapter, ClaudeAdapter, LLMFactory, rate limiting, retry, tool loop, 162 testes |
 | 2026-01-08 | M0.7 | Concluído | Auth completo com Supabase: 8 endpoints, AuthProvider, middleware, 31 integration tests, 16 E2E specs, Page Objects, scripts infra |
 | 2026-01-07 | M0.6 | Concluído | App web Next.js 16 com Turbopack, Tailwind v4, shadcn/ui, React Query, Zustand, Playwright E2E (12 testes), ADR-008 (Database Type Encapsulation) |
 | 2026-01-07 | M0.5 | Concluído | App API NestJS com guards, interceptors, filters, decorators, health endpoints, Swagger, 150 testes (137 unit + 13 integration) |
@@ -1977,4 +1995,4 @@
 ---
 
 *Última atualização: 12 Janeiro 2026*
-*Revisão: M1.1 atualizado com tasks de Tool Use Examples (inputExamples) por provider*
+*Revisão: M1.1 concluído com 162 testes - Package AI implementado com GeminiAdapter, ClaudeAdapter, Tool Use, rate limiting, retry*

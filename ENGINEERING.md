@@ -266,7 +266,7 @@ app/
 
 | Tecnologia | Uso |
 |------------|-----|
-| @google/generative-ai | SDK Gemini com Function Calling |
+| @google/genai | SDK Gemini (unified) com Function Calling |
 | @anthropic-ai/sdk | SDK Claude com Tool Use |
 | Zod | Validação de tool parameters |
 

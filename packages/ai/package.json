@@ -1,6 +1,6 @@
 {
   "name": "@life-assistant/ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.cjs",
@@ -13,19 +13,31 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@life-assistant/shared": "workspace:*"
+    "@anthropic-ai/sdk": "0.71.2",
+    "@google/genai": "1.35.0",
+    "@life-assistant/shared": "workspace:*",
+    "zod": "3.25.3",
+    "zod-to-json-schema": "^3.25.1"
   },
   "devDependencies": {
+    "@types/node": "22.15.21",
+    "@vitest/coverage-v8": "3.2.4",
     "tsup": "8.5.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
   }
 }
