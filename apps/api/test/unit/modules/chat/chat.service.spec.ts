@@ -5,6 +5,22 @@ import { firstValueFrom, take, toArray } from 'rxjs';
 // Mock the AI package
 vi.mock('@life-assistant/ai', () => ({
   createLLMFromEnv: vi.fn(),
+  runToolLoop: vi.fn(),
+  searchKnowledgeTool: {
+    name: 'search_knowledge',
+    description: 'Search knowledge items',
+    parameters: {},
+  },
+  addKnowledgeTool: {
+    name: 'add_knowledge',
+    description: 'Add knowledge item',
+    parameters: {},
+  },
+  analyzeContextTool: {
+    name: 'analyze_context',
+    description: 'Analyze context for connections, patterns, and contradictions',
+    parameters: {},
+  },
 }));
 
 import { ChatService } from '../../../../src/modules/chat/application/services/chat.service.js';
@@ -81,9 +97,14 @@ describe('ChatService', () => {
   let mockContextBuilder: {
     buildSystemPrompt: ReturnType<typeof vi.fn>;
   };
+  let mockMemoryToolExecutor: {
+    execute: ReturnType<typeof vi.fn>;
+  };
   let mockLLM: {
     stream: ReturnType<typeof vi.fn>;
     generateText: ReturnType<typeof vi.fn>;
+    chat: ReturnType<typeof vi.fn>;
+    getInfo: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -110,20 +131,27 @@ describe('ChatService', () => {
       buildSystemPrompt: vi.fn(),
     };
 
+    mockMemoryToolExecutor = {
+      execute: vi.fn(),
+    };
+
     // Create mock LLM
     mockLLM = {
       stream: vi.fn(),
       generateText: vi.fn(),
+      chat: vi.fn(),
+      getInfo: vi.fn().mockReturnValue({ name: 'test', model: 'test-model' }),
     };
 
     vi.mocked(createLLMFromEnv).mockReturnValue(mockLLM as unknown as ReturnType<typeof createLLMFromEnv>);
 
     // Create service instance with mocks
-    // Constructor order: contextBuilder, conversationRepository, messageRepository
+    // Constructor order: contextBuilder, conversationRepository, messageRepository, memoryToolExecutor
     chatService = new ChatService(
       mockContextBuilder as unknown as ConstructorParameters<typeof ChatService>[0],
       mockConversationRepository as unknown as ConstructorParameters<typeof ChatService>[1],
-      mockMessageRepository as unknown as ConstructorParameters<typeof ChatService>[2]
+      mockMessageRepository as unknown as ConstructorParameters<typeof ChatService>[2],
+      mockMemoryToolExecutor as unknown as ConstructorParameters<typeof ChatService>[3]
     );
   });
 

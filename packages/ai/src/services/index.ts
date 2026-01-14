@@ -14,14 +14,13 @@ export {
 export {
   type ToolExecutor,
   type ToolExecutionResult,
-  type PendingToolConfirmation,
+  type ToolExecutionContext,
   createErrorResult,
   createSuccessResult,
 } from './tool-executor.service.js';
 
 export {
   runToolLoop,
-  continueToolLoop,
   createSimpleExecutor,
   DEFAULT_MAX_ITERATIONS,
   type ToolLoopConfig,

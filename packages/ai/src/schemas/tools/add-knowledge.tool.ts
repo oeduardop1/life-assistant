@@ -25,17 +25,19 @@ export type AddKnowledgeParams = z.infer<typeof addKnowledgeParamsSchema>;
  * add_knowledge tool definition.
  *
  * Used to add a new fact learned about the user.
- * This is a WRITE tool - requires user confirmation.
+ * Executes automatically without confirmation (AI confirms in response text).
  */
 export const addKnowledgeTool: ToolDefinition<typeof addKnowledgeParamsSchema> = {
   name: 'add_knowledge',
   description:
-    'Add a new fact, preference, or insight learned about the user. Use this to record important information that should be remembered.',
+    'Add a new fact, preference, or insight learned about the user. IMPORTANT: Always include the "area" field to categorize the knowledge properly. This enables finding related facts later.',
   parameters: addKnowledgeParamsSchema,
-  requiresConfirmation: true,
+  requiresConfirmation: false,
   inputExamples: [
+    { type: 'fact', content: 'Is single and lives alone', area: LifeArea.RELATIONSHIPS, confidence: 1.0 },
     { type: 'fact', content: 'Works as a software developer', area: LifeArea.CAREER, confidence: 1.0 },
     { type: 'preference', content: 'Prefers to wake up early', area: LifeArea.HEALTH, confidence: 0.9 },
+    { type: 'fact', content: 'Has R$5000 credit card debt', area: LifeArea.FINANCIAL, confidence: 1.0 },
     { type: 'insight', content: 'Tends to spend more when stressed', area: LifeArea.FINANCIAL, confidence: 0.7 },
   ],
 };

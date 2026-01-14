@@ -81,26 +81,6 @@ export const toolExecutionContextSchema = z.object({
   userId: z.string().uuid(),
   /** Conversation ID */
   conversationId: z.string().uuid().optional(),
-  /** Whether to skip confirmation (for explicit commands) */
-  skipConfirmation: z.boolean().default(false),
 });
 
 export type ToolExecutionContext = z.infer<typeof toolExecutionContextSchema>;
-
-// ============================================================================
-// Pending Confirmation
-// ============================================================================
-
-/**
- * Schema for a pending tool confirmation.
- */
-export const pendingConfirmationSchema = z.object({
-  /** The tool call awaiting confirmation */
-  toolCall: toolCallSchema,
-  /** Human-readable confirmation message */
-  message: z.string(),
-  /** Tool name for reference */
-  toolName: z.string(),
-});
-
-export type PendingConfirmation = z.infer<typeof pendingConfirmationSchema>;

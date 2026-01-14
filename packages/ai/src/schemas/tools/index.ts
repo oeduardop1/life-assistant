@@ -48,6 +48,14 @@ export {
   type UpdatePersonParams,
 } from './update-person.tool.js';
 
+export {
+  analyzeContextTool,
+  analyzeContextParamsSchema,
+  analyzeContextResponseSchema,
+  type AnalyzeContextParams,
+  type AnalyzeContextResponse,
+} from './analyze-context.tool.js';
+
 // Convenience array of all tools
 import { searchKnowledgeTool } from './search-knowledge.tool.js';
 import { getTrackingHistoryTool } from './get-tracking-history.tool.js';
@@ -56,17 +64,19 @@ import { recordMetricTool } from './record-metric.tool.js';
 import { addKnowledgeTool } from './add-knowledge.tool.js';
 import { createReminderTool } from './create-reminder.tool.js';
 import { updatePersonTool } from './update-person.tool.js';
+import { analyzeContextTool } from './analyze-context.tool.js';
 import type { ToolDefinition } from '../../ports/llm.port.js';
 
 /**
  * All available tools.
- * READ tools: search_knowledge, get_tracking_history, get_person
+ * READ tools: search_knowledge, get_tracking_history, get_person, analyze_context
  * WRITE tools: record_metric, add_knowledge, create_reminder, update_person
  */
 export const allTools: ToolDefinition[] = [
   searchKnowledgeTool,
   getTrackingHistoryTool,
   getPersonTool,
+  analyzeContextTool,
   recordMetricTool,
   addKnowledgeTool,
   createReminderTool,
@@ -80,6 +90,7 @@ export const readTools: ToolDefinition[] = [
   searchKnowledgeTool,
   getTrackingHistoryTool,
   getPersonTool,
+  analyzeContextTool,
 ];
 
 /**

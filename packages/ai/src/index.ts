@@ -66,12 +66,11 @@ export {
   // Tool Executor
   type ToolExecutor,
   type ToolExecutionResult,
-  type PendingToolConfirmation,
+  type ToolExecutionContext,
   createErrorResult,
   createSuccessResult,
   // Tool Loop
   runToolLoop,
-  continueToolLoop,
   createSimpleExecutor,
   DEFAULT_MAX_ITERATIONS,
   type ToolLoopConfig,
@@ -111,6 +110,11 @@ export {
   updatePersonTool,
   updatePersonParamsSchema,
   type UpdatePersonParams,
+  analyzeContextTool,
+  analyzeContextParamsSchema,
+  analyzeContextResponseSchema,
+  type AnalyzeContextParams,
+  type AnalyzeContextResponse,
 } from './schemas/tools/index.js';
 
 // ============================================================================
@@ -122,7 +126,6 @@ export {
   toolDefinitionMetaSchema,
   toolCallSchema,
   toolResultSchema,
-  pendingConfirmationSchema,
 } from './schemas/tool.schema.js';
 
 export {

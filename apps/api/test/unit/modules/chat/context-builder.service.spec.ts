@@ -59,6 +59,10 @@ describe('ContextBuilderService', () => {
     };
     schema: { users: { id: unknown; name: unknown; timezone: unknown } };
   };
+  let mockUserMemoryService: {
+    getOrCreate: ReturnType<typeof vi.fn>;
+    formatForPrompt: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -71,11 +75,39 @@ describe('ContextBuilderService', () => {
       schema: { users: { id: 'id-field', name: 'name-field', timezone: 'tz-field' } },
     };
 
+    // Create mock user memory service
+    mockUserMemoryService = {
+      getOrCreate: vi.fn().mockResolvedValue({
+        id: 'memory-123',
+        userId: 'user-123',
+        bio: null,
+        occupation: null,
+        familyContext: null,
+        currentGoals: [],
+        currentChallenges: [],
+        topOfMind: [],
+        values: [],
+        learnedPatterns: [],
+        christianPerspective: false,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastConsolidatedAt: null,
+      }),
+      formatForPrompt: vi.fn().mockReturnValue({
+        text: '',
+        tokenEstimate: 0,
+      }),
+    };
+
     // Create service instance with mocks
     contextBuilderService = new ContextBuilderService(
       mockDatabaseService as unknown as ConstructorParameters<
         typeof ContextBuilderService
-      >[0]
+      >[0],
+      mockUserMemoryService as unknown as ConstructorParameters<
+        typeof ContextBuilderService
+      >[1]
     );
   });
 

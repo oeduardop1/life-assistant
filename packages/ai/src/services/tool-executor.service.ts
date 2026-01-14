@@ -22,6 +22,16 @@ export interface ToolExecutionResult {
 }
 
 /**
+ * Context passed to tool executors.
+ */
+export interface ToolExecutionContext {
+  /** User ID for the current session */
+  userId: string;
+  /** Conversation ID (optional) */
+  conversationId?: string;
+}
+
+/**
  * Interface for tool executors.
  *
  * Tool executors are responsible for executing tool calls
@@ -30,10 +40,10 @@ export interface ToolExecutionResult {
  * @example
  * ```typescript
  * class MyToolExecutor implements ToolExecutor {
- *   async execute(toolCall: ToolCall): Promise<ToolExecutionResult> {
+ *   async execute(toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult> {
  *     switch (toolCall.name) {
  *       case 'search_knowledge':
- *         const results = await this.searchKnowledge(toolCall.arguments);
+ *         const results = await this.searchKnowledge(toolCall.arguments, context.userId);
  *         return {
  *           toolCallId: toolCall.id,
  *           toolName: toolCall.name,
@@ -58,34 +68,10 @@ export interface ToolExecutor {
    * Execute a tool call.
    *
    * @param toolCall - The tool call from the LLM
+   * @param context - Execution context with user info
    * @returns Execution result
    */
-  execute(toolCall: ToolCall): Promise<ToolExecutionResult>;
-
-  /**
-   * Check if a tool requires user confirmation before execution.
-   *
-   * @param toolName - Name of the tool
-   * @returns True if confirmation is required
-   */
-  requiresConfirmation(toolName: string): boolean;
-}
-
-/**
- * Pending confirmation for a tool call.
- *
- * When a tool requires confirmation, the tool loop will return
- * this object instead of executing the tool.
- */
-export interface PendingToolConfirmation {
-  /** Tool call that needs confirmation */
-  toolCall: ToolCall;
-  /** Human-readable description of what the tool will do */
-  description: string;
-  /** Callback to confirm and execute */
-  confirm: () => Promise<ToolExecutionResult>;
-  /** Callback to reject the tool call */
-  reject: (reason?: string) => ToolExecutionResult;
+  execute(toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult>;
 }
 
 /**

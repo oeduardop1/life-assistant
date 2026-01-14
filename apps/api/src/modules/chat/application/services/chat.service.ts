@@ -2,13 +2,20 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Observable, Subject } from 'rxjs';
 import {
   createLLMFromEnv,
+  runToolLoop,
+  searchKnowledgeTool,
+  addKnowledgeTool,
+  analyzeContextTool,
   type LLMPort,
   type Message as LLMMessage,
+  type ToolLoopConfig,
+  type ToolDefinition,
 } from '@life-assistant/ai';
 import type { Conversation, Message } from '@life-assistant/database';
 import { ContextBuilderService } from './context-builder.service';
 import { ConversationRepository } from '../../infrastructure/repositories/conversation.repository';
 import { MessageRepository } from '../../infrastructure/repositories/message.repository';
+import { MemoryToolExecutorService } from '../../../memory/application/services/memory-tool-executor.service';
 import type { CreateConversationDto } from '../../presentation/dtos/create-conversation.dto';
 import type { SendMessageDto } from '../../presentation/dtos/send-message.dto';
 
@@ -22,19 +29,35 @@ export interface MessageEvent {
 }
 
 /**
- * Chat service - Orchestrates chat interactions with LLM
+ * Chat service - Orchestrates chat interactions with LLM and Tool Use
  *
  * @see AI_SPECS.md §2 for architecture
+ * @see AI_SPECS.md §6 for Tool Use Architecture
+ * @see ADR-012 for Tool Use + Memory Consolidation
  */
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
-  private llm: LLMPort;
+  private readonly llm: LLMPort;
+
+  /**
+   * Tools currently available for memory operations.
+   * More tools will be added in future milestones.
+   *
+   * @see AI_SPECS.md §6.2 for tool definitions
+   * @see ADR-014 for analyze_context (Real-time Inference)
+   */
+  private readonly availableTools: ToolDefinition[] = [
+    searchKnowledgeTool,
+    addKnowledgeTool,
+    analyzeContextTool,
+  ];
 
   constructor(
     private readonly contextBuilder: ContextBuilderService,
     private readonly conversationRepository: ConversationRepository,
-    private readonly messageRepository: MessageRepository
+    private readonly messageRepository: MessageRepository,
+    private readonly memoryToolExecutor: MemoryToolExecutorService
   ) {
     this.llm = createLLMFromEnv();
   }
@@ -166,7 +189,7 @@ export class ChatService {
   }
 
   /**
-   * Process the streaming response
+   * Process the streaming response with tool loop
    */
   private async processStreamResponse(
     userId: string,
@@ -191,54 +214,95 @@ export class ChatService {
 
     // Convert to LLM message format
     const llmMessages: LLMMessage[] = recentMessages.map((msg) => ({
-      role: msg.role,
+      role: msg.role as 'user' | 'assistant' | 'system' | 'tool',
       content: msg.content,
     }));
 
-    // Stream response from LLM
-    let fullContent = '';
-
     const llmInfo = this.llm.getInfo();
-    this.logger.log(`Starting LLM stream for conversation ${conversationId} using ${llmInfo.name}/${llmInfo.model}`);
+    this.logger.log(`Starting tool loop for conversation ${conversationId} using ${llmInfo.name}/${llmInfo.model}`);
 
     try {
-      for await (const chunk of this.llm.stream({
-        messages: llmMessages,
+      // Create tool loop config
+      const toolLoopConfig: ToolLoopConfig = {
+        tools: this.availableTools,
+        executor: this.memoryToolExecutor,
+        context: { userId, conversationId },
         systemPrompt,
-      })) {
-        fullContent += chunk.content;
+        maxIterations: 5,
+        onIteration: (iteration, response) => {
+          this.logger.debug(`Tool loop iteration ${String(iteration)}: ${String(response.toolCalls?.length ?? 0)} tool calls`);
 
-        this.logger.debug(`Stream chunk: ${chunk.content.substring(0, 50)}... done=${String(chunk.done)}`);
+          // Emit tool call info via SSE
+          if (response.toolCalls && response.toolCalls.length > 0) {
+            subject.next({
+              type: 'tool_calls',
+              data: {
+                iteration,
+                toolCalls: response.toolCalls.map((tc) => ({
+                  id: tc.id,
+                  name: tc.name,
+                  arguments: tc.arguments,
+                })),
+              },
+            });
+          }
+        },
+      };
 
-        // NestJS SSE expects data as object, it handles JSON stringification
-        subject.next({
-          data: { content: chunk.content, done: chunk.done },
-        });
+      // Run tool loop - tools execute directly without confirmation
+      const result = await runToolLoop(this.llm, llmMessages, toolLoopConfig);
 
-        if (chunk.done) {
-          this.logger.log('Stream completed with done=true');
-          break;
-        }
+      // Emit final content - handle empty responses
+      let fullContent = result.content;
+      this.logger.log(`Tool loop completed with ${String(result.iterations)} iterations, content length: ${String(fullContent.length)}`);
+
+      // Fallback for empty responses (can happen due to API issues or LLM returning only tool calls)
+      if (!fullContent || fullContent.trim().length === 0) {
+        this.logger.warn('Empty response from LLM, using fallback message');
+        fullContent = 'Desculpe, não consegui gerar uma resposta. Pode tentar novamente?';
       }
 
-      // Save assistant message after streaming completes
+      // Stream content chunk by chunk for smoother UX
+      subject.next({
+        data: { content: fullContent, done: true },
+      });
+
+      // Build metadata with tool call info
+      const metadata: Record<string, unknown> = {
+        provider: llmInfo.name,
+        model: llmInfo.model,
+        iterations: result.iterations,
+      };
+
+      if (result.toolCalls.length > 0) {
+        metadata.toolCalls = result.toolCalls.map((tc) => ({
+          id: tc.id,
+          name: tc.name,
+          arguments: tc.arguments,
+        }));
+        metadata.toolResults = result.toolResults.map((tr) => ({
+          toolCallId: tr.toolCallId,
+          toolName: tr.toolName,
+          success: tr.success,
+          error: tr.error,
+        }));
+      }
+
+      // Save assistant message
       this.logger.log(`Saving assistant message (${String(fullContent.length)} chars)`);
       await this.messageRepository.create(userId, {
         conversationId,
         role: 'assistant',
         content: fullContent,
-        metadata: {
-          provider: this.llm.getInfo().name,
-          model: this.llm.getInfo().model,
-        } as Record<string, unknown>,
+        metadata,
       });
 
-      this.logger.log('Stream response saved, completing subject');
+      this.logger.log('Tool loop response saved, completing subject');
       subject.complete();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`LLM streaming error: ${errorMessage}`, errorStack);
+      this.logger.error(`Tool loop error: ${errorMessage}`, errorStack);
 
       // Emit error event
       subject.next({

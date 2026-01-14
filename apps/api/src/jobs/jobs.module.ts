@@ -6,8 +6,13 @@ import {
   CleanupOnboardingProcessor,
   CleanupOnboardingScheduler,
 } from './cleanup-onboarding';
+import {
+  MemoryConsolidationProcessor,
+  MemoryConsolidationScheduler,
+} from './memory-consolidation';
 import { DatabaseModule } from '../database/database.module';
 import { LoggerModule } from '../logger/logger.module';
+import { MemoryModule } from '../modules/memory/memory.module';
 import { QUEUES } from './queues';
 
 // Re-export QUEUES for external consumers
@@ -53,13 +58,26 @@ export { QUEUES };
     BullModule.registerQueue({
       name: QUEUES.CLEANUP_ONBOARDING,
     }),
+    BullModule.registerQueue({
+      name: QUEUES.MEMORY_CONSOLIDATION,
+    }),
 
     // Dependencies
     DatabaseModule,
     LoggerModule,
+    MemoryModule,
   ],
-  providers: [CleanupOnboardingProcessor, CleanupOnboardingScheduler],
-  exports: [BullModule, CleanupOnboardingScheduler],
+  providers: [
+    CleanupOnboardingProcessor,
+    CleanupOnboardingScheduler,
+    MemoryConsolidationProcessor,
+    MemoryConsolidationScheduler,
+  ],
+  exports: [
+    BullModule,
+    CleanupOnboardingScheduler,
+    MemoryConsolidationScheduler,
+  ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class JobsModule {}

@@ -13,7 +13,7 @@ import type {
 import type {
   ToolExecutor,
   ToolExecutionResult,
-  PendingToolConfirmation,
+  ToolExecutionContext,
 } from './tool-executor.service.js';
 import { createErrorResult, createSuccessResult } from './tool-executor.service.js';
 import { MaxIterationsExceededError, ToolNotFoundError } from '../errors/ai.errors.js';
@@ -28,16 +28,14 @@ export interface ToolLoopConfig {
   tools: ToolDefinition[];
   /** Tool executor instance */
   executor: ToolExecutor;
+  /** Context for tool execution (userId, conversationId) */
+  context: ToolExecutionContext;
   /** System prompt for the LLM */
   systemPrompt?: string;
   /** Temperature for LLM responses */
   temperature?: number;
   /** Max tokens for LLM responses */
   maxTokens?: number;
-  /** Callback when a tool requires confirmation */
-  onConfirmationRequired?: (
-    confirmation: PendingToolConfirmation
-  ) => Promise<boolean>;
   /** Callback for each iteration (useful for logging/debugging) */
   onIteration?: (iteration: number, response: ChatWithToolsResponse) => void;
 }
@@ -56,10 +54,6 @@ export interface ToolLoopResult {
   toolResults: ToolExecutionResult[];
   /** Final conversation messages */
   messages: Message[];
-  /** Whether loop completed (vs pending confirmation) */
-  completed: boolean;
-  /** Pending confirmation if loop stopped for user confirmation */
-  pendingConfirmation?: PendingToolConfirmation;
 }
 
 /**
@@ -73,7 +67,6 @@ export const DEFAULT_MAX_ITERATIONS = 5;
  * The loop continues until:
  * 1. The LLM responds without tool calls (completed)
  * 2. Max iterations reached (throws MaxIterationsExceededError)
- * 3. A tool requires confirmation (returns with pendingConfirmation)
  *
  * @param llm - LLM adapter to use
  * @param messages - Initial conversation messages
@@ -83,13 +76,9 @@ export const DEFAULT_MAX_ITERATIONS = 5;
  * @example
  * ```typescript
  * const result = await runToolLoop(llm, messages, {
- *   tools: [searchKnowledgeTool, recordMetricTool],
+ *   tools: [searchKnowledgeTool, addKnowledgeTool],
  *   executor: myToolExecutor,
  *   systemPrompt: 'You are a helpful assistant.',
- *   onConfirmationRequired: async (confirmation) => {
- *     // Show confirmation UI to user
- *     return await showConfirmationDialog(confirmation.description);
- *   },
  * });
  *
  * console.log(result.content);
@@ -126,7 +115,6 @@ export async function runToolLoop(
         toolCalls: allToolCalls,
         toolResults: allToolResults,
         messages,
-        completed: true,
       };
     }
 
@@ -137,77 +125,19 @@ export async function runToolLoop(
       toolCalls: response.toolCalls,
     });
 
-    // Process each tool call
+    // Process each tool call - execute directly without confirmation
     for (const toolCall of response.toolCalls) {
       allToolCalls.push(toolCall);
 
-      // Check if tool requires confirmation
-      if (config.executor.requiresConfirmation(toolCall.name)) {
-        // Create pending confirmation
-        const pendingConfirmation: PendingToolConfirmation = {
-          toolCall,
-          description: formatToolCallDescription(toolCall),
-          confirm: async () => {
-            const result = await executeToolCall(config.executor, toolCall);
-            allToolResults.push(result);
-            return result;
-          },
-          reject: (reason?: string) => {
-            const result: ToolExecutionResult = {
-              toolCallId: toolCall.id,
-              toolName: toolCall.name,
-              content: '',
-              success: false,
-              error: reason ?? 'User rejected the tool call',
-            };
-            allToolResults.push(result);
-            return result;
-          },
-        };
+      const result = await executeToolCall(config.executor, toolCall, config.context);
+      allToolResults.push(result);
 
-        // If callback is provided, ask for confirmation
-        if (config.onConfirmationRequired) {
-          const confirmed = await config.onConfirmationRequired(pendingConfirmation);
-
-          if (confirmed) {
-            const result = await pendingConfirmation.confirm();
-            messages.push({
-              role: 'tool',
-              content: result.success ? result.content : `Error: ${result.error ?? 'Unknown error'}`,
-              toolCallId: toolCall.id,
-            });
-          } else {
-            const result = pendingConfirmation.reject();
-            messages.push({
-              role: 'tool',
-              content: `Tool call rejected: ${result.error ?? 'User rejected'}`,
-              toolCallId: toolCall.id,
-            });
-          }
-        } else {
-          // No callback, return pending confirmation
-          return {
-            content: response.content,
-            iterations: iteration,
-            toolCalls: allToolCalls,
-            toolResults: allToolResults,
-            messages,
-            completed: false,
-            pendingConfirmation,
-          };
-        }
-      } else {
-        // Execute tool without confirmation
-        const result = await executeToolCall(config.executor, toolCall);
-        allToolResults.push(result);
-
-        // Add tool result to messages
-        messages.push({
-          role: 'tool',
-          content: result.success ? result.content : `Error: ${result.error ?? 'Unknown error'}`,
-          toolCallId: toolCall.id,
-        });
-      }
+      // Add tool result to messages
+      messages.push({
+        role: 'tool',
+        content: result.success ? result.content : `Error: ${result.error ?? 'Unknown error'}`,
+        toolCallId: toolCall.id,
+      });
     }
   }
 
@@ -220,75 +150,20 @@ export async function runToolLoop(
  */
 async function executeToolCall(
   executor: ToolExecutor,
-  toolCall: ToolCall
+  toolCall: ToolCall,
+  context: ToolExecutionContext
 ): Promise<ToolExecutionResult> {
   try {
-    return await executor.execute(toolCall);
+    return await executor.execute(toolCall, context);
   } catch (error) {
     return createErrorResult(toolCall, error);
   }
 }
 
 /**
- * Formats a tool call into a human-readable description.
- */
-function formatToolCallDescription(toolCall: ToolCall): string {
-  const args = JSON.stringify(toolCall.arguments, null, 2);
-  return `Tool: ${toolCall.name}\nArguments:\n${args}`;
-}
-
-/**
- * Continues a tool loop after user confirmation.
- *
- * Use this to resume a loop that was paused for confirmation.
- *
- * @param llm - LLM adapter to use
- * @param previousResult - Previous tool loop result with pending confirmation
- * @param confirmed - Whether user confirmed the tool call
- * @param config - Tool loop configuration (same as original call)
- * @returns Updated tool loop result
- */
-export async function continueToolLoop(
-  llm: LLMPort,
-  previousResult: ToolLoopResult,
-  confirmed: boolean,
-  config: ToolLoopConfig
-): Promise<ToolLoopResult> {
-  if (!previousResult.pendingConfirmation) {
-    throw new Error('No pending confirmation to continue');
-  }
-
-  const { pendingConfirmation } = previousResult;
-  const messages = [...previousResult.messages];
-
-  // Execute or reject the pending tool call
-  let result: ToolExecutionResult;
-  if (confirmed) {
-    result = await pendingConfirmation.confirm();
-  } else {
-    result = pendingConfirmation.reject();
-  }
-
-  // Add tool result to messages
-  messages.push({
-    role: 'tool',
-    content: result.success ? result.content : `Error: ${result.error ?? 'Unknown error'}`,
-    toolCallId: pendingConfirmation.toolCall.id,
-  });
-
-  // Continue the loop
-  return runToolLoop(llm, messages, {
-    ...config,
-    // Reduce max iterations by what we've already used
-    maxIterations: (config.maxIterations ?? DEFAULT_MAX_ITERATIONS) - previousResult.iterations,
-  });
-}
-
-/**
  * Creates a simple tool executor from a map of handlers.
  *
  * @param handlers - Map of tool name to handler function
- * @param confirmationTools - Set of tool names that require confirmation
  * @returns Tool executor instance
  *
  * @example
@@ -298,19 +173,18 @@ export async function continueToolLoop(
  *     const results = await db.search(args.query);
  *     return results;
  *   },
- *   record_metric: async (args) => {
- *     await db.recordMetric(args);
+ *   add_knowledge: async (args) => {
+ *     await db.addKnowledge(args);
  *     return { success: true };
  *   },
- * }, new Set(['record_metric']));
+ * });
  * ```
  */
 export function createSimpleExecutor(
-  handlers: Record<string, (args: Record<string, unknown>) => Promise<unknown>>,
-  confirmationTools = new Set<string>()
+  handlers: Record<string, (args: Record<string, unknown>, context: ToolExecutionContext) => Promise<unknown>>
 ): ToolExecutor {
   return {
-    async execute(toolCall: ToolCall): Promise<ToolExecutionResult> {
+    async execute(toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult> {
       const handler = handlers[toolCall.name];
 
       if (!handler) {
@@ -318,15 +192,11 @@ export function createSimpleExecutor(
       }
 
       try {
-        const result = await handler(toolCall.arguments);
+        const result = await handler(toolCall.arguments, context);
         return createSuccessResult(toolCall, result);
       } catch (error) {
         return createErrorResult(toolCall, error);
       }
-    },
-
-    requiresConfirmation(toolName: string): boolean {
-      return confirmationTools.has(toolName);
     },
   };
 }

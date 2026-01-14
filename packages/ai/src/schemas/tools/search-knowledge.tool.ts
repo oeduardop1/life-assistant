@@ -25,10 +25,10 @@ export type KnowledgeType = z.infer<typeof knowledgeTypeSchema>;
  * Parameters for the search_knowledge tool.
  */
 export const searchKnowledgeParamsSchema = z.object({
-  query: z.string().min(1).describe('What to search for'),
+  query: z.string().optional().describe('Search query. If not provided, returns all recent items.'),
   type: knowledgeTypeSchema.optional().describe('Type of knowledge item to filter by'),
   area: z.nativeEnum(LifeArea).optional().describe('Life area to filter by'),
-  limit: z.number().min(1).max(10).default(5).describe('Maximum number of results to return'),
+  limit: z.number().min(1).max(20).default(10).describe('Maximum number of results to return'),
 });
 
 export type SearchKnowledgeParams = z.infer<typeof searchKnowledgeParamsSchema>;
@@ -42,10 +42,13 @@ export type SearchKnowledgeParams = z.infer<typeof searchKnowledgeParamsSchema>;
 export const searchKnowledgeTool: ToolDefinition<typeof searchKnowledgeParamsSchema> = {
   name: 'search_knowledge',
   description:
-    'Search for facts, preferences, or insights about the user. Use when you need additional context not present in the user memory.',
+    'Search for facts, preferences, or insights about the user. Call WITHOUT query parameter to get ALL recent knowledge items. Call WITH query to search for specific topics.',
   parameters: searchKnowledgeParamsSchema,
   requiresConfirmation: false,
   inputExamples: [
+    // Get all recent items (for "what do you know about me?" questions)
+    { limit: 10 },
+    // Search for specific topics
     { query: 'weight goal', type: 'fact', area: LifeArea.HEALTH, limit: 5 },
     { query: 'food preferences', type: 'preference', limit: 5 },
     { query: 'Maria', type: 'person', limit: 1 },

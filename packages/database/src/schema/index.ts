@@ -26,3 +26,8 @@ export * from './subscriptions';
 export * from './exports';
 export * from './habit-freezes';
 export * from './audit';
+
+// Memory System (ADR-012)
+export * from './user-memories';
+export * from './knowledge-items';
+export * from './memory-consolidations';

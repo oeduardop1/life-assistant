@@ -12,6 +12,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { MemoryModule } from './modules/memory/memory.module';
 
 // Jobs
 import { JobsModule } from './jobs/jobs.module';
@@ -63,6 +64,7 @@ import { AllExceptionsFilter } from './common/filters/index';
     AuthModule,
     OnboardingModule,
     ChatModule,
+    MemoryModule,
 
     // Background jobs
     JobsModule,

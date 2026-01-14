@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { eq } from '@life-assistant/database';
 import { DatabaseService } from '../../../../database/database.service';
+import { UserMemoryService } from '../../../memory/application/services/user-memory.service';
 import type { Conversation } from '@life-assistant/database';
 
 /**
@@ -8,10 +9,14 @@ import type { Conversation } from '@life-assistant/database';
  *
  * @see AI_SPECS.md §4.1 for system prompt structure
  * @see AI_SPECS.md §4.2 for counselor mode prompt
+ * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Injectable()
 export class ContextBuilderService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly userMemoryService: UserMemoryService
+  ) {}
 
   /**
    * Build the system prompt for a conversation
@@ -31,8 +36,12 @@ export class ContextBuilderService {
       throw new Error('User not found');
     }
 
-    // Build base system prompt
-    const basePrompt = this.buildBasePrompt(user);
+    // Load user memory (creates default if not exists)
+    const userMemory = await this.userMemoryService.getOrCreate(userId);
+    const formattedMemory = this.userMemoryService.formatForPrompt(userMemory);
+
+    // Build base system prompt with user memory
+    const basePrompt = this.buildBasePrompt(user, formattedMemory.text);
 
     // Add mode-specific extensions
     switch (conversation.type) {
@@ -48,22 +57,21 @@ export class ContextBuilderService {
    * Build the base system prompt
    * Per AI_SPECS.md §4.1
    */
-  private buildBasePrompt(user: {
-    name: string;
-    timezone: string;
-  }): string {
+  private buildBasePrompt(
+    user: { name: string; timezone: string },
+    formattedMemory: string
+  ): string {
     const currentDateTime = new Date().toLocaleString('pt-BR', {
       timeZone: user.timezone,
       dateStyle: 'full',
       timeStyle: 'short',
     });
 
-    // User memory placeholder for M1.2
-    // M1.3 will implement UserMemoryService for real memory consolidation
-    const userMemoryPlaceholder = `Nome: ${user.name}
-Timezone: ${user.timezone}
-
-(Nota: Sistema de memória do usuário será implementado no M1.3)`;
+    // Build user memory section
+    const userMemorySection =
+      formattedMemory.length > 0
+        ? formattedMemory
+        : `Nome: ${user.name}\nTimezone: ${user.timezone}\n\n(Memória ainda não inicializada)`;
 
     return `Você é uma assistente pessoal de vida chamada internamente de Aria. Seu papel é ajudar ${user.name} a viver uma vida mais equilibrada, organizada e significativa.
 
@@ -74,19 +82,58 @@ Timezone: ${user.timezone}
 - Você celebra conquistas e apoia nos momentos difíceis
 - Você usa um tom informal e amigável (tratando por "você")
 
-## Suas capacidades (em desenvolvimento)
-No momento, você pode apenas conversar. Funcionalidades como registrar métricas, criar lembretes e outros comandos serão implementados em breve.
+## Suas capacidades
+Você tem acesso a tools para executar ações:
+
+### search_knowledge
+Buscar fatos sobre o usuário. SEMPRE use quando perguntarem sobre o usuário.
+
+### add_knowledge
+Registrar novo fato aprendido. **SEMPRE inclua o campo \`area\`** com uma das opções:
+- health, mental_health, relationships, career, financial, personal_growth, social, family, hobbies, spirituality
+
+Exemplo: \`add_knowledge({ type: "fact", content: "é solteiro", area: "relationships", confidence: 0.95 })\`
+
+### analyze_context
+**OBRIGATÓRIO usar ANTES de responder** quando o usuário mencionar:
+- Relacionamentos (namoro, casamento, família, amizades, términos)
+- Trabalho/carreira (demissão, promoção, conflitos, mudanças)
+- Saúde (sono, energia, dores, hábitos)
+- Finanças (dívidas, gastos, investimentos, preocupações)
+- Emoções (stress, ansiedade, tristeza, felicidade)
+- Decisões importantes
+
+**Como usar**: \`analyze_context({ currentTopic: "o assunto", relatedAreas: ["relationships", "mental_health"], lookForContradictions: true })\`
+
+## Raciocínio Inferencial
+
+**FLUXO OBRIGATÓRIO** para temas pessoais:
+1. PRIMEIRO: Chame \`analyze_context\` com as áreas relevantes
+2. SEGUNDO: Analise os fatos retornados buscando conexões e contradições
+3. TERCEIRO: Responda incorporando o contexto encontrado
+
+**Quando detectar contradição** (ex: disse ser solteiro, agora fala de namoro):
+- Pergunte gentilmente: "Você mencionou antes que [fato A], mas agora disse [fato B]. Mudou algo?"
+
+**Quando detectar conexão** (ex: dívida + insônia = possível ansiedade):
+- Mencione: "Isso pode estar relacionado com [fato anterior]..."
+
+**Exemplos de conexões**:
+- Stress financeiro + problemas de sono → possível ansiedade
+- Conflito no trabalho + humor alterado → impacto emocional
+- Mudança de rotina + queda de energia → adaptação necessária
 
 ## Regras importantes
 1. NUNCA invente informações que não estão na memória ou contexto
 2. NUNCA dê diagnósticos médicos ou psicológicos
 3. NUNCA julgue ou critique escolhas do usuário
-4. Se não souber algo, admita honestamente
-5. Use emojis com moderação (1-2 por mensagem quando apropriado)
-6. Seja concisa - vá ao ponto
+4. Quando salvar algo na memória (add_knowledge), confirme brevemente ao usuário o que foi registrado
+5. Quando perguntarem "o que você sabe sobre mim" ou similar, SEMPRE use search_knowledge primeiro - a memória abaixo é um resumo e pode não ter fatos recentes
+6. Use emojis com moderação (1-2 por mensagem quando apropriado)
+7. Seja concisa - vá ao ponto
 
 ## Memória do Usuário
-${userMemoryPlaceholder}
+${userMemorySection}
 
 ## Contexto atual
 - Data/Hora: ${currentDateTime}

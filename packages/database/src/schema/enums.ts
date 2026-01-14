@@ -216,6 +216,31 @@ export const subscriptionStatusEnum = pgEnum('subscription_status', [
 ]);
 
 // ============================================================================
+// Memory System (ADR-012)
+// ============================================================================
+
+export const knowledgeItemTypeEnum = pgEnum('knowledge_item_type', [
+  'fact',
+  'preference',
+  'memory',
+  'insight',
+  'person',
+]);
+
+export const knowledgeItemSourceEnum = pgEnum('knowledge_item_source', [
+  'conversation',
+  'user_input',
+  'ai_inference',
+  'onboarding',
+]);
+
+export const consolidationStatusEnum = pgEnum('consolidation_status', [
+  'completed',
+  'failed',
+  'partial',
+]);
+
+// ============================================================================
 // Exports (LGPD)
 // ============================================================================
 
@@ -258,3 +283,6 @@ export type ExpenseCategory = (typeof expenseCategoryEnum.enumValues)[number];
 export type SubscriptionStatus = (typeof subscriptionStatusEnum.enumValues)[number];
 export type ExportStatus = (typeof exportStatusEnum.enumValues)[number];
 export type ExportType = (typeof exportTypeEnum.enumValues)[number];
+export type KnowledgeItemType = (typeof knowledgeItemTypeEnum.enumValues)[number];
+export type KnowledgeItemSource = (typeof knowledgeItemSourceEnum.enumValues)[number];
+export type ConsolidationStatus = (typeof consolidationStatusEnum.enumValues)[number];

@@ -8,6 +8,7 @@ import {
   CONVERSATION_REPOSITORY,
   MESSAGE_REPOSITORY,
 } from './domain/ports';
+import { MemoryModule } from '../memory/memory.module';
 
 /**
  * ChatModule - AI Chat functionality with SSE streaming
@@ -19,8 +20,10 @@ import {
  *
  * @see MILESTONES.md M1.2 for implementation details
  * @see AI_SPECS.md §4 for system prompts
+ * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Module({
+  imports: [MemoryModule],
   controllers: [ChatController],
   providers: [
     // Application Services
