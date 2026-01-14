@@ -1,7 +1,7 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import TimezoneSelect, { type ITimezone } from 'react-timezone-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ export function ProfileForm({
   isLoading = false,
 }: ProfileFormProps) {
   const form = useForm<ProfileStepData>({
-    resolver: zodResolver(profileStepSchema),
+    resolver: standardSchemaResolver(profileStepSchema),
     defaultValues: {
       name: defaultValues?.name ?? '',
       timezone: defaultValues?.timezone ?? SYSTEM_DEFAULTS.timezone,

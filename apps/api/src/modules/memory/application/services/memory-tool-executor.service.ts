@@ -86,7 +86,7 @@ export class MemoryToolExecutorService implements ToolExecutor {
 
     const { query, type, area, limit } = parseResult.data;
 
-    this.logger.debug(`search_knowledge params: query="${query ?? '(all)'}", type=${type ?? '(any)'}, area=${area ?? '(any)'}, limit=${limit}`);
+    this.logger.debug(`search_knowledge params: query="${query ?? '(all)'}", type=${type ?? '(any)'}, area=${area ?? '(any)'}, limit=${String(limit)}`);
 
     // Build search params - type and area are optional in Zod schema
     const searchParams: Parameters<typeof this.knowledgeItemsService.search>[1] = {
@@ -98,7 +98,7 @@ export class MemoryToolExecutorService implements ToolExecutor {
 
     const results = await this.knowledgeItemsService.search(userId, searchParams);
 
-    this.logger.debug(`search_knowledge found ${results.length} items`);
+    this.logger.debug(`search_knowledge found ${String(results.length)} items`);
 
     // Format results for LLM
     const formattedResults = results.map((item) => ({
@@ -136,7 +136,7 @@ export class MemoryToolExecutorService implements ToolExecutor {
 
     const { type, content, area, confidence } = parseResult.data;
 
-    this.logger.debug(`add_knowledge params: type=${type}, content="${content}", area=${area ?? '(none)'}, confidence=${confidence}`);
+    this.logger.debug(`add_knowledge params: type=${type}, content="${content}", area=${area ?? '(none)'}, confidence=${String(confidence)}`);
 
     // Build add params - area is optional, confidence has default, rest are required
     const addParams: Parameters<typeof this.knowledgeItemsService.add>[1] = {
@@ -150,7 +150,7 @@ export class MemoryToolExecutorService implements ToolExecutor {
 
     const item = await this.knowledgeItemsService.add(userId, addParams);
 
-    this.logger.log(`add_knowledge saved item ${item.id}: "${item.title}"`);
+    this.logger.log(`add_knowledge saved item ${item.id}: "${item.title ?? 'Untitled'}"`);
 
     return createSuccessResult(toolCall, {
       success: true,
@@ -198,12 +198,12 @@ export class MemoryToolExecutorService implements ToolExecutor {
     );
 
     // Sort by confidence descending
-    uniqueFacts.sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
+    uniqueFacts.sort((a, b) => b.confidence - a.confidence);
 
     // Limit to top 15 most relevant
     const topFacts = uniqueFacts.slice(0, 15);
 
-    this.logger.debug(`analyze_context found ${topFacts.length} related facts`);
+    this.logger.debug(`analyze_context found ${String(topFacts.length)} related facts`);
 
     // 2. Fetch learned patterns from user memory
     const userMemory = await this.userMemoryService.getOrCreate(userId);
@@ -212,7 +212,7 @@ export class MemoryToolExecutorService implements ToolExecutor {
     // Filter patterns with confidence >= 0.7
     const relevantPatterns = allPatterns.filter((p) => p.confidence >= 0.7);
 
-    this.logger.debug(`analyze_context found ${relevantPatterns.length} relevant patterns`);
+    this.logger.debug(`analyze_context found ${String(relevantPatterns.length)} relevant patterns`);
 
     // 3. Build potential connections (suggestions for LLM)
     // This is a simple heuristic - the LLM will do the actual reasoning
@@ -241,11 +241,11 @@ export class MemoryToolExecutorService implements ToolExecutor {
     // 4. Build contradictions list (placeholder for LLM analysis)
     // The actual contradiction detection is done by the LLM using the facts provided
     // We just provide the data structure for it to populate in its response
-    const contradictions: Array<{
+    const contradictions: {
       existingFact: string;
       currentStatement: string;
       suggestion: string;
-    }> = [];
+    }[] = [];
 
     // Note: Real contradiction detection would require NLP/semantic analysis
     // For now, we provide all facts and let the LLM identify contradictions
@@ -276,7 +276,7 @@ export class MemoryToolExecutorService implements ToolExecutor {
     };
 
     this.logger.log(
-      `analyze_context completed: ${formattedFacts.length} facts, ${formattedPatterns.length} patterns, ${potentialConnections.length} connections`
+      `analyze_context completed: ${String(formattedFacts.length)} facts, ${String(formattedPatterns.length)} patterns, ${String(potentialConnections.length)} connections`
     );
 
     return createSuccessResult(toolCall, result);
