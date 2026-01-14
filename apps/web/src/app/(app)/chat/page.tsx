@@ -131,7 +131,6 @@ export default function ChatPage() {
               onSend={sendMessage}
               onCancel={cancelStream}
               isStreaming={isStreaming}
-              disabled={false}
             />
           </>
         )}

@@ -103,9 +103,10 @@ export function useChat({ conversationId }: UseChatOptions) {
         );
         eventSourceRef.current = eventSource;
 
+        // Handle regular messages (content, error, done)
         eventSource.onmessage = (event) => {
           try {
-            const chunk: StreamChunk = JSON.parse(event.data);
+            const chunk: StreamChunk = JSON.parse(event.data as string);
 
             if (chunk.error) {
               setError(chunk.error);
