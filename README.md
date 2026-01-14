@@ -50,6 +50,34 @@ pnpm infra:down   # Para toda a infraestrutura (~15s)
 
 > **Dica:** Se o `infra:up` falhar, use `pnpm infra:up --clean` para limpar e tentar novamente.
 
+## Testando Jobs Manualmente
+
+Alguns jobs (como Memory Consolidation) rodam em horarios especificos (ex: 3AM).
+Durante desenvolvimento, voce pode dispara-los manualmente:
+
+```bash
+# Requer: pnpm infra:up + pnpm dev rodando
+
+# Opcao 1: Script automatico (recomendado)
+pnpm --filter @life-assistant/api trigger:consolidation --trigger
+
+# Opcao 2: Apenas obter token (para usar manualmente)
+pnpm --filter @life-assistant/api trigger:consolidation
+
+# Opcao 3: curl manual
+curl -X POST http://localhost:4000/api/admin/jobs/memory-consolidation/trigger \
+  -H "Authorization: Bearer <seu-token>" \
+  -H "Content-Type: application/json"
+
+# Verificar resultado no banco
+# Via Supabase Studio: http://localhost:54323
+# Ou via psql:
+docker exec -it supabase_db_life-assistant psql -U postgres -d postgres \
+  -c "SELECT * FROM memory_consolidations ORDER BY created_at DESC LIMIT 1;"
+```
+
+> **Nota:** Endpoints `/admin/*` so existem em `NODE_ENV=development`.
+
 ## Comandos Disponiveis
 
 ```bash

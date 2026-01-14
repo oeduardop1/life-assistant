@@ -110,7 +110,7 @@ export class MemoryConsolidationScheduler implements OnModuleInit {
         date: new Date().toISOString().split('T')[0],
       },
       {
-        jobId: `consolidation:${userId}:manual:${String(timestamp)}`,
+        jobId: `consolidation_${userId}_manual_${String(timestamp)}`,
       }
     );
 
@@ -132,7 +132,7 @@ export class MemoryConsolidationScheduler implements OnModuleInit {
         date: new Date().toISOString().split('T')[0],
       },
       {
-        jobId: `consolidation:${timezone}:manual:${String(timestamp)}`,
+        jobId: `consolidation_${timezone.replace(/\//g, '-')}_manual_${String(timestamp)}`,
       }
     );
 

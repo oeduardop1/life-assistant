@@ -1051,6 +1051,14 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 - Padrão: inline controllers com JWT auth via `jose`, mock services
 - 116 testes de integração passando (total geral)
 
+#### Ferramentas de Desenvolvimento (M1.3)
+
+- [x] Admin endpoint para disparo manual do Memory Consolidation Job
+  - [x] Criar AdminModule (`apps/api/src/modules/admin/`)
+  - [x] Criar AdminJobsController com endpoint `POST /admin/jobs/memory-consolidation/trigger`
+  - [x] Proteger endpoint para `NODE_ENV=development`
+  - [x] Documentar uso em `ENGINEERING.md` §7.6
+
 ---
 
 ### M1.4 — Classificação de Intent 🔴
@@ -2250,6 +2258,24 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 ---
 
+## Backlog Técnico
+
+> Itens de melhoria técnica identificados durante desenvolvimento que não são críticos mas devem ser feitos eventualmente.
+
+### Logging e Observabilidade
+
+- [ ] Adicionar logging para knowledge items descartados durante consolidação
+  - **Contexto:** `consolidation-prompt.ts` descarta items com tipos inválidos silenciosamente
+  - **Arquivo:** `apps/api/src/jobs/memory-consolidation/consolidation-prompt.ts`
+
+### Testes
+
+- [ ] Adicionar testes para AdminModule
+  - **Contexto:** AdminJobsController não tem testes unitários
+  - **Arquivo:** `apps/api/test/unit/modules/admin/admin-jobs.controller.spec.ts`
+
+---
+
 ## Acompanhamento
 
 ### Legenda de Status
@@ -2265,6 +2291,8 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-14 | M1.3 | Correções | Segurança: removido userId do admin endpoint. Bug fix: refreshSchedulers() no onboarding. Testes e docs atualizados |
+| 2026-01-14 | M1.3 | DevTools | Admin endpoint para disparo manual do Memory Consolidation Job: AdminModule, POST /admin/jobs/memory-consolidation/trigger (NODE_ENV=development only) |
 | 2026-01-14 | M1.3 | Testes Int. | Testes de integração: memory-endpoints (14), memory-tool-executor (14), memory-consolidation (18). Total 46 novos testes, 116 integration tests passando |
 | 2026-01-13 | M1.7 | Concluído | Raciocínio Inferencial Real-time: tool analyze_context, executor com busca de fatos/padrões, system prompt com instruções de raciocínio, ADR-014, 8 novos testes unitários (total 294) |
 | 2026-01-13 | M1.3 | Concluído | Sistema de Memória: UserMemoryService, KnowledgeItemsService, MemoryToolExecutor, Memory Consolidation Job (BullMQ timezone-aware), Context Builder, 106 novos testes (total 294) |
@@ -2281,4 +2309,4 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 ---
 
 *Última atualização: 14 Janeiro 2026*
-*Revisão: M1.3 testes de integração completos. 46 novos testes em 3 arquivos: memory-endpoints (14), memory-tool-executor (14), memory-consolidation (18). Total 116 integration tests passando.*
+*Revisão: Correções pós-implementação: segurança (removido userId do admin endpoint), bug fix (refreshSchedulers no onboarding), testes e docs atualizados. Backlog Técnico adicionado.*

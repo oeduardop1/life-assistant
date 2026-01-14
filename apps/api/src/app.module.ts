@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { MemoryModule } from './modules/memory/memory.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 // Jobs
 import { JobsModule } from './jobs/jobs.module';
@@ -68,6 +69,9 @@ import { AllExceptionsFilter } from './common/filters/index';
 
     // Background jobs
     JobsModule,
+
+    // Admin module (development only)
+    ...(process.env.NODE_ENV === 'development' ? [AdminModule] : []),
   ],
   providers: [
     // Global auth guard (requires @Public() to bypass)

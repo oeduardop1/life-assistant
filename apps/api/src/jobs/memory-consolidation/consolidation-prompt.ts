@@ -221,6 +221,46 @@ export function parseConsolidationResponse(response: string): ConsolidationRespo
     throw new Error(`Failed to parse consolidation response as JSON: ${response.substring(0, 200)}`);
   }
 
+  // Normalize new_knowledge_items: fix common LLM response issues
+  // LLMs sometimes return invalid values despite prompt instructions
+  const validTypes = new Set(['fact', 'preference', 'memory', 'insight', 'person']);
+  const typeMapping: Record<string, string> = {
+    challenge: 'insight', // Map 'challenge' to 'insight'
+    goal: 'fact',
+    observation: 'insight',
+    note: 'fact',
+  };
+
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    'new_knowledge_items' in parsed &&
+    Array.isArray((parsed as Record<string, unknown>).new_knowledge_items)
+  ) {
+    const items = (parsed as Record<string, unknown>).new_knowledge_items as Record<string, unknown>[];
+    const normalizedItems: Record<string, unknown>[] = [];
+
+    for (const item of items) {
+      // Always set source to 'ai_inference'
+      item.source = 'ai_inference';
+
+      // Normalize type: map invalid types to valid ones or skip
+      const itemType = item.type as string;
+      if (!validTypes.has(itemType)) {
+        if (typeMapping[itemType]) {
+          item.type = typeMapping[itemType];
+        } else {
+          // Skip items with completely invalid types
+          continue;
+        }
+      }
+
+      normalizedItems.push(item);
+    }
+
+    (parsed as Record<string, unknown>).new_knowledge_items = normalizedItems;
+  }
+
   // Validate with Zod
   const result = consolidationResponseSchema.safeParse(parsed);
 

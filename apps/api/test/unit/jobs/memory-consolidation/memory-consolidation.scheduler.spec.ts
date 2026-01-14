@@ -130,7 +130,7 @@ describe('MemoryConsolidationScheduler', () => {
           timezone: 'manual',
         }),
         expect.objectContaining({
-          jobId: expect.stringContaining('consolidation:user-456:manual:'),
+          jobId: expect.stringContaining('consolidation_user-456_manual_'),
         })
       );
     });
@@ -157,7 +157,7 @@ describe('MemoryConsolidationScheduler', () => {
           timezone: 'America/New_York',
         }),
         expect.objectContaining({
-          jobId: expect.stringContaining('consolidation:America/New_York:manual:'),
+          jobId: expect.stringContaining('consolidation_America-New_York_manual_'),
         })
       );
     });

@@ -80,6 +80,9 @@ describe('OnboardingService', () => {
     log: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
   };
+  let mockConsolidationScheduler: {
+    refreshSchedulers: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -99,10 +102,16 @@ describe('OnboardingService', () => {
       error: vi.fn(),
     };
 
+    // Create mock consolidation scheduler
+    mockConsolidationScheduler = {
+      refreshSchedulers: vi.fn().mockResolvedValue(undefined),
+    };
+
     // Create service instance with mocks
     onboardingService = new OnboardingService(
       mockDatabaseService as unknown as ConstructorParameters<typeof OnboardingService>[0],
       mockLogger as unknown as ConstructorParameters<typeof OnboardingService>[1],
+      mockConsolidationScheduler as unknown as ConstructorParameters<typeof OnboardingService>[2],
     );
   });
 

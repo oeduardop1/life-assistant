@@ -207,7 +207,8 @@ describe('parseConsolidationResponse', () => {
     );
   });
 
-  it('should_validate_knowledge_item_types', () => {
+  it('should_skip_knowledge_items_with_unmappable_types', () => {
+    // Items with completely invalid types that can't be mapped are skipped
     const response = JSON.stringify({
       memory_updates: {},
       new_knowledge_items: [
@@ -221,7 +222,36 @@ describe('parseConsolidationResponse', () => {
       updated_knowledge_items: [],
     });
 
-    expect(() => parseConsolidationResponse(response)).toThrow();
+    const result = parseConsolidationResponse(response);
+    // The invalid item should be skipped, resulting in empty array
+    expect(result.new_knowledge_items).toHaveLength(0);
+  });
+
+  it('should_map_known_invalid_types_to_valid_ones', () => {
+    // Items with known invalid types are mapped to valid ones
+    const response = JSON.stringify({
+      memory_updates: {},
+      new_knowledge_items: [
+        {
+          type: 'challenge', // Should be mapped to 'insight'
+          content: 'Test challenge',
+          confidence: 0.9,
+          source: 'ai_inference',
+        },
+        {
+          type: 'goal', // Should be mapped to 'fact'
+          content: 'Test goal',
+          confidence: 0.8,
+          source: 'ai_inference',
+        },
+      ],
+      updated_knowledge_items: [],
+    });
+
+    const result = parseConsolidationResponse(response);
+    expect(result.new_knowledge_items).toHaveLength(2);
+    expect(result.new_knowledge_items[0].type).toBe('insight');
+    expect(result.new_knowledge_items[1].type).toBe('fact');
   });
 
   it('should_validate_confidence_range', () => {

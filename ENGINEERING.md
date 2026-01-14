@@ -1062,6 +1062,45 @@ describe('Job Integration Test', () => {
 - Use `queue.obliterate({ force: true })` para limpar queue entre testes
 - Timeout generoso (10-30s) para evitar flaky tests
 
+### 7.6 Manual Job Triggering (Development)
+
+Durante desenvolvimento, jobs podem ser disparados manualmente via script ou endpoints admin.
+
+**Script Automatizado (Recomendado):**
+
+```bash
+# Autenticar e disparar o job em um único comando
+pnpm --filter @life-assistant/api trigger:consolidation --trigger
+
+# Apenas obter o token (para uso manual)
+pnpm --filter @life-assistant/api trigger:consolidation
+
+# Com credenciais customizadas
+TEST_USER_EMAIL=me@example.com TEST_USER_PASSWORD=mypass \
+  pnpm --filter @life-assistant/api trigger:consolidation --trigger
+```
+
+**Via curl (manual):**
+
+```bash
+# Memory Consolidation - dispara para o usuário atual
+curl -X POST http://localhost:4000/api/admin/jobs/memory-consolidation/trigger \
+  -H "Authorization: Bearer <token>"
+
+# Memory Consolidation - dispara para usuário específico
+curl -X POST http://localhost:4000/api/admin/jobs/memory-consolidation/trigger \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "specific-user-id"}'
+```
+
+**Nota:** Endpoints `/admin/*` só estão disponíveis quando `NODE_ENV=development`.
+
+Para verificar resultado da consolidação:
+1. Consultar tabela `memory_consolidations` para ver status e métricas
+2. Consultar tabela `knowledge_items` para ver fatos extraídos
+3. Consultar tabela `user_memories` para ver campos atualizados
+
 ---
 
 ## 8) Módulo de IA (LLM Abstraction)
