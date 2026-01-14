@@ -1013,6 +1013,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
   - [x] Tool loop completa e salva metadata na mensagem
   - [x] Fluxo de confirmação funciona via SSE (N/A - add_knowledge tem requiresConfirmation: false)
   - [x] API endpoints /memory/* funcionam com auth
+  - [x] Job executa via BullMQ com Redis real (QueueEvents pattern)
 
 **Definition of Done:**
 - [x] user_memory é sempre incluído no contexto
@@ -1031,7 +1032,8 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 - Memory consolidation job usando BullMQ com timezone-aware scheduling (`tz` option)
 - Scheduler cria um job por timezone único (não por usuário, para escalabilidade)
 - Consolidation prompt usa Zod schema para validação de resposta LLM
-- 106 novos testes unitários adicionados (total 294 tests passando)
+- 106 novos testes unitários adicionados
+- 7 testes de integração para BullMQ job com Redis real usando QueueEvents pattern
 - API endpoints: `/api/memory`, `/api/memory/knowledge`, `/api/memory/knowledge/:id`
 - Arquivos críticos:
   - `apps/api/src/modules/memory/` - Memory module completo

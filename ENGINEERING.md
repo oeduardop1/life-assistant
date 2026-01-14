@@ -994,6 +994,74 @@ export class SyncCalendarProcessor {
 }
 ```
 
+### 7.4 Testando Jobs com Redis Real
+
+Para testar jobs BullMQ com comportamento real, use **QueueEvents** para aguardar completion:
+
+```typescript
+import { Queue, QueueEvents, Worker } from 'bullmq';
+
+describe('Job Integration Test', () => {
+  let queue: Queue;
+  let queueEvents: QueueEvents;
+  let worker: Worker | null = null;
+
+  const redisConnection = {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: Number(process.env.REDIS_PORT) || 6379,
+  };
+
+  beforeAll(async () => {
+    // Use queue name específico para testes (evita conflito com workers reais)
+    queue = new Queue('my-job-test', { connection: redisConnection });
+    queueEvents = new QueueEvents('my-job-test', { connection: redisConnection });
+    await queueEvents.waitUntilReady();
+  });
+
+  afterAll(async () => {
+    if (worker) await worker.close();
+    await queueEvents.close();
+    await queue.close();
+  });
+
+  beforeEach(async () => {
+    await queue.obliterate({ force: true }); // Limpa queue entre testes
+  });
+
+  afterEach(async () => {
+    if (worker) {
+      await worker.close();
+      worker = null;
+    }
+  });
+
+  it('should process job and wait for completion', async () => {
+    // Arrange: Create worker
+    worker = new Worker(
+      'my-job-test',
+      async (job) => ({ result: 'success', data: job.data }),
+      { connection: redisConnection }
+    );
+    await worker.waitUntilReady();
+
+    // Act: Add job to queue
+    const job = await queue.add('test-job', { userId: 'user-123' });
+
+    // Wait: Use QueueEvents to wait for completion
+    const result = await job.waitUntilFinished(queueEvents, 10000);
+
+    // Assert
+    expect(result.result).toBe('success');
+  });
+});
+```
+
+**Boas Práticas:**
+- Use nome de queue único para testes (evita conflito com @Processor registrados)
+- Sempre feche workers em `afterEach` para evitar conexões pendentes
+- Use `queue.obliterate({ force: true })` para limpar queue entre testes
+- Timeout generoso (10-30s) para evitar flaky tests
+
 ---
 
 ## 8) Módulo de IA (LLM Abstraction)
