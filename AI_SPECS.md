@@ -318,19 +318,42 @@ Você é uma assistente pessoal de vida chamada internamente de Aria. Seu papel 
 ## Suas capacidades
 Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **record_metric**: Registrar métricas (peso, gastos, humor, etc.)
-- **search_knowledge**: Buscar fatos sobre o usuário quando precisar de contexto adicional
+- **search_knowledge**: Buscar fatos sobre o usuário. SEMPRE use quando perguntarem sobre o usuário ou quando precisar de contexto adicional
 - **add_knowledge**: Registrar novo fato aprendido sobre o usuário
+- **analyze_context**: Analisar contexto para encontrar conexões, padrões e contradições. Use antes de responder sobre assuntos pessoais importantes
 - **create_note**: Criar nota automática (análise, decisão, etc.)
 - **create_reminder**: Criar lembrete
 - **get_tracking_history**: Obter histórico de métricas
 - **update_person**: Atualizar informações de pessoa do CRM
 
+## Raciocínio Inferencial
+Você deve fazer conexões entre informações para dar respostas mais contextualizadas:
+
+1. **Antes de responder sobre assuntos pessoais importantes** (decisões, problemas, conselhos), use `analyze_context` para:
+   - Buscar fatos relacionados na memória
+   - Verificar padrões já identificados
+   - Detectar possíveis contradições
+
+2. **Quando detectar conexão relevante**, mencione naturalmente:
+   - "Isso pode estar relacionado com [fato anterior]..."
+   - "Lembro que você mencionou [contexto]..."
+   - "Considerando [padrão observado], talvez..."
+
+3. **Quando detectar contradição**, pergunte gentilmente:
+   - "Você mencionou antes que [fato A], mas agora disse [fato B]. Mudou algo?"
+   - "Percebi uma diferença com o que você havia dito antes sobre [assunto]. Pode me ajudar a entender?"
+
+4. **Exemplos de conexões úteis**:
+   - Stress financeiro + problemas de sono → possível ansiedade
+   - Conflito no trabalho + humor alterado → impacto emocional
+   - Mudança de rotina + queda de energia → adaptação necessária
+
 ## Regras importantes
 1. NUNCA invente informações que não estão na memória ou contexto
 2. NUNCA dê diagnósticos médicos ou psicológicos
 3. NUNCA julgue ou critique escolhas do usuário
-4. Tools que requerem confirmação aguardarão aprovação do usuário
-5. Se não souber algo, use search_knowledge ou admita honestamente
+4. Quando salvar algo na memória (add_knowledge), confirme brevemente ao usuário o que foi registrado
+5. Quando perguntarem "o que você sabe sobre mim" ou similar, SEMPRE use search_knowledge primeiro - a memória abaixo é um resumo e pode não ter fatos recentes
 6. Use emojis com moderação (1-2 por mensagem quando apropriado)
 7. Seja concisa - vá ao ponto
 
@@ -674,8 +697,28 @@ export const tools: ToolDefinition[] = [
       { name: "João da Silva" },
     ],
   },
+  {
+    name: 'analyze_context',
+    description: 'Analisa contexto para encontrar conexões, padrões e contradições. Use antes de responder sobre assuntos pessoais importantes (decisões, conselhos, problemas). Retorna fatos relacionados, padrões aprendidos, conexões potenciais e contradições detectadas.',
+    parameters: z.object({
+      currentTopic: z.string().describe('O assunto principal que o usuário está discutindo'),
+      relatedAreas: z.array(z.enum(['health', 'finance', 'relationships', 'work', 'spirituality', 'leisure', 'personal_development', 'mental_health'])).min(1).max(4).describe('Áreas da vida que podem estar relacionadas'),
+      lookForContradictions: z.boolean().default(true).describe('Se deve verificar contradições com conhecimento existente'),
+    }),
+    requiresConfirmation: false,
+    inputExamples: [
+      // Problemas de sono - pode conectar com stress/finanças
+      { currentTopic: "sleeping problems", relatedAreas: ["health", "mental_health", "finance"], lookForContradictions: true },
+      // Decisão de relacionamento
+      { currentTopic: "relationship decision", relatedAreas: ["relationships", "mental_health"], lookForContradictions: true },
+      // Mudança de carreira
+      { currentTopic: "career change consideration", relatedAreas: ["work", "finance", "personal_development"], lookForContradictions: false },
+    ],
+  },
 
-  // ========== WRITE TOOLS (requerem confirmação) ==========
+  // ========== WRITE TOOLS ==========
+  // Nota: add_knowledge não requer confirmação (IA confirma na resposta)
+  // Os demais WRITE tools (record_metric, create_reminder, update_person) requerem confirmação
   {
     name: 'record_metric',
     description: 'Registra uma métrica do usuário. SEMPRE confirme os dados antes de chamar.',
@@ -701,14 +744,14 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: 'add_knowledge',
-    description: 'Adiciona um novo fato aprendido sobre o usuário. Use para registrar preferências, fatos importantes, ou insights.',
+    description: 'Adiciona um novo fato aprendido sobre o usuário. Use para registrar preferências, fatos importantes, ou insights. Confirme ao usuário quando salvar.',
     parameters: z.object({
       type: z.enum(['fact', 'preference', 'memory', 'insight', 'person']),
       content: z.string().describe('O fato a ser registrado'),
       area: z.enum(['health', 'finance', 'relationships', 'work', 'spirituality', 'leisure', 'personal_development', 'mental_health']).optional(),
       confidence: z.number().min(0).max(1).default(0.9),
     }),
-    requiresConfirmation: true,
+    requiresConfirmation: false,
     inputExamples: [
       { type: "fact", content: "Trabalha como desenvolvedor", area: "work", confidence: 1.0 },
       { type: "preference", content: "Prefere acordar cedo", area: "health", confidence: 0.9 },
@@ -999,6 +1042,87 @@ export class MemoryConsolidationScheduler {
   }
 }
 ```
+
+### 6.6 Real-time Inference Architecture
+
+> **ADR-014:** Estende ADR-012 para suportar inferências em tempo real durante conversas.
+
+#### 6.6.1 Conceito
+
+A arquitetura de inferência opera em dois níveis complementares:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      ARQUITETURA DE INFERÊNCIAS                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  NÍVEL 1: Batch (Job 3AM - Memory Consolidation)                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │ • Processa todas as conversas do dia                                 │  │
+│  │ • Encontra padrões (mínimo 3 ocorrências)                           │  │
+│  │ • Salva inferências em knowledge_items e learnedPatterns            │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                               ↓ salva                                        │
+│                        [knowledge_items]                                     │
+│                        [user_memories.learnedPatterns]                       │
+│                               ↓ consulta                                     │
+│  NÍVEL 2: Real-time (Tool: analyze_context)                                 │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │ 1. LLM decide quando usar analyze_context                           │  │
+│  │ 2. Busca fatos relacionados das áreas especificadas                 │  │
+│  │ 3. Retorna padrões aprendidos com alta confiança (≥0.7)             │  │
+│  │ 4. Sugere conexões potenciais baseadas em keyword matching          │  │
+│  │ 5. Fornece estrutura para detecção de contradições                  │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 6.6.2 Quando usar analyze_context
+
+O LLM deve usar `analyze_context` antes de responder sobre:
+- **Decisões importantes** (carreira, relacionamentos, finanças)
+- **Problemas pessoais** (saúde, sono, stress)
+- **Conselhos** que requerem contexto histórico
+- **Assuntos que podem ter contradições** com informações anteriores
+
+#### 6.6.3 Estrutura de Retorno
+
+```typescript
+interface AnalyzeContextResult {
+  relatedFacts: Array<{
+    id: string;
+    type: string;
+    content: string;
+    confidence: number;
+    area?: string;
+  }>;
+  existingPatterns: Array<{
+    pattern: string;
+    confidence: number;
+    evidence: string[];
+  }>;
+  potentialConnections: string[];  // Sugestões de conexões para o LLM explorar
+  contradictions: Array<{
+    existingFact: string;
+    currentStatement: string;
+    suggestion: string;
+  }>;
+  _hint?: string;  // Instrução adicional quando lookForContradictions=true
+}
+```
+
+#### 6.6.4 Trade-offs
+
+| Aspecto | Batch (Job 3AM) | Real-time (analyze_context) |
+|---------|-----------------|----------------------------|
+| **Latência** | Nenhuma (pré-processado) | +200-500ms por tool call |
+| **Profundidade** | Alta (processa todas as conversas) | Moderada (fatos por área) |
+| **Custo** | Fixo por usuário/dia | Por uso (tokens extras) |
+| **Frescor** | Até 24h de atraso | Tempo real |
+| **Padrões** | Requer 3+ ocorrências | Usa padrões já identificados |
+
+**Recomendação:** Use batch para padrões consolidados + real-time para contexto imediato e detecção de contradições.
 
 ---
 
@@ -1298,7 +1422,7 @@ Fingir que sabe algo que não sabe
 
 | Categoria | Tools | Confirmação |
 |-----------|-------|-------------|
-| **Read** | `search_knowledge`, `get_tracking_history`, `get_person` | ❌ Não |
+| **Read** | `search_knowledge`, `get_tracking_history`, `get_person`, `analyze_context` | ❌ Não |
 | **Write** | `record_metric`, `add_knowledge`, `create_reminder`, `update_person` | ✅ Sim |
 | **Command** | Comandos explícitos `/peso 82` | ❌ Não |
 
@@ -1309,14 +1433,16 @@ Fingir que sabe algo que não sabe
 | `search_knowledge` | ❌ Não | Apenas leitura |
 | `get_tracking_history` | ❌ Não | Apenas leitura |
 | `get_person` | ❌ Não | Apenas leitura |
+| `analyze_context` | ❌ Não | Apenas leitura (análise de contexto) |
 | `record_metric` | ✅ Sim | Modifica dados |
-| `add_knowledge` | ✅ Sim | Modifica dados |
+| `add_knowledge` | ❌ Não | IA confirma naturalmente na resposta |
 | `create_reminder` | ✅ Sim | Cria agendamento |
 | `update_person` | ✅ Sim | Modifica dados |
 
-**Exceções (não requer confirmação):**
+**Exceções (não requer confirmação via UI):**
 - Comandos explícitos: `/peso 82`, `/agua 500ml`
 - Usuário já confirmou na mesma mensagem: "anota 82kg de peso"
+- `add_knowledge`: IA salva diretamente e confirma na resposta (ex: "Anotei que você é consultor de investimentos")
 
 ### 9.3 Fluxo de Confirmação
 
@@ -1590,5 +1716,5 @@ interface QualityEvaluation {
 
 ---
 
-*Última atualização: 12 Janeiro 2026*
-*Revisão: Adicionado §2.4 Tool Use Examples + inputExamples em todas as 7 tools §6.2*
+*Última atualização: 13 Janeiro 2026*
+*Revisão: Adicionado analyze_context tool (§4.1, §6.2, §9.1, §9.2), Raciocínio Inferencial (§4.1), Real-time Inference Architecture (§6.6), referência ADR-014*
