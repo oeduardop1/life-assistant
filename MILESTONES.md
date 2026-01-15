@@ -1339,53 +1339,54 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ### M1.9 — UI/UX Polish v1 🔴
 
-**Objetivo:** Refinar interface e experiência para lançamento da v1.
+**Objetivo:** Finalizar refinamentos de interface e implementar responsividade para lançamento da v1.
+
+> **Contexto:** Componentes base (EmptyState, LoadingSpinner, Skeleton, Toast, AlertDialog,
+> ErrorBoundary) foram implementados em M0.6, M1.2, M1.4. Este milestone finaliza ajustes
+> pendentes e implementa responsividade completa.
 
 **Tasks:**
 
-**Componentes de Estado (conforme `SYSTEM_SPECS.md` §4):**
-- [ ] Criar componente EmptyState reutilizável:
-  - [ ] Ícone contextual
-  - [ ] Mensagem principal
-  - [ ] Descrição secundária
-  - [ ] Call-to-action
-- [ ] Criar componente LoadingState reutilizável:
-  - [ ] Skeleton para listas
-  - [ ] Skeleton para cards
-  - [ ] Spinner para ações
-- [ ] Criar componente ErrorState reutilizável:
-  - [ ] Mensagem de erro amigável
-  - [ ] Botão de retry
-  - [ ] Link para suporte
-- [ ] Implementar Toast notifications (success, error, warning, info)
-- [ ] Implementar ConfirmationModal para ações destrutivas
+**Finalizar componentes de estado:**
+- [ ] ErrorBoundary: adicionar link "Precisa de ajuda?" para suporte
 
-**Aplicar estados nas telas implementadas (conforme `SYSTEM_SPECS.md` §4):**
-- [ ] Chat: empty (sem conversas), loading, error
-- [ ] Memória: empty (IA aprendendo sobre você), loading, error
-- [ ] Dashboard: loading (skeleton durante carregamento inicial)
+**Alinhar Empty States com `SYSTEM_SPECS.md` §4.1:**
+- [ ] Chat: ajustar mensagem para "Converse com sua assistente" + CTA "Iniciar conversa"
+- [ ] Memória: ajustar mensagem para "A IA ainda está aprendendo sobre você" + CTA "Iniciar conversa"
 
-> **Nota:** Telas futuras (Configurações, Tracking, etc.) serão polidas em seus respectivos milestones.
+**Finalizar Error Handling:**
+- [ ] Chat: adicionar botão "Tentar novamente" explícito no error state inline
+- [ ] Memória: adicionar ErrorState persistente quando fetch de items falha (além do toast)
+
+**Adicionar Toasts faltantes:**
+- [ ] Chat: toast de sucesso ao criar conversa ("Nova conversa criada")
+- [ ] Chat: toast de sucesso ao deletar conversa ("Conversa excluída")
+
+**Dashboard:**
+- [ ] Adicionar loading skeleton (preparação para quando buscar dados reais)
 
 **Responsividade:**
-- [ ] Revisar layout em mobile (< 640px)
-- [ ] Revisar layout em tablet (640px - 1024px)
-- [ ] Revisar layout em desktop (> 1024px)
-- [ ] Testar sidebar colapsável em mobile
+- [ ] Implementar hamburger menu em mobile (< 640px)
+- [ ] Implementar sidebar como overlay em mobile
+- [ ] Revisar layout do Chat em mobile (input fixo no bottom, área de mensagens scrollável)
+- [ ] Revisar layout da Memória em mobile (cards full-width, filtros empilhados)
+- [ ] Revisar layout em tablet (640px - 1024px) com sidebar colapsada
+- [ ] Verificar e ajustar layouts em desktop (> 1024px)
 
 **Testes:**
-- [ ] Testes de componentes para EmptyState, LoadingState, ErrorState
-- [ ] Teste E2E: verificar empty states nas telas principais
-- [ ] Teste E2E: verificar loading states durante carregamento
-- [ ] Testes de responsividade (viewport mobile, tablet, desktop)
+- [ ] Testes unitários para ajustes em ErrorBoundary
+- [ ] Teste E2E: verificar empty states em Chat e Memória
+- [ ] Teste E2E: verificar error states com retry
+- [ ] Teste E2E: verificar toasts em operações CRUD
+- [ ] Testes de responsividade (Playwright viewports: mobile 375px, tablet 768px, desktop 1280px)
 
 **Definition of Done:**
-- [ ] Empty/loading/error states implementados nas telas existentes (Chat, Memória, Dashboard)
-- [ ] App funciona bem em todas as resoluções (mobile, tablet, desktop)
-- [ ] Toasts funcionam para ações de CRUD (knowledge items, mensagens)
-- [ ] ConfirmationModal para ações destrutivas (delete knowledge item)
-- [ ] Não há bugs críticos
-- [ ] Testes passam
+- [ ] Empty states alinhados com SYSTEM_SPECS.md §4.1
+- [ ] Error states com botão retry e link suporte
+- [ ] Toasts em todas as operações CRUD (Chat + Memória)
+- [ ] App responsivo e funcional em mobile, tablet e desktop
+- [ ] Sidebar com hamburger menu em mobile
+- [ ] Todos os testes passam
 
 ---
 
@@ -2288,7 +2289,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
-| 2026-01-15 | M1.9 | Atualizado | Corrigido: "Notas"→"Memória", removido "Configurações" (não implementada), alinhado com SYSTEM_SPECS.md §4 e filosofia Jarvis-first |
+| 2026-01-15 | M1.9 | Reestruturado | Removidas tasks já implementadas em M0.6/M1.2/M1.4. Mantidas apenas: ajustes de texto (SYSTEM_SPECS §4.1), toasts Chat, responsividade, testes E2E. Tasks: 25→16 |
 | 2026-01-15 | M1.8 | Movido | Confirmação de Tracking via Chat incorporado ao M2.1 — depende de infraestrutura de tracking. M1.9→M1.8, M1.10→M1.9, M1.11→M1.10 |
 | 2026-01-15 | Docs | Atualizado | Gap Analysis: documentados fallbacks (AI_SPECS §10.4), tool loop limits (§6.8), conflict resolution (SYSTEM_SPECS §3.5, AI_SPECS §6.5.5), tool call logging (ENGINEERING §5.5), Raciocínio Inferencial (PRODUCT_SPECS §6.2). Tasks adicionadas: M1.9 (Logging Seguro), Backlog (stale memory) |
 | 2026-01-15 | M1.5 | Removido | Conflita com filosofia Jarvis-first; knowledge_items cobre funcionalidade |
