@@ -144,6 +144,7 @@ ${formatKnowledgeItems(existingKnowledge)}
 2. Identifique atualizações para fatos existentes
 3. Faça inferências quando houver padrões (mínimo 3 ocorrências)
 4. Atribua confidence score para cada item
+5. O título DEVE ser um resumo fiel do conteúdo - NUNCA faça inferências no título
 
 ### Formato de saída (JSON estrito):
 {
@@ -188,6 +189,23 @@ ${formatKnowledgeItems(existingKnowledge)}
 - Confidence >= 0.9 para fatos explícitos
 - NÃO crie duplicatas de knowledge_items existentes
 - Padrões requerem mínimo 3 ocorrências
+- CONTRADIÇÕES: Se identificar informação que contradiz um item existente (ex: "é solteiro" vs "está em relacionamento"), crie um novo item com a informação mais recente. O sistema detectará automaticamente a contradição e substituirá o item antigo.
+
+### IMPORTANTE - Consistência entre título e conteúdo:
+- O título DEVE refletir EXATAMENTE o que está no conteúdo
+- NUNCA faça inferências ou previsões no título
+- Use os termos exatos da conversa
+
+Exemplos de ERROS a evitar:
+❌ Título: "É solteiro" | Conteúdo: "Está em relacionamento pensando em terminar"
+   (ERRADO: "pensando em terminar" ≠ "é solteiro")
+❌ Título: "Vai mudar de emprego" | Conteúdo: "Está insatisfeito no trabalho"
+   (ERRADO: insatisfação ≠ decisão de mudar)
+
+Exemplos CORRETOS:
+✓ Título: "Relacionamento em crise" | Conteúdo: "Está em relacionamento pensando em terminar"
+✓ Título: "Insatisfação no trabalho" | Conteúdo: "Está insatisfeito no trabalho atual"
+
 - Retorne APENAS o JSON, sem texto adicional`;
 }
 

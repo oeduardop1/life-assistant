@@ -7,6 +7,12 @@
 -- Step 1: Create enums if they don't exist
 -- =============================================================================
 DO $$ BEGIN
+    CREATE TYPE life_area AS ENUM ('health', 'financial', 'relationships', 'career', 'personal_growth', 'leisure', 'spirituality', 'mental_health');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
     CREATE TYPE knowledge_item_type AS ENUM ('fact', 'preference', 'memory', 'insight', 'person');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
@@ -170,30 +176,51 @@ CREATE TRIGGER update_knowledge_items_updated_at
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- =============================================================================
--- Step 7: Enable RLS on new tables
+-- Step 7: Create helper function for RLS policies
+-- This function reads the user_id from session context (service role) or JWT (client)
+-- Must be created BEFORE RLS policies that reference it
+-- Note: Created in public schema per Supabase best practices (not auth schema)
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.get_current_user_id()
+RETURNS UUID AS $$
+BEGIN
+    -- First try to get from session context (set by service role/backend)
+    -- Then fall back to auth.uid() for direct client access
+    RETURN COALESCE(
+        NULLIF(current_setting('app.user_id', TRUE), '')::UUID,
+        auth.uid()
+    );
+EXCEPTION
+    WHEN invalid_text_representation THEN
+        RETURN auth.uid();
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- =============================================================================
+-- Step 8: Enable RLS on new tables
 -- =============================================================================
 ALTER TABLE public.user_memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.knowledge_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memory_consolidations ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================================
--- Step 8: Create RLS policies for user_memories
+-- Step 9: Create RLS policies for user_memories
 -- =============================================================================
 DROP POLICY IF EXISTS "Users can read own memory" ON public.user_memories;
 CREATE POLICY "Users can read own memory" ON public.user_memories
     FOR SELECT
-    USING ((SELECT auth.user_id()) = user_id);
+    USING ((SELECT public.get_current_user_id()) = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own memory" ON public.user_memories;
 CREATE POLICY "Users can insert own memory" ON public.user_memories
     FOR INSERT
-    WITH CHECK ((SELECT auth.user_id()) = user_id);
+    WITH CHECK ((SELECT public.get_current_user_id()) = user_id);
 
 DROP POLICY IF EXISTS "Users can update own memory" ON public.user_memories;
 CREATE POLICY "Users can update own memory" ON public.user_memories
     FOR UPDATE
-    USING ((SELECT auth.user_id()) = user_id)
-    WITH CHECK ((SELECT auth.user_id()) = user_id);
+    USING ((SELECT public.get_current_user_id()) = user_id)
+    WITH CHECK ((SELECT public.get_current_user_id()) = user_id);
 
 DROP POLICY IF EXISTS "Service role has full access to user_memories" ON public.user_memories;
 CREATE POLICY "Service role has full access to user_memories" ON public.user_memories
@@ -206,23 +233,23 @@ CREATE POLICY "Service role has full access to user_memories" ON public.user_mem
 DROP POLICY IF EXISTS "Users can read own knowledge items" ON public.knowledge_items;
 CREATE POLICY "Users can read own knowledge items" ON public.knowledge_items
     FOR SELECT
-    USING ((SELECT auth.user_id()) = user_id);
+    USING ((SELECT public.get_current_user_id()) = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own knowledge items" ON public.knowledge_items;
 CREATE POLICY "Users can insert own knowledge items" ON public.knowledge_items
     FOR INSERT
-    WITH CHECK ((SELECT auth.user_id()) = user_id);
+    WITH CHECK ((SELECT public.get_current_user_id()) = user_id);
 
 DROP POLICY IF EXISTS "Users can update own knowledge items" ON public.knowledge_items;
 CREATE POLICY "Users can update own knowledge items" ON public.knowledge_items
     FOR UPDATE
-    USING ((SELECT auth.user_id()) = user_id)
-    WITH CHECK ((SELECT auth.user_id()) = user_id);
+    USING ((SELECT public.get_current_user_id()) = user_id)
+    WITH CHECK ((SELECT public.get_current_user_id()) = user_id);
 
 DROP POLICY IF EXISTS "Users can delete own knowledge items" ON public.knowledge_items;
 CREATE POLICY "Users can delete own knowledge items" ON public.knowledge_items
     FOR DELETE
-    USING ((SELECT auth.user_id()) = user_id);
+    USING ((SELECT public.get_current_user_id()) = user_id);
 
 DROP POLICY IF EXISTS "Service role has full access to knowledge_items" ON public.knowledge_items;
 CREATE POLICY "Service role has full access to knowledge_items" ON public.knowledge_items
@@ -235,26 +262,10 @@ CREATE POLICY "Service role has full access to knowledge_items" ON public.knowle
 DROP POLICY IF EXISTS "Users can read own consolidations" ON public.memory_consolidations;
 CREATE POLICY "Users can read own consolidations" ON public.memory_consolidations
     FOR SELECT
-    USING ((SELECT auth.user_id()) = user_id);
+    USING ((SELECT public.get_current_user_id()) = user_id);
 
 DROP POLICY IF EXISTS "Service role has full access to memory_consolidations" ON public.memory_consolidations;
 CREATE POLICY "Service role has full access to memory_consolidations" ON public.memory_consolidations
     FOR ALL
     USING (auth.role() = 'service_role');
 
--- =============================================================================
--- Step 11: Create auth.user_id function if it doesn't exist
--- This function reads the user_id from the session context set by the API
--- =============================================================================
-CREATE OR REPLACE FUNCTION auth.user_id()
-RETURNS UUID AS $$
-BEGIN
-    RETURN COALESCE(
-        current_setting('app.user_id', TRUE)::UUID,
-        auth.uid()
-    );
-EXCEPTION
-    WHEN invalid_text_representation THEN
-        RETURN auth.uid();
-END;
-$$ LANGUAGE plpgsql STABLE;

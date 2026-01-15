@@ -210,7 +210,7 @@ describe('MemoryToolExecutorService', () => {
           id: 'new-item',
           title: 'New knowledge',
         });
-        mockKnowledgeItemsService.add.mockResolvedValue(mockItem);
+        mockKnowledgeItemsService.add.mockResolvedValue({ item: mockItem });
 
         const toolCall = createMockToolCall({
           name: 'add_knowledge',
@@ -245,7 +245,7 @@ describe('MemoryToolExecutorService', () => {
 
       it('should_pass_area_when_provided', async () => {
         const mockItem = createMockKnowledgeItem();
-        mockKnowledgeItemsService.add.mockResolvedValue(mockItem);
+        mockKnowledgeItemsService.add.mockResolvedValue({ item: mockItem });
 
         const toolCall = createMockToolCall({
           name: 'add_knowledge',
@@ -266,7 +266,7 @@ describe('MemoryToolExecutorService', () => {
 
       it('should_pass_confidence_when_provided', async () => {
         const mockItem = createMockKnowledgeItem();
-        mockKnowledgeItemsService.add.mockResolvedValue(mockItem);
+        mockKnowledgeItemsService.add.mockResolvedValue({ item: mockItem });
 
         const toolCall = createMockToolCall({
           name: 'add_knowledge',

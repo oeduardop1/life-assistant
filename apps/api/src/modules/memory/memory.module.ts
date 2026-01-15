@@ -3,11 +3,14 @@ import { MemoryController } from './presentation/controllers/memory.controller';
 import { UserMemoryService } from './application/services/user-memory.service';
 import { KnowledgeItemsService } from './application/services/knowledge-items.service';
 import { MemoryToolExecutorService } from './application/services/memory-tool-executor.service';
+import { ContradictionResolutionService } from './application/services/contradiction-resolution.service';
 import { UserMemoryRepository } from './infrastructure/repositories/user-memory.repository';
 import { KnowledgeItemRepository } from './infrastructure/repositories/knowledge-item.repository';
+import { ContradictionDetectorAdapter } from './infrastructure/adapters/contradiction-detector.adapter';
 import {
   USER_MEMORY_REPOSITORY,
   KNOWLEDGE_ITEM_REPOSITORY,
+  CONTRADICTION_DETECTOR,
 } from './domain/ports';
 
 /**
@@ -29,10 +32,14 @@ import {
     UserMemoryService,
     KnowledgeItemsService,
     MemoryToolExecutorService,
+    ContradictionResolutionService,
 
     // Repository implementations (injected via symbols for DI)
     UserMemoryRepository,
     KnowledgeItemRepository,
+
+    // Adapter implementations
+    ContradictionDetectorAdapter,
 
     // Bind interfaces to implementations
     {
@@ -43,11 +50,16 @@ import {
       provide: KNOWLEDGE_ITEM_REPOSITORY,
       useExisting: KnowledgeItemRepository,
     },
+    {
+      provide: CONTRADICTION_DETECTOR,
+      useExisting: ContradictionDetectorAdapter,
+    },
   ],
   exports: [
     UserMemoryService,
     KnowledgeItemsService,
     MemoryToolExecutorService,
+    ContradictionResolutionService,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class

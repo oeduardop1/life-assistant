@@ -30,7 +30,7 @@ export type AddKnowledgeParams = z.infer<typeof addKnowledgeParamsSchema>;
 export const addKnowledgeTool: ToolDefinition<typeof addKnowledgeParamsSchema> = {
   name: 'add_knowledge',
   description:
-    'Add a new fact, preference, or insight learned about the user. IMPORTANT: Always include the "area" field to categorize the knowledge properly. This enables finding related facts later.',
+    'Add a new fact, preference, or insight learned about the user. IMPORTANT: Always include the "area" field to categorize the knowledge properly. This enables finding related facts later. NOTE: Contradictions are automatically detected and resolved - if a new fact contradicts an existing one in the same area/type (e.g., "is single" vs "is in a relationship"), the older fact is automatically superseded. The response will include supersession info when this happens.',
   parameters: addKnowledgeParamsSchema,
   requiresConfirmation: false,
   inputExamples: [

@@ -2,6 +2,7 @@ import type {
   KnowledgeItem,
   NewKnowledgeItem,
   KnowledgeItemType,
+  KnowledgeItemSource,
   LifeArea,
 } from '@life-assistant/database';
 
@@ -12,9 +13,21 @@ export interface KnowledgeItemSearchParams {
   query?: string;
   type?: KnowledgeItemType;
   area?: LifeArea;
+  source?: KnowledgeItemSource;
+  confidenceMin?: number;
+  confidenceMax?: number;
+  dateFrom?: Date;
+  dateTo?: Date;
   limit?: number;
   offset?: number;
   includeDeleted?: boolean;
+
+  /**
+   * Include superseded items in results (M1.6.1)
+   * When true, returns items that have been replaced by newer versions
+   * @default false
+   */
+  includeSuperseded?: boolean;
 }
 
 /**
@@ -74,6 +87,57 @@ export interface KnowledgeItemRepositoryPort {
    * Find all knowledge items by area for a user
    */
   findByArea(userId: string, area: LifeArea, limit?: number): Promise<KnowledgeItem[]>;
+
+  /**
+   * Count knowledge items by area for a user
+   * Returns a record with counts for each life area
+   */
+  countByArea(userId: string): Promise<Record<LifeArea, number>>;
+
+  /**
+   * Count knowledge items by type for a user
+   * Returns a record with counts for each knowledge item type
+   */
+  countByType(userId: string): Promise<Record<KnowledgeItemType, number>>;
+
+  /**
+   * Find all non-deleted knowledge items for export
+   */
+  findAll(userId: string): Promise<KnowledgeItem[]>;
+
+  // =========================================================================
+  // Contradiction Detection Methods
+  // =========================================================================
+
+  /**
+   * Find active (non-superseded, non-deleted) items by type and area
+   * Used for contradiction detection when adding new items
+   */
+  findActiveBySameScope(
+    userId: string,
+    type: KnowledgeItemType,
+    area?: LifeArea | null,
+    limit?: number
+  ): Promise<KnowledgeItem[]>;
+
+  /**
+   * Supersede an item (mark as replaced by another due to contradiction)
+   * Sets supersededById and supersededAt fields
+   */
+  supersede(
+    userId: string,
+    itemId: string,
+    supersededById: string
+  ): Promise<KnowledgeItem | null>;
+
+  /**
+   * Find superseded items for a user (audit/review purposes)
+   */
+  findSuperseded(
+    userId: string,
+    limit?: number,
+    offset?: number
+  ): Promise<KnowledgeItem[]>;
 }
 
 export const KNOWLEDGE_ITEM_REPOSITORY = Symbol('KNOWLEDGE_ITEM_REPOSITORY');

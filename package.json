@@ -34,5 +34,8 @@
     "turbo": "2.7.3",
     "typescript": "5.9.3",
     "typescript-eslint": "8.52.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-switch": "^1.2.6"
   }
 }

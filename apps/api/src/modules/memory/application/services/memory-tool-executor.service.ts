@@ -148,15 +148,28 @@ export class MemoryToolExecutorService implements ToolExecutor {
     if (area !== undefined) addParams.area = area;
     if (conversationId) addParams.sourceRef = conversationId;
 
-    const item = await this.knowledgeItemsService.add(userId, addParams);
+    const { item, superseded } = await this.knowledgeItemsService.add(userId, addParams);
 
-    this.logger.log(`add_knowledge saved item ${item.id}: "${item.title ?? 'Untitled'}"`);
+    this.logger.log(`add_knowledge saved item ${item.id}: "${item.title ?? 'Untitled'}"${superseded ? ` (superseded: ${superseded.supersededItemId})` : ''}`);
 
-    return createSuccessResult(toolCall, {
+    // Build response with optional supersession info
+    const response: Record<string, unknown> = {
       success: true,
       itemId: item.id,
       message: `Conhecimento adicionado: ${item.title ?? 'Item'}`,
-    });
+    };
+
+    // Include supersession info if a contradiction was resolved
+    if (superseded) {
+      response.superseded = {
+        id: superseded.supersededItemId,
+        content: superseded.supersededContent,
+        reason: superseded.reason,
+      };
+      response.message = `Conhecimento adicionado: ${item.title ?? 'Item'} (substituiu informação anterior contraditória)`;
+    }
+
+    return createSuccessResult(toolCall, response);
   }
 
   /**

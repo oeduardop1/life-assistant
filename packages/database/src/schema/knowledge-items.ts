@@ -64,6 +64,11 @@ export const knowledgeItems = pgTable(
     // Person-specific metadata (when type = 'person')
     personMetadata: jsonb('person_metadata').$type<PersonMetadata>(),
 
+    // Supersession tracking for contradiction resolution
+    // When a new item contradicts this one, the new item's ID is stored here
+    supersededById: uuid('superseded_by_id'),
+    supersededAt: timestamp('superseded_at', { withTimezone: true }),
+
     // Soft delete
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 
@@ -80,6 +85,8 @@ export const knowledgeItems = pgTable(
     index('knowledge_items_user_type_idx').on(table.userId, table.type),
     index('knowledge_items_user_area_idx').on(table.userId, table.area),
     index('knowledge_items_source_idx').on(table.source),
+    // Index for finding active (non-superseded) items by scope
+    index('knowledge_items_user_active_scope_idx').on(table.userId, table.type, table.area),
   ]
 );
 

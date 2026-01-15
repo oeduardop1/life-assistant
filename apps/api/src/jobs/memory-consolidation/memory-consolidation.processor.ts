@@ -20,6 +20,7 @@ import { DatabaseService } from '../../database/database.service';
 import { AppLoggerService } from '../../logger/logger.service';
 import { UserMemoryService } from '../../modules/memory/application/services/user-memory.service';
 import { KnowledgeItemsService } from '../../modules/memory/application/services/knowledge-items.service';
+import { ContradictionResolutionService } from '../../modules/memory/application/services/contradiction-resolution.service';
 import { QUEUES } from '../queues';
 import {
   buildConsolidationPrompt,
@@ -85,7 +86,8 @@ export class MemoryConsolidationProcessor extends WorkerHost {
     private readonly databaseService: DatabaseService,
     private readonly logger: AppLoggerService,
     private readonly userMemoryService: UserMemoryService,
-    private readonly knowledgeItemsService: KnowledgeItemsService
+    private readonly knowledgeItemsService: KnowledgeItemsService,
+    private readonly contradictionResolution: ContradictionResolutionService
   ) {
     super();
     this.logger.setContext(MemoryConsolidationProcessor.name);
@@ -172,6 +174,12 @@ export class MemoryConsolidationProcessor extends WorkerHost {
 
     // Get existing knowledge items for context
     const existingKnowledge = await this.getExistingKnowledge(user.id);
+
+    // Run deduplication phase: find and resolve existing contradictions
+    const deduplicationResult = await this.runDeduplicationPhase(user.id, existingKnowledge);
+    if (deduplicationResult.contradictionsResolved > 0) {
+      this.logger.log(`Resolved ${String(deduplicationResult.contradictionsResolved)} existing contradictions for user ${user.id}`);
+    }
 
     // Build consolidation prompt
     const prompt = buildConsolidationPrompt(
@@ -315,6 +323,61 @@ export class MemoryConsolidationProcessor extends WorkerHost {
   }
 
   /**
+   * Run deduplication phase: find and resolve existing contradictions
+   * This helps clean up contradictions that may have been added before
+   * contradiction detection was implemented, or edge cases that slipped through.
+   */
+  private async runDeduplicationPhase(
+    userId: string,
+    existingKnowledge: KnowledgeItem[]
+  ): Promise<{ contradictionsResolved: number }> {
+    let contradictionsResolved = 0;
+
+    // Skip if less than 2 items (no contradictions possible)
+    if (existingKnowledge.length < 2) {
+      return { contradictionsResolved };
+    }
+
+    // Group items by type and area for efficient checking
+    const groupedItems = new Map<string, KnowledgeItem[]>();
+    for (const item of existingKnowledge) {
+      const key = `${item.type}:${item.area ?? 'null'}`;
+      const group = groupedItems.get(key) ?? [];
+      group.push(item);
+      groupedItems.set(key, group);
+    }
+
+    // Check each group for contradictions
+    for (const [groupKey, items] of groupedItems) {
+      // Skip groups with less than 2 items
+      if (items.length < 2) continue;
+
+      // Find contradictions in this group (returns { keep, supersede, explanation })
+      const contradictions = await this.contradictionResolution.findContradictionsInGroup(
+        userId,
+        items
+      );
+
+      // Resolve each contradiction
+      for (const contradiction of contradictions) {
+        await this.contradictionResolution.resolve(
+          userId,
+          contradiction.supersede.id,
+          contradiction.keep.id,
+          contradiction.explanation
+        );
+
+        this.logger.debug(
+          `Deduplication: resolved contradiction in ${groupKey}, kept ${contradiction.keep.id}, superseded ${contradiction.supersede.id}`
+        );
+        contradictionsResolved++;
+      }
+    }
+
+    return { contradictionsResolved };
+  }
+
+  /**
    * Apply consolidation result to memory and knowledge items
    */
   private async applyConsolidationResult(
@@ -339,7 +402,7 @@ export class MemoryConsolidationProcessor extends WorkerHost {
       this.logger.debug(`Updated memory for user ${userId}`);
     }
 
-    // Create new knowledge items
+    // Create new knowledge items (contradiction detection is enabled by default)
     for (const item of result.new_knowledge_items) {
       // Build params without undefined values (exactOptionalPropertyTypes)
       const params: Parameters<typeof this.knowledgeItemsService.add>[1] = {
@@ -352,7 +415,10 @@ export class MemoryConsolidationProcessor extends WorkerHost {
       if (item.title !== undefined) params.title = item.title;
       if (item.inferenceEvidence !== undefined) params.inferenceEvidence = item.inferenceEvidence;
 
-      await this.knowledgeItemsService.add(userId, params);
+      const { superseded } = await this.knowledgeItemsService.add(userId, params);
+      if (superseded) {
+        this.logger.debug(`Superseded item ${superseded.supersededItemId} during consolidation: ${superseded.reason}`);
+      }
     }
 
     if (result.new_knowledge_items.length > 0) {

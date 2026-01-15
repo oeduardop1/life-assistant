@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { KnowledgeItemsService } from '../../../../src/modules/memory/application/services/knowledge-items.service.js';
+import type { ContradictionResolutionService } from '../../../../src/modules/memory/application/services/contradiction-resolution.service.js';
 import type { KnowledgeItem } from '@life-assistant/database';
 
 /**
@@ -21,6 +22,8 @@ function createMockKnowledgeItem(
     inferenceEvidence: null,
     tags: [],
     validatedByUser: false,
+    supersededById: null,
+    supersededAt: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     deletedAt: null,
@@ -37,8 +40,19 @@ describe('KnowledgeItemsService', () => {
     findById: ReturnType<typeof vi.fn>;
     findByType: ReturnType<typeof vi.fn>;
     findByArea: ReturnType<typeof vi.fn>;
+    countByArea: ReturnType<typeof vi.fn>;
+    countByType: ReturnType<typeof vi.fn>;
+    findAll: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     softDelete: ReturnType<typeof vi.fn>;
+    findActiveBySameScope: ReturnType<typeof vi.fn>;
+    supersede: ReturnType<typeof vi.fn>;
+    findSuperseded: ReturnType<typeof vi.fn>;
+  };
+  let mockContradictionResolution: {
+    checkBeforeAdd: ReturnType<typeof vi.fn>;
+    resolve: ReturnType<typeof vi.fn>;
+    findContradictionsInGroup: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -51,12 +65,25 @@ describe('KnowledgeItemsService', () => {
       findById: vi.fn(),
       findByType: vi.fn(),
       findByArea: vi.fn(),
+      countByArea: vi.fn(),
+      countByType: vi.fn(),
+      findAll: vi.fn(),
       update: vi.fn(),
       softDelete: vi.fn(),
+      findActiveBySameScope: vi.fn(),
+      supersede: vi.fn(),
+      findSuperseded: vi.fn(),
+    };
+
+    mockContradictionResolution = {
+      checkBeforeAdd: vi.fn().mockResolvedValue({ shouldSupersede: null, explanation: null }),
+      resolve: vi.fn().mockResolvedValue(undefined),
+      findContradictionsInGroup: vi.fn().mockResolvedValue([]),
     };
 
     knowledgeItemsService = new KnowledgeItemsService(
-      mockRepository as unknown as ConstructorParameters<typeof KnowledgeItemsService>[0]
+      mockRepository as unknown as ConstructorParameters<typeof KnowledgeItemsService>[0],
+      mockContradictionResolution as unknown as ContradictionResolutionService
     );
   });
 
@@ -152,7 +179,8 @@ describe('KnowledgeItemsService', () => {
         source: 'conversation',
       });
 
-      expect(result).toEqual(mockItem);
+      expect(result.item).toEqual(mockItem);
+      expect(result.superseded).toBeUndefined();
       expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
         type: 'fact',
         content: 'Test content',
@@ -289,6 +317,100 @@ describe('KnowledgeItemsService', () => {
           inferenceEvidence: 'Based on 3 conversations',
         })
       );
+    });
+
+    it('should_check_for_contradictions_before_adding', async () => {
+      const mockItem = createMockKnowledgeItem();
+      mockRepository.create.mockResolvedValue(mockItem);
+
+      await knowledgeItemsService.add('user-123', {
+        type: 'fact',
+        content: 'User is in a relationship',
+        area: 'relationships',
+        source: 'conversation',
+      });
+
+      expect(mockContradictionResolution.checkBeforeAdd).toHaveBeenCalledWith(
+        'user-123',
+        'User is in a relationship',
+        'fact',
+        'relationships'
+      );
+    });
+
+    it('should_return_superseded_info_when_contradiction_found', async () => {
+      const existingItem = createMockKnowledgeItem({
+        id: 'old-item',
+        content: 'User is single',
+      });
+      const newItem = createMockKnowledgeItem({
+        id: 'new-item',
+        content: 'User is in a relationship',
+      });
+
+      mockContradictionResolution.checkBeforeAdd.mockResolvedValue({
+        shouldSupersede: existingItem,
+        explanation: 'Single contradicts relationship',
+      });
+      mockRepository.create.mockResolvedValue(newItem);
+
+      const result = await knowledgeItemsService.add('user-123', {
+        type: 'fact',
+        content: 'User is in a relationship',
+        area: 'relationships',
+        source: 'conversation',
+      });
+
+      expect(result.item).toEqual(newItem);
+      expect(result.superseded).toBeDefined();
+      expect(result.superseded?.supersededItemId).toBe('old-item');
+      expect(result.superseded?.supersededContent).toBe('User is single');
+      expect(result.superseded?.reason).toBe('Single contradicts relationship');
+    });
+
+    it('should_resolve_contradiction_after_creating_item', async () => {
+      const existingItem = createMockKnowledgeItem({
+        id: 'old-item',
+        content: 'User is single',
+      });
+      const newItem = createMockKnowledgeItem({
+        id: 'new-item',
+        content: 'User is in a relationship',
+      });
+
+      mockContradictionResolution.checkBeforeAdd.mockResolvedValue({
+        shouldSupersede: existingItem,
+        explanation: 'Single contradicts relationship',
+      });
+      mockRepository.create.mockResolvedValue(newItem);
+
+      await knowledgeItemsService.add('user-123', {
+        type: 'fact',
+        content: 'User is in a relationship',
+        area: 'relationships',
+        source: 'conversation',
+      });
+
+      expect(mockContradictionResolution.resolve).toHaveBeenCalledWith(
+        'user-123',
+        'old-item',
+        'new-item',
+        'Single contradicts relationship'
+      );
+    });
+
+    it('should_skip_contradiction_check_when_skipContradictionCheck_is_true', async () => {
+      const mockItem = createMockKnowledgeItem();
+      mockRepository.create.mockResolvedValue(mockItem);
+
+      await knowledgeItemsService.add('user-123', {
+        type: 'fact',
+        content: 'Test',
+        source: 'conversation',
+        skipContradictionCheck: true,
+      });
+
+      expect(mockContradictionResolution.checkBeforeAdd).not.toHaveBeenCalled();
     });
   });
 
@@ -508,6 +630,209 @@ describe('KnowledgeItemsService', () => {
       await knowledgeItemsService.findByArea('user-123', 'health', 10);
 
       expect(mockRepository.findByArea).toHaveBeenCalledWith('user-123', 'health', 10);
+    });
+  });
+
+  describe('update', () => {
+    it('should_update_item_with_all_fields', async () => {
+      const updatedItem = createMockKnowledgeItem({
+        title: 'Updated title',
+        content: 'Updated content',
+        tags: ['tag1', 'tag2'],
+      });
+      mockRepository.update.mockResolvedValue(updatedItem);
+
+      const result = await knowledgeItemsService.update('user-123', 'item-123', {
+        title: 'Updated title',
+        content: 'Updated content',
+        tags: ['tag1', 'tag2'],
+      });
+
+      expect(result).toEqual(updatedItem);
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'item-123', {
+        title: 'Updated title',
+        content: 'Updated content',
+        tags: ['tag1', 'tag2'],
+      });
+    });
+
+    it('should_update_item_with_partial_fields', async () => {
+      const updatedItem = createMockKnowledgeItem({ title: 'New title' });
+      mockRepository.update.mockResolvedValue(updatedItem);
+
+      const result = await knowledgeItemsService.update('user-123', 'item-123', {
+        title: 'New title',
+      });
+
+      expect(result).toEqual(updatedItem);
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'item-123', {
+        title: 'New title',
+      });
+    });
+
+    it('should_return_existing_item_when_no_updates_provided', async () => {
+      const existingItem = createMockKnowledgeItem();
+      mockRepository.findById.mockResolvedValue(existingItem);
+
+      const result = await knowledgeItemsService.update('user-123', 'item-123', {});
+
+      expect(result).toEqual(existingItem);
+      expect(mockRepository.findById).toHaveBeenCalledWith('user-123', 'item-123');
+      expect(mockRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('should_return_null_when_item_not_found', async () => {
+      mockRepository.update.mockResolvedValue(null);
+
+      const result = await knowledgeItemsService.update('user-123', 'nonexistent', {
+        title: 'New title',
+      });
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getStats', () => {
+    it('should_return_stats_with_counts_by_area_and_type', async () => {
+      mockRepository.countByArea.mockResolvedValue({
+        health: 5,
+        financial: 3,
+        relationships: 2,
+        career: 8,
+        personal_growth: 4,
+        leisure: 1,
+        spirituality: 0,
+        mental_health: 2,
+      });
+      mockRepository.countByType.mockResolvedValue({
+        fact: 10,
+        preference: 8,
+        memory: 3,
+        insight: 2,
+        person: 2,
+      });
+
+      const result = await knowledgeItemsService.getStats('user-123');
+
+      expect(result).toEqual({
+        byArea: {
+          health: 5,
+          financial: 3,
+          relationships: 2,
+          career: 8,
+          personal_growth: 4,
+          leisure: 1,
+          spirituality: 0,
+          mental_health: 2,
+        },
+        byType: {
+          fact: 10,
+          preference: 8,
+          memory: 3,
+          insight: 2,
+          person: 2,
+        },
+        total: 25, // Sum of byType counts
+      });
+    });
+
+    it('should_return_zero_counts_for_empty_user', async () => {
+      mockRepository.countByArea.mockResolvedValue({
+        health: 0,
+        financial: 0,
+        relationships: 0,
+        career: 0,
+        personal_growth: 0,
+        leisure: 0,
+        spirituality: 0,
+        mental_health: 0,
+      });
+      mockRepository.countByType.mockResolvedValue({
+        fact: 0,
+        preference: 0,
+        memory: 0,
+        insight: 0,
+        person: 0,
+      });
+
+      const result = await knowledgeItemsService.getStats('user-123');
+
+      expect(result.total).toBe(0);
+    });
+  });
+
+  describe('exportAll', () => {
+    it('should_return_all_items_including_superseded_with_stats', async () => {
+      const mockItems = [
+        createMockKnowledgeItem({ id: 'item-1', supersededById: null }),
+        createMockKnowledgeItem({ id: 'item-2', supersededById: null }),
+        createMockKnowledgeItem({ id: 'item-3', supersededById: 'item-2', supersededAt: new Date() }),
+      ];
+      mockRepository.search.mockResolvedValue(mockItems);
+
+      const result = await knowledgeItemsService.exportAll('user-123');
+
+      expect(result.items).toEqual(mockItems);
+      expect(result.total).toBe(3);
+      expect(result.stats.active).toBe(2);
+      expect(result.stats.superseded).toBe(1);
+      expect(result.exportedAt).toBeDefined();
+      expect(mockRepository.search).toHaveBeenCalledWith('user-123', {
+        includeSuperseded: true,
+        limit: 10000,
+      });
+    });
+
+    it('should_return_empty_export_when_no_items', async () => {
+      mockRepository.search.mockResolvedValue([]);
+
+      const result = await knowledgeItemsService.exportAll('user-123');
+
+      expect(result.items).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(result.stats.active).toBe(0);
+      expect(result.stats.superseded).toBe(0);
+    });
+  });
+
+  describe('list with includeSuperseded', () => {
+    it('should_pass_includeSuperseded_to_repository_when_true', async () => {
+      mockRepository.search.mockResolvedValue([]);
+      mockRepository.countSearch.mockResolvedValue(0);
+
+      await knowledgeItemsService.list('user-123', { includeSuperseded: true });
+
+      expect(mockRepository.search).toHaveBeenCalledWith('user-123',
+        expect.objectContaining({ includeSuperseded: true })
+      );
+      expect(mockRepository.countSearch).toHaveBeenCalledWith('user-123',
+        expect.objectContaining({ includeSuperseded: true })
+      );
+    });
+
+    it('should_not_include_superseded_by_default', async () => {
+      mockRepository.search.mockResolvedValue([]);
+      mockRepository.countSearch.mockResolvedValue(0);
+
+      await knowledgeItemsService.list('user-123', {});
+
+      // Should not have includeSuperseded in the call
+      const searchCall = mockRepository.search.mock.calls[0][1];
+      expect(searchCall.includeSuperseded).toBeUndefined();
+    });
+
+    it('should_return_superseded_items_when_includeSuperseded_is_true', async () => {
+      const mockItems = [
+        createMockKnowledgeItem({ id: 'item-1', supersededById: null }),
+        createMockKnowledgeItem({ id: 'item-2', supersededById: 'item-1', supersededAt: new Date() }),
+      ];
+      mockRepository.search.mockResolvedValue(mockItems);
+      mockRepository.countSearch.mockResolvedValue(2);
+
+      const result = await knowledgeItemsService.list('user-123', { includeSuperseded: true });
+
+      expect(result.items).toHaveLength(2);
+      expect(result.items.some(i => i.supersededById !== null)).toBe(true);
     });
   });
 });
