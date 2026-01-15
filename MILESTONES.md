@@ -1337,7 +1337,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.9 — UI/UX Polish v1 🔴
+### M1.9 — UI/UX Polish v1 🟡
 
 **Objetivo:** Finalizar refinamentos de interface e implementar responsividade para lançamento da v1.
 
@@ -1348,32 +1348,32 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 **Tasks:**
 
 **Finalizar componentes de estado:**
-- [ ] ErrorBoundary: adicionar link "Precisa de ajuda?" para suporte
+- [x] ErrorBoundary: adicionar link "Precisa de ajuda?" para suporte
 
 **Alinhar Empty States com `SYSTEM_SPECS.md` §4.1:**
-- [ ] Chat: ajustar mensagem para "Converse com sua assistente" + CTA "Iniciar conversa"
-- [ ] Memória: ajustar mensagem para "A IA ainda está aprendendo sobre você" + CTA "Iniciar conversa"
+- [x] Chat: ajustar mensagem para "Converse com sua assistente" + CTA "Iniciar conversa"
+- [x] Memória: ajustar mensagem para "A IA ainda está aprendendo sobre você" + CTA "Iniciar conversa"
 
 **Finalizar Error Handling:**
-- [ ] Chat: adicionar botão "Tentar novamente" explícito no error state inline
-- [ ] Memória: adicionar ErrorState persistente quando fetch de items falha (além do toast)
+- [x] Chat: adicionar botão "Tentar novamente" explícito no error state inline
+- [x] Memória: adicionar ErrorState persistente quando fetch de items falha (além do toast)
 
 **Adicionar Toasts faltantes:**
-- [ ] Chat: toast de sucesso ao criar conversa ("Nova conversa criada")
-- [ ] Chat: toast de sucesso ao deletar conversa ("Conversa excluída")
+- [x] Chat: toast de sucesso ao criar conversa ("Nova conversa criada")
+- [x] Chat: toast de sucesso ao deletar conversa ("Conversa excluída")
 
 **Dashboard:**
-- [ ] Adicionar loading skeleton (preparação para quando buscar dados reais)
+- [x] Adicionar loading skeleton (preparação para quando buscar dados reais)
 
 **Responsividade:**
-- [ ] Implementar hamburger menu em mobile (< 640px)
-- [ ] Implementar sidebar como overlay em mobile
-- [ ] Revisar layout do Chat em mobile (input fixo no bottom, área de mensagens scrollável)
-- [ ] Revisar layout da Memória em mobile (cards full-width, filtros empilhados)
-- [ ] Revisar layout em tablet (640px - 1024px) com sidebar colapsada
-- [ ] Verificar e ajustar layouts em desktop (> 1024px)
+- [x] Implementar hamburger menu em mobile (< 640px) — já existia em header.tsx
+- [x] Implementar sidebar como overlay em mobile (backdrop + translate-x animation)
+- [x] Revisar layout do Chat em mobile (conversation list hidden, chat area full-width)
+- [x] Revisar layout da Memória em mobile (overview full-width, filters wrap)
+- [x] Revisar layout em tablet (768px) — sidebar always visible
+- [x] Verificar e ajustar layouts em desktop (> 1024px) — confirmado funcional
 
-**Testes:**
+**Testes (pendente):**
 - [ ] Testes unitários para ajustes em ErrorBoundary
 - [ ] Teste E2E: verificar empty states em Chat e Memória
 - [ ] Teste E2E: verificar error states com retry
@@ -1381,12 +1381,20 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Testes de responsividade (Playwright viewports: mobile 375px, tablet 768px, desktop 1280px)
 
 **Definition of Done:**
-- [ ] Empty states alinhados com SYSTEM_SPECS.md §4.1
-- [ ] Error states com botão retry e link suporte
-- [ ] Toasts em todas as operações CRUD (Chat + Memória)
-- [ ] App responsivo e funcional em mobile, tablet e desktop
-- [ ] Sidebar com hamburger menu em mobile
+- [x] Empty states alinhados com SYSTEM_SPECS.md §4.1
+- [x] Error states com botão retry e link suporte
+- [x] Toasts em todas as operações CRUD (Chat + Memória)
+- [x] App responsivo e funcional em mobile, tablet e desktop
+- [x] Sidebar com hamburger menu em mobile
 - [ ] Todos os testes passam
+
+**Notas (2026-01-15):**
+- 14 tasks de UI implementadas (Estados, Toasts, Dashboard, Responsividade)
+- Sidebar: transform-based com backdrop em mobile, sempre visível em desktop (md+)
+- Chat: conversation list hidden em mobile, usa empty state para iniciar conversa
+- Memory: overview full-width em mobile (lg:flex-row), error state persistente com retry
+- Dashboard: skeleton durante loading inicial, textos atualizados para "Memória"
+- Testes serão implementados em etapa posterior
 
 ---
 
@@ -2289,6 +2297,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-15 | M1.9 | UI Impl. | 14 tasks de UI implementadas: ErrorBoundary support link, empty states (Chat/Memory), error states com retry, toasts CRUD (Chat), dashboard skeleton, responsividade (sidebar mobile overlay, layouts responsive). Testes pendentes |
 | 2026-01-15 | M1.9 | Reestruturado | Removidas tasks já implementadas em M0.6/M1.2/M1.4. Mantidas apenas: ajustes de texto (SYSTEM_SPECS §4.1), toasts Chat, responsividade, testes E2E. Tasks: 25→16 |
 | 2026-01-15 | M1.8 | Movido | Confirmação de Tracking via Chat incorporado ao M2.1 — depende de infraestrutura de tracking. M1.9→M1.8, M1.10→M1.9, M1.11→M1.10 |
 | 2026-01-15 | Docs | Atualizado | Gap Analysis: documentados fallbacks (AI_SPECS §10.4), tool loop limits (§6.8), conflict resolution (SYSTEM_SPECS §3.5, AI_SPECS §6.5.5), tool call logging (ENGINEERING §5.5), Raciocínio Inferencial (PRODUCT_SPECS §6.2). Tasks adicionadas: M1.9 (Logging Seguro), Backlog (stale memory) |
@@ -2314,4 +2323,4 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 ---
 
 *Última atualização: 15 Janeiro 2026*
-*Revisão: M1.8 (Confirmação de Tracking) movido para M2.1 — dependência de infraestrutura de tracking. Renumeração: M1.9→M1.8, M1.10→M1.9, M1.11→M1.10.*
+*Revisão: M1.9 — 14 tasks de UI implementadas (estados, toasts, responsividade). Testes pendentes.*

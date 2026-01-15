@@ -173,6 +173,11 @@ export function useChat({ conversationId }: UseChatOptions) {
     setIsStreaming(false);
   }, []);
 
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   return {
     messages,
     isLoadingMessages: messagesQuery.isLoading,
@@ -183,5 +188,6 @@ export function useChat({ conversationId }: UseChatOptions) {
     error,
     cancelStream,
     refetchMessages: messagesQuery.refetch,
+    clearError,
   };
 }

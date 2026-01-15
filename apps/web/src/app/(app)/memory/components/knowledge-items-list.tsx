@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { Brain, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { KnowledgeItemCard } from './knowledge-item-card';
 import type { KnowledgeItem } from '../types';
 
@@ -17,6 +19,7 @@ interface KnowledgeItemsListProps {
   onDelete: (item: KnowledgeItem) => void;
   onValidate: (item: KnowledgeItem) => void;
   validatingId?: string | null;
+  isFiltered?: boolean;
 }
 
 function LoadingSkeleton() {
@@ -43,15 +46,32 @@ function LoadingSkeleton() {
   );
 }
 
-function EmptyState() {
+interface EmptyStateProps {
+  isFiltered?: boolean;
+}
+
+function EmptyState({ isFiltered = false }: EmptyStateProps) {
+  if (isFiltered) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="text-muted-foreground text-sm">
+          <p className="font-medium">Nenhum conhecimento encontrado</p>
+          <p className="mt-1">Ajuste os filtros de busca.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="text-muted-foreground text-sm">
-        <p className="font-medium">Nenhum conhecimento encontrado</p>
-        <p className="mt-1">
-          Adicione novos itens ou ajuste os filtros de busca.
-        </p>
-      </div>
+      <Brain className="h-12 w-12 text-muted-foreground mb-4" />
+      <p className="font-medium">A IA ainda está aprendendo sobre você</p>
+      <p className="mt-1 text-muted-foreground text-sm">
+        Converse comigo e vou lembrar das coisas importantes.
+      </p>
+      <Link href="/chat">
+        <Button className="mt-4">Iniciar conversa</Button>
+      </Link>
     </div>
   );
 }
@@ -66,6 +86,7 @@ export function KnowledgeItemsList({
   onDelete,
   onValidate,
   validatingId,
+  isFiltered,
 }: KnowledgeItemsListProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -100,7 +121,7 @@ export function KnowledgeItemsList({
   }
 
   if (items.length === 0) {
-    return <EmptyState />;
+    return <EmptyState isFiltered={isFiltered} />;
   }
 
   return (

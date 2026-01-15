@@ -3,7 +3,9 @@
 import { useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   ConversationList,
@@ -61,6 +63,8 @@ export default function ChatPage() {
     streamingContent,
     error,
     cancelStream,
+    clearError,
+    refetchMessages,
   } = useChat({ conversationId: selectedConversationId });
 
   // Handle creating a new conversation
@@ -70,6 +74,7 @@ export default function ChatPage() {
       {
         onSuccess: (newConversation) => {
           setSelectedConversationId(newConversation.id);
+          toast.success('Nova conversa criada');
         },
       }
     );
@@ -81,15 +86,19 @@ export default function ChatPage() {
       if (selectedConversationId === id) {
         setSelectedConversationId(null);
       }
-      deleteConversation(id);
+      deleteConversation(id, {
+        onSuccess: () => {
+          toast.success('Conversa excluída');
+        },
+      });
     },
     [selectedConversationId, deleteConversation, setSelectedConversationId]
   );
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] gap-4">
-      {/* Sidebar */}
-      <Card className="w-72 shrink-0 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)] gap-4">
+      {/* Conversation sidebar - hidden on mobile */}
+      <Card className="hidden md:flex w-72 shrink-0 overflow-hidden flex-col">
         <ConversationList
           conversations={conversations}
           selectedId={selectedConversationId}
@@ -101,13 +110,23 @@ export default function ChatPage() {
         />
       </Card>
 
-      {/* Main chat area */}
-      <Card className="flex-1 flex flex-col overflow-hidden">
+      {/* Main chat area - full width on mobile */}
+      <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* Error alert */}
         {error && (
           <Alert variant="destructive" className="m-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="flex-1">{error}</AlertDescription>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                clearError();
+                refetchMessages();
+              }}
+            >
+              Tentar novamente
+            </Button>
           </Alert>
         )}
 

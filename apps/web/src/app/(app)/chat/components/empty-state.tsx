@@ -15,10 +15,9 @@ export function EmptyState({ type, onCreateConversation }: EmptyStateProps) {
         <div className="rounded-full bg-muted p-4 mb-4">
           <MessageSquare className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-medium mb-2">Nenhuma conversa ainda</h3>
+        <h3 className="text-lg font-medium mb-2">Converse com sua assistente</h3>
         <p className="text-muted-foreground text-sm mb-4 max-w-sm">
-          Inicie uma conversa com sua assistente pessoal. Ela pode ajudar com
-          organização, decisões e reflexões.
+          Ela pode ajudar com organização, decisões e reflexões.
         </p>
         {onCreateConversation && (
           <Button onClick={onCreateConversation} data-testid="chat-start-conversation">

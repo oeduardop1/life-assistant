@@ -56,6 +56,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <CardDescription>
                 Um erro inesperado ocorreu. Por favor, tente novamente.
               </CardDescription>
+              <a
+                href="mailto:suporte@lifeassistant.ai"
+                className="text-sm text-muted-foreground hover:underline"
+              >
+                Precisa de ajuda?
+              </a>
             </CardHeader>
             <CardContent>
               {process.env.NODE_ENV === 'development' && this.state.error && (

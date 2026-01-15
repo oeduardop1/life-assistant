@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Plus, Download, Loader2 } from 'lucide-react';
+import { Plus, Download, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,7 +58,22 @@ export default function MemoryPage() {
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
+    isError,
+    error: itemsError,
+    refetch: refetchItems,
   } = useKnowledgeItemsFlat(filters);
+
+  // Check if any filter (besides pagination) is active
+  const isFiltered = Boolean(
+    filters.type ||
+    filters.area ||
+    filters.source ||
+    filters.confidenceMin ||
+    filters.confidenceMax ||
+    filters.search ||
+    filters.dateFrom ||
+    filters.dateTo
+  );
 
   // Mutations
   const createItem = useCreateItem();
@@ -153,14 +168,14 @@ export default function MemoryPage() {
   }, [exportMemory]);
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] gap-4">
-      {/* Sidebar - Overview */}
-      <div className="w-80 shrink-0">
+    <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-10rem)] gap-4">
+      {/* Sidebar - Overview: full width on mobile, fixed on desktop */}
+      <div className="w-full lg:w-80 lg:shrink-0">
         <MemoryOverviewComponent data={overview} isLoading={isLoadingOverview} />
       </div>
 
       {/* Main area - Knowledge Items */}
-      <Card className="flex-1 flex flex-col overflow-hidden">
+      <Card className="flex-1 flex flex-col overflow-hidden min-h-[400px]">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">
@@ -193,17 +208,31 @@ export default function MemoryPage() {
         </div>
 
         <div className="flex-1 px-6 pb-6 overflow-hidden">
-          <KnowledgeItemsList
-            items={items}
-            isLoading={isLoadingItems}
-            isFetchingNextPage={isFetchingNextPage}
-            hasNextPage={hasNextPage}
-            fetchNextPage={fetchNextPage}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onValidate={handleValidate}
-            validatingId={validatingId}
-          />
+          {isError ? (
+            <div className="flex flex-col items-center justify-center h-full">
+              <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+              <p className="font-medium">Erro ao carregar conhecimentos</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {itemsError instanceof Error ? itemsError.message : 'Erro desconhecido'}
+              </p>
+              <Button onClick={() => refetchItems()} className="mt-4">
+                Tentar novamente
+              </Button>
+            </div>
+          ) : (
+            <KnowledgeItemsList
+              items={items}
+              isLoading={isLoadingItems}
+              isFetchingNextPage={isFetchingNextPage}
+              hasNextPage={hasNextPage}
+              fetchNextPage={fetchNextPage}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onValidate={handleValidate}
+              validatingId={validatingId}
+              isFiltered={isFiltered}
+            />
+          )}
         </div>
       </Card>
 
