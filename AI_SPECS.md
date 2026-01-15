@@ -201,7 +201,7 @@ const llm = LLMFactory.create(config.llmProvider);
 **Vantagens da Abstração:**
 - Troca de provider sem refatoração de código
 - Fallback automático se provider falhar
-- Otimização de custo por tipo de tarefa (ex: usar modelo menor para classificação de intent)
+- Otimização de custo por tipo de tarefa (ex: usar modelo menor para tarefas simples)
 
 ### 2.4 Tool Use Examples
 
@@ -482,128 +482,6 @@ NÃO tome a decisão pelo usuário - ajude-o a decidir.
 - Mantenha tom amigável e pessoal
 - Use emojis com moderação para destacar pontos
 - Personalize com o nome do usuário
-```
-
----
-
-## 5) Classificação de Intent
-
-### 5.1 Categorias de Intent
-
-```typescript
-enum IntentCategory {
-  // Comandos explícitos
-  COMMAND = 'command',           // /peso, /agua, /nota
-  
-  // Ações implícitas
-  TRACK_METRIC = 'track_metric', // "pesei 82kg hoje"
-  CREATE_NOTE = 'create_note',   // "anota isso: ..."
-  CREATE_REMINDER = 'create_reminder', // "me lembra amanhã"
-  START_DECISION = 'start_decision', // "preciso decidir se..."
-  
-  // Consultas
-  QUERY_DATA = 'query_data',     // "quanto gastei esse mês?"
-  QUERY_SCORE = 'query_score',   // "como está meu score?"
-  QUERY_HISTORY = 'query_history', // "o que registrei ontem?"
-  
-  // Conversa
-  CHAT_GENERAL = 'chat_general', // conversa livre
-  CHAT_COUNSELOR = 'chat_counselor', // reflexão profunda
-  CHAT_GREETING = 'chat_greeting', // "oi", "bom dia"
-  
-  // Sistema
-  HELP = 'help',                 // "o que você pode fazer?"
-  SETTINGS = 'settings',         // "mudar configurações"
-  FEEDBACK = 'feedback',         // "isso não está certo"
-}
-```
-
-### 5.2 Regras de Classificação
-
-| Padrão | Intent | Exemplo |
-|--------|--------|---------|
-| `/comando` | COMMAND | "/peso 82" |
-| Número + unidade métrica | TRACK_METRIC | "82kg", "2L de água" |
-| "gastei", "comprei" + valor | TRACK_METRIC (expense) | "gastei 50 no mercado" |
-| "anota", "nota:", "lembrar" | CREATE_NOTE | "anota: ideia para projeto" |
-| "me lembra", "lembrete" | CREATE_REMINDER | "me lembra amanhã às 9h" |
-| "decidir", "decisão", "devo" | START_DECISION | "devo aceitar o emprego?" |
-| "quanto", "como está", "qual" | QUERY_* | "quanto gastei?" |
-| "oi", "olá", "bom dia" | CHAT_GREETING | "oi, tudo bem?" |
-| "preciso desabafar", "posso falar" | CHAT_COUNSELOR | "preciso conversar..." |
-| "ajuda", "o que você faz" | HELP | "como funciona?" |
-| Outros | CHAT_GENERAL | Qualquer outro |
-
-### 5.3 Prompt de Classificação
-
-```markdown
-Classifique a intenção da mensagem do usuário.
-
-Mensagem: "{user_message}"
-
-Categorias possíveis:
-- COMMAND: comando explícito começando com /
-- TRACK_METRIC: registrar métrica (peso, água, gasto, exercício, humor, sono)
-- CREATE_NOTE: criar nota ou anotação
-- CREATE_REMINDER: criar lembrete
-- START_DECISION: iniciar análise de decisão
-- QUERY_DATA: perguntar sobre dados (gastos, métricas)
-- QUERY_SCORE: perguntar sobre Life Balance Score
-- QUERY_HISTORY: perguntar sobre histórico
-- CHAT_GREETING: saudação
-- CHAT_COUNSELOR: pedido de conversa profunda/desabafo
-- CHAT_GENERAL: conversa geral
-- HELP: pedido de ajuda sobre o sistema
-- SETTINGS: configurações
-- FEEDBACK: feedback sobre o sistema
-
-Responda APENAS com um JSON:
-{
-  "intent": "CATEGORIA",
-  "confidence": 0.0-1.0,
-  "extracted_data": { ... } // dados extraídos, se aplicável
-}
-```
-
-### 5.4 Extração de Dados por Intent
-
-#### TRACK_METRIC
-
-```typescript
-interface TrackMetricExtraction {
-  type: 'weight' | 'water' | 'expense' | 'exercise' | 'mood' | 'sleep' | 'energy';
-  value: number;
-  unit?: string;
-  category?: string;     // para expense
-  description?: string;  // para expense
-  date?: string;         // ISO date, default: now
-}
-```
-
-**Exemplos:**
-```
-"pesei 82.5kg" → { type: "weight", value: 82.5, unit: "kg" }
-"tomei 500ml de água" → { type: "water", value: 500, unit: "ml" }
-"gastei 150 no mercado" → { type: "expense", value: 150, category: "food", description: "mercado" }
-"corri 5km em 30min" → { type: "exercise", value: 30, unit: "min", metadata: { distance: 5000 } }
-"humor 7" → { type: "mood", value: 7 }
-"dormi 7 horas" → { type: "sleep", value: 7, unit: "hours" }
-```
-
-#### CREATE_REMINDER
-
-```typescript
-interface ReminderExtraction {
-  title: string;
-  datetime: string;  // ISO datetime
-  repeat?: 'daily' | 'weekly' | 'monthly';
-}
-```
-
-**Exemplos:**
-```
-"me lembra amanhã às 9h da reunião" → { title: "reunião", datetime: "2026-01-07T09:00:00" }
-"lembrete: pagar conta dia 10" → { title: "pagar conta", datetime: "2026-01-10T09:00:00" }
 ```
 
 ---
@@ -1533,7 +1411,6 @@ Fingir que sabe algo que não sabe
 |-----------|-------|-------------|
 | **Read** | `search_knowledge`, `get_tracking_history`, `get_person`, `analyze_context` | ❌ Não |
 | **Write** | `record_metric`, `add_knowledge`, `create_reminder`, `update_person` | ✅ Sim |
-| **Command** | Comandos explícitos `/peso 82` | ❌ Não |
 
 ### 9.2 Regras de Confirmação
 
@@ -1549,7 +1426,6 @@ Fingir que sabe algo que não sabe
 | `update_person` | ✅ Sim | Modifica dados |
 
 **Exceções (não requer confirmação via UI):**
-- Comandos explícitos: `/peso 82`, `/agua 500ml`
 - Usuário já confirmou na mesma mensagem: "anota 82kg de peso"
 - `add_knowledge`: IA salva diretamente e confirma na resposta (ex: "Anotei que você é consultor de investimentos")
 
@@ -1654,7 +1530,6 @@ const errorMessages = {
 |---------|-----------|------|
 | Response time | Tempo até primeiro token | < 500ms |
 | Full response time | Tempo total de resposta | < 3s |
-| Intent accuracy | Classificação correta | > 95% |
 | Action extraction | Ações extraídas corretamente | > 90% |
 | User satisfaction | Thumbs up/down | > 80% positivo |
 | Fallback rate | Respostas de fallback | < 5% |
@@ -1671,9 +1546,7 @@ interface AIInteractionLog {
   
   // Input
   userMessage: string;
-  intent: IntentCategory;
-  intentConfidence: number;
-  
+
   // Context (Tool Use + Memory)
   toolsUsed: string[];
   memoryContextRetrieved: number;
@@ -1700,22 +1573,7 @@ interface AIInteractionLog {
 
 ### 12.1 Casos de Teste Obrigatórios
 
-#### Intent Classification
-
-```typescript
-const intentTests = [
-  { input: "peso 82", expected: "COMMAND" },
-  { input: "pesei 82kg hoje", expected: "TRACK_METRIC" },
-  { input: "gastei 50 reais no mercado", expected: "TRACK_METRIC" },
-  { input: "me lembra amanhã às 9h", expected: "CREATE_REMINDER" },
-  { input: "quanto gastei esse mês?", expected: "QUERY_DATA" },
-  { input: "oi, tudo bem?", expected: "CHAT_GREETING" },
-  { input: "preciso desabafar", expected: "CHAT_COUNSELOR" },
-  { input: "devo aceitar esse emprego?", expected: "START_DECISION" },
-];
-```
-
-#### Data Extraction
+#### Tool Use
 
 ```typescript
 const extractionTests = [
@@ -1756,7 +1614,7 @@ const guardrailTests = [
 ```typescript
 interface QualityEvaluation {
   // Automatizável
-  intentCorrect: boolean;
+  toolCallsCorrect: boolean;
   dataExtractedCorrect: boolean;
   responseTime: number;
   guardrailsRespected: boolean;
@@ -1778,7 +1636,7 @@ interface QualityEvaluation {
 ## Checklist de Feature de IA
 
 ### Funcional
-- [ ] Intent classificado corretamente (>95% dos casos)
+- [ ] Tool calls executadas corretamente (>95% dos casos)
 - [ ] Dados extraídos corretamente
 - [ ] Ações executadas quando identificadas
 - [ ] Confirmação quando necessário
@@ -1796,7 +1654,7 @@ interface QualityEvaluation {
 - [ ] Tool calls executando corretamente
 
 ### Testes
-- [ ] Testes de intent (casos de teste)
+- [ ] Testes de tool calls (casos de teste)
 - [ ] Testes de extração
 - [ ] Testes de guardrail
 - [ ] Avaliação humana de qualidade

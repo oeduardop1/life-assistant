@@ -249,21 +249,14 @@ flowchart TB
         C --> D[Save to DB]
     end
 
-    subgraph Classification["2. CLASSIFICAÇÃO"]
-        D --> E[Intent Classifier]
-        E --> F{É comando?}
-        F -->|Sim| G[Execute Command]
-        F -->|Não| H[Continue to Context]
+    subgraph Context["2. CONTEXTO (ADR-012)"]
+        D --> I[Histórico Recente]
+        D --> J[User Memory]
+        D --> K[Tools Disponíveis]
+        D --> L[Área Atual]
     end
 
-    subgraph Context["3. CONTEXTO (ADR-012)"]
-        H --> I[Histórico Recente]
-        H --> J[User Memory]
-        H --> K[Tools Disponíveis]
-        H --> L[Área Atual]
-    end
-
-    subgraph Generation["4. GERAÇÃO + TOOL LOOP"]
+    subgraph Generation["3. GERAÇÃO + TOOL LOOP"]
         I --> M[Build Prompt]
         J --> M
         K --> M
@@ -275,26 +268,11 @@ flowchart TB
         O -->|Não| Q[Stream Response]
     end
 
-    subgraph PostProcess["5. PÓS-PROCESSAMENTO"]
+    subgraph PostProcess["4. PÓS-PROCESSAMENTO"]
         Q --> R[Save Response]
         R --> S[Log Tool Calls]
     end
 ```
-
-#### Comandos Reconhecidos
-
-| Comando | Aliases | Ação | Exemplo |
-|---------|---------|------|---------|
-| `/peso` | peso, weight | Registrar peso | "peso 82.5" |
-| `/agua` | água, water | Registrar água | "água 500ml" |
-| `/gasto` | gasto, gastei | Registrar despesa | "gastei 50 no mercado" |
-| `/exercicio` | exercício, treino | Registrar exercício | "corri 5km" |
-| `/humor` | humor, mood | Registrar humor | "humor 7" |
-| `/sono` | sono, dormi | Registrar sono | "dormi 7h" |
-| `/nota` | nota, note | Criar nota rápida | "nota: ideia para projeto" |
-| `/lembrete` | lembrete, reminder | Criar lembrete | "lembrete amanhã 9h reunião" |
-| `/decisao` | decisão, decision | Iniciar decisão | "decisão: devo aceitar?" |
-| `/score` | score, pontuação | Ver Life Balance Score | "/score" |
 
 #### Regras de Rate Limit
 
@@ -306,7 +284,6 @@ flowchart TB
 
 - [ ] Enviar mensagem e receber resposta da IA
 - [ ] Streaming de resposta funcionando
-- [ ] Comandos reconhecidos e executados
 - [ ] Histórico de conversa mantido
 - [ ] User Memory presente no contexto
 - [ ] Tool calls executando corretamente

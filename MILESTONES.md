@@ -1061,47 +1061,6 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 ---
 
-### M1.4 — Classificação de Intent 🔴
-
-**Objetivo:** Classificar intenção da mensagem para executar ações.
-
-**Referências:** `AI_SPECS.md` §5
-
-**Tasks:**
-
-- [ ] Criar `IntentClassifier` service:
-  - [ ] Implementar classificação via LLM (prompt em `AI_SPECS.md` §5.3)
-  - [ ] Extrair dados estruturados da mensagem
-- [ ] Implementar categorias de intent:
-  - [ ] COMMAND (comandos explícitos /peso, /agua)
-  - [ ] TRACK_METRIC (registro implícito "pesei 82kg")
-  - [ ] CREATE_NOTE ("anota isso")
-  - [ ] CREATE_REMINDER ("me lembra amanhã")
-  - [ ] START_DECISION ("devo aceitar o emprego?")
-  - [ ] QUERY_DATA ("quanto gastei?")
-  - [ ] CHAT_GENERAL (conversa livre)
-  - [ ] CHAT_COUNSELOR ("preciso desabafar")
-- [ ] Implementar extração de dados por intent (conforme `AI_SPECS.md` §5.4)
-- [ ] Integrar com fluxo de chat
-
-**Testes:**
-- [ ] Testes unitários para IntentClassifier:
-  - [ ] Classificação correta para cada categoria de intent
-  - [ ] Extração de dados estruturados (peso, valor, data, etc.)
-  - [ ] Tratamento de mensagens ambíguas
-- [ ] Testes com dataset de exemplos reais:
-  - [ ] Mínimo 20 exemplos por categoria
-  - [ ] Validar accuracy >95%
-- [ ] Teste de integração com fluxo de chat
-
-**Definition of Done:**
-- [ ] Mensagens são classificadas corretamente (>95% accuracy)
-- [ ] Dados são extraídos das mensagens
-- [ ] Classificação integrada ao chat
-- [ ] Testes passam
-
----
-
 ### M1.5 — Sistema de Decisões 🔴
 
 **Objetivo:** Implementar sistema estruturado de análise de decisões.
@@ -1406,7 +1365,6 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   4. IA registra e confirma
 - [ ] Criar `ConfirmationService` para gerenciar estado de confirmação
 - [ ] Permitir correções (valor, data, categoria)
-- [ ] Exceções (comandos explícitos não requerem confirmação)
 
 **Frontend:**
 - [ ] Componente ConfirmationCard no chat (exibe dados extraídos)
@@ -1417,13 +1375,11 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Teste unitário: extração de dados de mensagens
 - [ ] Teste unitário: fluxo de confirmação
 - [ ] Teste de integração: mensagem implícita → confirmação → registro
-- [ ] Teste de integração: comando explícito → registro direto (sem confirmação)
 - [ ] Teste E2E: fluxo completo de tracking via chat com confirmação
 
 **Definition of Done:**
 - [ ] Tracking via conversa sempre pede confirmação
 - [ ] Correções funcionam
-- [ ] Comandos explícitos (/peso) não pedem confirmação
 - [ ] Testes passam
 
 ---
@@ -1621,7 +1577,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Implementar validações conforme `SYSTEM_SPECS.md` §3.3
 - [ ] Implementar categorias de despesa (conforme `SYSTEM_SPECS.md`)
 - [ ] Implementar agregações (média, soma, variação)
-- [ ] Integrar com intent classifier (tracking via chat)
+- [ ] Integrar com Tool Use (tracking via chat — ver M1.9)
 
 **Frontend:**
 - [ ] Criar página `/tracking`:
@@ -2366,6 +2322,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-15 | M1.4 | Removido | Intent Classification redundante com Tool Use (ADR-012). Seção 5 do AI_SPECS.md removida. Diagrama e comandos no SYSTEM_SPECS.md atualizados. |
 | 2026-01-14 | M1.6.1 | Concluído | Temporal Knowledge Management: detecção de mudanças de estado, UI toggle "Ver histórico", export com metadados temporais |
 | 2026-01-14 | M1.6 | Concluído | Memory View completo: endpoints, filtros, UI /memory, testes unit/integration (E2E pendentes) |
 | 2026-01-14 | M1.3 | Correções | Segurança: removido userId do admin endpoint. Bug fix: refreshSchedulers() no onboarding. Testes e docs atualizados |
@@ -2385,5 +2342,5 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-*Última atualização: 14 Janeiro 2026*
-*Revisão: M1.6 (Memory View) e M1.6.1 (Temporal Knowledge Management) concluídos. Detecção de mudanças de estado implementada, UI toggle "Ver histórico", export com metadados temporais. 338 testes unitários passando.*
+*Última atualização: 15 Janeiro 2026*
+*Revisão: M1.4 (Intent Classification) removido — redundante com arquitetura Tool Use (ADR-012). Documentações atualizadas: AI_SPECS.md §5 removida, SYSTEM_SPECS.md diagrama simplificado e comandos removidos.*
