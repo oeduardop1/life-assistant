@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User, Bot, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { MarkdownContent } from './markdown-content';
 import type { Message } from '../types';
 
 interface UseTypewriterResult {
@@ -93,7 +94,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               : 'bg-muted'
           )}
         >
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          {isUser ? (
+            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          ) : (
+            <MarkdownContent content={message.content} className="text-sm" />
+          )}
         </div>
         <span className="text-xs text-muted-foreground">
           {new Date(message.createdAt).toLocaleTimeString('pt-BR', {
@@ -154,12 +159,16 @@ export function StreamingMessage({ content, onComplete }: StreamingMessageProps)
       {/* Message content */}
       <div className="flex max-w-[80%] flex-col gap-1">
         <div className="rounded-2xl px-4 py-2 bg-muted">
-          <p className="text-sm whitespace-pre-wrap">
-            {displayedContent}
+          <div className="text-sm">
+            <MarkdownContent
+              content={displayedContent}
+              isStreaming={!isComplete}
+              className="text-sm"
+            />
             {!isComplete && (
               <span className="inline-block w-2 h-4 ml-1 bg-foreground/50 animate-pulse" />
             )}
-          </p>
+          </div>
         </div>
       </div>
     </div>

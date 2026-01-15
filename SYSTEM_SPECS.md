@@ -975,7 +975,8 @@ Que tal uma caminhada de 20min?
 
 | Contexto | Indicador |
 |----------|-----------|
-| Chat respondendo | Typing indicator + streaming |
+| Chat processando | ThinkingIndicator (spinner + "Pensando...") |
+| Chat respondendo | StreamingMessage (typewriter 5ms/char + cursor pulsante) |
 | Gerando análise | Progress bar + "Analisando..." |
 | Salvando dados | Spinner discreto |
 | Carregando lista | Skeleton loading |
@@ -1016,6 +1017,26 @@ Que tal uma caminhada de 20min?
 | Deletar nota | Modal: "Tem certeza? A nota irá para a lixeira." |
 | Deletar vault item | Modal: "Ação irreversível. Confirmar exclusão?" |
 | Deletar conta | Modal + redigitar email para confirmar |
+
+### 4.7 Chat Response Typography
+
+As respostas da IA são renderizadas com suporte a Markdown usando a biblioteca `streamdown`.
+
+| Elemento | Renderização |
+|----------|--------------|
+| `**bold**` | Texto em negrito |
+| `*italic*` | Texto em itálico |
+| `> quote` | Blockquote com borda esquerda |
+| `- item` | Lista não ordenada |
+| `1. item` | Lista ordenada |
+| `` `code` `` | Inline code com background |
+| ` ```code``` ` | Code block com syntax |
+| `# heading` | Headings (h1-h6) |
+
+**Comportamento durante streaming:**
+- Markdown incompleto é auto-completado (`parseIncompleteMarkdown`)
+- Cursor pulsante indica que resposta está em progresso
+- Auto-scroll a cada 50 caracteres
 
 ---
 

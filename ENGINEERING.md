@@ -181,6 +181,8 @@ Princípios que **não podem ser violados** em nenhuma circunstância:
 | Zod | 3.x | Validação de schemas |
 | next-themes | 0.4.6 | Dark/Light mode |
 | lucide-react | 0.562.0 | Ícones |
+| streamdown | 2.0.1 | Markdown rendering para streaming AI |
+| @tailwindcss/typography | 0.5.19 | Classes prose para styling de conteúdo |
 | Playwright | 1.57.0 | E2E testing |
 | Tiptap | - | Notas automáticas (M1+) |
 

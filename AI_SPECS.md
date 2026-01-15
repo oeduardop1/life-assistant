@@ -99,7 +99,7 @@ A IA do Life Assistant é uma **assistente pessoal de vida** que ajuda o usuári
 │                          RESPONSE HANDLER                                    │
 │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
 │   │   Format    │  │   Log Tool  │  │   Stream    │  │   Async     │       │
-│   │   response  │  │   Calls     │  │   to user   │  │   Actions   │       │
+│   │   Markdown  │  │   Calls     │  │   to user   │  │   Actions   │       │
 │   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
