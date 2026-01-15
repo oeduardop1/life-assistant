@@ -327,6 +327,21 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Busca | Encontrar qualquer informação por texto |
 | Relacionados | Ver itens conectados a um item específico |
 
+**Iconografia:**
+
+Cada área da vida tem um ícone Lucide React associado:
+
+| Área | Ícone | Cor |
+|------|-------|-----|
+| Saúde | `Heart` | red-500 |
+| Financeiro | `$` (texto) | green-500 |
+| Relacionamentos | `Users` | pink-500 |
+| Carreira | `Briefcase` | blue-500 |
+| Crescimento Pessoal | `Target` | purple-500 |
+| Lazer | `Sparkles` | yellow-500 |
+| Espiritualidade | `Sun` | indigo-500 |
+| Saúde Mental | `Brain` | teal-500 |
+
 **Gestão:**
 
 | Feature | Descrição |

@@ -1362,6 +1362,9 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [x] Chat: toast de sucesso ao criar conversa ("Nova conversa criada")
 - [x] Chat: toast de sucesso ao deletar conversa ("Conversa excluída")
 
+**Chat UX:**
+- [x] Renderizar Markdown nas respostas da IA (Streamdown + @tailwindcss/typography)
+
 **Dashboard:**
 - [x] Adicionar loading skeleton (preparação para quando buscar dados reais)
 
@@ -1395,6 +1398,9 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - Memory: overview full-width em mobile (lg:flex-row), error state persistente com retry
 - Dashboard: skeleton durante loading inicial, textos atualizados para "Memória"
 - Testes serão implementados em etapa posterior
+- **Bug fix (M1.2):** Typing indicator corrigido — adicionado ThinkingIndicator + typewriter effect + auto-scroll
+- **Nova feature:** Markdown rendering com Streamdown (lida com markdown incompleto durante typewriter)
+- **Bug fix:** Memory area cards — ícones Lucide (Sparkles, Sun) + truncate em textos longos
 
 ---
 
@@ -2297,6 +2303,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-15 | M1.9 | Chat UX | Markdown rendering com Streamdown + @tailwindcss/typography. Bug fixes: typing indicator (ThinkingIndicator + typewriter + auto-scroll), Memory area cards (ícones Lucide, truncate texto) |
 | 2026-01-15 | M1.9 | UI Impl. | 14 tasks de UI implementadas: ErrorBoundary support link, empty states (Chat/Memory), error states com retry, toasts CRUD (Chat), dashboard skeleton, responsividade (sidebar mobile overlay, layouts responsive). Testes pendentes |
 | 2026-01-15 | M1.9 | Reestruturado | Removidas tasks já implementadas em M0.6/M1.2/M1.4. Mantidas apenas: ajustes de texto (SYSTEM_SPECS §4.1), toasts Chat, responsividade, testes E2E. Tasks: 25→16 |
 | 2026-01-15 | M1.8 | Movido | Confirmação de Tracking via Chat incorporado ao M2.1 — depende de infraestrutura de tracking. M1.9→M1.8, M1.10→M1.9, M1.11→M1.10 |
@@ -2323,4 +2330,4 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 ---
 
 *Última atualização: 15 Janeiro 2026*
-*Revisão: M1.9 — 14 tasks de UI implementadas (estados, toasts, responsividade). Testes pendentes.*
+*Revisão: M1.9 — 15 tasks de UI implementadas (estados, toasts, responsividade, Markdown chat). Bug fixes: typing indicator, Memory icons. Testes pendentes.*

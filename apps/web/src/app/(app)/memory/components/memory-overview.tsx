@@ -1,6 +1,6 @@
 'use client';
 
-import { User, Briefcase, Users, Target, AlertCircle, Brain, Heart } from 'lucide-react';
+import { User, Briefcase, Users, Target, AlertCircle, Brain, Heart, Sparkles, Sun } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type MemoryOverview, type LifeArea, lifeAreaLabels } from '../types';
@@ -16,8 +16,8 @@ const areaIcons: Record<LifeArea, React.ReactNode> = {
   relationships: <Users className="h-4 w-4" />,
   career: <Briefcase className="h-4 w-4" />,
   personal_growth: <Target className="h-4 w-4" />,
-  leisure: <span className="text-sm">\u2728</span>,
-  spirituality: <span className="text-sm">\u2728</span>,
+  leisure: <Sparkles className="h-4 w-4" />,
+  spirituality: <Sun className="h-4 w-4" />,
   mental_health: <Brain className="h-4 w-4" />,
 };
 
@@ -113,13 +113,13 @@ export function MemoryOverviewComponent({ data, isLoading }: MemoryOverviewProps
             {(Object.keys(stats.byArea) as LifeArea[]).map((area) => (
               <div
                 key={area}
-                className="flex items-center justify-between p-2 rounded-md bg-muted/50"
+                className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50"
               >
-                <div className="flex items-center gap-2">
-                  <span className={areaColors[area]}>{areaIcons[area]}</span>
-                  <span className="text-sm">{lifeAreaLabels[area]}</span>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className={`shrink-0 ${areaColors[area]}`}>{areaIcons[area]}</span>
+                  <span className="text-sm truncate">{lifeAreaLabels[area]}</span>
                 </div>
-                <span className="text-sm font-medium">{stats.byArea[area]}</span>
+                <span className="text-sm font-medium shrink-0">{stats.byArea[area]}</span>
               </div>
             ))}
           </div>
