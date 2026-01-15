@@ -13,7 +13,6 @@ export * from './conversations';
 export * from './tracking';
 export * from './scores';
 export * from './notes';
-export * from './decisions';
 export * from './people';
 export * from './vault';
 export * from './goals';

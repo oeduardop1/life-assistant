@@ -497,7 +497,7 @@ Ver: `.env.example` para variáveis disponíveis.
 // Exports principais
 export {
   // Enums
-  LifeArea, TrackingType, DecisionStatus, VaultItemType, ExpenseCategory,
+  LifeArea, TrackingType, VaultItemType, ExpenseCategory,
   // Constants
   DEFAULT_WEIGHTS, TRACKING_VALIDATIONS, RATE_LIMITS, STORAGE_LIMITS,
   // Utils

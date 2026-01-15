@@ -234,7 +234,6 @@ O usuário pode ajustar a importância de cada área para seu contexto. Os pesos
 | **Dashboard** | Visão geral: scores, destaques, pendências, alertas |
 | **Chat** | Conversas com a IA (todos os modos) |
 | **Memória** | O que a IA sabe sobre você (fatos, preferências, insights) |
-| **Decisões** | Lista e gestão de problemas/decisões em aberto |
 | **Áreas** | Dashboard detalhado por área da vida |
 | **Tracking** | Registro manual e visualização de métricas |
 | **Pessoas** | CRM pessoal (contatos, relacionamentos) |
@@ -342,7 +341,6 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 
 | Feature | Descrição |
 |---------|-----------|
-| Nota de decisão | Criada quando uma decisão importante é tomada |
 | Nota de consulta | Resumo preparado para consultas médicas |
 | Nota de relatório | Relatórios semanais/mensais salvos como nota |
 
@@ -353,25 +351,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Exportar memória | Download de todos os itens em JSON ou Markdown |
 | Exportar notas | Download de notas automáticas em .md |
 
-### 6.3 Módulo: Sistema de Decisões
-
-| Feature | Descrição |
-|---------|-----------|
-| Registrar decisão/problema | Criar nova decisão a partir de conversa |
-| Ciclo de vida | ABERTA → ANALISANDO → DECIDIDA → ARQUIVADA |
-| Urgência e prazo | Definir nível de urgência e deadline |
-| Associar áreas | Vincular decisão às áreas da vida afetadas |
-| Análise estruturada | Prós/contras organizados automaticamente |
-| Matriz de decisão | Critérios ponderados para decisões complexas |
-| Contexto histórico | IA puxa decisões similares do passado |
-| Perspectiva bíblica | Princípios relevantes para a situação (se habilitado) |
-| Registro de resultado | Documentar como a decisão se desenrolou |
-| Aprendizados | Extrair e armazenar lições aprendidas |
-| Lista de pendentes | Ver todas as decisões em aberto com filtros |
-| Lembretes de follow-up | IA pergunta sobre resultado após X tempo |
-| Nota automática | Decisão gera nota e conhecimento na Memória |
-
-### 6.4 Módulo: Assistente e Agenda
+### 6.3 Módulo: Assistente e Agenda
 
 | Feature | Descrição |
 |---------|-----------|
@@ -392,7 +372,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Busca no histórico | Encontrar qualquer informação do passado |
 | Integração Google Calendar | Sync bidirecional com agenda do Google |
 
-### 6.5 Módulo: Vault (Informações Pessoais)
+### 6.4 Módulo: Vault (Informações Pessoais)
 
 | Feature | Descrição |
 |---------|-----------|
@@ -407,7 +387,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Imóveis | Informações de propriedades |
 | Busca rápida | "Qual meu número do passaporte?" |
 
-### 6.6 Módulo: Pessoas (CRM Pessoal)
+### 6.5 Módulo: Pessoas (CRM Pessoal)
 
 | Feature | Descrição |
 |---------|-----------|
@@ -424,7 +404,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Sugestão de contato | "Faz 3 meses que você não fala com X" |
 | Conhecimento automático | Informações sobre a pessoa vão para Memória |
 
-### 6.7 Módulo: Saúde
+### 6.6 Módulo: Saúde
 
 **Métricas Corporais:**
 - Peso, gordura corporal, medidas, IMC
@@ -464,7 +444,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 - Gatilhos identificados
 - Registro de sessões de terapia
 
-### 6.8 Módulo: Financeiro
+### 6.7 Módulo: Financeiro
 
 **Fluxo de Caixa:**
 - Registro de gastos e receitas por categoria
@@ -501,7 +481,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 - Métricas customizadas
 - Acompanhamento de impostos
 
-### 6.9 Módulo: Profissional
+### 6.8 Módulo: Profissional
 
 **Carreira:**
 - Cargo atual e histórico profissional
@@ -524,7 +504,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 - Metas de carreira
 - Plano de desenvolvimento
 
-### 6.10 Módulo: Familiar
+### 6.9 Módulo: Familiar
 
 | Feature | Descrição |
 |---------|-----------|
@@ -538,7 +518,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Calendário familiar | Eventos de todos os membros |
 | Metas familiares | Viagens, conquistas juntos |
 
-### 6.11 Módulo: Espiritual
+### 6.10 Módulo: Espiritual
 
 | Feature | Descrição |
 |---------|-----------|
@@ -555,7 +535,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Jejum | Registro de períodos |
 | Versículo do dia | Personalizado pelo contexto |
 
-### 6.12 Módulo: Estudos
+### 6.11 Módulo: Estudos
 
 | Feature | Descrição |
 |---------|-----------|
@@ -573,7 +553,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Aprendizados | Insights extraídos |
 | Flashcards | Revisão espaçada |
 
-### 6.13 Módulo: Bem-estar
+### 6.12 Módulo: Bem-estar
 
 | Feature | Descrição |
 |---------|-----------|
@@ -587,7 +567,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Gratidão | Registro diário (opcional) |
 | Social | Encontros com amigos |
 
-### 6.14 Módulo: Dashboard e Visualização
+### 6.13 Módulo: Dashboard e Visualização
 
 | Feature | Descrição |
 |---------|-----------|
@@ -605,7 +585,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 
 > Regras de cálculo de scores em `SYSTEM_SPECS.md`
 
-### 6.15 Módulo: Metas e Hábitos
+### 6.14 Módulo: Metas e Hábitos
 
 **Metas:**
 - Criar meta com descrição, valor alvo e prazo
@@ -626,7 +606,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 - Hábitos em cadeia
 - Visualização em calendário
 
-### 6.16 Módulo: Alertas e Proatividade
+### 6.15 Módulo: Alertas e Proatividade
 
 | Feature | Descrição |
 |---------|-----------|
@@ -638,10 +618,9 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Resumo da manhã | Agenda + lembretes + motivação |
 | Resumo da noite | Recap do dia (opcional) |
 | Aniversários | Lembrete de pessoas importantes |
-| Follow-up de decisões | Perguntar sobre resultado |
 | Sugestões de ação | Baseado em padrões |
 
-### 6.17 Módulo: Relatórios
+### 6.16 Módulo: Relatórios
 
 | Feature | Descrição |
 |---------|-----------|
@@ -655,7 +634,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Comparativo YoY | Mesmo período ano anterior |
 | Salvar como nota | Relatório fica disponível na Memória |
 
-### 6.18 Módulo: SaaS e Multi-tenancy
+### 6.17 Módulo: SaaS e Multi-tenancy
 
 | Feature | Descrição |
 |---------|-----------|
@@ -776,18 +755,18 @@ NOITE (Web App)
     sobre isso? O que seu cônjuge pensa?"
 
 6. IA oferece próximos passos:
-   - "Quer que eu crie uma decisão formal para acompanhar?"
    - "Posso montar uma lista de perguntas para fazer à empresa?"
-   
+   - "Quer que eu resuma os pontos principais para você pensar?"
+
 7. Usuário decide e comunica: "Decidi recusar"
-   → IA registra decisão com todo o contexto
+   → IA registra a conclusão com todo o contexto
    → Fatos e aprendizados salvos na Memória
-   
+
 8. Após 3 meses, IA faz check-in:
    "Faz 3 meses que você recusou a proposta da empresa X.
-    Como está se sentindo sobre essa decisão?"
+    Como está se sentindo sobre essa escolha?"
    → Usuário responde, IA registra aprendizados
-   → Nota da decisão é atualizada com resultado
+   → Conhecimento atualizado na Memória
 ```
 
 ### 7.4 Jornada: Explorando a Memória
@@ -898,10 +877,6 @@ PONTOS DE ATENÇÃO ⚠️
 - Nenhuma leitura registrada
 - Gasto não planejado: R$450 mecânico
 
-DECISÕES EM ABERTO (2)
-- Proposta de parceria com Y (prazo: 15/01)
-- Trocar ou reformar o carro (sem prazo)
-
 INSIGHT DA SEMANA 💡
 "Suas semanas com devocional acima de 85% têm
 score de bem-estar 20% maior. Continue assim!"
@@ -1005,7 +980,6 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 | Dashboard completo | - | ✓ | ✓ |
 | Memória | Limitado | Completo | Completo |
 | Insights automáticos | - | ✓ | ✓ |
-| Sistema de decisões | Limitado | Completo | Completo |
 | Relatórios | Semanal | Todos | Todos |
 | Integrações (Calendar) | - | ✓ | ✓ |
 | Vault | - | ✓ | ✓ |
@@ -1047,7 +1021,6 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 |---------|------|
 | Time to value | < 5 min |
 | Onboarding completion | > 80% |
-| Decisões documentadas | > 2/mês |
 | Itens na Memória | > 20/mês |
 | Score improvement | Positivo |
 
@@ -1075,7 +1048,6 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 | **Vault** | Área segura para informações sensíveis (documentos, credenciais) |
 | **Score** | Pontuação de 0-10 que indica o estado de uma área da vida |
 | **Streak** | Sequência de dias consecutivos realizando uma atividade |
-| **Decisão** | Problema ou escolha importante sendo analisada pelo sistema |
 | **Área da Vida** | Uma das 8 categorias principais (Saúde, Financeiro, Profissional, Relacionamentos, Espiritual, Crescimento Pessoal, Saúde Mental, Lazer) |
 | **Tracking** | Registro sistemático de métricas ao longo do tempo |
 | **PR (Personal Record)** | Recorde pessoal em exercício físico |
@@ -1084,5 +1056,5 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 
 ---
 
-*Última atualização: 11 Janeiro 2026*
-*Revisão: ADR-012 - Segundo Cérebro simplificado para Memória. Removido Graph View, wikilinks, notas manuais. Adicionado sistema de conhecimento com validação pelo usuário.*
+*Última atualização: 15 Janeiro 2026*
+*Revisão: Removido Sistema de Decisões. Funcionalidade de aconselhamento mantida no modo Conselheira da IA, sem módulo formal de decisões.*

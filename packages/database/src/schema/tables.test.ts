@@ -11,10 +11,6 @@ import {
   lifeBalanceHistory,
   notes,
   noteLinks,
-  decisions,
-  decisionOptions,
-  decisionCriteria,
-  decisionScores,
   people,
   personNotes,
   personInteractions,
@@ -47,14 +43,6 @@ import {
   type NewNote,
   type NoteLink,
   type NewNoteLink,
-  type Decision,
-  type NewDecision,
-  type DecisionOption,
-  type NewDecisionOption,
-  type DecisionCriterion,
-  type NewDecisionCriterion,
-  type DecisionScore,
-  type NewDecisionScore,
   type Person,
   type NewPerson,
   type PersonNote,
@@ -234,66 +222,6 @@ describe('tables', () => {
       const newLink: NewNoteLink = {} as NewNoteLink;
       expect(link).toBeDefined();
       expect(newLink).toBeDefined();
-    });
-  });
-
-  describe('decisions table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(decisions)).toBe('decisions');
-    });
-
-    it('should have required columns', () => {
-      expect(decisions.id).toBeDefined();
-      expect(decisions.userId).toBeDefined();
-      expect(decisions.title).toBeDefined();
-      expect(decisions.area).toBeDefined();
-      expect(decisions.status).toBeDefined();
-    });
-
-    it('should export Decision and NewDecision types', () => {
-      const decision: Decision = {} as Decision;
-      const newDecision: NewDecision = {} as NewDecision;
-      expect(decision).toBeDefined();
-      expect(newDecision).toBeDefined();
-    });
-  });
-
-  describe('decisionOptions table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(decisionOptions)).toBe('decision_options');
-    });
-
-    it('should export DecisionOption and NewDecisionOption types', () => {
-      const option: DecisionOption = {} as DecisionOption;
-      const newOption: NewDecisionOption = {} as NewDecisionOption;
-      expect(option).toBeDefined();
-      expect(newOption).toBeDefined();
-    });
-  });
-
-  describe('decisionCriteria table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(decisionCriteria)).toBe('decision_criteria');
-    });
-
-    it('should export DecisionCriterion and NewDecisionCriterion types', () => {
-      const criterion: DecisionCriterion = {} as DecisionCriterion;
-      const newCriterion: NewDecisionCriterion = {} as NewDecisionCriterion;
-      expect(criterion).toBeDefined();
-      expect(newCriterion).toBeDefined();
-    });
-  });
-
-  describe('decisionScores table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(decisionScores)).toBe('decision_scores');
-    });
-
-    it('should export DecisionScore and NewDecisionScore types', () => {
-      const score: DecisionScore = {} as DecisionScore;
-      const newScore: NewDecisionScore = {} as NewDecisionScore;
-      expect(score).toBeDefined();
-      expect(newScore).toBeDefined();
     });
   });
 
@@ -611,7 +539,7 @@ describe('tables', () => {
   });
 
   describe('total table count', () => {
-    it('should have exactly 29 tables defined', () => {
+    it('should have exactly 24 tables defined', () => {
       const allTables = [
         users,
         conversations,
@@ -620,10 +548,6 @@ describe('tables', () => {
         lifeBalanceHistory,
         notes,
         noteLinks,
-        decisions,
-        decisionOptions,
-        decisionCriteria,
-        decisionScores,
         people,
         personNotes,
         personInteractions,
@@ -642,7 +566,7 @@ describe('tables', () => {
         exportRequests,
         auditLogs,
       ];
-      expect(allTables).toHaveLength(28);
+      expect(allTables).toHaveLength(24);
     });
   });
 });

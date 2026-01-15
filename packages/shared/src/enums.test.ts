@@ -4,7 +4,6 @@ import {
   LifeArea,
   TrackingType,
   ConversationType,
-  DecisionStatus,
   VaultItemType,
   VaultCategory,
   ExpenseCategory,
@@ -12,7 +11,6 @@ import {
   ALL_LIFE_AREAS,
   ALL_TRACKING_TYPES,
   ALL_CONVERSATION_TYPES,
-  ALL_DECISION_STATUSES,
   ALL_VAULT_ITEM_TYPES,
   ALL_VAULT_CATEGORIES,
   ALL_EXPENSE_CATEGORIES,
@@ -72,32 +70,15 @@ describe('TrackingType', () => {
 });
 
 describe('ConversationType', () => {
-  it('should have 5 values', () => {
-    expect(Object.values(ConversationType)).toHaveLength(5);
+  it('should have 4 values', () => {
+    expect(Object.values(ConversationType)).toHaveLength(4);
   });
 
   it('should have correct values', () => {
     expect(ConversationType.GENERAL).toBe('general');
     expect(ConversationType.COUNSELOR).toBe('counselor');
     expect(ConversationType.QUICK_ACTION).toBe('quick_action');
-    expect(ConversationType.DECISION).toBe('decision');
     expect(ConversationType.REPORT).toBe('report');
-  });
-});
-
-describe('DecisionStatus', () => {
-  it('should have 7 values', () => {
-    expect(Object.values(DecisionStatus)).toHaveLength(7);
-  });
-
-  it('should have correct values', () => {
-    expect(DecisionStatus.DRAFT).toBe('draft');
-    expect(DecisionStatus.ANALYZING).toBe('analyzing');
-    expect(DecisionStatus.READY).toBe('ready');
-    expect(DecisionStatus.DECIDED).toBe('decided');
-    expect(DecisionStatus.POSTPONED).toBe('postponed');
-    expect(DecisionStatus.CANCELED).toBe('canceled');
-    expect(DecisionStatus.REVIEWED).toBe('reviewed');
   });
 });
 
@@ -167,10 +148,6 @@ describe('ALL_* arrays', () => {
 
   it('ALL_CONVERSATION_TYPES should match ConversationType values', () => {
     expect(ALL_CONVERSATION_TYPES).toEqual(Object.values(ConversationType));
-  });
-
-  it('ALL_DECISION_STATUSES should match DecisionStatus values', () => {
-    expect(ALL_DECISION_STATUSES).toEqual(Object.values(DecisionStatus));
   });
 
   it('ALL_VAULT_ITEM_TYPES should match VaultItemType values', () => {

@@ -53,7 +53,6 @@ erDiagram
     users ||--o{ conversations : has
     users ||--o{ tracking_entries : has
     users ||--o{ notes : has
-    users ||--o{ decisions : has
     users ||--o{ people : has
     users ||--o{ vault_items : has
     users ||--o{ goals : has
@@ -74,9 +73,6 @@ erDiagram
     goals ||--o{ tracking_entries : updates
 
     conversations ||--o{ messages : contains
-
-    decisions ||--o{ decision_options : has
-    decisions ||--o{ decision_criteria : has
 
     notes ||--o{ knowledge_items : generates
 
@@ -210,26 +206,7 @@ erDiagram
         text error_message
         timestamp created_at
     }
-    
-    decisions {
-        uuid id PK
-        uuid user_id FK
-        string title
-        text description
-        enum area
-        enum status
-        date deadline
-        uuid chosen_option_id
-        text reasoning
-        jsonb ai_analysis
-        date review_date
-        integer review_score
-        text review_notes
-        timestamp deleted_at
-        timestamp created_at
-        timestamp updated_at
-    }
-    
+
     people {
         uuid id PK
         uuid user_id FK
@@ -351,7 +328,6 @@ CREATE TYPE conversation_type AS ENUM (
   'general',
   'counselor',
   'quick_action',
-  'decision',
   'report'
 );
 
@@ -360,17 +336,6 @@ CREATE TYPE message_role AS ENUM (
   'user',
   'assistant',
   'system'
-);
-
--- Status de decisão
-CREATE TYPE decision_status AS ENUM (
-  'draft',
-  'analyzing',
-  'ready',
-  'decided',
-  'postponed',
-  'canceled',
-  'reviewed'
 );
 
 -- Tipo de relacionamento (CRM)
@@ -534,15 +499,11 @@ export const trackingTypeEnum = pgEnum('tracking_type', [
 ]);
 
 export const conversationTypeEnum = pgEnum('conversation_type', [
-  'general', 'counselor', 'quick_action', 'decision', 'report'
+  'general', 'counselor', 'quick_action', 'report'
 ]);
 
 export const messageRoleEnum = pgEnum('message_role', [
   'user', 'assistant', 'system'
-]);
-
-export const decisionStatusEnum = pgEnum('decision_status', [
-  'draft', 'analyzing', 'ready', 'decided', 'postponed', 'canceled', 'reviewed'
 ]);
 
 export const relationshipTypeEnum = pgEnum('relationship_type', [
@@ -797,7 +758,7 @@ export const conversations = pgTable('conversations', {
   type: conversationTypeEnum('type').notNull().default('general'),
   title: varchar('title', { length: 255 }),
   
-  // Metadata (ex: decision_id se type='decision')
+  // Metadata
   metadata: jsonb('metadata'),
   
   // Soft delete
@@ -1154,117 +1115,7 @@ export type MemoryConsolidation = typeof memoryConsolidations.$inferSelect;
 export type NewMemoryConsolidation = typeof memoryConsolidations.$inferInsert;
 ```
 
-### 4.6 Decisions
-
-```typescript
-// packages/database/src/schema/decisions.ts
-
-import { pgTable, uuid, varchar, text, date, integer, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
-import { decisionStatusEnum, lifeAreaEnum } from './enums';
-import { users } from './users';
-
-export const decisions = pgTable('decisions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  
-  // Basic info
-  title: varchar('title', { length: 500 }).notNull(),
-  description: text('description'),
-  area: lifeAreaEnum('area').notNull(),
-  deadline: date('deadline'),
-  
-  // Status
-  status: decisionStatusEnum('status').notNull().default('draft'),
-  
-  // Result
-  chosenOptionId: uuid('chosen_option_id'),
-  reasoning: text('reasoning'),
-  
-  // AI Analysis
-  aiAnalysis: jsonb('ai_analysis'),
-  // {
-  //   summary: string,
-  //   recommendation?: string,
-  //   riskAssessment: string,
-  //   questionsToConsider: string[],
-  //   generatedAt: Date
-  // }
-  
-  // Review
-  reviewDate: date('review_date'),
-  reviewScore: integer('review_score'), // 1-10
-  reviewNotes: text('review_notes'),
-  
-  // Soft delete
-  deletedAt: timestamp('deleted_at', { withTimezone: true }),
-  
-  // Timestamps
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => ({
-  userIdIdx: index('decisions_user_id_idx').on(table.userId),
-  statusIdx: index('decisions_status_idx').on(table.status),
-}));
-
-export const decisionOptions = pgTable('decision_options', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  decisionId: uuid('decision_id').notNull().references(() => decisions.id, { onDelete: 'cascade' }),
-  
-  title: varchar('title', { length: 255 }).notNull(),
-  description: text('description'),
-  
-  pros: jsonb('pros').notNull().default([]), // string[]
-  cons: jsonb('cons').notNull().default([]), // string[]
-  
-  // Calculated score
-  score: integer('score'), // 0-100
-  
-  // Order
-  sortOrder: integer('sort_order').notNull().default(0),
-  
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => ({
-  decisionIdIdx: index('decision_options_decision_id_idx').on(table.decisionId),
-}));
-
-export const decisionCriteria = pgTable('decision_criteria', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  decisionId: uuid('decision_id').notNull().references(() => decisions.id, { onDelete: 'cascade' }),
-  
-  name: varchar('name', { length: 255 }).notNull(),
-  description: text('description'),
-  weight: integer('weight').notNull().default(5), // 1-10
-  
-  // Order
-  sortOrder: integer('sort_order').notNull().default(0),
-  
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => ({
-  decisionIdIdx: index('decision_criteria_decision_id_idx').on(table.decisionId),
-}));
-
-// Scores per option per criterion
-export const decisionScores = pgTable('decision_scores', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  optionId: uuid('option_id').notNull().references(() => decisionOptions.id, { onDelete: 'cascade' }),
-  criterionId: uuid('criterion_id').notNull().references(() => decisionCriteria.id, { onDelete: 'cascade' }),
-  
-  score: integer('score').notNull(), // 1-10
-  
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => ({
-  optionIdIdx: index('decision_scores_option_id_idx').on(table.optionId),
-}));
-
-// Types
-export type Decision = typeof decisions.$inferSelect;
-export type NewDecision = typeof decisions.$inferInsert;
-export type DecisionOption = typeof decisionOptions.$inferSelect;
-export type DecisionCriterion = typeof decisionCriteria.$inferSelect;
-```
-
-### 4.7 People (CRM)
+### 4.6 People (CRM)
 
 ```typescript
 // packages/database/src/schema/people.ts
@@ -1358,7 +1209,7 @@ export type NewPerson = typeof people.$inferInsert;
 export type PersonInteraction = typeof personInteractions.$inferSelect;
 ```
 
-### 4.8 Vault
+### 4.7 Vault
 
 ```typescript
 // packages/database/src/schema/vault.ts
@@ -1408,7 +1259,7 @@ export type VaultItem = typeof vaultItems.$inferSelect;
 export type NewVaultItem = typeof vaultItems.$inferInsert;
 ```
 
-### 4.9 Goals & Habits
+### 4.8 Goals & Habits
 
 ```typescript
 // packages/database/src/schema/goals.ts
@@ -1524,7 +1375,7 @@ export type NewHabit = typeof habits.$inferInsert;
 export type HabitCompletion = typeof habitCompletions.$inferSelect;
 ```
 
-### 4.10 Notifications
+### 4.9 Notifications
 
 ```typescript
 // packages/database/src/schema/notifications.ts
@@ -1570,7 +1421,7 @@ export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 ```
 
-### 4.11 Reminders
+### 4.10 Reminders
 
 ```typescript
 // packages/database/src/schema/reminders.ts
@@ -1614,7 +1465,7 @@ export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
 ```
 
-### 4.12 Integrations
+### 4.11 Integrations
 
 ```typescript
 // packages/database/src/schema/integrations.ts
@@ -1657,7 +1508,7 @@ export type UserIntegration = typeof userIntegrations.$inferSelect;
 export type NewUserIntegration = typeof userIntegrations.$inferInsert;
 ```
 
-### 4.13 Calendar Events
+### 4.12 Calendar Events
 
 ```typescript
 // packages/database/src/schema/calendar.ts
@@ -1713,7 +1564,7 @@ export type CalendarEvent = typeof calendarEvents.$inferSelect;
 export type NewCalendarEvent = typeof calendarEvents.$inferInsert;
 ```
 
-### 4.14 Budgets
+### 4.13 Budgets
 
 ```typescript
 // packages/database/src/schema/budgets.ts
@@ -1759,7 +1610,7 @@ export type Budget = typeof budgets.$inferSelect;
 export type NewBudget = typeof budgets.$inferInsert;
 ```
 
-### 4.15 Subscriptions (Stripe local copy)
+### 4.14 Subscriptions (Stripe local copy)
 
 ```typescript
 // packages/database/src/schema/subscriptions.ts
@@ -1813,7 +1664,7 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type NewSubscription = typeof subscriptions.$inferInsert;
 ```
 
-### 4.16 Export Requests (LGPD)
+### 4.15 Export Requests (LGPD)
 
 ```typescript
 // packages/database/src/schema/exports.ts
@@ -1870,7 +1721,7 @@ export type ExportRequest = typeof exportRequests.$inferSelect;
 export type NewExportRequest = typeof exportRequests.$inferInsert;
 ```
 
-### 4.17 Habit Freezes
+### 4.16 Habit Freezes
 
 ```typescript
 // packages/database/src/schema/habit-freezes.ts
@@ -1909,7 +1760,7 @@ export type NewHabitFreeze = typeof habitFreezes.$inferInsert;
 > **REMOVIDO (ADR-012):** A tabela embeddings foi removida. A arquitetura migrou de RAG para Tool Use + Memory Consolidation.
 > Conhecimento do usuário é armazenado em `knowledge_items` e buscado via tool `search_knowledge`.
 
-### 4.19 Audit Log
+### 4.17 Audit Log
 
 > **Nota sobre LGPD:** O `user_id` é mantido mesmo após exclusão do usuário (não usa CASCADE nem SET NULL).
 > Isso permite rastrear ações para investigações de segurança sem identificar a pessoa (dados pessoais são deletados, mas o ID permanece como referência anônima).
@@ -2051,10 +1902,6 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE life_balance_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decisions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decision_options ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decision_criteria ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decision_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE people ENABLE ROW LEVEL SECURITY;
 ALTER TABLE person_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE person_interactions ENABLE ROW LEVEL SECURITY;
@@ -2117,19 +1964,6 @@ CREATE POLICY "Users can only access own scores" ON life_balance_history
 
 CREATE POLICY "Users can only access own notes" ON notes
   FOR ALL USING (user_id = (SELECT auth.user_id()));
-
-CREATE POLICY "Users can only access own decisions" ON decisions
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
-
-CREATE POLICY "Users can only access own decision_options" ON decision_options
-  FOR ALL USING (
-    decision_id IN (SELECT id FROM decisions WHERE user_id = (SELECT auth.user_id()))
-  );
-
-CREATE POLICY "Users can only access own decision_criteria" ON decision_criteria
-  FOR ALL USING (
-    decision_id IN (SELECT id FROM decisions WHERE user_id = (SELECT auth.user_id()))
-  );
 
 CREATE POLICY "Users can only access own people" ON people
   FOR ALL USING (user_id = (SELECT auth.user_id()));
@@ -2212,14 +2046,6 @@ CREATE TRIGGER update_tracking_entries_updated_at
 
 CREATE TRIGGER update_notes_updated_at
   BEFORE UPDATE ON notes
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-CREATE TRIGGER update_decisions_updated_at
-  BEFORE UPDATE ON decisions
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-CREATE TRIGGER update_decision_options_updated_at
-  BEFORE UPDATE ON decision_options
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TRIGGER update_people_updated_at
@@ -2411,11 +2237,10 @@ async function seed() {
   await db.insert(notes).values([
     {
       userId: user.id,
-      title: 'Análise: Decisão de carreira',
-      content: '# Análise de Decisão\n\nO usuário está considerando mudar de emprego.\n\n## Fatores considerados\n- Salário\n- Qualidade de vida\n- Crescimento profissional',
+      title: 'Resumo semanal de progresso',
+      content: '# Resumo Semanal\n\nProgresso do usuário na semana:\n\n## Saúde\n- Peso mantido\n- Hidratação adequada\n\n## Humor\n- Média de 7/10',
       autoGenerated: true,
-      relatedConversationId: conversation.id,
-      tags: ['análise', 'carreira'],
+      tags: ['resumo', 'semanal'],
     },
   ]);
 
@@ -2480,11 +2305,7 @@ seed().catch(console.error);
 | `messages` | Mensagens das conversas | ✅ |
 | `tracking_entries` | Registros de métricas | ✅ |
 | `life_balance_history` | Histórico de scores | ✅ |
-| `notes` | Notas automáticas (análises, decisões) | ✅ |
-| `decisions` | Decisões estruturadas | ✅ |
-| `decision_options` | Opções de decisão | ✅ |
-| `decision_criteria` | Critérios de decisão | ✅ |
-| `decision_scores` | Scores por critério | ✅ |
+| `notes` | Notas automáticas (resumos, análises) | ✅ |
 | `people` | Contatos (CRM) | ✅ |
 | `person_notes` | Notas vinculadas a pessoas | ✅ |
 | `person_interactions` | Interações com pessoas | ✅ |
@@ -2507,7 +2328,7 @@ seed().catch(console.error);
 | `knowledge_items` | Fatos, preferências, insights do usuário | ✅ |
 | `memory_consolidations` | Log de consolidações de memória | ✅ |
 
-**Total: 30 tabelas**
+**Total: 26 tabelas**
 
 ---
 
@@ -2528,7 +2349,6 @@ packages/database/
 │   │   ├── tracking.ts
 │   │   ├── scores.ts
 │   │   ├── notes.ts
-│   │   ├── decisions.ts
 │   │   ├── people.ts
 │   │   ├── vault.ts
 │   │   ├── goals.ts
@@ -2587,5 +2407,5 @@ pnpm drizzle-kit studio
 
 ---
 
-*Última atualização: 11 Janeiro 2026*
-*Revisão: ADR-012 - Migração de RAG para Tool Use + Memory Consolidation. Removidas tabelas embeddings e note_links. Adicionadas tabelas user_memories, knowledge_items, memory_consolidations. Removido pgvector.*
+*Última atualização: 15 Janeiro 2026*
+*Revisão: Removido sistema de Decisions (tabelas decisions, decision_options, decision_criteria, decision_scores). Redução de 30 para 26 tabelas.*

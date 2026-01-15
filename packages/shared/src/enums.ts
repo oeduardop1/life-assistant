@@ -45,19 +45,7 @@ export enum ConversationType {
   GENERAL = 'general',
   COUNSELOR = 'counselor',
   QUICK_ACTION = 'quick_action',
-  DECISION = 'decision',
   REPORT = 'report',
-}
-
-// DecisionStatus - Estados de uma decisão
-export enum DecisionStatus {
-  DRAFT = 'draft',
-  ANALYZING = 'analyzing',
-  READY = 'ready',
-  DECIDED = 'decided',
-  POSTPONED = 'postponed',
-  CANCELED = 'canceled',
-  REVIEWED = 'reviewed',
 }
 
 // VaultItemType - Tipos de itens no cofre
@@ -101,7 +89,6 @@ export const ALL_USER_STATUSES = Object.values(UserStatus);
 export const ALL_LIFE_AREAS = Object.values(LifeArea);
 export const ALL_TRACKING_TYPES = Object.values(TrackingType);
 export const ALL_CONVERSATION_TYPES = Object.values(ConversationType);
-export const ALL_DECISION_STATUSES = Object.values(DecisionStatus);
 export const ALL_VAULT_ITEM_TYPES = Object.values(VaultItemType);
 export const ALL_VAULT_CATEGORIES = Object.values(VaultCategory);
 export const ALL_EXPENSE_CATEGORIES = Object.values(ExpenseCategory);

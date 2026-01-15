@@ -46,30 +46,23 @@ Registro de uma métrica (peso, gasto, exercício, humor, etc.).
 
 ### 1.5 Conversation (Conversa)
 Sessão de chat com a IA.
-- **Tipos:** `general`, `counselor`, `quick_action`, `decision`, `report`
+- **Tipos:** `general`, `counselor`, `quick_action`, `report`
 - Contém múltiplas mensagens (Message)
 - Contexto mantido via histórico + User Memory + Tool Use (ADR-012)
 
-### 1.6 Decision (Decisão)
-Decisão estruturada com análise da IA.
-- Opções (mínimo 2)
-- Critérios com pesos
-- Análise gerada pela IA
-- Review agendado após decisão tomada
-
-### 1.7 Note (Nota)
+### 1.6 Note (Nota)
 Nota automática gerada pela IA.
 - Markdown estruturado
 - Tags automáticas
-- Relacionada a conversas ou decisões
+- Relacionada a conversas
 
-### 1.8 Person (Pessoa)
+### 1.7 Person (Pessoa)
 Contato no CRM pessoal.
 - Relacionamento, preferências, datas importantes
 - Lembretes automáticos de contato
 - Histórico de interações
 
-### 1.9 Vault Item
+### 1.8 Vault Item
 Informação sensível criptografada.
 - **Não acessível** pela IA sem re-autenticação
 - Requer re-autenticação para acesso
@@ -131,7 +124,6 @@ Informação sensível criptografada.
 | Message | Não | Com conversation | Imediato |
 | Note | Sim (Lixeira) | 30 dias | Após retenção ou manual |
 | Tracking Entry | Não | - | Imediato |
-| Decision | Sim | 30 dias | Após retenção |
 | Person | Sim | 30 dias | Após retenção |
 | Vault Item | Não | - | Imediato |
 
@@ -150,7 +142,6 @@ Informação sensível criptografada.
 | Mensagens IA/dia | 20 | 100 | Ilimitado |
 | Tracking entries/mês | 100 | 1.000 | Ilimitado |
 | Notas | 50 | 500 | Ilimitado |
-| Decisões ativas | 5 | 50 | Ilimitado |
 | Pessoas (CRM) | 20 | 200 | Ilimitado |
 | Storage (arquivos) | 100MB | 1GB | 10GB |
 | Histórico conversas | 30 dias | 1 ano | Ilimitado |
@@ -236,7 +227,6 @@ stateDiagram-v2
 | `general` | Chat livre | ✅ Sim |
 | `counselor` | Modo conselheira (reflexão profunda) | ✅ Sim |
 | `quick_action` | Ação rápida (ex: registrar peso) | ❌ Não |
-| `decision` | Análise de decisão estruturada | ✅ Sim (vinculada) |
 | `report` | Discussão sobre relatório | ✅ Sim |
 
 #### Fluxo de Mensagem
@@ -510,126 +500,7 @@ Quando não há dados suficientes para calcular um componente ou área:
 
 ---
 
-### 3.5 Decisões
-
-**O que é:** Sistema de análise estruturada para tomada de decisões.
-
-#### Estados de uma Decisão
-
-```mermaid
-stateDiagram-v2
-    [*] --> DRAFT: Criar decisão
-    DRAFT --> ANALYZING: Solicitar análise
-    ANALYZING --> READY: Análise completa
-    READY --> DECIDED: Escolher opção
-    READY --> POSTPONED: Adiar
-    READY --> CANCELED: Cancelar
-    DECIDED --> REVIEWED: Fazer review
-    POSTPONED --> READY: Retomar
-```
-
-#### Regras de Decisões
-
-| Regra | Descrição |
-|-------|-----------|
-| Mínimo de opções | **2 opções** (decisões sim/não são válidas) |
-| Máximo de opções | 10 opções |
-| Mínimo de critérios | 1 critério |
-| Máximo de critérios | 20 critérios |
-
-#### Review de Decisões
-
-O sistema sugere um prazo de review baseado na natureza da decisão, mas o **usuário pode alterar**:
-
-| Tipo de decisão | Review sugerido | Exemplos |
-|-----------------|-----------------|----------|
-| **Urgente** | 7 dias | Decisões do dia-a-dia, compras pequenas |
-| **Padrão** | 30 dias | Mudança de emprego, investimentos |
-| **Estratégico** | 90 dias | Mudança de cidade, casamento, carreira |
-
-**Comportamento:**
-- Sistema sugere prazo com base na área e deadline da decisão
-- Usuário pode aceitar sugestão ou definir data customizada
-- Notificação enviada na data do review
-- Review registra: score (1-10), notas, lições aprendidas
-
-#### Estrutura de uma Decisão
-
-```typescript
-interface Decision {
-  id: string;
-  userId: string;
-
-  // Básico
-  title: string;              // "Devo aceitar o novo emprego?"
-  description: string;        // Contexto detalhado
-  deadline?: Date;            // Data limite
-  area: LifeArea;
-
-  // Opções (min 2, max 10)
-  options: DecisionOption[];
-
-  // Critérios (min 1, max 20)
-  criteria: DecisionCriterion[];
-
-  // Análise IA
-  aiAnalysis?: {
-    summary: string;
-    recommendation?: string;
-    riskAssessment: string;
-    questionsToConsider: string[];
-    generatedAt: Date;
-  };
-
-  // Resultado
-  chosenOption?: string;
-  reasoning?: string;
-
-  // Review (prazo sugerido pelo sistema, editável pelo usuário)
-  reviewDate?: Date;          // 7, 30 ou 90 dias após decisão (editável)
-  reviewScore?: number;       // 1-10
-  reviewNotes?: string;
-
-  status: DecisionStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
-#### Fluxo de Decisão
-
-```mermaid
-flowchart TB
-    A[Criar Decisão] --> B[Adicionar Opções\nmin 2]
-    B --> C[Definir Critérios\ncom pesos]
-    C --> D[Solicitar Análise IA]
-    D --> E[IA Analisa\nprós/contras/riscos]
-    E --> F{Decisão pronta}
-    F --> G[Escolher Opção]
-    F --> H[Adiar]
-    F --> I[Cancelar]
-    G --> J[Agendar Review\n7/30/90 dias]
-    J --> K[Notificação Review]
-    K --> L[Responder Review\nscore + notas]
-    L --> M[Salvar para\nfuturas decisões]
-```
-
-#### Critérios de Aceite
-
-- [ ] Criar decisão com título e descrição
-- [ ] Adicionar opções (2-10)
-- [ ] Definir critérios com pesos (1-20)
-- [ ] Solicitar análise da IA
-- [ ] Visualizar análise com prós/contras
-- [ ] Marcar decisão como tomada
-- [ ] Agendar review automático
-- [ ] Receber notificação de review
-- [ ] Registrar feedback do review
-- [ ] Histórico de decisões acessível
-
----
-
-### 3.6 Memória (Knowledge Items) — ADR-012
+### 3.5 Memória (Knowledge Items) — ADR-012
 
 **O que é:** Sistema de conhecimento gerenciado automaticamente pela IA.
 
@@ -708,7 +579,7 @@ interface KnowledgeItem {
 
 ---
 
-### 3.7 Pessoas (CRM)
+### 3.6 Pessoas (CRM)
 
 **O que é:** Gerenciamento de relacionamentos pessoais.
 
@@ -773,7 +644,7 @@ interface Person {
 
 ---
 
-### 3.8 Vault (Informações Sensíveis)
+### 3.7 Vault (Informações Sensíveis)
 
 **O que é:** Área segura para informações sensíveis.
 
@@ -847,7 +718,7 @@ enum VaultCategory {
 
 ---
 
-### 3.9 Metas e Hábitos
+### 3.8 Metas e Hábitos
 
 **O que é:** Sistema de definição e acompanhamento de metas e hábitos.
 
@@ -935,7 +806,7 @@ interface Habit {
 
 ---
 
-### 3.10 Relatórios
+### 3.9 Relatórios
 
 **O que é:** Sistema de geração de relatórios periódicos.
 
@@ -1007,7 +878,7 @@ Que tal uma caminhada de 20min?
 
 ---
 
-### 3.11 Notificações
+### 3.10 Notificações
 
 **O que é:** Sistema de alertas e lembretes.
 
@@ -1058,10 +929,9 @@ Que tal uma caminhada de 20min?
 |----------|----------|-----|
 | Sem tracking | "Comece a registrar seu dia!" | "Registrar primeiro peso" |
 | Sem memória | "A IA ainda está aprendendo sobre você" | "Iniciar conversa" |
-| Sem decisões | "Nenhuma decisão em andamento" | "Nova decisão" |
 | Sem pessoas | "Adicione pessoas importantes" | "Adicionar pessoa" |
 | Sem conversas | "Converse com sua assistente" | "Iniciar conversa" |
-| Sem pendências | "Tudo em dia! 🎉" | - |
+| Sem pendências | "Tudo em dia!" | - |
 
 ### 4.2 Loading States
 
@@ -1099,7 +969,6 @@ Que tal uma caminhada de 20min?
 |------|----------|
 | Tracking salvo | Toast: "Peso registrado! 82.5kg" |
 | Nota criada | Toast: "Nota criada" |
-| Decisão tomada | Toast: "Decisão registrada" |
 | Configuração salva | Toast: "Preferências atualizadas" |
 
 ### 4.6 Confirmations
@@ -1108,7 +977,6 @@ Que tal uma caminhada de 20min?
 |------|-------------|
 | Deletar nota | Modal: "Tem certeza? A nota irá para a lixeira." |
 | Deletar vault item | Modal: "Ação irreversível. Confirmar exclusão?" |
-| Cancelar decisão | Modal: "Tem certeza que deseja cancelar?" |
 | Deletar conta | Modal + redigitar email para confirmar |
 
 ---
@@ -1317,7 +1185,6 @@ interface Consent {
   "conversations": [ ... ],
   "trackingEntries": [ ... ],
   "notes": [ ... ],
-  "decisions": [ ... ],
   "people": [ ... ],
   "goals": [ ... ],
   "habits": [ ... ]
@@ -1432,15 +1299,7 @@ Comportamento similar ao Telegram.
 - [ ] Gráfico de evolução
 - [ ] Comparativos
 
-### 8.5 Decisões
-
-- [ ] CRUD completo
-- [ ] Análise da IA
-- [ ] Estados funcionando
-- [ ] Review agendado
-- [ ] Notificação de review
-
-### 8.6 Memória (ADR-012)
+### 8.5 Memória (ADR-012)
 
 - [ ] Lista de knowledge_items
 - [ ] Filtros (área, tipo, confiança)
@@ -1449,14 +1308,14 @@ Comportamento similar ao Telegram.
 - [ ] Corrigir item
 - [ ] Deletar item
 
-### 8.7 Pessoas (CRM)
+### 8.6 Pessoas (CRM)
 
 - [ ] CRUD completo
 - [ ] Lembretes automáticos
 - [ ] Registro de interações
 - [ ] Vínculo com notas
 
-### 8.8 Vault
+### 8.7 Vault
 
 - [ ] CRUD de itens
 - [ ] Re-autenticação
@@ -1465,14 +1324,14 @@ Comportamento similar ao Telegram.
 - [ ] Não acessível via tools de IA
 - [ ] Audit log
 
-### 8.9 Metas e Hábitos
+### 8.8 Metas e Hábitos
 
 - [ ] CRUD de metas
 - [ ] CRUD de hábitos
 - [ ] Streaks corretos
 - [ ] Lembretes
 
-### 8.10 Relatórios
+### 8.9 Relatórios
 
 - [ ] Morning summary
 - [ ] Weekly report
@@ -1480,7 +1339,7 @@ Comportamento similar ao Telegram.
 - [ ] Envio Telegram/email
 - [ ] Configuração de horários
 
-### 8.11 Notificações
+### 8.10 Notificações
 
 - [ ] Push web
 - [ ] Telegram
@@ -1496,7 +1355,6 @@ Comportamento similar ao Telegram.
 |-------|-----------|
 | **Area Score** | Pontuação 0-100 de uma área específica da vida |
 | **Conversation** | Sessão de chat com a IA |
-| **Decision** | Decisão estruturada com análise |
 | **Grace Period** | Período de tolerância que não quebra streak |
 | **Knowledge Item** | Fato, preferência ou insight armazenado sobre o usuário |
 | **Life Balance Score** | Pontuação geral 0-100 do equilíbrio de vida |
@@ -1515,5 +1373,5 @@ Comportamento similar ao Telegram.
 
 ---
 
-*Última atualização: 11 Janeiro 2026*
-*Revisão: ADR-012 - Migração de RAG para Tool Use + Memory Consolidation*
+*Última atualização: 15 Janeiro 2026*
+*Revisão: Remoção do Sistema de Decisões*

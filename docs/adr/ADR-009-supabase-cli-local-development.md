@@ -46,9 +46,9 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 ```
 
-### pgvector Incluído
+### Extensões Incluídas
 
-O Supabase CLI já inclui PostgreSQL com extensão pgvector habilitada, necessária para o futuro milestone de RAG (M1.5).
+O Supabase CLI já inclui PostgreSQL com todas as extensões necessárias.
 
 ## Consequências
 
@@ -58,7 +58,7 @@ O Supabase CLI já inclui PostgreSQL com extensão pgvector habilitada, necessá
 - Triggers `auth.users → public.users` funcionam localmente
 - Desenvolvimento offline possível
 - Emails capturados no Inbucket (não envia emails reais)
-- PostgreSQL 17 com pgvector incluso
+- PostgreSQL 17 com extensões necessárias
 - Studio para administração local (porta 54323)
 
 ### Negativas

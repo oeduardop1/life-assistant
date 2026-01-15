@@ -74,7 +74,6 @@ export const conversationTypeEnum = pgEnum('conversation_type', [
   'general',
   'counselor',
   'quick_action',
-  'decision',
   'report',
 ]);
 
@@ -82,20 +81,6 @@ export const messageRoleEnum = pgEnum('message_role', [
   'user',
   'assistant',
   'system',
-]);
-
-// ============================================================================
-// Decisions
-// ============================================================================
-
-export const decisionStatusEnum = pgEnum('decision_status', [
-  'draft',
-  'analyzing',
-  'ready',
-  'decided',
-  'postponed',
-  'canceled',
-  'reviewed',
 ]);
 
 // ============================================================================
@@ -270,7 +255,6 @@ export type ExerciseIntensity = (typeof exerciseIntensityEnum.enumValues)[number
 export type ExerciseType = (typeof exerciseTypeEnum.enumValues)[number];
 export type ConversationType = (typeof conversationTypeEnum.enumValues)[number];
 export type MessageRole = (typeof messageRoleEnum.enumValues)[number];
-export type DecisionStatus = (typeof decisionStatusEnum.enumValues)[number];
 export type RelationshipType = (typeof relationshipTypeEnum.enumValues)[number];
 export type InteractionType = (typeof interactionTypeEnum.enumValues)[number];
 export type VaultItemType = (typeof vaultItemTypeEnum.enumValues)[number];

@@ -16,7 +16,7 @@
 | Versão | Nome | Foco Principal | Status |
 |--------|------|----------------|--------|
 | **0.x** | Fundação | Infraestrutura base | 🟡 Em andamento |
-| **1.x** | Conselheira | Chat + Decisões + Memória | 🔴 Não iniciado |
+| **1.x** | Conselheira | Chat + Memória | 🔴 Não iniciado |
 | **2.x** | Tracker | Métricas + Score + Relatórios | 🔴 Não iniciado |
 | **3.x** | Assistente | Integrações + Automações | 🔴 Não iniciado |
 
@@ -789,8 +789,8 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 ## Fase 1: Conselheira (v1.x)
 
-> **Objetivo:** Implementar a feature principal de ajudar o usuário a tomar decisões através de chat com IA, sistema de decisões estruturadas e memória gerenciada pela IA (ADR-012).
-> **Referências:** `PRODUCT_SPECS.md` §2.1, §6.1, §6.2, §6.3, `AI_SPECS.md`, `SYSTEM_SPECS.md` §3.2, §3.5, §3.6
+> **Objetivo:** Implementar a feature principal de ajudar o usuário através de chat com IA e memória gerenciada pela IA (ADR-012).
+> **Referências:** `PRODUCT_SPECS.md` §2.1, §6.1, §6.2, `AI_SPECS.md`, `SYSTEM_SPECS.md` §3.2, §3.6
 
 ### M1.1 — Package: AI (LLM Abstraction + Tool Use) 🟢
 
@@ -1058,70 +1058,6 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
   - [x] Criar AdminJobsController com endpoint `POST /admin/jobs/memory-consolidation/trigger`
   - [x] Proteger endpoint para `NODE_ENV=development`
   - [x] Documentar uso em `ENGINEERING.md` §7.6
-
----
-
-### M1.5 — Sistema de Decisões 🔴
-
-**Objetivo:** Implementar sistema estruturado de análise de decisões.
-
-**Referências:** `SYSTEM_SPECS.md` §3.5, `PRODUCT_SPECS.md` §6.3, `AI_SPECS.md` §7.3
-
-**Tasks:**
-
-**Backend:**
-- [ ] Criar módulo `decisions` com Clean Architecture:
-  - [ ] `DecisionController` - CRUD de decisões
-  - [ ] `CreateDecisionUseCase`
-  - [ ] `AddOptionsUseCase`
-  - [ ] `AddCriteriaUseCase`
-  - [ ] `GenerateAnalysisUseCase` - análise via IA
-  - [ ] `MakeDecisionUseCase` - registrar escolha
-  - [ ] `ReviewDecisionUseCase` - feedback após período
-  - [ ] `DecisionRepository`
-- [ ] Implementar estados: DRAFT → ANALYZING → READY → DECIDED/POSTPONED/CANCELED → REVIEWED
-- [ ] Implementar validações:
-  - [ ] Mínimo 2 opções, máximo 10
-  - [ ] Mínimo 1 critério, máximo 20
-- [ ] Implementar análise da IA (conforme `AI_SPECS.md` §7.3):
-  - [ ] Resumo da situação
-  - [ ] Prós/contras de cada opção
-  - [ ] Score por critério
-  - [ ] Riscos principais
-  - [ ] Perguntas para reflexão
-  - [ ] Recomendação (se solicitado)
-- [ ] Implementar agendamento de review:
-  - [ ] 7 dias (urgente)
-  - [ ] 30 dias (padrão)
-  - [ ] 90 dias (estratégico)
-  - [ ] Customizável pelo usuário
-- [ ] Criar job para notificação de review
-
-**Frontend:**
-- [ ] Criar páginas de decisões:
-  - [ ] `/decisions` - lista de decisões com filtros
-  - [ ] `/decisions/new` - criar nova decisão
-  - [ ] `/decisions/[id]` - visualizar decisão
-  - [ ] `/decisions/[id]/edit` - editar opções/critérios
-  - [ ] `/decisions/[id]/review` - registrar review
-- [ ] Componentes:
-  - [ ] DecisionCard (resumo na lista)
-  - [ ] OptionsList (gerenciar opções)
-  - [ ] CriteriaList (gerenciar critérios com pesos)
-  - [ ] AnalysisView (exibir análise da IA)
-  - [ ] DecisionMatrix (tabela opção x critério)
-  - [ ] ReviewForm
-
-**Testes:**
-- [ ] Testes unitários para use cases
-- [ ] Teste E2E: criar decisão → adicionar opções → gerar análise → decidir
-
-**Definition of Done:**
-- [ ] CRUD completo de decisões
-- [ ] IA gera análise estruturada
-- [ ] Estados funcionam corretamente
-- [ ] Review agendado e notificado
-- [ ] Testes passam
 
 ---
 
@@ -1445,7 +1381,6 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Aplicar estados em todas as telas:**
 - [ ] Chat: empty (sem conversas), loading, error
-- [ ] Decisões: empty (sem decisões), loading, error
 - [ ] Notas: empty (sem notas), loading, error
 - [ ] Configurações: loading, error
 
@@ -1495,7 +1430,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] Retornar summary formatado
 - [ ] Criar schema para summary prompt:
   - [ ] Template para resumo de conversa
-  - [ ] Preservar: decisões, fatos aprendidos, tópicos discutidos
+  - [ ] Preservar: fatos aprendidos, tópicos discutidos
   - [ ] Descartar: mensagens repetitivas, saudações, confirmações
 - [ ] Implementar token counting (estimativa: 4 chars = 1 token)
 
@@ -1674,7 +1609,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] Scores por área (cards)
   - [ ] Destaques positivos
   - [ ] Pontos de atenção
-  - [ ] Decisões em aberto
+  - [ ] Tarefas pendentes
   - [ ] Hábitos (streaks)
   - [ ] Eventos do dia
   - [ ] Métricas recentes
@@ -2322,6 +2257,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-15 | M1.5 | Removido | Conflita com filosofia Jarvis-first; knowledge_items cobre funcionalidade |
 | 2026-01-15 | M1.4 | Removido | Intent Classification redundante com Tool Use (ADR-012). Seção 5 do AI_SPECS.md removida. Diagrama e comandos no SYSTEM_SPECS.md atualizados. |
 | 2026-01-14 | M1.6.1 | Concluído | Temporal Knowledge Management: detecção de mudanças de estado, UI toggle "Ver histórico", export com metadados temporais |
 | 2026-01-14 | M1.6 | Concluído | Memory View completo: endpoints, filtros, UI /memory, testes unit/integration (E2E pendentes) |
@@ -2343,4 +2279,4 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 ---
 
 *Última atualização: 15 Janeiro 2026*
-*Revisão: M1.4 (Intent Classification) removido — redundante com arquitetura Tool Use (ADR-012). Documentações atualizadas: AI_SPECS.md §5 removida, SYSTEM_SPECS.md diagrama simplificado e comandos removidos.*
+*Revisão: M1.5 (Sistema de Decisões) removido — conflita com filosofia Jarvis-first; knowledge_items cobre funcionalidade. M1.4 (Intent Classification) removido — redundante com arquitetura Tool Use (ADR-012).*

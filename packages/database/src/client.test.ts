@@ -50,10 +50,6 @@ describe('client', () => {
       expect(schema.lifeBalanceHistory).toBeDefined();
       expect(schema.notes).toBeDefined();
       expect(schema.noteLinks).toBeDefined();
-      expect(schema.decisions).toBeDefined();
-      expect(schema.decisionOptions).toBeDefined();
-      expect(schema.decisionCriteria).toBeDefined();
-      expect(schema.decisionScores).toBeDefined();
       expect(schema.people).toBeDefined();
       expect(schema.personNotes).toBeDefined();
       expect(schema.personInteractions).toBeDefined();
@@ -73,10 +69,10 @@ describe('client', () => {
       expect(schema.auditLogs).toBeDefined();
     });
 
-    it('should export 28 tables and 21 enums in schema', () => {
+    it('should export 24 tables and 20 enums in schema', () => {
       const schemaKeys = Object.keys(schema);
-      // 28 tables + 21 enums + 5 additional exports (types, preferences, etc)
-      expect(schemaKeys.length).toBeGreaterThanOrEqual(50);
+      // 24 tables + 20 enums + 5 additional exports (types, preferences, etc)
+      expect(schemaKeys.length).toBeGreaterThanOrEqual(45);
     });
   });
 });

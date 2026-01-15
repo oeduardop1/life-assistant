@@ -1,5 +1,4 @@
-CREATE TYPE "public"."conversation_type" AS ENUM('general', 'counselor', 'quick_action', 'decision', 'report');--> statement-breakpoint
-CREATE TYPE "public"."decision_status" AS ENUM('draft', 'analyzing', 'ready', 'decided', 'postponed', 'canceled', 'reviewed');--> statement-breakpoint
+CREATE TYPE "public"."conversation_type" AS ENUM('general', 'counselor', 'quick_action', 'report');--> statement-breakpoint
 CREATE TYPE "public"."exercise_intensity" AS ENUM('low', 'medium', 'high');--> statement-breakpoint
 CREATE TYPE "public"."exercise_type" AS ENUM('cardio', 'strength', 'flexibility', 'sports', 'other');--> statement-breakpoint
 CREATE TYPE "public"."expense_category" AS ENUM('food', 'transport', 'housing', 'health', 'education', 'entertainment', 'shopping', 'bills', 'subscriptions', 'travel', 'gifts', 'investments', 'other');--> statement-breakpoint
@@ -107,56 +106,6 @@ CREATE TABLE "notes" (
 	"tags" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"is_pinned" boolean DEFAULT false NOT NULL,
 	"is_archived" boolean DEFAULT false NOT NULL,
-	"deleted_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "decision_criteria" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"decision_id" uuid NOT NULL,
-	"name" varchar(255) NOT NULL,
-	"description" text,
-	"weight" integer DEFAULT 5 NOT NULL,
-	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "decision_options" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"decision_id" uuid NOT NULL,
-	"title" varchar(255) NOT NULL,
-	"description" text,
-	"pros" jsonb DEFAULT '[]'::jsonb NOT NULL,
-	"cons" jsonb DEFAULT '[]'::jsonb NOT NULL,
-	"score" integer,
-	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "decision_scores" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"option_id" uuid NOT NULL,
-	"criterion_id" uuid NOT NULL,
-	"score" integer NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "decisions" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" uuid NOT NULL,
-	"title" varchar(500) NOT NULL,
-	"description" text,
-	"area" "life_area" NOT NULL,
-	"deadline" date,
-	"status" "decision_status" DEFAULT 'draft' NOT NULL,
-	"chosen_option_id" uuid,
-	"reasoning" text,
-	"ai_analysis" jsonb,
-	"review_date" date,
-	"review_score" integer,
-	"review_notes" text,
 	"deleted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -428,11 +377,6 @@ ALTER TABLE "life_balance_history" ADD CONSTRAINT "life_balance_history_user_id_
 ALTER TABLE "note_links" ADD CONSTRAINT "note_links_source_note_id_notes_id_fk" FOREIGN KEY ("source_note_id") REFERENCES "public"."notes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "note_links" ADD CONSTRAINT "note_links_target_note_id_notes_id_fk" FOREIGN KEY ("target_note_id") REFERENCES "public"."notes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notes" ADD CONSTRAINT "notes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "decision_criteria" ADD CONSTRAINT "decision_criteria_decision_id_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."decisions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "decision_options" ADD CONSTRAINT "decision_options_decision_id_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."decisions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "decision_scores" ADD CONSTRAINT "decision_scores_option_id_decision_options_id_fk" FOREIGN KEY ("option_id") REFERENCES "public"."decision_options"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "decision_scores" ADD CONSTRAINT "decision_scores_criterion_id_decision_criteria_id_fk" FOREIGN KEY ("criterion_id") REFERENCES "public"."decision_criteria"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "decisions" ADD CONSTRAINT "decisions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "people" ADD CONSTRAINT "people_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "person_interactions" ADD CONSTRAINT "person_interactions_person_id_people_id_fk" FOREIGN KEY ("person_id") REFERENCES "public"."people"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "person_interactions" ADD CONSTRAINT "person_interactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -468,11 +412,6 @@ CREATE INDEX "note_links_target_idx" ON "note_links" USING btree ("target_note_i
 CREATE INDEX "notes_user_id_idx" ON "notes" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "notes_user_id_folder_idx" ON "notes" USING btree ("user_id","folder");--> statement-breakpoint
 CREATE INDEX "notes_title_idx" ON "notes" USING btree ("title");--> statement-breakpoint
-CREATE INDEX "decision_criteria_decision_id_idx" ON "decision_criteria" USING btree ("decision_id");--> statement-breakpoint
-CREATE INDEX "decision_options_decision_id_idx" ON "decision_options" USING btree ("decision_id");--> statement-breakpoint
-CREATE INDEX "decision_scores_option_id_idx" ON "decision_scores" USING btree ("option_id");--> statement-breakpoint
-CREATE INDEX "decisions_user_id_idx" ON "decisions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "decisions_status_idx" ON "decisions" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "people_user_id_idx" ON "people" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "people_name_idx" ON "people" USING btree ("name");--> statement-breakpoint
 CREATE INDEX "person_interactions_person_id_idx" ON "person_interactions" USING btree ("person_id");--> statement-breakpoint

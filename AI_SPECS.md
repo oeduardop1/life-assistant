@@ -321,7 +321,6 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **search_knowledge**: Buscar fatos sobre o usuário. SEMPRE use quando perguntarem sobre o usuário ou quando precisar de contexto adicional
 - **add_knowledge**: Registrar novo fato aprendido sobre o usuário
 - **analyze_context**: Analisar contexto para encontrar conexões, padrões e contradições. Use antes de responder sobre assuntos pessoais importantes
-- **create_note**: Criar nota automática (análise, decisão, etc.)
 - **create_reminder**: Criar lembrete
 - **get_tracking_history**: Obter histórico de métricas
 - **update_person**: Atualizar informações de pessoa do CRM

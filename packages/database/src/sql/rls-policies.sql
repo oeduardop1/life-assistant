@@ -23,10 +23,6 @@ ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE life_balance_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE note_links ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decisions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decision_options ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decision_criteria ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decision_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE people ENABLE ROW LEVEL SECURITY;
 ALTER TABLE person_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE person_interactions ENABLE ROW LEVEL SECURITY;
@@ -70,10 +66,6 @@ CREATE POLICY "Users can only access own scores" ON life_balance_history
 
 -- Notes
 CREATE POLICY "Users can only access own notes" ON notes
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
-
--- Decisions
-CREATE POLICY "Users can only access own decisions" ON decisions
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 -- People
@@ -149,32 +141,6 @@ CREATE POLICY "Users can only access own note_links" ON note_links
   FOR ALL USING (
     source_note_id IN (
       SELECT id FROM notes WHERE user_id = (SELECT auth.user_id())
-    )
-  );
-
--- Decision options (access through decision)
-CREATE POLICY "Users can only access own decision_options" ON decision_options
-  FOR ALL USING (
-    decision_id IN (
-      SELECT id FROM decisions WHERE user_id = (SELECT auth.user_id())
-    )
-  );
-
--- Decision criteria (access through decision)
-CREATE POLICY "Users can only access own decision_criteria" ON decision_criteria
-  FOR ALL USING (
-    decision_id IN (
-      SELECT id FROM decisions WHERE user_id = (SELECT auth.user_id())
-    )
-  );
-
--- Decision scores (access through option → decision)
-CREATE POLICY "Users can only access own decision_scores" ON decision_scores
-  FOR ALL USING (
-    option_id IN (
-      SELECT dopt.id FROM decision_options dopt
-      JOIN decisions d ON dopt.decision_id = d.id
-      WHERE d.user_id = (SELECT auth.user_id())
     )
   );
 

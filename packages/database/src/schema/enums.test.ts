@@ -11,7 +11,6 @@ import {
   exerciseTypeEnum,
   conversationTypeEnum,
   messageRoleEnum,
-  decisionStatusEnum,
   relationshipTypeEnum,
   interactionTypeEnum,
   vaultItemTypeEnum,
@@ -33,7 +32,6 @@ import {
   type ExerciseType,
   type ConversationType,
   type MessageRole,
-  type DecisionStatus,
   type RelationshipType,
   type InteractionType,
   type VaultItemType,
@@ -192,7 +190,6 @@ describe('enums', () => {
         'general',
         'counselor',
         'quick_action',
-        'decision',
         'report',
       ]);
     });
@@ -215,29 +212,6 @@ describe('enums', () => {
     it('should export correct TypeScript type', () => {
       const role: MessageRole = 'user';
       expect(messageRoleEnum.enumValues).toContain(role);
-    });
-  });
-
-  describe('decisionStatusEnum', () => {
-    it('should have correct enum name', () => {
-      expect(decisionStatusEnum.enumName).toBe('decision_status');
-    });
-
-    it('should have all expected values', () => {
-      expect(decisionStatusEnum.enumValues).toEqual([
-        'draft',
-        'analyzing',
-        'ready',
-        'decided',
-        'postponed',
-        'canceled',
-        'reviewed',
-      ]);
-    });
-
-    it('should export correct TypeScript type', () => {
-      const status: DecisionStatus = 'draft';
-      expect(decisionStatusEnum.enumValues).toContain(status);
     });
   });
 
@@ -505,7 +479,7 @@ describe('enums', () => {
   });
 
   describe('total enum count', () => {
-    it('should have exactly 21 enums defined', () => {
+    it('should have exactly 20 enums defined', () => {
       const allEnums = [
         userStatusEnum,
         userPlanEnum,
@@ -515,7 +489,6 @@ describe('enums', () => {
         exerciseTypeEnum,
         conversationTypeEnum,
         messageRoleEnum,
-        decisionStatusEnum,
         relationshipTypeEnum,
         interactionTypeEnum,
         vaultItemTypeEnum,
@@ -529,7 +502,7 @@ describe('enums', () => {
         exportStatusEnum,
         exportTypeEnum,
       ];
-      expect(allEnums).toHaveLength(21);
+      expect(allEnums).toHaveLength(20);
     });
   });
 });
