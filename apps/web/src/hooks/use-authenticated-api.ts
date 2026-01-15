@@ -122,6 +122,15 @@ export function useAuthenticatedApi() {
     [request]
   );
 
+  const patch = useCallback(
+    <T>(
+      endpoint: string,
+      data?: unknown,
+      options?: Omit<FetchOptions, 'method' | 'data'>
+    ) => request<T>(endpoint, { ...options, method: 'PATCH', data }),
+    [request]
+  );
+
   const del = useCallback(
     <T>(endpoint: string, options?: Omit<FetchOptions, 'method' | 'data'>) =>
       request<T>(endpoint, { ...options, method: 'DELETE' }),
@@ -148,6 +157,7 @@ export function useAuthenticatedApi() {
     get,
     post,
     put,
+    patch,
     delete: del,
     request,
     getSseUrl,
