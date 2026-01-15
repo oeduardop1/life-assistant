@@ -1061,7 +1061,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 ---
 
-### M1.6 — Memory View (Visualização de Memória) 🟢
+### M1.4 — Memory View (Visualização de Memória) 🟢
 
 **Objetivo:** Implementar tela para visualizar e gerenciar o que a IA sabe sobre o usuário.
 
@@ -1137,7 +1137,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 ---
 
-### M1.6.1 — Temporal Knowledge Management 🟢
+### M1.5 — Temporal Knowledge Management 🟢
 
 **Objetivo:** Implementar gerenciamento temporal de conhecimento com detecção de mudanças de estado (padrão Zep/Graphiti Temporal Knowledge Graphs).
 
@@ -1196,7 +1196,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.7 — Raciocínio Inferencial Real-time 🟢
+### M1.6 — Raciocínio Inferencial Real-time 🟢
 
 **Objetivo:** Permitir que a IA faça conexões entre fatos e detecte contradições em tempo real durante conversas.
 
@@ -1249,7 +1249,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.8 — Perspectiva Cristã 🔴
+### M1.7 — Perspectiva Cristã 🔴
 
 **Objetivo:** Implementar feature opt-in de perspectiva cristã no chat.
 
@@ -1285,7 +1285,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.9 — Confirmação de Tracking via Chat 🔴
+### M1.8 — Confirmação de Tracking via Chat 🔴
 
 **Objetivo:** Implementar confirmação antes de registrar métricas via chat.
 
@@ -1320,7 +1320,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.10 — Guardrails de Segurança 🔴
+### M1.9 — Guardrails de Segurança 🔴
 
 **Objetivo:** Implementar guardrails para tópicos sensíveis.
 
@@ -1356,7 +1356,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.11 — UI/UX Polish v1 🔴
+### M1.10 — UI/UX Polish v1 🔴
 
 **Objetivo:** Refinar interface e experiência para lançamento da v1.
 
@@ -1406,7 +1406,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.12 — Context Management (Compaction) 🔴
+### M1.11 — Context Management (Compaction) 🔴
 
 **Objetivo:** Gerenciar contexto de conversas longas usando compaction automático, similar ao Claude Code.
 
@@ -1512,7 +1512,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Implementar validações conforme `SYSTEM_SPECS.md` §3.3
 - [ ] Implementar categorias de despesa (conforme `SYSTEM_SPECS.md`)
 - [ ] Implementar agregações (média, soma, variação)
-- [ ] Integrar com Tool Use (tracking via chat — ver M1.9)
+- [ ] Integrar com Tool Use (tracking via chat — ver M1.8)
 
 **Frontend:**
 - [ ] Criar página `/tracking`:
