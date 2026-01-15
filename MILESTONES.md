@@ -1529,6 +1529,12 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Implementar categorias de despesa (conforme `SYSTEM_SPECS.md`)
 - [ ] Implementar agregações (média, soma, variação)
 - [ ] Integrar com Tool Use (tracking via chat — ver M1.8)
+- [ ] Implementar tool `get_trends` para análise de correlação (JARVIS-first):
+  - [ ] Input: `{ areas?: LifeArea[], period?: string, metrics?: string[] }`
+  - [ ] Output: correlações detectadas, tendências, insights
+  - [ ] Exemplos de correlação: stress + gastos impulsivos, sono + energia, exercício + humor
+  - [ ] Integrar com Tool Use para resposta contextualizada
+  - [ ] Usar agregações do `GetAggregationsUseCase`
 
 **Frontend:**
 - [ ] Criar página `/tracking`:
@@ -2054,6 +2060,16 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] Queda de humor
   - [ ] Evento próximo
   - [ ] Follow-up de decisão
+- [ ] Implementar tool `suggest_action` para proatividade durante conversa (JARVIS-first):
+  - [ ] Analisar contexto atual + memória + tracking
+  - [ ] Retornar sugestões de ação baseadas em padrões detectados
+  - [ ] Exemplos: "Você não registrou exercício há 5 dias", "Seu humor está baixo há 3 dias"
+  - [ ] LLM decide quando chamar baseado no contexto da conversa
+- [ ] Implementar sistema de follow-ups (JARVIS-first):
+  - [ ] Data Model: Nova tabela `scheduled_followups` (topic, context, scheduledFor, sourceType, sourceId, status)
+  - [ ] Tool `create_followup`: Input `{ topic, scheduledFor, context? }`, Output `{ id, scheduledFor }`
+  - [ ] Job diário para verificar follow-ups pendentes e criar notificações
+  - [ ] Integração: follow-ups aparecem na lista de check-ins do dia
 - [ ] Criar jobs para envio
 - [ ] Implementar job de notificações de onboarding abandonado (conforme `SYSTEM_SPECS.md` §3.1):
   - [ ] Dia 3: email "Complete seu cadastro para começar a usar o app!"
