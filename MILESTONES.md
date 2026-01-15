@@ -1285,42 +1285,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.8 — Confirmação de Tracking via Chat 🔴
-
-**Objetivo:** Implementar confirmação antes de registrar métricas via chat.
-
-**Referências:** `AI_SPECS.md` §9.2.1
-
-**Tasks:**
-
-**Backend:**
-- [ ] Implementar fluxo de confirmação no chat:
-  1. Usuário menciona métrica ("pesei 82kg")
-  2. IA extrai dados e pede confirmação
-  3. Usuário confirma ou corrige
-  4. IA registra e confirma
-- [ ] Criar `ConfirmationService` para gerenciar estado de confirmação
-- [ ] Permitir correções (valor, data, categoria)
-
-**Frontend:**
-- [ ] Componente ConfirmationCard no chat (exibe dados extraídos)
-- [ ] Botões de Confirmar/Corrigir/Cancelar
-- [ ] Formulário inline para correções
-
-**Testes:**
-- [ ] Teste unitário: extração de dados de mensagens
-- [ ] Teste unitário: fluxo de confirmação
-- [ ] Teste de integração: mensagem implícita → confirmação → registro
-- [ ] Teste E2E: fluxo completo de tracking via chat com confirmação
-
-**Definition of Done:**
-- [ ] Tracking via conversa sempre pede confirmação
-- [ ] Correções funcionam
-- [ ] Testes passam
-
----
-
-### M1.9 — Guardrails de Segurança 🔴
+### M1.8 — Guardrails de Segurança 🔴
 
 **Objetivo:** Implementar guardrails para tópicos sensíveis.
 
@@ -1372,7 +1337,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.10 — UI/UX Polish v1 🔴
+### M1.9 — UI/UX Polish v1 🔴
 
 **Objetivo:** Refinar interface e experiência para lançamento da v1.
 
@@ -1422,7 +1387,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-### M1.11 — Context Management (Compaction) 🔴
+### M1.10 — Context Management (Compaction) 🔴
 
 **Objetivo:** Gerenciar contexto de conversas longas usando compaction automático, similar ao Claude Code.
 
@@ -1528,7 +1493,15 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Implementar validações conforme `SYSTEM_SPECS.md` §3.3
 - [ ] Implementar categorias de despesa (conforme `SYSTEM_SPECS.md`)
 - [ ] Implementar agregações (média, soma, variação)
-- [ ] Integrar com Tool Use (tracking via chat — ver M1.8)
+- [ ] Integrar com Tool Use (tracking via chat):
+  - [ ] Implementar executor da tool `record_metric` no ToolExecutorService
+  - [ ] Implementar fluxo de confirmação no chat:
+    1. Usuário menciona métrica ("pesei 82kg")
+    2. IA extrai dados e chama `record_metric` com `requiresConfirmation: true`
+    3. Frontend exibe card de confirmação
+    4. Usuário confirma → executa tool
+  - [ ] Criar `ConfirmationService` para gerenciar estado de confirmação
+  - [ ] Permitir correções (valor, data, categoria)
 - [ ] Implementar tool `get_trends` para análise de correlação (JARVIS-first):
   - [ ] Input: `{ areas?: LifeArea[], period?: string, metrics?: string[] }`
   - [ ] Output: correlações detectadas, tendências, insights
@@ -1546,10 +1519,17 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] MetricChart (gráfico de linha/barra)
   - [ ] TrackingHistory (lista com filtros)
   - [ ] CategoryPicker (para despesas)
+  - [ ] ConfirmationCard (exibe dados extraídos via chat)
+  - [ ] Botões de Confirmar/Corrigir/Cancelar no chat
+  - [ ] Formulário inline para correções
 
 **Testes:**
 - [ ] Testes unitários para validações
+- [ ] Teste unitário: extração de dados de mensagens
+- [ ] Teste unitário: fluxo de confirmação
+- [ ] Teste de integração: mensagem implícita → confirmação → registro
 - [ ] Teste E2E: registrar peso → ver no histórico
+- [ ] Teste E2E: fluxo completo de tracking via chat com confirmação
 
 **Definition of Done:**
 - [ ] Todos os tipos de tracking funcionam
@@ -1557,6 +1537,9 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Agregações calculadas corretamente
 - [ ] Gráficos de evolução funcionam
 - [ ] Tracking via chat funciona
+- [ ] Tracking via conversa sempre pede confirmação
+- [ ] Correções de métricas funcionam
+- [ ] Testes passam
 
 ---
 
@@ -2303,6 +2286,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-15 | M1.8 | Movido | Confirmação de Tracking via Chat incorporado ao M2.1 — depende de infraestrutura de tracking. M1.9→M1.8, M1.10→M1.9, M1.11→M1.10 |
 | 2026-01-15 | Docs | Atualizado | Gap Analysis: documentados fallbacks (AI_SPECS §10.4), tool loop limits (§6.8), conflict resolution (SYSTEM_SPECS §3.5, AI_SPECS §6.5.5), tool call logging (ENGINEERING §5.5), Raciocínio Inferencial (PRODUCT_SPECS §6.2). Tasks adicionadas: M1.9 (Logging Seguro), Backlog (stale memory) |
 | 2026-01-15 | M1.5 | Removido | Conflita com filosofia Jarvis-first; knowledge_items cobre funcionalidade |
 | 2026-01-15 | M1.4 | Removido | Intent Classification redundante com Tool Use (ADR-012). Seção 5 do AI_SPECS.md removida. Diagrama e comandos no SYSTEM_SPECS.md atualizados. |
@@ -2326,4 +2310,4 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 ---
 
 *Última atualização: 15 Janeiro 2026*
-*Revisão: Gap Analysis completo — documentados fallbacks, tool loop limits, conflict resolution, tool call logging, Raciocínio Inferencial. Tasks adicionadas em M1.9 (Logging Seguro) e Backlog (stale memory detection).*
+*Revisão: M1.8 (Confirmação de Tracking) movido para M2.1 — dependência de infraestrutura de tracking. Renumeração: M1.9→M1.8, M1.10→M1.9, M1.11→M1.10.*
