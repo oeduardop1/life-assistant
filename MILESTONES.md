@@ -1360,10 +1360,12 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Implementar Toast notifications (success, error, warning, info)
 - [ ] Implementar ConfirmationModal para ações destrutivas
 
-**Aplicar estados em todas as telas:**
+**Aplicar estados nas telas implementadas (conforme `SYSTEM_SPECS.md` §4):**
 - [ ] Chat: empty (sem conversas), loading, error
-- [ ] Notas: empty (sem notas), loading, error
-- [ ] Configurações: loading, error
+- [ ] Memória: empty (IA aprendendo sobre você), loading, error
+- [ ] Dashboard: loading (skeleton durante carregamento inicial)
+
+> **Nota:** Telas futuras (Configurações, Tracking, etc.) serão polidas em seus respectivos milestones.
 
 **Responsividade:**
 - [ ] Revisar layout em mobile (< 640px)
@@ -1378,10 +1380,10 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Testes de responsividade (viewport mobile, tablet, desktop)
 
 **Definition of Done:**
-- [ ] Todos os empty/loading/error states implementados em todas as telas
-- [ ] App funciona bem em todas as resoluções
-- [ ] Toasts funcionam para todas as ações
-- [ ] Confirmações funcionam para ações destrutivas
+- [ ] Empty/loading/error states implementados nas telas existentes (Chat, Memória, Dashboard)
+- [ ] App funciona bem em todas as resoluções (mobile, tablet, desktop)
+- [ ] Toasts funcionam para ações de CRUD (knowledge items, mensagens)
+- [ ] ConfirmationModal para ações destrutivas (delete knowledge item)
 - [ ] Não há bugs críticos
 - [ ] Testes passam
 
@@ -2286,6 +2288,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-15 | M1.9 | Atualizado | Corrigido: "Notas"→"Memória", removido "Configurações" (não implementada), alinhado com SYSTEM_SPECS.md §4 e filosofia Jarvis-first |
 | 2026-01-15 | M1.8 | Movido | Confirmação de Tracking via Chat incorporado ao M2.1 — depende de infraestrutura de tracking. M1.9→M1.8, M1.10→M1.9, M1.11→M1.10 |
 | 2026-01-15 | Docs | Atualizado | Gap Analysis: documentados fallbacks (AI_SPECS §10.4), tool loop limits (§6.8), conflict resolution (SYSTEM_SPECS §3.5, AI_SPECS §6.5.5), tool call logging (ENGINEERING §5.5), Raciocínio Inferencial (PRODUCT_SPECS §6.2). Tasks adicionadas: M1.9 (Logging Seguro), Backlog (stale memory) |
 | 2026-01-15 | M1.5 | Removido | Conflita com filosofia Jarvis-first; knowledge_items cobre funcionalidade |
