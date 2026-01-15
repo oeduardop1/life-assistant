@@ -3,7 +3,12 @@
 import { useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageBubble, StreamingMessage } from './message-bubble';
+import {
+  MessageBubble,
+  StreamingMessage,
+  ThinkingIndicator,
+  ErrorMessage,
+} from './message-bubble';
 import type { Message } from '../types';
 
 interface MessageAreaProps {
@@ -11,6 +16,9 @@ interface MessageAreaProps {
   streamingContent: string;
   isStreaming: boolean;
   isLoading: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+  onStreamingComplete?: () => void;
 }
 
 export function MessageArea({
@@ -18,15 +26,18 @@ export function MessageArea({
   streamingContent,
   isStreaming,
   isLoading,
+  error,
+  onRetry,
+  onStreamingComplete,
 }: MessageAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive or error appears
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages.length, streamingContent]);
+  }, [messages.length, streamingContent, error]);
 
   if (isLoading) {
     return (
@@ -48,9 +59,16 @@ export function MessageArea({
           <MessageBubble key={message.id} message={message} />
         ))}
 
+        {/* Thinking indicator - before first chunk arrives */}
+        {isStreaming && !streamingContent && <ThinkingIndicator />}
+
+        {/* Streaming message - after first chunk arrives */}
         {isStreaming && streamingContent && (
-          <StreamingMessage content={streamingContent} />
+          <StreamingMessage content={streamingContent} onComplete={onStreamingComplete} />
         )}
+
+        {/* Error message - inline in conversation */}
+        {error && !isStreaming && <ErrorMessage error={error} onRetry={onRetry} />}
 
         {/* Scroll anchor */}
         <div ref={scrollRef} />

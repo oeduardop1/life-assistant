@@ -26,6 +26,7 @@ export function useChat({ conversationId }: UseChatOptions) {
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [isStreamingDone, setIsStreamingDone] = useState(false); // Backend finished, waiting for typewriter
   const [error, setError] = useState<string | null>(null);
   const [prevConversationId, setPrevConversationId] = useState(conversationId);
 
@@ -40,6 +41,7 @@ export function useChat({ conversationId }: UseChatOptions) {
     setStreamingContent('');
     setError(null);
     setIsStreaming(false);
+    setIsStreamingDone(false);
   }
 
   // Cleanup EventSource on unmount or conversation change
@@ -75,6 +77,7 @@ export function useChat({ conversationId }: UseChatOptions) {
 
       setError(null);
       setIsStreaming(true);
+      setIsStreamingDone(false);
       setStreamingContent('');
       streamCompletedRef.current = false;
 
@@ -123,18 +126,11 @@ export function useChat({ conversationId }: UseChatOptions) {
             if (chunk.done) {
               streamCompletedRef.current = true;
               eventSource.close();
-              setIsStreaming(false);
+              setIsStreamingDone(true); // Mark backend as done, but keep StreamingMessage mounted
               setError(null); // Clear any error that might have been set by race condition
-              // Refresh messages to get the saved assistant message, then clear streaming content
-              queryClient.invalidateQueries({
-                queryKey: ['messages', conversationId],
-              }).then(() => {
-                setStreamingContent('');
-              });
-              // Also refresh conversations to update updatedAt
-              queryClient.invalidateQueries({
-                queryKey: ['conversations'],
-              });
+              // NOTE: We DON'T invalidate queries here to avoid duplicate messages
+              // The StreamingMessage component will call finishStreaming() when typewriter completes
+              // which will then refresh messages
             }
           } catch (e) {
             console.error('Error parsing SSE message:', e);
@@ -171,7 +167,27 @@ export function useChat({ conversationId }: UseChatOptions) {
       eventSourceRef.current = null;
     }
     setIsStreaming(false);
+    setIsStreamingDone(false);
+    setStreamingContent('');
   }, []);
+
+  // Finish streaming - called by StreamingMessage when typewriter completes
+  const finishStreaming = useCallback(async () => {
+    // First, refresh messages and WAIT for it to complete
+    // This ensures MessageBubble is ready before we unmount StreamingMessage
+    await queryClient.invalidateQueries({
+      queryKey: ['messages', conversationId],
+    });
+    // Also refresh conversations to update updatedAt (no need to wait)
+    queryClient.invalidateQueries({
+      queryKey: ['conversations'],
+    });
+    // Only THEN clear streaming state - this unmounts StreamingMessage
+    // At this point, MessageBubble is already rendered with the new message
+    setIsStreaming(false);
+    setIsStreamingDone(false);
+    setStreamingContent('');
+  }, [queryClient, conversationId]);
 
   // Clear error
   const clearError = useCallback(() => {
@@ -185,8 +201,10 @@ export function useChat({ conversationId }: UseChatOptions) {
     sendMessage,
     isStreaming,
     streamingContent,
+    isStreamingDone,
     error,
     cancelStream,
+    finishStreaming,
     refetchMessages: messagesQuery.refetch,
     clearError,
   };

@@ -2,10 +2,7 @@
 
 import { useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   ConversationList,
@@ -63,6 +60,7 @@ export default function ChatPage() {
     streamingContent,
     error,
     cancelStream,
+    finishStreaming,
     clearError,
     refetchMessages,
   } = useChat({ conversationId: selectedConversationId });
@@ -112,24 +110,6 @@ export default function ChatPage() {
 
       {/* Main chat area - full width on mobile */}
       <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
-        {/* Error alert */}
-        {error && (
-          <Alert variant="destructive" className="m-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex-1">{error}</AlertDescription>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                clearError();
-                refetchMessages();
-              }}
-            >
-              Tentar novamente
-            </Button>
-          </Alert>
-        )}
-
         {/* Content */}
         {conversations.length === 0 && !isLoadingConversations ? (
           <EmptyState
@@ -145,6 +125,12 @@ export default function ChatPage() {
               streamingContent={streamingContent}
               isStreaming={isStreaming}
               isLoading={isLoadingMessages}
+              error={error}
+              onRetry={() => {
+                clearError();
+                refetchMessages();
+              }}
+              onStreamingComplete={finishStreaming}
             />
             <MessageInput
               onSend={sendMessage}
