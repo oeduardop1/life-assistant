@@ -337,6 +337,19 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 | Adicionar item | Informar algo que a IA não sabe |
 | Ver histórico | Quando o item foi criado/atualizado |
 
+**Raciocínio Inferencial:**
+
+A IA analisa automaticamente a memória e fornece insights proativos:
+
+| Feature | Descrição |
+|---------|-----------|
+| Conexões automáticas | Detecta relações entre itens de conhecimento (ex: "Seu stress financeiro correlaciona com gastos impulsivos") |
+| Detecção de contradições | Identifica inconsistências na memória (ex: novo fato contradiz um antigo) |
+| Resolução automática | Resolve contradições com regras de prioridade (item validado > maior confiança > mais recente) |
+| Insights temporais | Analisa padrões ao longo do tempo |
+
+> Detalhes técnicos em AI_SPECS.md §6.6 (Raciocínio Inferencial)
+
 **Notas Automáticas:**
 
 | Feature | Descrição |

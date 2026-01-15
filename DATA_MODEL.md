@@ -1015,7 +1015,7 @@ export const knowledgeItems = pgTable('knowledge_items', {
 
   // Classification
   type: knowledgeItemTypeEnum('type').notNull(), // 'fact', 'preference', 'memory', 'insight', 'person'
-  area: lifeAreaEnum('area'), // 'health', 'finance', 'relationships', etc.
+  area: lifeAreaEnum('area'), // 'health', 'financial', 'career', 'relationships', etc.
 
   // Content
   title: varchar('title', { length: 255 }),
@@ -1027,7 +1027,7 @@ export const knowledgeItems = pgTable('knowledge_items', {
   inferenceEvidence: text('inference_evidence'), // For AI inferences: supporting evidence
 
   // Confidence
-  confidence: real('confidence').notNull().default(1.0), // 0.0 to 1.0
+  confidence: real('confidence').notNull().default(0.9), // 0.0 to 1.0 (fatos explícitos: 1.0, inferências: 0.7-0.9)
   validatedByUser: boolean('validated_by_user').notNull().default(false),
 
   // Relationships
@@ -2272,7 +2272,7 @@ async function seed() {
     {
       userId: user.id,
       type: 'preference',
-      area: 'work',
+      area: 'career',
       content: 'Prefere trabalhar pela manhã, mais produtivo entre 8h-12h',
       source: 'ai_inference',
       inferenceEvidence: 'Mencionou 3x em conversas diferentes',

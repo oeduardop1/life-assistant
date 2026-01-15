@@ -567,6 +567,44 @@ interface KnowledgeItem {
 | **Deletar** | Soft delete, item não aparece mais em buscas |
 | **Ver fonte** | Link para conversa original (se aplicável) |
 
+#### Resolução de Conflitos de Conhecimento
+
+##### Prioridade de Decisão (3 Tiers)
+
+Quando dois knowledge items conflitam, o sistema decide qual manter:
+
+| Tier | Critério | Regra |
+|------|----------|-------|
+| 1 | `validatedByUser` | Item validado pelo usuário NUNCA é sobrescrito |
+| 2 | `confidence` | Item com maior confidence é mantido |
+| 3 | `createdAt` | Item mais recente ganha (desempate) |
+
+> Código: `contradiction-resolution.service.ts:284-310`
+
+##### Threshold de Detecção
+
+- Valor: `0.7` (70%)
+- Contradições com confiança menor são ignoradas (reduz falsos positivos)
+
+> Código: `contradiction-resolution.service.ts:16`
+
+##### Comportamento de Supersession
+
+- Item perdedor recebe `supersededById` e `supersededAt`
+- **Confidence NÃO é alterada** — representa certeza no momento da criação (Temporal Knowledge)
+- Item superseded permanece no histórico (não é deletado)
+- UI filtra superseded por padrão; toggle "Ver histórico" mostra todos
+
+> Código: `knowledge-item.repository.ts:471-472`
+
+##### Proteção de Input do Usuário
+
+Items criados manualmente pelo usuário:
+- Recebem `source: 'user_input'`
+- Recebem `confidence: 1.0` automaticamente
+- Quando validados: `validatedByUser: true`
+- Resultado: Máxima proteção (Tier 1 + Tier 2)
+
 #### Critérios de Aceite
 
 - [ ] Lista de knowledge_items por área funciona

@@ -50,7 +50,7 @@ A IA do Life Assistant é uma **assistente pessoal de vida** que ajuda o usuári
 
 - ❌ Executa ações críticas sem confirmação
 - ❌ Dá diagnósticos médicos ou psicológicos
-- ❌ Oferece aconselhamento financeiro profissional
+- ❌ Oferece aconselhamento financialiro profissional
 - ❌ Julga ou critica escolhas do usuário
 - ❌ Compartilha dados com terceiros
 - ❌ Acessa informações do Vault sem re-autenticação
@@ -343,7 +343,7 @@ Você deve fazer conexões entre informações para dar respostas mais contextua
    - "Percebi uma diferença com o que você havia dito antes sobre [assunto]. Pode me ajudar a entender?"
 
 4. **Exemplos de conexões úteis**:
-   - Stress financeiro + problemas de sono → possível ansiedade
+   - Stress financialiro + problemas de sono → possível ansiedade
    - Conflito no trabalho + humor alterado → impacto emocional
    - Mudança de rotina + queda de energia → adaptação necessária
 
@@ -538,7 +538,7 @@ export const tools: ToolDefinition[] = [
     parameters: z.object({
       query: z.string().describe('O que buscar'),
       type: z.enum(['fact', 'preference', 'memory', 'insight', 'person']).optional(),
-      area: z.enum(['health', 'finance', 'relationships', 'work', 'spirituality', 'leisure', 'personal_development', 'mental_health']).optional(),
+      area: z.enum(['health', 'financial', 'relationships', 'career', 'spirituality', 'leisure', 'personal_growth', 'mental_health']).optional(),
       limit: z.number().max(10).default(5),
     }),
     requiresConfirmation: false,
@@ -579,17 +579,17 @@ export const tools: ToolDefinition[] = [
     description: 'Analisa contexto para encontrar conexões, padrões e contradições. Use antes de responder sobre assuntos pessoais importantes (decisões, conselhos, problemas). Retorna fatos relacionados, padrões aprendidos, conexões potenciais e contradições detectadas.',
     parameters: z.object({
       currentTopic: z.string().describe('O assunto principal que o usuário está discutindo'),
-      relatedAreas: z.array(z.enum(['health', 'finance', 'relationships', 'work', 'spirituality', 'leisure', 'personal_development', 'mental_health'])).min(1).max(4).describe('Áreas da vida que podem estar relacionadas'),
+      relatedAreas: z.array(z.enum(['health', 'financial', 'relationships', 'career', 'spirituality', 'leisure', 'personal_growth', 'mental_health'])).min(1).max(4).describe('Áreas da vida que podem estar relacionadas'),
       lookForContradictions: z.boolean().default(true).describe('Se deve verificar contradições com conhecimento existente'),
     }),
     requiresConfirmation: false,
     inputExamples: [
       // Problemas de sono - pode conectar com stress/finanças
-      { currentTopic: "sleeping problems", relatedAreas: ["health", "mental_health", "finance"], lookForContradictions: true },
+      { currentTopic: "sleeping problems", relatedAreas: ["health", "mental_health", "financial"], lookForContradictions: true },
       // Decisão de relacionamento
       { currentTopic: "relationship decision", relatedAreas: ["relationships", "mental_health"], lookForContradictions: true },
       // Mudança de carreira
-      { currentTopic: "career change consideration", relatedAreas: ["work", "finance", "personal_development"], lookForContradictions: false },
+      { currentTopic: "career change consideration", relatedAreas: ["career", "financial", "personal_growth"], lookForContradictions: false },
     ],
   },
 
@@ -625,14 +625,14 @@ export const tools: ToolDefinition[] = [
     parameters: z.object({
       type: z.enum(['fact', 'preference', 'memory', 'insight', 'person']),
       content: z.string().describe('O fato a ser registrado'),
-      area: z.enum(['health', 'finance', 'relationships', 'work', 'spirituality', 'leisure', 'personal_development', 'mental_health']).optional(),
+      area: z.enum(['health', 'financial', 'relationships', 'career', 'spirituality', 'leisure', 'personal_growth', 'mental_health']).optional(),
       confidence: z.number().min(0).max(1).default(0.9),
     }),
     requiresConfirmation: false,
     inputExamples: [
-      { type: "fact", content: "Trabalha como desenvolvedor", area: "work", confidence: 1.0 },
+      { type: "fact", content: "Trabalha como desenvolvedor", area: "career", confidence: 1.0 },
       { type: "preference", content: "Prefere acordar cedo", area: "health", confidence: 0.9 },
-      { type: "insight", content: "Gasta mais quando estressado", area: "finance", confidence: 0.7 },
+      { type: "insight", content: "Gasta mais quando estressado", area: "financial", confidence: 0.7 },
     ],
   },
   {
@@ -728,6 +728,10 @@ async function chatWithToolLoop(
   throw new Error('Max tool iterations reached');
 }
 ```
+
+> **Logging:** Tool calls são logados em DEBUG level. Ver ENGINEERING.md §5.4 para detalhes.
+> Argumentos completos são armazenados em metadata da mensagem para debugging.
+> ⚠️ Dados sensíveis podem estar incluídos nos argumentos (ver M1.9 para filtro planejado).
 
 ### 6.4 Tool Executor Service
 
@@ -828,7 +832,7 @@ Analise as conversas recentes e extraia informações para atualizar a memória 
   "new_knowledge_items": [
     {
       "type": "fact|preference|insight|person",
-      "area": "health|finance|work|...",
+      "area": "health|financial|career|...",
       "content": "descrição do fato",
       "confidence": 0.9,
       "source": "conversation",
@@ -919,6 +923,42 @@ export class MemoryConsolidationScheduler {
   }
 }
 ```
+
+### 6.5.5 Resolução de Contradições
+
+#### Durante Memory Consolidation
+
+O job de consolidação detecta contradições usando LLM com threshold de 0.7.
+Quando detectada contradição entre item existente e novo:
+
+1. Aplica regras de prioridade (ver SYSTEM_SPECS.md §3.X)
+2. Item perdedor é marcado como superseded
+3. Registra explicação do motivo da supersession
+4. **Confidence original é preservada** (design de Temporal Knowledge)
+
+> Código: `contradiction-resolution.service.ts:findContradictionsInGroup()`
+
+#### Durante add_knowledge (Real-time)
+
+Tool `add_knowledge` verifica contradições antes de adicionar:
+- Busca até 20 items existentes no mesmo scope (type + area)
+- Usa LLM para detectar contradição (confidence ≥ 0.7)
+- Aplica mesmas regras de prioridade
+- Retorna info de supersession na resposta
+
+> Código: `contradiction-resolution.service.ts:checkBeforeAdd()`
+
+#### Regras de Prioridade (3 Tiers)
+
+Quando dois knowledge items conflitam, o sistema decide qual manter:
+
+| Tier | Critério | Regra |
+|------|----------|-------|
+| 1 | `validatedByUser` | Item validado pelo usuário NUNCA é sobrescrito |
+| 2 | `confidence` | Item com maior confidence é mantido |
+| 3 | `createdAt` | Item mais recente ganha (desempate) |
+
+> Código: `contradiction-resolution.service.ts:decideWhichToKeep()` (linhas 284-310)
 
 ### 6.6 Real-time Inference Architecture
 
@@ -1057,7 +1097,7 @@ Determine se o FATO NOVO torna o FATO EXISTENTE obsoleto para o ESTADO ATUAL.
 
 ### SÃO mudanças de estado (isContradiction: true):
 - Estado civil mudou
-- Situação financeira mudou
+- Situação financialira mudou
 - Local de moradia mudou
 - Valor numérico atual é diferente
 
@@ -1109,6 +1149,63 @@ O endpoint `GET /memory/export` retorna todos os items (incluindo superseded) co
   }
 }
 ```
+
+### 6.8 Limites e Erros do Tool Loop
+
+#### Limite de Iterações
+
+- **Máximo:** 5 iterações (`DEFAULT_MAX_ITERATIONS`)
+- **Configurável:** Via parâmetro `maxIterations` em `ToolLoopConfig`
+
+> Código: `tool-loop.service.ts:62`
+
+#### Comportamento ao Atingir Limite
+
+1. **Exceção lançada:** `MaxIterationsExceededError`
+   - Code: `MAX_ITERATIONS_EXCEEDED`
+   - Message: `"Max tool loop iterations (${maxIterations}) exceeded"`
+
+2. **Tratamento em chat.service.ts:**
+   - Log: `this.logger.error('Tool loop error: ${errorMessage}', errorStack)`
+   - SSE: `{ content: '', done: true, error: 'Erro ao gerar resposta. Por favor, tente novamente.' }`
+   - Re-lança erro após logging
+
+> Código: `chat.service.ts:302-318`
+
+#### Logging por Iteração
+
+| Nível | Formato | Local |
+|-------|---------|-------|
+| DEBUG | `Tool loop iteration ${n}: ${count} tool calls` | chat.service.ts:233 |
+| INFO | `Tool loop completed with ${n} iterations, content length: ${len}` | chat.service.ts:257 |
+
+#### Emissão SSE por Iteração
+
+Quando há tool calls, emite evento SSE:
+```typescript
+{
+  type: 'tool_calls',
+  data: {
+    iteration: number,
+    toolCalls: [{ id, name, arguments }]
+  }
+}
+```
+
+> Código: `chat.service.ts:236-248`
+
+#### Cenários que Podem Esgotar Limite
+
+- Análise complexa requerendo 6+ tool calls
+- LLM indeciso (quer verificar cada decisão)
+- Loops recursivos (tool A → tool B → tool A)
+
+#### Mitigação no System Prompt
+
+Instruir LLM a:
+- Usar tools estrategicamente, não para cada pergunta
+- Finalizar resposta após coletar contexto necessário
+- Combinar múltiplas buscas quando possível
 
 ---
 
@@ -1330,7 +1427,7 @@ Considerar: interesses, dislikes, dietary restrictions
 | Abuso / violência | Validar sentimentos + sugerir recursos (180, 190) |
 | Saúde mental grave | Acolher + sugerir buscar profissional + continuar disponível |
 | Diagnósticos médicos | Não dar diagnóstico + sugerir consultar médico |
-| Aconselhamento financeiro | Não dar conselho específico de investimento |
+| Aconselhamento financialiro | Não dar conselho específico de investimento |
 | Conteúdo ilegal | Recusar educadamente |
 
 ### 8.2 Prompt de Guardrail
@@ -1349,8 +1446,8 @@ Antes de responder, verifique:
 3. O usuário está pedindo diagnóstico médico?
    → Se sim: Não diagnostique, sugira consultar profissional, pode dar informações gerais
 
-4. O usuário está pedindo conselho financeiro específico?
-   → Se sim: Não recomende investimentos específicos, pode ajudar com organização financeira geral
+4. O usuário está pedindo conselho financialiro específico?
+   → Se sim: Não recomende investimentos específicos, pode ajudar com organização financialira geral
 
 5. A mensagem contém conteúdo ilegal ou perigoso?
    → Se sim: Recuse educadamente, explique limitações
@@ -1518,6 +1615,43 @@ const errorMessages = {
   limit_reached: "Você atingiu o limite de hoje. Que tal fazer upgrade?",
 };
 ```
+
+### 10.4 Fallbacks e Degradação
+
+#### 10.4.1 search_knowledge Retorna Vazio
+
+Quando `search_knowledge` retorna `count: 0`:
+- Sistema retorna `{ count: 0, results: [] }` (sucesso, não erro)
+- LLM deve interpretar como "nenhum conhecimento encontrado"
+- Resposta sugerida: "Não encontrei informações sobre isso no seu histórico..."
+- LLM pode oferecer: registrar nova informação ou pedir mais contexto
+
+> Código: `memory-tool-executor.service.ts:113-116`
+
+#### 10.4.2 Resposta Vazia do LLM
+
+Quando LLM retorna conteúdo vazio após tool loop:
+- **Trigger:** `!fullContent || fullContent.trim().length === 0`
+- **Log:** `this.logger.warn('Empty response from LLM, using fallback message')`
+- **Fallback automático:** `"Desculpe, não consegui gerar uma resposta. Pode tentar novamente?"`
+
+> Código: `chat.service.ts:259-263`
+
+#### 10.4.3 Falha do Memory Consolidation Job
+
+Quando o job de consolidação falha:
+- **Retry:** 3 tentativas com backoff exponencial (delay inicial: 1000ms)
+- **Status:** Registrado como `status: 'failed'` em `memory_consolidations` com `errorMessage`
+- **Isolamento:** Falha de um usuário não impede processamento de outros
+- **Retenção:** Últimos 1000 jobs com falha mantidos para debug
+- **Recuperação:** Próxima execução bem-sucedida processa conversas pendentes
+
+> Código: `jobs.module.ts:42-45`, `memory-consolidation.processor.ts:125-135`
+
+#### 10.4.4 Nota: Detecção de Memória Desatualizada
+
+> ⚠️ **Não implementado:** O sistema atualmente não detecta se a memória está desatualizada
+> (ex: consolidação falhou por 7+ dias). Ver task no Backlog Técnico em MILESTONES.md.
 
 ---
 

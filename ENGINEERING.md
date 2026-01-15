@@ -824,6 +824,67 @@ logger.info({
 });
 ```
 
+### 5.5 Tool Call Logging
+
+#### O que é Logado
+
+| Dado | Nível | Local | Linha |
+|------|-------|-------|-------|
+| Tool name + userId | LOG | memory-tool-executor.service | 43 |
+| search_knowledge params | DEBUG | memory-tool-executor.service | 89 |
+| search_knowledge results count | DEBUG | memory-tool-executor.service | 101 |
+| add_knowledge params (inclui conteúdo!) | DEBUG | memory-tool-executor.service | 139 |
+| add_knowledge item id | LOG | memory-tool-executor.service | 153 |
+| Tool loop start | LOG | chat.service | 222 |
+| Tool loop iteration | DEBUG | chat.service | 233 |
+| Tool loop completion | LOG | chat.service | 257 |
+
+#### Formato de Log
+
+```
+[MemoryToolExecutorService] Executing tool search_knowledge for user abc-123
+[MemoryToolExecutorService] search_knowledge params: query="meu salário", type=fact, area=financial, limit=10
+[MemoryToolExecutorService] search_knowledge found 3 items
+[ChatService] Tool loop iteration 1: 2 tool calls
+[ChatService] Tool loop completed with 2 iterations, content length: 450
+```
+
+#### ⚠️ Alerta: Dados Sensíveis
+
+> **ATENÇÃO:** Argumentos de tools são logados SEM filtro em DEBUG level.
+> Isso inclui: queries de busca, **conteúdo completo de knowledge items**, dados pessoais.
+>
+> **Mitigação atual:** DEBUG não habilitado em produção por padrão
+> **Recomendação:** Implementar `SensitiveDataFilter` antes de habilitar DEBUG em prod (ver M1.9 em MILESTONES.md)
+
+#### Dados em Metadata (Banco)
+
+Mensagens armazenam em `metadata` (chat.service.ts:270-288):
+
+```typescript
+{
+  provider: string,           // Ex: "Anthropic"
+  model: string,              // Ex: "claude-opus-4.5"
+  iterations: number,
+  toolCalls?: Array<{
+    id: string,
+    name: string,
+    arguments: object         // ⚠️ Argumentos COMPLETOS salvos
+  }>,
+  toolResults?: Array<{
+    toolCallId: string,
+    toolName: string,
+    success: boolean,
+    error?: string
+  }>
+}
+```
+
+#### Retenção
+
+Segue política geral de retenção de mensagens.
+Não há retenção específica para tool calls.
+
 ---
 
 ## 6) Multi-tenant e Segurança (RLS)

@@ -33,12 +33,23 @@ Substituir RAG tradicional por **Tool Use + Memory Consolidation**:
 A LLM decide quando precisa buscar dados, chamando tools específicas:
 
 ```typescript
-// Exemplo de tools disponíveis
-const tools = [
-  { name: 'search_knowledge', description: 'Busca fatos sobre o usuário' },
-  { name: 'get_tracking_history', description: 'Obtém histórico de métricas' },
-  { name: 'record_metric', description: 'Registra peso, humor, etc.' },
-  { name: 'add_knowledge', description: 'Adiciona fato aprendido' },
+// Tools disponíveis (ver packages/ai/src/schemas/tools/ para definições completas)
+// Status: ✅ executor implementado | 🔜 schema definido, executor em milestone futuro
+
+// READ tools (sem confirmação):
+const readTools = [
+  { name: 'search_knowledge', description: 'Busca fatos, preferências, insights' }, // ✅ M1.3
+  { name: 'analyze_context', description: 'Analisa contexto para conexões e contradições' }, // ✅ M1.7
+  { name: 'get_tracking_history', description: 'Obtém histórico de métricas' }, // 🔜 M2.1
+  { name: 'get_person', description: 'Obtém informações de pessoa do CRM' }, // 🔜 M2.6
+];
+
+// WRITE tools (requerem confirmação, exceto add_knowledge):
+const writeTools = [
+  { name: 'add_knowledge', description: 'Adiciona fato aprendido' }, // ✅ M1.3
+  { name: 'record_metric', description: 'Registra métrica (peso, gasto, etc.)' }, // 🔜 M2.1
+  { name: 'create_reminder', description: 'Cria lembrete' }, // 🔜 M2.5
+  { name: 'update_person', description: 'Atualiza pessoa no CRM' }, // 🔜 M2.6
 ];
 ```
 

@@ -1338,6 +1338,22 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Implementar respostas padrão para cada guardrail (templates)
 - [ ] Integrar verificação no fluxo de chat (antes de responder)
 
+**Logging Seguro:**
+- [ ] Implementar filtro de dados sensíveis em tool call logging:
+  - [ ] Criar `SensitiveDataFilter` utility em `packages/ai/src/utils/`
+  - [ ] Campos a mascarar:
+    - `add_knowledge.content` → `"[CONTENT REDACTED - ${length} chars]"`
+    - `search_knowledge.query` → `"[QUERY REDACTED]"` (se contiver dados pessoais)
+  - [ ] Aplicar filtro em:
+    - `memory-tool-executor.service.ts:139` (add_knowledge params)
+    - `memory-tool-executor.service.ts:89` (search_knowledge params)
+  - [ ] Manter log de tool_name, duration, success/failure sem filtro
+- [ ] Revisar metadata de mensagens no banco:
+  - [ ] Avaliar se `toolCalls.arguments` deve ser armazenado completo (chat.service.ts:278-282)
+  - [ ] Opção 1: Não armazenar argumentos (apenas id, name)
+  - [ ] Opção 2: Aplicar SensitiveDataFilter antes de salvar
+  - [ ] Considerar impacto em debugging
+
 **Testes:**
 - [ ] Testes unitários para cada tipo de guardrail:
   - [ ] Detecção de conteúdo sobre suicídio/autolesão
@@ -2234,6 +2250,20 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - **Contexto:** `consolidation-prompt.ts` descarta items com tipos inválidos silenciosamente
   - **Arquivo:** `apps/api/src/jobs/memory-consolidation/consolidation-prompt.ts`
 
+### Memória e Contexto
+
+- [ ] Implementar detecção de memória desatualizada (stale memory)
+  - **Contexto:** Sistema não detecta se Memory Consolidation falhou por vários dias
+  - **Impacto:** Usuário pode receber respostas baseadas em memória desatualizada
+  - **Implementação sugerida:**
+    - Adicionar check em `UserMemoryService.getOrCreate()` para idade da última consolidação
+    - Query: última `memory_consolidations` com `status='completed'` para o userId
+    - Se >7 dias sem consolidação bem-sucedida, logar WARNING
+    - Considerar: flag no contexto para LLM saber que memória pode estar desatualizada
+  - **Arquivos:**
+    - `apps/api/src/modules/memory/application/services/user-memory.service.ts`
+    - `apps/api/src/modules/memory/infrastructure/repositories/memory-consolidation.repository.ts`
+
 ### Testes
 
 - [ ] Adicionar testes para AdminModule
@@ -2257,6 +2287,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-15 | Docs | Atualizado | Gap Analysis: documentados fallbacks (AI_SPECS §10.4), tool loop limits (§6.8), conflict resolution (SYSTEM_SPECS §3.5, AI_SPECS §6.5.5), tool call logging (ENGINEERING §5.5), Raciocínio Inferencial (PRODUCT_SPECS §6.2). Tasks adicionadas: M1.9 (Logging Seguro), Backlog (stale memory) |
 | 2026-01-15 | M1.5 | Removido | Conflita com filosofia Jarvis-first; knowledge_items cobre funcionalidade |
 | 2026-01-15 | M1.4 | Removido | Intent Classification redundante com Tool Use (ADR-012). Seção 5 do AI_SPECS.md removida. Diagrama e comandos no SYSTEM_SPECS.md atualizados. |
 | 2026-01-14 | M1.6.1 | Concluído | Temporal Knowledge Management: detecção de mudanças de estado, UI toggle "Ver histórico", export com metadados temporais |
@@ -2279,4 +2310,4 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 ---
 
 *Última atualização: 15 Janeiro 2026*
-*Revisão: M1.5 (Sistema de Decisões) removido — conflita com filosofia Jarvis-first; knowledge_items cobre funcionalidade. M1.4 (Intent Classification) removido — redundante com arquitetura Tool Use (ADR-012).*
+*Revisão: Gap Analysis completo — documentados fallbacks, tool loop limits, conflict resolution, tool call logging, Raciocínio Inferencial. Tasks adicionadas em M1.9 (Logging Seguro) e Backlog (stale memory detection).*
