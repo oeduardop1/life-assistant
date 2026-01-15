@@ -1079,6 +1079,10 @@ export const knowledgeItems = pgTable('knowledge_items', {
   // Soft delete
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 
+  // Temporal tracking (M1.6.1) - for contradiction detection
+  supersededById: uuid('superseded_by_id').references(() => knowledgeItems.id),
+  supersededAt: timestamp('superseded_at', { withTimezone: true }),
+
   // Timestamps
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1093,6 +1097,17 @@ export const knowledgeItems = pgTable('knowledge_items', {
 export type KnowledgeItem = typeof knowledgeItems.$inferSelect;
 export type NewKnowledgeItem = typeof knowledgeItems.$inferInsert;
 ```
+
+> **Temporal Tracking (M1.6.1):** Campos `superseded_by_id` e `superseded_at` implementam o padrão de invalidação temporal.
+> Quando um novo fato torna um existente obsoleto (ex: "é solteiro" → "está namorando"),
+> o item antigo é marcado como superseded (não deletado), preservando histórico.
+>
+> | Campo | Tipo | Descrição |
+> |-------|------|-----------|
+> | `superseded_by_id` | UUID | ID do item que substituiu este |
+> | `superseded_at` | TIMESTAMPTZ | Quando foi substituído |
+>
+> Queries padrão filtram items superseded. UI oferece toggle "Ver histórico" para visualizá-los.
 
 ### 4.5.3 Memory Consolidations (ADR-012)
 

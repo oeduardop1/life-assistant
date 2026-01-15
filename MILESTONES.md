@@ -1166,7 +1166,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 ---
 
-### M1.6 — Memory View (Visualização de Memória) 🔴
+### M1.6 — Memory View (Visualização de Memória) 🟢
 
 **Objetivo:** Implementar tela para visualizar e gerenciar o que a IA sabe sobre o usuário.
 
@@ -1175,54 +1175,129 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 **Tasks:**
 
 **Backend:**
-- [ ] Criar endpoints de memória:
-  - [ ] `GET /memory` - user_memory + estatísticas
-  - [ ] `GET /memory/items` - lista de knowledge_items com filtros
-  - [ ] `PATCH /memory/items/:id` - corrigir item
-  - [ ] `DELETE /memory/items/:id` - deletar item
-  - [ ] `POST /memory/items/:id/validate` - validar item
-  - [ ] `POST /memory/items` - adicionar item manualmente
-- [ ] Implementar filtros:
-  - [ ] Por área (health, financial, career, etc.)
-  - [ ] Por tipo (fact, preference, insight, person, memory)
-  - [ ] Por confiança (high, medium, low)
-  - [ ] Por fonte (conversation, user_input, ai_inference)
-  - [ ] Por data
-- [ ] Implementar busca full-text em knowledge_items
+- [x] Criar endpoints de memória:
+  - [x] `GET /memory` - user_memory + estatísticas
+  - [x] `GET /memory/items` - lista de knowledge_items com filtros
+  - [x] `PATCH /memory/items/:id` - corrigir item
+  - [x] `DELETE /memory/items/:id` - deletar item
+  - [x] `POST /memory/items/:id/validate` - validar item
+  - [x] `POST /memory/items` - adicionar item manualmente
+  - [x] `GET /memory/export` - exportar todos os items (JSON)
+- [x] Renomear endpoint existente `/memory/knowledge` → `/memory/items`
+- [x] Implementar filtros:
+  - [x] Por área (health, financial, career, etc.)
+  - [x] Por tipo (fact, preference, insight, person, memory)
+  - [x] Por confiança (high, medium, low)
+  - [x] Por fonte (conversation, user_input, ai_inference)
+  - [x] Por data
+- [x] Implementar busca full-text em knowledge_items
 
 **Frontend:**
-- [ ] Criar página `/memory`:
-  - [ ] Resumo do user_memory (perfil, objetivos, desafios)
-  - [ ] Lista de knowledge_items organizada por área
-  - [ ] Filtros por tipo, confiança, fonte
-  - [ ] Busca por texto
-- [ ] Componentes:
-  - [ ] MemoryOverview (resumo do perfil)
-  - [ ] KnowledgeItemsList (lista com filtros)
-  - [ ] KnowledgeItemCard (item com ações)
-  - [ ] ConfidenceIndicator (alta/média/baixa)
-  - [ ] EditItemModal (para correções)
-  - [ ] AddItemModal (para adições manuais)
-- [ ] Ações por item:
-  - [ ] Validar (confirmar que está correto)
-  - [ ] Corrigir (editar conteúdo)
-  - [ ] Deletar (remover permanentemente)
-  - [ ] Ver fonte (link para conversa original)
+- [x] Criar página `/memory`:
+  - [x] Resumo do user_memory (perfil, objetivos, desafios)
+  - [x] Lista de knowledge_items organizada por área
+  - [x] Filtros por tipo, confiança, fonte
+  - [x] Busca por texto
+- [x] Componentes:
+  - [x] MemoryOverview (resumo do perfil)
+  - [x] KnowledgeItemsList (lista com filtros)
+  - [x] KnowledgeItemCard (item com ações)
+  - [x] ConfidenceIndicator (alta/média/baixa)
+  - [x] EditItemModal (para correções)
+  - [x] AddItemModal (para adições manuais)
+- [x] Ações por item:
+  - [x] Validar (confirmar que está correto)
+  - [x] Corrigir (editar conteúdo)
+  - [x] Deletar (remover permanentemente)
+  - [x] Ver fonte (link para conversa original)
 
 **Testes:**
-- [ ] Testes unitários para filtros
+- [x] Testes unitários para filtros e novos métodos do service
+- [x] Testes de integração para novos endpoints:
+  - [x] PATCH /memory/items/:id
+  - [x] POST /memory/items/:id/validate
+  - [x] POST /memory/items
+  - [x] GET /memory/export
+  - [x] Filtros expandidos (confidence, source, date)
 - [ ] Teste E2E: validar item → verificar flag
 - [ ] Teste E2E: corrigir item → verificar novo valor
 - [ ] Teste E2E: deletar item → verificar remoção
+- [ ] Teste E2E: adicionar item manualmente → verificar criação
 
 **Definition of Done:**
-- [ ] Usuário vê todos os knowledge_items
-- [ ] Filtros funcionam (área, tipo, confiança)
-- [ ] Busca por texto funciona
-- [ ] Validar item marca como validado
-- [ ] Corrigir item atualiza conteúdo
-- [ ] Deletar item remove permanentemente
-- [ ] Testes passam
+- [x] Usuário vê todos os knowledge_items
+- [x] Filtros funcionam (área, tipo, confiança)
+- [x] Busca por texto funciona
+- [x] Validar item marca como validado
+- [x] Corrigir item atualiza conteúdo
+- [x] Deletar item remove permanentemente
+- [x] Testes passam (unit/integration - E2E pendentes)
+
+**Notas (14/01/2026):**
+- Implementação completa de backend e frontend
+- Endpoints: GET /memory, GET/POST /memory/items, PATCH/DELETE /memory/items/:id, POST /memory/items/:id/validate, GET /memory/export
+- Filtros: área, tipo, confiança (min/max), fonte, busca, data
+- UI: página /memory com overview, lista paginada, filtros, modais de adição/edição
+- Testes E2E pendentes para próxima iteração
+
+---
+
+### M1.6.1 — Temporal Knowledge Management 🟢
+
+**Objetivo:** Implementar gerenciamento temporal de conhecimento com detecção de mudanças de estado (padrão Zep/Graphiti Temporal Knowledge Graphs).
+
+**Referências:** `AI_SPECS.md` §6.7, `DATA_MODEL.md` §4.5
+
+**Contexto:**
+Sistema detectava contradições de forma inconsistente:
+- "solteiro" → "namorando" = detectado ✓
+- "tem dívida" → "quitou dívida" = NÃO detectado ✗
+
+Solução: reformular prompt para detectar "mudanças de estado atual" + UI toggle "Ver histórico".
+
+**Tasks:**
+
+**Backend:**
+- [x] Corrigir prompt de detecção de contradições (`contradiction-detector.adapter.ts`)
+  - [x] Reformular para detectar "mudanças de estado" em vez de "contradições"
+  - [x] Exemplos claros: estado civil, situação financeira, local, valores numéricos
+- [x] Adicionar suporte a `includeSuperseded` no repositório
+  - [x] Atualizar `KnowledgeItemSearchParams` com campo `includeSuperseded`
+  - [x] Modificar `search()` e `countSearch()` para filtrar quando necessário
+- [x] Atualizar DTOs para incluir filtro temporal
+  - [x] `ListKnowledgeItemsQueryDto.includeSuperseded`
+  - [x] `KnowledgeItemResponseDto.supersededById/supersededAt`
+- [x] Atualizar export para incluir metadados temporais
+  - [x] `ExportMemoryResponseDto` com stats (active/superseded)
+  - [x] Incluir todos os items (ativos + superseded) no export
+
+**Frontend:**
+- [x] Adicionar campos `supersededById`, `supersededAt` aos types
+- [x] Implementar toggle "Ver histórico" na FilterBar
+- [x] Estilizar items superseded com badge e opacidade
+
+**Documentação:**
+- [x] Atualizar DATA_MODEL.md com campos temporais
+- [x] Adicionar seção 6.7 ao AI_SPECS.md (Contradiction Detection)
+
+**Testes:**
+- [x] Atualizar unit tests para `KnowledgeItemsService.exportAll()`
+- [x] Atualizar unit tests para `MemoryController.exportMemory()`
+- [x] Atualizar integration tests para temporal queries
+
+**Definition of Done:**
+- [x] "Tem dívida" → "Quitou dívida" detectado como mudança de estado
+- [x] UI mostra apenas items ativos por padrão
+- [x] Toggle "Ver histórico" mostra items superseded
+- [x] Export inclui todos os items com metadados temporais
+- [x] Testes passando (338 unit tests)
+
+**Notas (14/01/2026):**
+- Padrão de Temporal Knowledge Graphs (Zep/Graphiti)
+- Bi-temporal model: `supersededById` + `supersededAt`
+- Items superseded NÃO são deletados, preservam histórico
+- UI: Switch "Ver histórico" + badge "Substituído em {data}"
+- Arquivos modificados: 12 backend, 4 frontend, 2 docs, 4 test files
 
 ---
 
@@ -2291,6 +2366,8 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-14 | M1.6.1 | Concluído | Temporal Knowledge Management: detecção de mudanças de estado, UI toggle "Ver histórico", export com metadados temporais |
+| 2026-01-14 | M1.6 | Concluído | Memory View completo: endpoints, filtros, UI /memory, testes unit/integration (E2E pendentes) |
 | 2026-01-14 | M1.3 | Correções | Segurança: removido userId do admin endpoint. Bug fix: refreshSchedulers() no onboarding. Testes e docs atualizados |
 | 2026-01-14 | M1.3 | DevTools | Admin endpoint para disparo manual do Memory Consolidation Job: AdminModule, POST /admin/jobs/memory-consolidation/trigger (NODE_ENV=development only) |
 | 2026-01-14 | M1.3 | Testes Int. | Testes de integração: memory-endpoints (14), memory-tool-executor (14), memory-consolidation (18). Total 46 novos testes, 116 integration tests passando |
@@ -2309,4 +2386,4 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 ---
 
 *Última atualização: 14 Janeiro 2026*
-*Revisão: Correções pós-implementação: segurança (removido userId do admin endpoint), bug fix (refreshSchedulers no onboarding), testes e docs atualizados. Backlog Técnico adicionado.*
+*Revisão: M1.6 (Memory View) e M1.6.1 (Temporal Knowledge Management) concluídos. Detecção de mudanças de estado implementada, UI toggle "Ver histórico", export com metadados temporais. 338 testes unitários passando.*

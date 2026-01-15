@@ -1124,6 +1124,115 @@ interface AnalyzeContextResult {
 
 **Recomendação:** Use batch para padrões consolidados + real-time para contexto imediato e detecção de contradições.
 
+### 6.7 Contradiction Detection (M1.6.1)
+
+O sistema detecta automaticamente quando um novo fato torna um fato existente obsoleto, implementando o padrão de **Temporal Knowledge Graphs** (similar a Zep/Graphiti).
+
+#### 6.7.1 Conceito: Mudanças de Estado
+
+Em vez de "contradições" (termo confuso), o sistema detecta **mudanças de estado atual**:
+
+| Cenário | Tipo | Comportamento |
+|---------|------|---------------|
+| "é solteiro" → "está namorando" | Mudança de estado | Supersede antigo |
+| "tem dívida de R$1M" → "quitou dívida de R$1M" | Mudança de estado | Supersede antigo |
+| "pesa 80kg" → "pesa 75kg" | Atualização de valor | Supersede antigo |
+| "mora em SP" → "mora no RJ" | Mudança de local | Supersede antigo |
+| "começou curso" → "terminou curso" | Evolução temporal | Ambos coexistem |
+| "gosta de café" → "prefere expresso" | Detalhe adicional | Ambos coexistem |
+
+**Regra de Ouro:** "O fato existente ainda descreve o ESTADO ATUAL do usuário?"
+- Se **NÃO** → É mudança de estado (supersede antigo)
+- Se **SIM** → Ambos coexistem (não supersede)
+
+#### 6.7.2 Fluxo de Detecção
+
+```
+1. Usuário menciona novo fato via chat
+2. Tool add_knowledge é chamado pelo LLM
+3. ContradictionResolutionService.checkBeforeAdd() executa:
+   a. Busca fatos existentes no mesmo escopo (type + area)
+   b. Para cada fato, LLM analisa se há mudança de estado
+   c. Se detectado: retorna { shouldSupersede: existingItem, explanation }
+4. KnowledgeItemsService.add() continua:
+   a. Cria novo item
+   b. Se shouldSupersede: marca antigo como superseded
+5. Resultado: { item: newItem, superseded?: info }
+```
+
+#### 6.7.3 Prompt de Detecção
+
+O prompt enviado ao LLM para análise:
+
+```markdown
+## Contexto
+- Tipo: {type}
+- Área: {area}
+
+## Fato existente
+"{existingContent}"
+
+## Fato novo
+"{newContent}"
+
+## Instruções
+Determine se o FATO NOVO torna o FATO EXISTENTE obsoleto para o ESTADO ATUAL.
+
+### SÃO mudanças de estado (isContradiction: true):
+- Estado civil mudou
+- Situação financeira mudou
+- Local de moradia mudou
+- Valor numérico atual é diferente
+
+### NÃO são mudanças de estado (isContradiction: false):
+- Evolução temporal (começou → terminou)
+- Informações complementares
+- Detalhes adicionais
+
+## Resposta (JSON)
+{ "isContradiction": boolean, "confidence": 0.0-1.0, "explanation": "..." }
+```
+
+#### 6.7.4 Modelo de Dados Temporal
+
+Campos na tabela `knowledge_items`:
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `superseded_by_id` | UUID | ID do item que substituiu este |
+| `superseded_at` | TIMESTAMPTZ | Quando foi substituído |
+
+**Importante:** Items superseded **NÃO são deletados**. Eles permanecem no banco para:
+- Histórico completo do usuário
+- Análise de evolução temporal
+- Export com metadados temporais
+- Auditoria e transparência
+
+#### 6.7.5 UI: Toggle "Ver Histórico"
+
+Na página `/memory`, o filtro "Ver histórico" controla a visibilidade:
+
+| Toggle | Comportamento |
+|--------|---------------|
+| OFF (padrão) | Mostra apenas items ativos (`superseded_by_id IS NULL`) |
+| ON | Mostra todos os items, superseded aparecem com opacidade reduzida e badge "Substituído em {data}" |
+
+#### 6.7.6 Export Temporal
+
+O endpoint `GET /memory/export` retorna todos os items (incluindo superseded) com estatísticas:
+
+```typescript
+{
+  items: KnowledgeItem[],  // Todos os items com campos supersededById, supersededAt
+  total: number,
+  exportedAt: string,
+  stats: {
+    active: number,      // Items ativos
+    superseded: number   // Items substituídos
+  }
+}
+```
+
 ---
 
 ## 7) Prompts por Funcionalidade
