@@ -26,8 +26,8 @@ export default function Home() {
           </h1>
 
           <p className="mb-8 text-lg text-muted-foreground" data-testid="landing-description">
-            Seu segundo cérebro, conselheiro e tracker de vida. Organize seus pensamentos,
-            tome decisões melhores e acompanhe seu progresso.
+            Sua memória, conselheira e assistente pessoal. Você só conversa — a IA organiza,
+            lembra, aconselha e age.
           </p>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
@@ -42,29 +42,29 @@ export default function Home() {
           <div className="mt-16 grid gap-4 sm:grid-cols-3">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Segundo Cérebro</CardTitle>
+                <CardTitle className="text-base">Memória Persistente</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Capture e organize suas ideias com sistema de notas e wikilinks
+                  A IA lembra tudo sobre você e traz contexto relevante para cada conversa
                 </CardDescription>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Decisões</CardTitle>
+                <CardTitle className="text-base">Conselheira</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Tome decisões melhores com análise estruturada e revisões
+                  Ajuda você a pensar, analisar situações e tomar decisões com mais clareza
                 </CardDescription>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Tracking</CardTitle>
+                <CardTitle className="text-base">Tracker de Evolução</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
