@@ -21,7 +21,7 @@ export type LifeArea =
   | 'spirituality'
   | 'mental_health';
 
-export type KnowledgeItemSource = 'conversation' | 'user_input' | 'inference';
+export type KnowledgeItemSource = 'conversation' | 'user_input' | 'ai_inference';
 
 export type ConfidenceLevel = 'high' | 'medium' | 'low';
 
@@ -190,11 +190,12 @@ export const lifeAreaLabels: Record<LifeArea, string> = {
 
 /**
  * Human-readable labels for sources (PT-BR)
+ * @see DATA_MODEL.md §3.1 for knowledge_item_source enum
  */
 export const sourceLabels: Record<KnowledgeItemSource, string> = {
-  conversation: 'Conversa',
+  conversation: 'Na conversa',
   user_input: 'Manual',
-  inference: 'Inferido',
+  ai_inference: 'Inferido pela IA',
 };
 
 /**

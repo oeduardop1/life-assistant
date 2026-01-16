@@ -465,8 +465,7 @@ CREATE TYPE knowledge_item_type AS ENUM (
 CREATE TYPE knowledge_item_source AS ENUM (
   'conversation',
   'user_input',
-  'ai_inference',
-  'onboarding'
+  'ai_inference'
 );
 
 -- Status de consolidação de memória (ADR-012)
@@ -562,7 +561,7 @@ export const knowledgeItemTypeEnum = pgEnum('knowledge_item_type', [
 ]);
 
 export const knowledgeItemSourceEnum = pgEnum('knowledge_item_source', [
-  'conversation', 'user_input', 'ai_inference', 'onboarding'
+  'conversation', 'user_input', 'ai_inference'
 ]);
 
 export const consolidationStatusEnum = pgEnum('consolidation_status', [
@@ -1022,7 +1021,7 @@ export const knowledgeItems = pgTable('knowledge_items', {
   content: text('content').notNull(),
 
   // Traceability
-  source: knowledgeItemSourceEnum('source').notNull(), // 'conversation', 'user_input', 'ai_inference', 'onboarding'
+  source: knowledgeItemSourceEnum('source').notNull(), // 'conversation', 'user_input', 'ai_inference'
   sourceRef: uuid('source_ref'), // conversation_id or message_id
   inferenceEvidence: text('inference_evidence'), // For AI inferences: supporting evidence
 

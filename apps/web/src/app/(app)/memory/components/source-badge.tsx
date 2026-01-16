@@ -15,7 +15,7 @@ interface SourceBadgeProps {
 const iconMap: Record<KnowledgeItemSource, React.ReactNode> = {
   conversation: <MessageSquare className="h-3 w-3" />,
   user_input: <UserPen className="h-3 w-3" />,
-  inference: <Sparkles className="h-3 w-3" />,
+  ai_inference: <Sparkles className="h-3 w-3" />,
 };
 
 export function SourceBadge({ source, sourceRef, className }: SourceBadgeProps) {

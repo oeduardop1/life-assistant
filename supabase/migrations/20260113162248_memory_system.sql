@@ -19,7 +19,7 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE knowledge_item_source AS ENUM ('conversation', 'user_input', 'ai_inference', 'onboarding');
+    CREATE TYPE knowledge_item_source AS ENUM ('conversation', 'user_input', 'ai_inference');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;

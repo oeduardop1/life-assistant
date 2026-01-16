@@ -36,7 +36,6 @@ const KNOWLEDGE_ITEM_SOURCES = [
   'conversation',
   'user_input',
   'ai_inference',
-  'onboarding',
 ] as const;
 
 const LIFE_AREAS = [

@@ -216,7 +216,6 @@ export const knowledgeItemSourceEnum = pgEnum('knowledge_item_source', [
   'conversation',
   'user_input',
   'ai_inference',
-  'onboarding',
 ]);
 
 export const consolidationStatusEnum = pgEnum('consolidation_status', [
