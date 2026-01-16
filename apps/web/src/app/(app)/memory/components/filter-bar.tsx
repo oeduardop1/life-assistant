@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Search, X } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { useDebounce } from 'use-debounce';
+import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,14 +39,18 @@ const CONFIDENCE_RANGES: Record<ConfidenceLevel, [number | undefined, number | u
 
 export function FilterBar({ filters, onChange }: FilterBarProps) {
   const [searchInput, setSearchInput] = useState(filters.search ?? '');
+  const [debouncedSearch] = useDebounce(searchInput, 300);
 
-  const handleSearchSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      onChange({ ...filters, search: searchInput || undefined, offset: 0 });
-    },
-    [filters, onChange, searchInput]
-  );
+  // Trigger search automatically when debounced value changes
+  useEffect(() => {
+    const currentSearch = filters.search ?? '';
+    const newSearch = debouncedSearch || undefined;
+
+    // Only update if the search value actually changed
+    if (currentSearch !== (newSearch ?? '')) {
+      onChange({ ...filters, search: newSearch, offset: 0 });
+    }
+  }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTypeChange = useCallback(
     (value: string) => {
@@ -112,24 +117,25 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
     return 'all';
   })();
 
+  // Show loading indicator while typing (before debounce completes)
+  const isSearchPending = searchInput !== debouncedSearch;
+
   return (
     <div className="space-y-3">
       {/* Search */}
-      <form onSubmit={handleSearchSubmit} className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Buscar conhecimentos..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Button type="submit" variant="secondary" size="sm">
-          Buscar
-        </Button>
-      </form>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Buscar conhecimentos..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="pl-9 pr-9"
+        />
+        {isSearchPending && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+        )}
+      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
