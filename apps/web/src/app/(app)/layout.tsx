@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/auth-context';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { useUIStore } from '@/stores/ui-store';
 import { Header } from '@/components/layouts/header';
 import { Sidebar } from '@/components/layouts/sidebar';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,7 @@ export default function AppLayout({
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuthContext();
   const { isComplete, isLoading: isOnboardingLoading } = useOnboarding();
+  const { sidebarOpen } = useUIStore();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -66,7 +68,8 @@ export default function AppLayout({
       <div
         className={cn(
           'flex min-h-screen flex-col transition-all duration-300',
-          'md:ml-64' // Sidebar margin only on desktop
+          // Desktop: always has margin (full or collapsed)
+          sidebarOpen ? 'md:ml-64' : 'md:ml-16'
         )}
       >
         <Header />
