@@ -125,8 +125,8 @@ export function KnowledgeItemsList({
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-280px)]">
-      <div className="space-y-4 pr-4">
+    <ScrollArea className="h-full">
+      <div className="space-y-4 pr-4 pb-2">
         {items.map((item) => (
           <KnowledgeItemCard
             key={item.id}
