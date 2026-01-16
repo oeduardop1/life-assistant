@@ -1,6 +1,10 @@
 # Life Assistant AI
 
-> Plataforma SaaS com IA integrada que funciona como memória pessoal, conselheira, assistente e tracker de evolução.
+[![CI](https://github.com/oeduardop1/life-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/oeduardop1/life-assistant/actions/workflows/ci.yml)
+[![Deploy Web](https://github.com/oeduardop1/life-assistant/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/oeduardop1/life-assistant/actions/workflows/deploy-web.yml)
+[![Deploy API](https://github.com/oeduardop1/life-assistant/actions/workflows/deploy-api.yml/badge.svg)](https://github.com/oeduardop1/life-assistant/actions/workflows/deploy-api.yml)
+
+> Plataforma SaaS com IA integrada que funciona como memoria pessoal, conselheira, assistente e tracker de evolucao.
 
 ## Pre-requisitos
 
@@ -50,40 +54,6 @@ pnpm infra:down   # Para toda a infraestrutura (~15s)
 
 > **Dica:** Se o `infra:up` falhar, use `pnpm infra:up --clean` para limpar e tentar novamente.
 
-## Testando Jobs Manualmente
-
-Alguns jobs (como Memory Consolidation) rodam em horarios especificos (ex: 3AM).
-Durante desenvolvimento, voce pode dispara-los manualmente:
-
-```bash
-# Requer: pnpm infra:up + pnpm dev rodando
-
-# Opcao 1: Script automatico (recomendado)
-pnpm --filter @life-assistant/api trigger:consolidation --trigger
-
-# Opcao 2: Especificar usuario via variaveis de ambiente
-TEST_USER_EMAIL=<email> TEST_USER_PASSWORD=<senha> pnpm --filter @life-assistant/api trigger:consolidation --trigger
-
-# Opcao 3: Especificar usuario e aguardar conclusao do job
-TEST_USER_EMAIL=<email> TEST_USER_PASSWORD=<senha> pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait
-
-# Opcao 4: Apenas obter token (para usar manualmente)
-pnpm --filter @life-assistant/api trigger:consolidation
-
-# Opcao 5: curl manual
-curl -X POST http://localhost:4000/api/admin/jobs/memory-consolidation/trigger \
-  -H "Authorization: Bearer <seu-token>" \
-  -H "Content-Type: application/json"
-
-# Verificar resultado no banco
-# Via Supabase Studio: http://localhost:54323
-# Ou via psql:
-docker exec -it supabase_db_life-assistant psql -U postgres -d postgres \
-  -c "SELECT * FROM memory_consolidations ORDER BY created_at DESC LIMIT 1;"
-```
-
-> **Nota:** Endpoints `/admin/*` so existem em `NODE_ENV=development`.
-
 ## Comandos Disponiveis
 
 ```bash
@@ -123,6 +93,40 @@ pnpm --filter database db:seed      # Popular banco com dados de teste
 pnpm clean                   # Limpar builds e node_modules
 ```
 
+## Testando Jobs Manualmente
+
+Alguns jobs (como Memory Consolidation) rodam em horarios especificos (ex: 3AM).
+Durante desenvolvimento, voce pode dispara-los manualmente:
+
+```bash
+# Requer: pnpm infra:up + pnpm dev rodando
+
+# Opcao 1: Script automatico (recomendado)
+pnpm --filter @life-assistant/api trigger:consolidation --trigger
+
+# Opcao 2: Especificar usuario via variaveis de ambiente
+TEST_USER_EMAIL=<email> TEST_USER_PASSWORD=<senha> pnpm --filter @life-assistant/api trigger:consolidation --trigger
+
+# Opcao 3: Especificar usuario e aguardar conclusao do job
+TEST_USER_EMAIL=<email> TEST_USER_PASSWORD=<senha> pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait
+
+# Opcao 4: Apenas obter token (para usar manualmente)
+pnpm --filter @life-assistant/api trigger:consolidation
+
+# Opcao 5: curl manual
+curl -X POST http://localhost:4000/api/admin/jobs/memory-consolidation/trigger \
+  -H "Authorization: Bearer <seu-token>" \
+  -H "Content-Type: application/json"
+
+# Verificar resultado no banco
+# Via Supabase Studio: http://localhost:54323
+# Ou via psql:
+docker exec -it supabase_db_life-assistant psql -U postgres -d postgres \
+  -c "SELECT * FROM memory_consolidations ORDER BY created_at DESC LIMIT 1;"
+```
+
+> **Nota:** Endpoints `/admin/*` so existem em `NODE_ENV=development`.
+
 ## Estrutura de Arquivos .env
 
 O projeto usa arquivos `.env` separados por necessidade dos frameworks:
@@ -144,15 +148,17 @@ O projeto usa arquivos `.env` separados por necessidade dos frameworks:
 ```
 life-assistant/
 ├── apps/
-│   ├── web/                 # Next.js Frontend (M0.6)
-│   └── api/                 # NestJS Backend (M0.5)
+│   ├── web/                 # Next.js Frontend
+│   └── api/                 # NestJS Backend
 ├── packages/
-│   ├── shared/              # Tipos e utilitarios compartilhados
-│   ├── database/            # Schema Drizzle + migrations (M0.4)
-│   ├── ai/                  # Abstracao de LLM (M1.1)
-│   └── config/              # Configuracoes e validacao ENV (M0.3)
+│   ├── ai/                  # Abstracao de LLM (Anthropic, Google)
+│   ├── config/              # Configuracoes e validacao ENV
+│   ├── database/            # Schema Drizzle + migrations
+│   └── shared/              # Tipos e utilitarios compartilhados
+├── supabase/                # Migrations e seeds do banco
 ├── infra/
 │   └── docker/              # Docker Compose para dev local
+├── scripts/                 # Scripts de automacao
 ├── docs/
 │   └── adr/                 # Architecture Decision Records
 └── [spec files]             # Documentacao de especificacoes
@@ -173,6 +179,11 @@ life-assistant/
 | **Web (Next.js)** | 3000 | Frontend (quando rodando) |
 | **API (NestJS)** | 4000 | Backend (quando rodando) |
 
+### Observabilidade
+
+- **Sentry**: Error tracking e performance monitoring configurado em ambos apps (web e api)
+- **Logs**: Estruturados via `AppLoggerService` no backend
+
 ### Comandos Uteis
 
 ```bash
@@ -189,8 +200,20 @@ docker compose -f infra/docker/docker-compose.yml logs -f
 docker exec life-assistant-redis redis-cli ping
 
 # Verificar API (requer pnpm dev rodando)
-curl http://localhost:4000/api/health
+curl http://localhost:4000/api/health        # Liveness check (basico)
+curl http://localhost:4000/api/health/ready  # Readiness check (com dependencias)
 ```
+
+### API Documentation (Swagger)
+
+Em desenvolvimento, a documentacao da API esta disponivel via Swagger UI:
+
+```bash
+# Acesse enquanto o backend estiver rodando (pnpm dev)
+open http://localhost:4000/api/docs
+```
+
+> **Nota:** Swagger so esta disponivel em `NODE_ENV=development`. Em producao, use a spec OpenAPI gerada localmente.
 
 **Emails de desenvolvimento:** Em ambiente local, todos os emails (confirmacao, reset de senha) sao capturados no Inbucket. Acesse http://localhost:54324 para visualizar.
 
@@ -262,16 +285,16 @@ Veja `DEPLOYMENT.md` para guia completo de deploy.
 
 ## Web App
 
-O frontend é construído com Next.js 16, React 19, e shadcn/ui.
+O frontend e construido com Next.js, React, e shadcn/ui.
 
 ### Tecnologias
 
-- **Next.js 16.1.1**: App Router, Turbopack, React 19
-- **Tailwind CSS v4**: CSS-first configuration
+- **Next.js**: App Router, Turbopack, React 19
+- **Tailwind CSS**: CSS-first configuration
 - **shadcn/ui**: Componentes UI (new-york style)
-- **TanStack Query v5**: Server state management
-- **Zustand 5**: Client state com localStorage persistence
-- **Playwright 1.57**: E2E testing
+- **TanStack Query**: Server state management
+- **Zustand**: Client state com localStorage persistence
+- **Playwright**: E2E testing
 
 ### Acessar
 
@@ -279,7 +302,7 @@ O frontend é construído com Next.js 16, React 19, e shadcn/ui.
 # Desenvolvimento
 pnpm --filter web dev              # http://localhost:3000
 
-# Build produção
+# Build producao
 pnpm --filter web build
 pnpm --filter web start
 
@@ -291,13 +314,52 @@ pnpm --filter web test:e2e
 
 Veja `MILESTONES.md` para lista completa de features implementadas e roadmap.
 
-**Milestones concluidos:** M0.1 → M0.8 (Foundation + Auth + Onboarding)
+**Milestones concluidos:** Veja `MILESTONES.md` para status atual.
 
 Veja `ENGINEERING.md` §2.2 para documentacao tecnica completa do frontend.
 
+## API (Backend)
+
+O backend e construido com NestJS seguindo Clean Architecture.
+
+### Tecnologias
+
+- **NestJS**: Framework Node.js enterprise-grade
+- **Drizzle ORM**: Type-safe database access
+- **BullMQ**: Job queues com Redis
+- **Zod**: Runtime validation
+- **Vitest**: Unit e integration testing
+
+### Endpoints Principais
+
+| Modulo | Prefixo | Descricao |
+|--------|---------|-----------|
+| Auth | `/api/auth` | Autenticacao e sessoes |
+| Onboarding | `/api/onboarding` | Fluxo de onboarding |
+| Memory | `/api/memory` | Gestao de conhecimento |
+| Chat | `/api/chat` | Conversas com IA |
+| Health | `/api/health` | Health checks |
+
+### Acessar
+
+```bash
+# Desenvolvimento
+pnpm --filter api dev              # http://localhost:4000
+
+# Build producao
+pnpm --filter api build
+pnpm --filter api start:prod
+
+# Testes
+pnpm --filter api test             # Unit tests
+pnpm --filter api test:integration # Integration tests
+```
+
+Veja `ENGINEERING.md` §2.3 para documentacao tecnica completa do backend.
+
 ## Deploy
 
-Para deploy em produção, consulte **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+Para deploy em producao, consulte **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 | Serviço | Plataforma |
 |---------|------------|
