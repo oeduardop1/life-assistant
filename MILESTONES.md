@@ -304,6 +304,7 @@
 - dotenv import adicionado ao drizzle.config.ts para CLI commands
 - 199 testes unitários + 31 testes de integração passando
 - Lint, typecheck e build passam
+- **16 Jan 2026:** Gap identificado: 14 tabelas têm RLS apenas em `rls-policies.sql` (script manual), não nas migrations Supabase. Após M0.7, o padrão foi atualizado para RLS inline nas migrations. Ver **Backlog Técnico > Segurança e RLS** para tasks de correção.
 
 ---
 
@@ -2286,6 +2287,35 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - **Contexto:** AdminJobsController não tem testes unitários
   - **Arquivo:** `apps/api/test/unit/modules/admin/admin-jobs.controller.spec.ts`
 
+### Segurança e RLS (Prioridade Alta)
+
+> **Contexto:** Análise de 16 Jan 2026 identificou que 14 tabelas têm RLS apenas no `rls-policies.sql`
+> (script manual) e não nas migrations Supabase. Isso significa que `supabase db reset` não aplica
+> RLS a essas tabelas automaticamente. O código backend está protegido via `withUserId()`, mas o
+> banco precisa de RLS como segunda camada de defesa.
+>
+> **Decisão:** Consolidar RLS nas migrations Supabase (padrão novo) e manter `rls-policies.sql` apenas como referência.
+
+- [ ] Criar migration `20260117000000_complete_rls.sql` para as 14 tabelas faltantes:
+  - Tabelas: `life_balance_history`, `people`, `person_notes`, `person_interactions`, `vault_items`, `habit_freezes`, `notifications`, `reminders`, `user_integrations`, `calendar_events`, `budgets`, `subscriptions`, `export_requests`, `audit_logs`
+  - **Padrão:** Usar `public.get_current_user_id()` + service role bypass
+  - **Referência:** `supabase/migrations/20260114200001_tracking_notes_goals_habits.sql`
+
+- [ ] Atualizar `rls-policies.sql` com as 3 tabelas do Memory System:
+  - Tabelas: `user_memories`, `knowledge_items`, `memory_consolidations`
+  - **Motivo:** Manter sincronizado como documentação/referência
+
+- [ ] Adicionar teste pgTAP para validar cobertura RLS:
+  - Criar `supabase/tests/rls_coverage.test.sql`
+  - Usar helper `tests.rls_enabled('public')` do Supabase
+  - Integrar no CI via `supabase test db`
+  - **Referência:** https://supabase.com/docs/guides/local-development/testing/pgtap-extended
+
+- [ ] Documentar em ENGINEERING.md §6:
+  - Regra: toda nova tabela com `user_id` DEVE ter RLS na própria migration
+  - Template de policy padrão a seguir
+  - Referência ao teste pgTAP de validação
+
 ---
 
 ## Acompanhamento
@@ -2303,6 +2333,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-16 | Backlog | Adicionado | Seção "Segurança e RLS" no Backlog Técnico. 14 tabelas precisam de RLS nas migrations Supabase. Nota adicionada no M0.4 sobre gap identificado |
 | 2026-01-15 | M1.3 | Bug fix | Corrigido bug crítico no Memory Consolidation (Zod null handling) que impedia criação de knowledge items. Melhorado script trigger (`--wait` flag). 6 novos testes. Docs atualizados (AI_SPECS §6.5, ENGINEERING §7.6) |
 | 2026-01-15 | M1.9 | Chat UX | Markdown rendering com Streamdown + @tailwindcss/typography. Bug fixes: typing indicator (ThinkingIndicator + typewriter + auto-scroll), Memory area cards (ícones Lucide, truncate texto) |
 | 2026-01-15 | M1.9 | UI Impl. | 14 tasks de UI implementadas: ErrorBoundary support link, empty states (Chat/Memory), error states com retry, toasts CRUD (Chat), dashboard skeleton, responsividade (sidebar mobile overlay, layouts responsive). Testes pendentes |
@@ -2330,5 +2361,5 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-*Última atualização: 15 Janeiro 2026*
-*Revisão: Bug fix crítico Memory Consolidation (Zod null handling). Script trigger com --wait flag. Docs atualizados.*
+*Última atualização: 16 Janeiro 2026*
+*Revisão: Backlog Técnico - Adicionada seção "Segurança e RLS" com tasks para consolidar RLS nas migrations Supabase (14 tabelas). Nota no M0.4 sobre gap identificado.*
