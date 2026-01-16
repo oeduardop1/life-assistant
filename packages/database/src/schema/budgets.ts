@@ -1,5 +1,5 @@
 // packages/database/src/schema/budgets.ts
-// Budgets table as defined in DATA_MODEL.md §4.14
+// Budgets table as defined in docs/specs/data-model.md §4.14
 
 import {
   pgTable,

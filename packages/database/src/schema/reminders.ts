@@ -1,5 +1,5 @@
 // packages/database/src/schema/reminders.ts
-// Reminders table as defined in DATA_MODEL.md §4.11
+// Reminders table as defined in docs/specs/data-model.md §4.11
 
 import {
   pgTable,

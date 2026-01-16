@@ -1,5 +1,5 @@
 // packages/database/src/schema/habit-freezes.ts
-// Habit freezes table as defined in DATA_MODEL.md §4.17
+// Habit freezes table as defined in docs/specs/data-model.md §4.17
 
 import { pgTable, uuid, date, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { habits } from './goals';

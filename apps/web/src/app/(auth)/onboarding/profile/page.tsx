@@ -20,7 +20,7 @@ import type { ProfileStepData } from '@/lib/validations/onboarding';
  * - User name (min 2 chars)
  * - Timezone (IANA format)
  *
- * @see SYSTEM_SPECS.md §3.1 for validation requirements
+ * @see docs/specs/system.md §3.1 for validation requirements
  */
 export default function ProfilePage() {
   const router = useRouter();

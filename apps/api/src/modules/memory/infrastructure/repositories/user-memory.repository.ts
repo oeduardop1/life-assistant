@@ -8,7 +8,7 @@ import type { UserMemory, NewUserMemory } from '@life-assistant/database';
  * Drizzle implementation of UserMemoryRepositoryPort
  *
  * Uses RLS via withUserId for all operations
- * @see DATA_MODEL.md §4.5 for user_memories entity
+ * @see docs/specs/data-model.md §4.5 for user_memories entity
  */
 @Injectable()
 export class UserMemoryRepository implements UserMemoryRepositoryPort {

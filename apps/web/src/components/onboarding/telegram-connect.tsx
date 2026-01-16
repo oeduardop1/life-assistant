@@ -24,7 +24,7 @@ interface TelegramConnectProps {
  *
  * User can skip this step and configure later.
  *
- * @see INTEGRATIONS_SPECS.md for Telegram bot integration
+ * @see docs/specs/integrations.md for Telegram bot integration
  */
 export function TelegramConnect({
   telegramBotUsername = 'LifeAssistantBot',

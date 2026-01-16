@@ -1,5 +1,5 @@
 // packages/database/src/schema/notifications.ts
-// Notifications table as defined in DATA_MODEL.md §4.10
+// Notifications table as defined in docs/specs/data-model.md §4.10
 
 import {
   pgTable,

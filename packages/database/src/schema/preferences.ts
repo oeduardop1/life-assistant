@@ -1,5 +1,5 @@
 // packages/database/src/schema/preferences.ts
-// Zod schema for JSONB preferences field as defined in DATA_MODEL.md §3.3
+// Zod schema for JSONB preferences field as defined in docs/specs/data-model.md §3.3
 
 import { z } from 'zod';
 

@@ -7,8 +7,8 @@ import type { Conversation } from '@life-assistant/database';
 /**
  * Builds the system prompt context for chat interactions
  *
- * @see AI_SPECS.md §4.1 for system prompt structure
- * @see AI_SPECS.md §4.2 for counselor mode prompt
+ * @see docs/specs/ai.md §4.1 for system prompt structure
+ * @see docs/specs/ai.md §4.2 for counselor mode prompt
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Injectable()
@@ -55,7 +55,7 @@ export class ContextBuilderService {
 
   /**
    * Build the base system prompt
-   * Per AI_SPECS.md §4.1
+   * Per docs/specs/ai.md §4.1
    */
   private buildBasePrompt(
     user: { name: string; timezone: string },
@@ -157,7 +157,7 @@ ${userMemorySection}
 
   /**
    * Add counselor mode extensions to the base prompt
-   * Per AI_SPECS.md §4.2
+   * Per docs/specs/ai.md §4.2
    */
   private addCounselorMode(basePrompt: string): string {
     return `${basePrompt}

@@ -1,6 +1,6 @@
 /**
  * LLM Port Interface - Abstracts LLM providers (Gemini, Claude).
- * Reference: ENGINEERING.md §8.2
+ * Reference: docs/specs/engineering.md §8.2
  * @module ports/llm.port
  */
 

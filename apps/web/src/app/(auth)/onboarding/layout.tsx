@@ -17,7 +17,7 @@ import type { OnboardingStep } from '@/lib/validations/onboarding';
  * - OnboardingStepper progress indicator
  * - Consistent card layout
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ * @see docs/specs/system.md §3.1 for onboarding flow
  */
 /**
  * Derive the current onboarding step from the URL pathname

@@ -1,5 +1,5 @@
 // packages/database/src/schema/memory-consolidations.ts
-// Memory consolidations table as defined in DATA_MODEL.md §4.5 (ADR-012)
+// Memory consolidations table as defined in docs/specs/data-model.md §4.5 (ADR-012)
 
 import {
   pgTable,

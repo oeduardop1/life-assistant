@@ -14,12 +14,12 @@ const CONSOLIDATION_CRON = '0 3 * * *';
 /**
  * MemoryConsolidationScheduler - Schedules daily consolidation at 3:00 AM per timezone
  *
- * Per AI_SPECS.md §6.5:
+ * Per docs/specs/ai.md §6.5:
  * - Runs at 3:00 AM user's local time
  * - Uses BullMQ timezone support for scheduling
  * - Creates one scheduler per unique timezone in the system
  *
- * @see ENGINEERING.md §7 for job patterns
+ * @see docs/specs/engineering.md §7 for job patterns
  */
 @Injectable()
 export class MemoryConsolidationScheduler implements OnModuleInit {

@@ -190,7 +190,7 @@ export const lifeAreaLabels: Record<LifeArea, string> = {
 
 /**
  * Human-readable labels for sources (PT-BR)
- * @see DATA_MODEL.md §3.1 for knowledge_item_source enum
+ * @see docs/specs/data-model.md §3.1 for knowledge_item_source enum
  */
 export const sourceLabels: Record<KnowledgeItemSource, string> = {
   conversation: 'Na conversa',

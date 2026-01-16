@@ -30,7 +30,7 @@ interface ProfileFormProps {
  * - User name (minimum 2 characters)
  * - Timezone (IANA format)
  *
- * @see SYSTEM_SPECS.md §3.1 for validation requirements
+ * @see docs/specs/system.md §3.1 for validation requirements
  */
 export function ProfileForm({
   defaultValues,

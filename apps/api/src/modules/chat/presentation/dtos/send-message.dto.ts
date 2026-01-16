@@ -4,7 +4,7 @@ import { IsString, IsNotEmpty, MaxLength, MinLength } from 'class-validator';
 /**
  * DTO for sending a message to a conversation
  *
- * @see AI_SPECS.md §4.1 for message handling
+ * @see docs/specs/ai.md §4.1 for message handling
  */
 export class SendMessageDto {
   @ApiProperty({

@@ -3,7 +3,7 @@ import type { Conversation, NewConversation } from '@life-assistant/database';
 /**
  * Port for conversation persistence operations
  *
- * @see DATA_MODEL.md §4.2 for conversation entity
+ * @see docs/specs/data-model.md §4.2 for conversation entity
  */
 export interface ConversationRepositoryPort {
   /**

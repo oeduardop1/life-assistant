@@ -17,7 +17,7 @@ import { OnboardingPage } from '../pages';
  * - Supabase CLI running (npx supabase start)
  * - Global setup creates onboarding user with pending onboarding
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow requirements
+ * @see docs/specs/system.md §3.1 for onboarding flow requirements
  */
 
 // =========================================================================

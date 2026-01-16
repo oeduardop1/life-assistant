@@ -1,5 +1,5 @@
 // packages/database/src/schema/notes.ts
-// Notes and note links tables as defined in DATA_MODEL.md §4.5
+// Notes and note links tables as defined in docs/specs/data-model.md §4.5
 
 import {
   pgTable,

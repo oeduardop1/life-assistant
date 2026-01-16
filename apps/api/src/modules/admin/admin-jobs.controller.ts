@@ -10,7 +10,7 @@ import type { AuthenticatedUser } from '../../common/types/request.types';
  * This controller is only available when NODE_ENV=development.
  * Provides endpoints to manually trigger background jobs for testing.
  *
- * @see ENGINEERING.md §7.6 for usage documentation
+ * @see docs/specs/engineering.md §7.6 for usage documentation
  */
 @ApiTags('Admin - Jobs')
 @Controller('admin/jobs')

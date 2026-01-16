@@ -21,7 +21,7 @@ import { toast } from 'sonner';
  * - user.status = 'active'
  * - user.onboardingCompletedAt = NOW()
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ * @see docs/specs/system.md §3.1 for onboarding flow
  */
 export default function TutorialPage() {
   const { completeOnboarding, skipStep, isSaving, error } = useOnboarding();

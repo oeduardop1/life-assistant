@@ -1,5 +1,5 @@
 // packages/database/src/schema/conversations.ts
-// Conversations and Messages tables as defined in DATA_MODEL.md §4.2
+// Conversations and Messages tables as defined in docs/specs/data-model.md §4.2
 
 import {
   pgTable,

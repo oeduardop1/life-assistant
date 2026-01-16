@@ -1,5 +1,5 @@
 // packages/database/src/schema/tracking.ts
-// Tracking entries table as defined in DATA_MODEL.md §4.3
+// Tracking entries table as defined in docs/specs/data-model.md §4.3
 
 import {
   pgTable,

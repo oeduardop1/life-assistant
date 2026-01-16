@@ -22,7 +22,7 @@ import {
  * - Tool executor for search_knowledge and add_knowledge
  *
  * @see MILESTONES.md M1.3 for implementation details
- * @see DATA_MODEL.md §4.5 for entities
+ * @see docs/specs/data-model.md §4.5 for entities
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Module({

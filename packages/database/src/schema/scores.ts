@@ -1,5 +1,5 @@
 // packages/database/src/schema/scores.ts
-// Life balance history table as defined in DATA_MODEL.md §4.4
+// Life balance history table as defined in docs/specs/data-model.md §4.4
 
 import {
   pgTable,

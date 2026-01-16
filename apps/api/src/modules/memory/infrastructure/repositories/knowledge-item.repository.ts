@@ -37,7 +37,7 @@ const KNOWLEDGE_ITEM_TYPES: KnowledgeItemType[] = [
  * Drizzle implementation of KnowledgeItemRepositoryPort
  *
  * Uses RLS via withUserId for all operations
- * @see DATA_MODEL.md §4.5 for knowledge_items entity
+ * @see docs/specs/data-model.md §4.5 for knowledge_items entity
  */
 @Injectable()
 export class KnowledgeItemRepository implements KnowledgeItemRepositoryPort {

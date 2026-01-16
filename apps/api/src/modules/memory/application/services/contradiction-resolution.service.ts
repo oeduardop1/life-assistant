@@ -53,7 +53,7 @@ export interface ContradictionResolutionInfo {
  *
  * Part of M1.6.1 - Contradiction Detection for Memory System.
  *
- * @see AI_SPECS.md for memory management
+ * @see docs/specs/ai.md for memory management
  */
 @Injectable()
 export class ContradictionResolutionService {

@@ -1,5 +1,5 @@
 // packages/database/src/schema/calendar.ts
-// Calendar events table as defined in DATA_MODEL.md §4.13
+// Calendar events table as defined in docs/specs/data-model.md §4.13
 
 import {
   pgTable,

@@ -1,5 +1,5 @@
 // packages/database/src/schema/goals.ts
-// Goals, milestones, habits and completions as defined in DATA_MODEL.md §4.9
+// Goals, milestones, habits and completions as defined in docs/specs/data-model.md §4.9
 
 import {
   pgTable,

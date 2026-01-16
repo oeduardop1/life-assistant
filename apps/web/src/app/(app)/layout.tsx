@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  * - Redirects to /onboarding if onboarding not complete
  * - Shows loading state during checks
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding requirements
+ * @see docs/specs/system.md §3.1 for onboarding requirements
  */
 export default function AppLayout({
   children,

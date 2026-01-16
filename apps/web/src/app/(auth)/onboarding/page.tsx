@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  * - If telegram complete: /onboarding/tutorial
  * - If all complete: /dashboard
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ * @see docs/specs/system.md §3.1 for onboarding flow
  */
 export default function OnboardingPage() {
   const router = useRouter();

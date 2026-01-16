@@ -25,7 +25,7 @@ interface ApiError {
 
 /**
  * Standard API response wrapper from TransformInterceptor
- * @see ENGINEERING.md - API Response Format
+ * @see docs/specs/engineering.md - API Response Format
  */
 interface ApiResponse<T> {
   success: boolean;
@@ -46,7 +46,7 @@ interface ApiResponse<T> {
  * - Completing onboarding
  * - Navigation between steps
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow requirements
+ * @see docs/specs/system.md §3.1 for onboarding flow requirements
  */
 export function useOnboarding() {
   const router = useRouter();

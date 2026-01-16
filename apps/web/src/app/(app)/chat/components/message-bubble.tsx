@@ -122,7 +122,7 @@ interface StreamingMessageProps {
  * Uses typewriter effect to gradually reveal content character by character,
  * creating a smooth "typing" experience similar to ChatGPT/Claude/Gemini.
  *
- * @see SYSTEM_SPECS.md §4.2 "Typing indicator + streaming"
+ * @see docs/specs/system.md §4.2 "Typing indicator + streaming"
  */
 export function StreamingMessage({ content, onComplete }: StreamingMessageProps) {
   const { displayedContent, isComplete } = useTypewriter(content);
@@ -178,7 +178,7 @@ export function StreamingMessage({ content, onComplete }: StreamingMessageProps)
 /**
  * ThinkingIndicator - Shows while AI is processing before streaming starts
  *
- * @see SYSTEM_SPECS.md §4.2 "Typing indicator + streaming"
+ * @see docs/specs/system.md §4.2 "Typing indicator + streaming"
  */
 export function ThinkingIndicator() {
   return (

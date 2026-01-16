@@ -1,5 +1,5 @@
 // packages/database/src/schema/people.ts
-// People (CRM) tables as defined in DATA_MODEL.md §4.7
+// People (CRM) tables as defined in docs/specs/data-model.md §4.7
 
 import {
   pgTable,

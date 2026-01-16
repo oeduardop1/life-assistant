@@ -22,7 +22,7 @@ const CLEANUP_SCHEDULER_NAME = 'cleanup-onboarding-daily';
 /**
  * CleanupOnboardingScheduler - Schedules daily cleanup of abandoned onboardings
  *
- * Per SYSTEM_SPECS.md §3.1:
+ * Per docs/specs/system.md §3.1:
  * - Users who don't complete onboarding within 30 days are removed
  * - Job runs daily at 03:00 UTC
  */

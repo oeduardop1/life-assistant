@@ -1,5 +1,5 @@
 // packages/database/src/schema/audit.ts
-// Audit logs table as defined in DATA_MODEL.md §4.19
+// Audit logs table as defined in docs/specs/data-model.md §4.19
 
 import {
   pgTable,

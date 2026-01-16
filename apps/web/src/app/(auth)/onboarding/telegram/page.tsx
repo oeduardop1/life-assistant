@@ -22,7 +22,7 @@ import { toast } from 'sonner';
  *
  * User can skip this step and configure later.
  *
- * @see INTEGRATIONS_SPECS.md for Telegram bot integration
+ * @see docs/specs/integrations.md for Telegram bot integration
  */
 export default function TelegramPage() {
   const router = useRouter();

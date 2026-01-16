@@ -1,6 +1,6 @@
 /**
  * Zod validation schemas for onboarding forms
- * @see SYSTEM_SPECS.md §3.1 for onboarding requirements
+ * @see docs/specs/system.md §3.1 for onboarding requirements
  */
 
 import { z } from 'zod';

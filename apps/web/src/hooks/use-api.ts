@@ -14,7 +14,7 @@ interface ApiError {
 
 /**
  * Standard API response wrapper from TransformInterceptor
- * @see ENGINEERING.md - API Response Format
+ * @see docs/specs/engineering.md - API Response Format
  */
 interface ApiResponse<T> {
   success: boolean;

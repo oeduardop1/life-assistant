@@ -15,7 +15,7 @@ import { LoggerModule } from '../../logger/logger.module';
  * - Password reset flow
  * - Email confirmation
  *
- * @see ENGINEERING.md §4 for Clean Architecture patterns
+ * @see docs/specs/engineering.md §4 for Clean Architecture patterns
  * @see ADR-006 for JWT validation with jose
  */
 @Module({

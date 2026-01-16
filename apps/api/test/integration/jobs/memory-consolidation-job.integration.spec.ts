@@ -8,7 +8,7 @@
  * Memory Consolidation Job, without importing the actual processor to avoid
  * database dependencies.
  *
- * @see ENGINEERING.md §7.5 for job testing patterns
+ * @see docs/specs/engineering.md §7.5 for job testing patterns
  * @see ADR-012 for Memory Consolidation architecture
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';

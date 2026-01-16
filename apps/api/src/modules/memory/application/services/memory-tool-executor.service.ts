@@ -18,7 +18,7 @@ import { UserMemoryService } from './user-memory.service';
 /**
  * Memory Tool Executor - Executes search_knowledge, add_knowledge, and analyze_context tools
  *
- * @see AI_SPECS.md §5.1 for tool definitions
+ * @see docs/specs/ai.md §5.1 for tool definitions
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  * @see ADR-014 for Real-time Inference architecture
  */

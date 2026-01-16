@@ -34,12 +34,12 @@ interface CleanupJobResult {
 /**
  * CleanupOnboardingProcessor - Removes abandoned onboarding users after 30 days
  *
- * Per SYSTEM_SPECS.md §3.1:
+ * Per docs/specs/system.md §3.1:
  * - Users who don't complete onboarding within 30 days are removed
  * - Job runs daily at 03:00 UTC
  * - Soft deletes users (sets deletedAt) to allow recovery if needed
  *
- * @see ENGINEERING.md §7 for job patterns
+ * @see docs/specs/engineering.md §7 for job patterns
  */
 @Processor(QUEUES.CLEANUP_ONBOARDING)
 @Injectable()

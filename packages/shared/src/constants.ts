@@ -1,11 +1,11 @@
 /**
- * Constantes do sistema - SYSTEM_SPECS.md
+ * Constantes do sistema - docs/specs/system.md
  */
 
 import { LifeArea } from './enums';
 
 /**
- * Pesos default das áreas de vida - SYSTEM_SPECS.md §2.2
+ * Pesos default das áreas de vida - docs/specs/system.md §2.2
  */
 export const DEFAULT_WEIGHTS: Record<LifeArea, number> = {
   [LifeArea.HEALTH]: 1.0,
@@ -27,7 +27,7 @@ export const WEIGHT_CONFIG = {
 } as const;
 
 /**
- * Validações de tracking - SYSTEM_SPECS.md §3.3
+ * Validações de tracking - docs/specs/system.md §3.3
  */
 export const TRACKING_VALIDATIONS = {
   weight: {
@@ -70,7 +70,7 @@ export const TRACKING_DEFAULTS = {
 } as const;
 
 /**
- * Rate limits por plano - SYSTEM_SPECS.md §2.6
+ * Rate limits por plano - docs/specs/system.md §2.6
  */
 export const RATE_LIMITS = {
   free: {
@@ -91,7 +91,7 @@ export const RATE_LIMITS = {
 } as const;
 
 /**
- * Storage limits por plano - SYSTEM_SPECS.md §2.7
+ * Storage limits por plano - docs/specs/system.md §2.7
  */
 export const STORAGE_LIMITS = {
   free: {
@@ -121,7 +121,7 @@ export const STORAGE_LIMITS = {
 } as const;
 
 /**
- * Defaults do sistema - SYSTEM_SPECS.md §2.1
+ * Defaults do sistema - docs/specs/system.md §2.1
  */
 export const SYSTEM_DEFAULTS = {
   timezone: 'America/Sao_Paulo',
@@ -130,7 +130,7 @@ export const SYSTEM_DEFAULTS = {
 } as const;
 
 /**
- * Retenção de dados - SYSTEM_SPECS.md §2.5
+ * Retenção de dados - docs/specs/system.md §2.5
  */
 export const DATA_RETENTION_DAYS = {
   softDeleteToHardDelete: 30,

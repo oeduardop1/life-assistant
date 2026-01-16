@@ -26,7 +26,7 @@ export { QUEUES };
  * - Job processors for background tasks
  * - Scheduled (cron) jobs
  *
- * @see ENGINEERING.md §7 for job architecture
+ * @see docs/specs/engineering.md §7 for job architecture
  */
 @Module({
   imports: [

@@ -11,7 +11,7 @@
  *   TEST_USER_EMAIL    - Email do usuário (default: test@example.com)
  *   TEST_USER_PASSWORD - Senha do usuário (default: testpassword123)
  *
- * @see ENGINEERING.md §7.6 para documentação do endpoint admin
+ * @see docs/specs/engineering.md §7.6 para documentação do endpoint admin
  */
 
 import 'dotenv/config';

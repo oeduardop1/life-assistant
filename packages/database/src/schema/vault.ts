@@ -1,5 +1,5 @@
 // packages/database/src/schema/vault.ts
-// Vault items table as defined in DATA_MODEL.md §4.8
+// Vault items table as defined in docs/specs/data-model.md §4.8
 
 import {
   pgTable,

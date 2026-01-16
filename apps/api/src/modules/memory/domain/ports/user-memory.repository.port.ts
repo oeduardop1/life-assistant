@@ -3,7 +3,7 @@ import type { UserMemory, NewUserMemory } from '@life-assistant/database';
 /**
  * Port for user memory persistence operations
  *
- * @see DATA_MODEL.md §4.5 for user_memories entity
+ * @see docs/specs/data-model.md §4.5 for user_memories entity
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 export interface UserMemoryRepositoryPort {

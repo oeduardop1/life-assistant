@@ -1,7 +1,7 @@
 /**
  * Memory consolidation prompt builder
  *
- * @see AI_SPECS.md §6.5.2 for prompt specification
+ * @see docs/specs/ai.md §6.5.2 for prompt specification
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 

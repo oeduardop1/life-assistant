@@ -19,7 +19,7 @@ import type { AreasStepData } from '@/lib/validations/onboarding';
  * Allows user to select 3-8 life areas to focus on.
  * Selected areas get weight 1.0, unselected get 0.0.
  *
- * @see SYSTEM_SPECS.md §3.1 for validation requirements
+ * @see docs/specs/system.md §3.1 for validation requirements
  */
 export default function AreasPage() {
   const router = useRouter();

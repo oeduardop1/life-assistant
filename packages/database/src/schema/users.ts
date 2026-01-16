@@ -1,5 +1,5 @@
 // packages/database/src/schema/users.ts
-// Users table as defined in DATA_MODEL.md §4.1
+// Users table as defined in docs/specs/data-model.md §4.1
 
 import {
   pgTable,

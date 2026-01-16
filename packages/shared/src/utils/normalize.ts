@@ -1,6 +1,6 @@
 /**
  * Normaliza texto para busca case/accent insensitive (wikilinks)
- * Per SYSTEM_SPECS.md §3.6
+ * Per docs/specs/system.md §3.6
  *
  * @param text - Texto a ser normalizado
  * @returns Texto normalizado (lowercase, sem acentos, trimmed)

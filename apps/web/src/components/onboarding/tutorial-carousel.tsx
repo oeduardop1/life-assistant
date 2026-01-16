@@ -64,7 +64,7 @@ interface TutorialCarouselProps {
  * Shows 3-4 slides introducing key features of the app.
  * User can navigate through slides or skip directly to dashboard.
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ * @see docs/specs/system.md §3.1 for onboarding flow
  */
 export function TutorialCarousel({
   onComplete,

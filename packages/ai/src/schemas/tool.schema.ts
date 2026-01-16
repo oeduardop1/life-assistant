@@ -1,6 +1,6 @@
 /**
  * Tool definition schemas for LLM Tool Use.
- * Reference: AI_SPECS.md §6.2
+ * Reference: docs/specs/ai.md §6.2
  * @module schemas/tool.schema
  */
 

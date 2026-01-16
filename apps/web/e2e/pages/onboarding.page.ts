@@ -4,7 +4,7 @@ import { type Page, type Locator } from '@playwright/test';
  * Page Object for the Onboarding pages
  * Provides methods to interact with the 4-step onboarding wizard
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow requirements
+ * @see docs/specs/system.md §3.1 for onboarding flow requirements
  */
 export class OnboardingPage {
   readonly page: Page;

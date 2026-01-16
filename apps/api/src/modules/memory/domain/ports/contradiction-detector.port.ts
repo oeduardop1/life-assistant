@@ -50,7 +50,7 @@ export interface BatchContradictionResult {
  * Uses LLM to semantically compare facts and determine if they contradict.
  * This is part of the contradiction detection system (M1.6.1).
  *
- * @see ENGINEERING.md §8 for LLM abstraction patterns
+ * @see docs/specs/engineering.md §8 for LLM abstraction patterns
  */
 export interface ContradictionDetectorPort {
   /**

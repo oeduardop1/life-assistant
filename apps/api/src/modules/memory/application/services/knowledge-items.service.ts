@@ -107,7 +107,7 @@ export interface UpdateKnowledgeItemParams {
 /**
  * Service for managing knowledge items
  *
- * @see DATA_MODEL.md §4.5 for knowledge_items entity
+ * @see docs/specs/data-model.md §4.5 for knowledge_items entity
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Injectable()

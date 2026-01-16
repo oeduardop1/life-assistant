@@ -1,5 +1,5 @@
 -- Triggers for Life Assistant AI
--- As defined in DATA_MODEL.md §7
+-- As defined in docs/specs/data-model.md §7
 
 -- ============================================================================
 -- 7.1 Updated At Trigger

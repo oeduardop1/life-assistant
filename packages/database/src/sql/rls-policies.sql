@@ -1,5 +1,5 @@
 -- RLS Policies for Life Assistant AI
--- As defined in DATA_MODEL.md §6
+-- As defined in docs/specs/data-model.md §6
 
 -- ============================================================================
 -- Helper function to get user_id from session context

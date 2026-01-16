@@ -1,5 +1,5 @@
 // packages/database/src/schema/exports.ts
-// Export requests table (LGPD) as defined in DATA_MODEL.md §4.16
+// Export requests table (LGPD) as defined in docs/specs/data-model.md §4.16
 
 import {
   pgTable,

@@ -10,7 +10,7 @@ import {
 /**
  * DTO for creating a new conversation
  *
- * @see SYSTEM_SPECS.md §3.2 for conversation types
+ * @see docs/specs/system.md §3.2 for conversation types
  */
 export class CreateConversationDto {
   @ApiPropertyOptional({

@@ -1,5 +1,5 @@
 /**
- * Enums compartilhados - DATA_MODEL.md §3.2
+ * Enums compartilhados - docs/specs/data-model.md §3.2
  */
 
 // UserStatus - Status do usuário no sistema
@@ -67,7 +67,7 @@ export enum VaultCategory {
   OTHER = 'other',
 }
 
-// ExpenseCategory - Categorias de despesas - SYSTEM_SPECS.md §3.3
+// ExpenseCategory - Categorias de despesas - docs/specs/system.md §3.3
 export enum ExpenseCategory {
   FOOD = 'food',
   TRANSPORT = 'transport',

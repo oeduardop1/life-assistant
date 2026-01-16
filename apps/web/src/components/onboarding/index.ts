@@ -7,7 +7,7 @@
  * 3. Telegram (optional)
  * 4. Tutorial (optional)
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ * @see docs/specs/system.md §3.1 for onboarding flow
  */
 
 export { OnboardingStepper } from './onboarding-stepper';

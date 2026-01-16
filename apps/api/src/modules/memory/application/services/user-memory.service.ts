@@ -17,8 +17,8 @@ export interface FormattedUserMemory {
 /**
  * Service for managing user memories
  *
- * @see DATA_MODEL.md §4.5 for user_memories entity
- * @see AI_SPECS.md §6.3 for system prompt structure
+ * @see docs/specs/data-model.md §4.5 for user_memories entity
+ * @see docs/specs/ai.md §6.3 for system prompt structure
  */
 @Injectable()
 export class UserMemoryService {
@@ -72,7 +72,7 @@ export class UserMemoryService {
    * Format user memory for system prompt injection
    * Targets ~500-800 tokens
    *
-   * @see AI_SPECS.md §6.3.2 for format specification
+   * @see docs/specs/ai.md §6.3.2 for format specification
    */
   formatForPrompt(memory: UserMemory): FormattedUserMemory {
     const sections: string[] = [];

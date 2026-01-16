@@ -20,8 +20,8 @@ import { JobsModule } from '../../jobs/jobs.module';
  * - POST /api/onboarding/complete - Finalize onboarding
  * - GET /api/onboarding/check - Check if onboarding is complete
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow requirements
- * @see ENGINEERING.md §4 for Clean Architecture patterns
+ * @see docs/specs/system.md §3.1 for onboarding flow requirements
+ * @see docs/specs/engineering.md §4 for Clean Architecture patterns
  */
 @Module({
   imports: [DatabaseModule, LoggerModule, JobsModule],

@@ -47,7 +47,7 @@ interface OnboardingStepperProps {
  * - Current: highlighted circle
  * - Pending: gray circle
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ * @see docs/specs/system.md §3.1 for onboarding flow
  */
 export function OnboardingStepper({
   currentStep,

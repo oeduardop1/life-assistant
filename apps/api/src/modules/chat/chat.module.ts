@@ -19,7 +19,7 @@ import { MemoryModule } from '../memory/memory.module';
  * - Support for different conversation types (general, counselor)
  *
  * @see MILESTONES.md M1.2 for implementation details
- * @see AI_SPECS.md §4 for system prompts
+ * @see docs/specs/ai.md §4 for system prompts
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Module({

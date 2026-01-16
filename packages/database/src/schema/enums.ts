@@ -1,5 +1,5 @@
 // packages/database/src/schema/enums.ts
-// 21 PostgreSQL enums as defined in DATA_MODEL.md §3.2
+// 21 PostgreSQL enums as defined in docs/specs/data-model.md §3.2
 
 import { pgEnum } from 'drizzle-orm/pg-core';
 

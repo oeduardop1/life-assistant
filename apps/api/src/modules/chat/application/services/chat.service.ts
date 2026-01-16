@@ -31,8 +31,8 @@ export interface MessageEvent {
 /**
  * Chat service - Orchestrates chat interactions with LLM and Tool Use
  *
- * @see AI_SPECS.md §2 for architecture
- * @see AI_SPECS.md §6 for Tool Use Architecture
+ * @see docs/specs/ai.md §2 for architecture
+ * @see docs/specs/ai.md §6 for Tool Use Architecture
  * @see ADR-012 for Tool Use + Memory Consolidation
  */
 @Injectable()
@@ -44,7 +44,7 @@ export class ChatService {
    * Tools currently available for memory operations.
    * More tools will be added in future milestones.
    *
-   * @see AI_SPECS.md §6.2 for tool definitions
+   * @see docs/specs/ai.md §6.2 for tool definitions
    * @see ADR-014 for analyze_context (Real-time Inference)
    */
   private readonly availableTools: ToolDefinition[] = [

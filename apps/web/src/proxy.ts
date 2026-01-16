@@ -17,7 +17,7 @@ const publicRoutes = [
 
 /**
  * Routes accessible during onboarding (authenticated but pending status)
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ * @see docs/specs/system.md §3.1 for onboarding flow
  */
 const onboardingRoutes = ['/onboarding'];
 

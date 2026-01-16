@@ -15,7 +15,7 @@ interface SkipButtonProps {
  * - Telegram step (optional integration)
  * - Tutorial step (can skip to dashboard)
  *
- * @see SYSTEM_SPECS.md §3.1 for optional step requirements
+ * @see docs/specs/system.md §3.1 for optional step requirements
  */
 export function SkipButton({
   onSkip,

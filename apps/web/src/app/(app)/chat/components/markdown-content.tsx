@@ -15,7 +15,7 @@ interface MarkdownContentProps {
  * Handles incomplete markdown gracefully during streaming/typewriter.
  * Uses Tailwind prose classes for consistent styling.
  *
- * @see SYSTEM_SPECS.md §4.2 "Chat UI"
+ * @see docs/specs/system.md §4.2 "Chat UI"
  */
 export function MarkdownContent({
   content,

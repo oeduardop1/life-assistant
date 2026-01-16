@@ -1,5 +1,5 @@
 // packages/database/src/schema/subscriptions.ts
-// Subscriptions table (Stripe local copy) as defined in DATA_MODEL.md §4.15
+// Subscriptions table (Stripe local copy) as defined in docs/specs/data-model.md §4.15
 
 import {
   pgTable,

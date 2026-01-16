@@ -68,13 +68,13 @@ interface UserForConsolidation {
 /**
  * MemoryConsolidationProcessor - Extracts facts from conversations daily
  *
- * Per AI_SPECS.md §6.5:
+ * Per docs/specs/ai.md §6.5:
  * - Runs at 3:00 AM user's local time
  * - Extracts facts, preferences, and insights from conversations
  * - Updates user_memories and knowledge_items
  * - Creates audit log in memory_consolidations
  *
- * @see ENGINEERING.md §7 for job patterns
+ * @see docs/specs/engineering.md §7 for job patterns
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Processor(QUEUES.MEMORY_CONSOLIDATION)

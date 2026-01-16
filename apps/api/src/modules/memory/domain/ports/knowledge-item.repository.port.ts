@@ -33,7 +33,7 @@ export interface KnowledgeItemSearchParams {
 /**
  * Port for knowledge item persistence operations
  *
- * @see DATA_MODEL.md §4.5 for knowledge_items entity
+ * @see docs/specs/data-model.md §4.5 for knowledge_items entity
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 export interface KnowledgeItemRepositoryPort {

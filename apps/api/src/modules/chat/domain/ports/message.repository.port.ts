@@ -3,7 +3,7 @@ import type { Message, NewMessage } from '@life-assistant/database';
 /**
  * Port for message persistence operations
  *
- * @see DATA_MODEL.md §4.2 for message entity
+ * @see docs/specs/data-model.md §4.2 for message entity
  */
 export interface MessageRepositoryPort {
   /**

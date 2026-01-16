@@ -1,5 +1,5 @@
 // packages/database/src/schema/user-memories.ts
-// User memories table as defined in DATA_MODEL.md §4.5 (ADR-012)
+// User memories table as defined in docs/specs/data-model.md §4.5 (ADR-012)
 
 import {
   pgTable,

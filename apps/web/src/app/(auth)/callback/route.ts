@@ -6,7 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 
 /**
  * Standard API response wrapper from TransformInterceptor
- * @see ENGINEERING.md - API Response Format
+ * @see docs/specs/engineering.md - API Response Format
  */
 interface ApiResponse<T> {
   success: boolean;
@@ -31,7 +31,7 @@ interface OnboardingStatus {
  *
  * The code in the URL is exchanged for a session.
  *
- * @see SYSTEM_SPECS.md §3.1 for onboarding flow
+ * @see docs/specs/system.md §3.1 for onboarding flow
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);

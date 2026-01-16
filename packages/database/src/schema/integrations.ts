@@ -1,5 +1,5 @@
 // packages/database/src/schema/integrations.ts
-// User integrations table as defined in DATA_MODEL.md §4.12
+// User integrations table as defined in docs/specs/data-model.md §4.12
 
 import {
   pgTable,
