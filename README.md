@@ -61,10 +61,16 @@ Durante desenvolvimento, voce pode dispara-los manualmente:
 # Opcao 1: Script automatico (recomendado)
 pnpm --filter @life-assistant/api trigger:consolidation --trigger
 
-# Opcao 2: Apenas obter token (para usar manualmente)
+# Opcao 2: Especificar usuario via variaveis de ambiente
+TEST_USER_EMAIL=<email> TEST_USER_PASSWORD=<senha> pnpm --filter @life-assistant/api trigger:consolidation --trigger
+
+# Opcao 3: Especificar usuario e aguardar conclusao do job
+TEST_USER_EMAIL=<email> TEST_USER_PASSWORD=<senha> pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait
+
+# Opcao 4: Apenas obter token (para usar manualmente)
 pnpm --filter @life-assistant/api trigger:consolidation
 
-# Opcao 3: curl manual
+# Opcao 5: curl manual
 curl -X POST http://localhost:4000/api/admin/jobs/memory-consolidation/trigger \
   -H "Authorization: Bearer <seu-token>" \
   -H "Content-Type: application/json"
