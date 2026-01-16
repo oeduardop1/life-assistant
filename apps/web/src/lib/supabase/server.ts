@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
  *
  * This client reads cookies from the request headers.
  * Note: Server Components are read-only for cookies - mutations
- * should happen in middleware or route handlers.
+ * should happen in proxy or route handlers.
  *
  * @see https://supabase.com/docs/guides/auth/server-side/nextjs
  */
@@ -23,14 +23,14 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           // Server components are read-only for cookies
-          // Cookie mutations should happen in middleware
+          // Cookie mutations should happen in proxy
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options),
             );
           } catch {
             // The `setAll` method is called from a Server Component.
-            // This can be ignored if you have middleware refreshing sessions.
+            // This can be ignored if you have proxy refreshing sessions.
           }
         },
       },

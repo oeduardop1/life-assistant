@@ -27,9 +27,9 @@ const onboardingRoutes = ['/onboarding'];
 const authRoutes = ['/login', '/signup'];
 
 /**
- * Next.js Middleware for Supabase Auth
+ * Next.js Proxy for Supabase Auth
  *
- * CRITICAL: This middleware is MANDATORY for session refresh.
+ * CRITICAL: This proxy is MANDATORY for session refresh.
  * Without it, the session will not be refreshed and users will be logged out.
  *
  * Features:
@@ -39,7 +39,7 @@ const authRoutes = ['/login', '/signup'];
  *
  * @see https://supabase.com/docs/guides/auth/server-side/nextjs
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   // IMPORTANT: Handle password reset codes that arrive on root URL

@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
  * - PKCE flow: ?code=xxx (from Supabase auth server redirect)
  * - Token hash flow: ?token_hash=xxx&type=recovery (direct from email)
  *
- * The middleware also redirects /?code=xxx to this route as a fallback
+ * The proxy also redirects /?code=xxx to this route as a fallback
  * when Supabase uses Site URL instead of our redirectTo.
  */
 export async function GET(request: Request) {

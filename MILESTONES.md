@@ -613,7 +613,7 @@
 - [x] Criar job diário para limpar onboardings abandonados após 30 dias (cron via BullMQ)
 
 **Technical Debt (do M0.7):**
-- [x] ~~Migrar `middleware.ts` para convenção "proxy" do Next.js 16+~~ — N/A: middleware é de auth, não proxy
+- [x] Migrar `middleware.ts` para convenção `proxy.ts` do Next.js 16+ (renomear arquivo e função)
 - [x] Criar seed data para testes E2E (usuário `test@example.com` para que 36 E2E tests passem)
 
 **Frontend:**
@@ -677,6 +677,9 @@
 - [x] Middleware redireciona para onboarding quando necessário
 - [x] Callback redireciona para onboarding após verificação de email
 - [x] Job de limpeza de onboardings abandonados configurado
+
+**Notas:**
+- **16 Jan 2026:** Migrado `middleware.ts` → `proxy.ts` (Next.js 16 convention). A marcação anterior "N/A" estava incorreta — Next.js renomeou middleware para proxy independentemente do propósito (auth, routing, etc.). Runtime mudou de Edge para Node.js, sem impacto funcional para Supabase SSR.
 
 ---
 
@@ -2333,6 +2336,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-16 | M0.8 | Migração | `middleware.ts` → `proxy.ts` (Next.js 16 convention). Corrigido technical debt marcado incorretamente como N/A. Atualizados comentários em server.ts e callback-recovery/route.ts |
 | 2026-01-16 | Backlog | Adicionado | Seção "Segurança e RLS" no Backlog Técnico. 14 tabelas precisam de RLS nas migrations Supabase. Nota adicionada no M0.4 sobre gap identificado |
 | 2026-01-15 | M1.3 | Bug fix | Corrigido bug crítico no Memory Consolidation (Zod null handling) que impedia criação de knowledge items. Melhorado script trigger (`--wait` flag). 6 novos testes. Docs atualizados (AI_SPECS §6.5, ENGINEERING §7.6) |
 | 2026-01-15 | M1.9 | Chat UX | Markdown rendering com Streamdown + @tailwindcss/typography. Bug fixes: typing indicator (ThinkingIndicator + typewriter + auto-scroll), Memory area cards (ícones Lucide, truncate texto) |
@@ -2362,4 +2366,4 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 ---
 
 *Última atualização: 16 Janeiro 2026*
-*Revisão: Backlog Técnico - Adicionada seção "Segurança e RLS" com tasks para consolidar RLS nas migrations Supabase (14 tabelas). Nota no M0.4 sobre gap identificado.*
+*Revisão: M0.8 - Migrado middleware.ts → proxy.ts (Next.js 16 convention). Corrigido technical debt que estava marcado incorretamente como N/A.*

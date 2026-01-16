@@ -104,6 +104,8 @@ import { AllExceptionsFilter } from './common/filters/index';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     // Apply RequestIdMiddleware to all routes
-    consumer.apply(RequestIdMiddleware).forRoutes('*');
+    // NestJS 11+ requires named wildcards for path-to-regexp v8+
+    // {*splat} = named wildcard wrapped in braces (matches all including root)
+    consumer.apply(RequestIdMiddleware).forRoutes('{*splat}');
   }
 }
