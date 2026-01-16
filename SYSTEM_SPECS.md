@@ -562,7 +562,7 @@ interface KnowledgeItem {
 
 | Ação | Comportamento |
 |------|---------------|
-| **Validar** | Marca `validatedByUser: true`, aumenta confidence |
+| **Confirmar** | Marca `validatedByUser: true`, aumenta confidence |
 | **Corrigir** | Atualiza conteúdo, marca `source: 'user_input'` |
 | **Deletar** | Soft delete, item não aparece mais em buscas |
 | **Ver fonte** | Link para conversa original (se aplicável) |
@@ -575,7 +575,7 @@ Quando dois knowledge items conflitam, o sistema decide qual manter:
 
 | Tier | Critério | Regra |
 |------|----------|-------|
-| 1 | `validatedByUser` | Item validado pelo usuário NUNCA é sobrescrito |
+| 1 | `validatedByUser` | Item confirmado pelo usuário NUNCA é sobrescrito |
 | 2 | `confidence` | Item com maior confidence é mantido |
 | 3 | `createdAt` | Item mais recente ganha (desempate) |
 
@@ -602,7 +602,7 @@ Quando dois knowledge items conflitam, o sistema decide qual manter:
 Items criados manualmente pelo usuário:
 - Recebem `source: 'user_input'`
 - Recebem `confidence: 1.0` automaticamente
-- Quando validados: `validatedByUser: true`
+- Quando confirmados: `validatedByUser: true`
 - Resultado: Máxima proteção (Tier 1 + Tier 2)
 
 #### Critérios de Aceite
@@ -610,7 +610,7 @@ Items criados manualmente pelo usuário:
 - [ ] Lista de knowledge_items por área funciona
 - [ ] Filtros por tipo, confiança, fonte funcionam
 - [ ] Busca por texto funciona
-- [ ] Validar item atualiza flag
+- [ ] Confirmar item atualiza flag
 - [ ] Corrigir item atualiza conteúdo
 - [ ] Deletar item remove da visualização
 - [ ] Ver fonte navega para conversa original
@@ -1363,7 +1363,7 @@ Comportamento similar ao Telegram.
 - [ ] Lista de knowledge_items
 - [ ] Filtros (área, tipo, confiança)
 - [ ] Busca por texto
-- [ ] Validar item
+- [ ] Confirmar item
 - [ ] Corrigir item
 - [ ] Deletar item
 

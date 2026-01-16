@@ -100,7 +100,7 @@ export function KnowledgeItemCard({
                 <Pencil className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
-              {!item.validatedByUser && (
+              {item.confidence < 1.0 && (
                 <DropdownMenuItem
                   onClick={() => {
                     onValidate(item);
@@ -109,7 +109,7 @@ export function KnowledgeItemCard({
                   disabled={isValidating}
                 >
                   <Check className="h-4 w-4 mr-2" />
-                  Validar
+                  Confirmar
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -151,7 +151,7 @@ export function KnowledgeItemCard({
             {item.validatedByUser && (
               <Badge variant="outline" className="text-xs text-green-600 border-green-600">
                 <Check className="h-3 w-3 mr-1" />
-                Validado
+                Confirmado
               </Badge>
             )}
           </div>

@@ -649,10 +649,13 @@ describe('KnowledgeItemsService', () => {
       });
 
       expect(result).toEqual(updatedItem);
+      // Manual edit = implicit confirmation (maximum protection)
       expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'item-123', {
         title: 'Updated title',
         content: 'Updated content',
         tags: ['tag1', 'tag2'],
+        validatedByUser: true,
+        confidence: 1.0,
       });
     });
 
@@ -665,8 +668,11 @@ describe('KnowledgeItemsService', () => {
       });
 
       expect(result).toEqual(updatedItem);
+      // Manual edit = implicit confirmation (maximum protection)
       expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'item-123', {
         title: 'New title',
+        validatedByUser: true,
+        confidence: 1.0,
       });
     });
 

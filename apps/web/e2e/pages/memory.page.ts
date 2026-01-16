@@ -196,11 +196,11 @@ export class MemoryPage {
   }
 
   /**
-   * Validate an item
+   * Confirm an item (previously "Validate")
    */
-  async validateItem(itemLocator: Locator) {
+  async confirmItem(itemLocator: Locator) {
     await this.openItemMenu(itemLocator);
-    await this.page.getByRole('menuitem', { name: 'Validar' }).click();
+    await this.page.getByRole('menuitem', { name: 'Confirmar' }).click();
   }
 
   /**

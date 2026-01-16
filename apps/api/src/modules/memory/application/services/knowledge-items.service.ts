@@ -340,6 +340,9 @@ export class KnowledgeItemsService {
 
   /**
    * Update a knowledge item (for corrections)
+   *
+   * Note: Manual edit implies user confirmation, so we automatically
+   * set maximum protection (confidence: 1.0 + validatedByUser: true)
    */
   async update(
     userId: string,
@@ -349,7 +352,7 @@ export class KnowledgeItemsService {
     const { title, content, tags } = params;
 
     // Only include fields that are provided
-    const updateData: Partial<Pick<KnowledgeItem, 'title' | 'content' | 'tags'>> = {};
+    const updateData: Partial<Pick<KnowledgeItem, 'title' | 'content' | 'tags' | 'validatedByUser' | 'confidence'>> = {};
     if (title !== undefined) updateData.title = title;
     if (content !== undefined) updateData.content = content;
     if (tags !== undefined) updateData.tags = tags;
@@ -358,6 +361,10 @@ export class KnowledgeItemsService {
     if (Object.keys(updateData).length === 0) {
       return this.knowledgeItemRepository.findById(userId, itemId);
     }
+
+    // Manual edit = implicit confirmation (maximum protection)
+    updateData.validatedByUser = true;
+    updateData.confidence = 1.0;
 
     this.logger.log(`Updating knowledge item ${itemId} for user ${userId}`);
 

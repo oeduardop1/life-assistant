@@ -96,11 +96,11 @@ export default function MemoryPage() {
       setValidatingId(item.id);
       validateItem.mutate(item.id, {
         onSuccess: () => {
-          toast.success('Conhecimento validado com sucesso');
+          toast.success('Conhecimento confirmado com sucesso');
           setValidatingId(null);
         },
         onError: () => {
-          toast.error('Erro ao validar conhecimento');
+          toast.error('Erro ao confirmar conhecimento');
           setValidatingId(null);
         },
       });

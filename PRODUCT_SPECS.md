@@ -303,7 +303,7 @@ A Memória é o sistema de conhecimento gerenciado automaticamente pela IA. Tudo
 1. Você conversa naturalmente com a IA
 2. A cada 24h, um job extrai fatos, preferências e insights das conversas
 3. Os itens extraídos ficam visíveis na tela de Memória
-4. Você pode validar, corrigir ou deletar qualquer item
+4. Você pode confirmar, corrigir ou deletar qualquer item
 5. A IA usa essa memória para contextualizar todas as respostas
 
 **Tipos de Conhecimento:**
@@ -346,7 +346,7 @@ Cada área da vida tem um ícone Lucide React associado:
 
 | Feature | Descrição |
 |---------|-----------|
-| Validar item | Confirmar que a informação está correta |
+| Confirmar item | Confirmar que a informação está correta |
 | Corrigir item | Editar informação incorreta |
 | Deletar item | Remover informação que não quer que a IA use |
 | Adicionar item | Informar algo que a IA não sabe |
@@ -360,7 +360,7 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 |---------|-----------|
 | Conexões automáticas | Detecta relações entre itens de conhecimento (ex: "Seu stress financeiro correlaciona com gastos impulsivos") |
 | Detecção de contradições | Identifica inconsistências na memória (ex: novo fato contradiz um antigo) |
-| Resolução automática | Resolve contradições com regras de prioridade (item validado > maior confiança > mais recente) |
+| Resolução automática | Resolve contradições com regras de prioridade (item confirmado > maior confiança > mais recente) |
 | Insights temporais | Analisa padrões ao longo do tempo |
 
 > Detalhes técnicos em AI_SPECS.md §6.6 (Raciocínio Inferencial)

@@ -968,7 +968,7 @@ Quando dois knowledge items conflitam, o sistema decide qual manter:
 
 | Tier | Critério | Regra |
 |------|----------|-------|
-| 1 | `validatedByUser` | Item validado pelo usuário NUNCA é sobrescrito |
+| 1 | `validatedByUser` | Item confirmado pelo usuário NUNCA é sobrescrito |
 | 2 | `confidence` | Item com maior confidence é mantido |
 | 3 | `createdAt` | Item mais recente ganha (desempate) |
 

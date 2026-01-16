@@ -1101,7 +1101,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
   - [x] EditItemModal (para correções)
   - [x] AddItemModal (para adições manuais)
 - [x] Ações por item:
-  - [x] Validar (confirmar que está correto)
+  - [x] Confirmar (confirmar que está correto)
   - [x] Corrigir (editar conteúdo)
   - [x] Deletar (remover permanentemente)
   - [x] Ver fonte (link para conversa original)
@@ -1114,7 +1114,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
   - [x] POST /memory/items
   - [x] GET /memory/export
   - [x] Filtros expandidos (confidence, source, date)
-- [ ] Teste E2E: validar item → verificar flag
+- [ ] Teste E2E: confirmar item → verificar flag
 - [ ] Teste E2E: corrigir item → verificar novo valor
 - [ ] Teste E2E: deletar item → verificar remoção
 - [ ] Teste E2E: adicionar item manualmente → verificar criação
@@ -1123,7 +1123,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 - [x] Usuário vê todos os knowledge_items
 - [x] Filtros funcionam (área, tipo, confiança)
 - [x] Busca por texto funciona
-- [x] Validar item marca como validado
+- [x] Confirmar item marca como confirmado
 - [x] Corrigir item atualiza conteúdo
 - [x] Deletar item remove permanentemente
 - [x] Testes passam (unit/integration - E2E pendentes)
