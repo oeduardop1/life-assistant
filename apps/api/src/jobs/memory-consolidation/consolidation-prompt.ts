@@ -210,6 +210,34 @@ Exemplos CORRETOS:
 }
 
 /**
+ * Recursively remove null values from object (convert to undefined)
+ * LLMs often return null instead of omitting optional fields, but Zod's
+ * .optional() only accepts undefined, not null.
+ *
+ * @param obj - Object to clean
+ * @returns Object with null values removed
+ */
+function removeNulls(obj: unknown): unknown {
+  if (obj === null) return undefined;
+  if (Array.isArray(obj)) {
+    return obj
+      .map(removeNulls)
+      .filter((item) => item !== undefined);
+  }
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const cleaned = removeNulls(value);
+      if (cleaned !== undefined) {
+        result[key] = cleaned;
+      }
+    }
+    return result;
+  }
+  return obj;
+}
+
+/**
  * Parse the consolidation response from LLM
  *
  * @param response - Raw LLM response string
@@ -238,6 +266,10 @@ export function parseConsolidationResponse(response: string): ConsolidationRespo
   } catch {
     throw new Error(`Failed to parse consolidation response as JSON: ${response.substring(0, 200)}`);
   }
+
+  // Normalize null values to undefined (LLMs often return null instead of omitting)
+  // This is critical because Zod's .optional() accepts undefined but not null
+  parsed = removeNulls(parsed);
 
   // Normalize new_knowledge_items: fix common LLM response issues
   // LLMs sometimes return invalid values despite prompt instructions

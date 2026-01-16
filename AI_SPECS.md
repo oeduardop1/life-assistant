@@ -802,10 +802,12 @@ export class ToolExecutorService {
 ### 6.5.1 Conceito
 
 A Memory Consolidation é um job BullMQ que:
-1. Processa todas as conversas das últimas 24h
+1. Processa mensagens desde a última consolidação (`lastConsolidatedAt`)
 2. Usa LLM para extrair fatos, preferências e inferências
 3. Atualiza `user_memories` e `knowledge_items`
 4. Registra log em `memory_consolidations`
+
+> **Deduplicação:** Se o usuário não enviou mensagens desde a última consolidação, o job é ignorado (retorna sem processar). Isso evita reprocessamento desnecessário e custo com LLM.
 
 ### 6.5.2 Prompt de Consolidação
 
@@ -814,7 +816,7 @@ A Memory Consolidation é um job BullMQ que:
 
 Analise as conversas recentes e extraia informações para atualizar a memória do usuário.
 
-### Conversas das últimas 24h:
+### Conversas desde última consolidação:
 {conversations}
 
 ### Memória atual do usuário:
@@ -882,26 +884,29 @@ export class MemoryConsolidationProcessor {
   async consolidate(job: Job<{ userId: string }>) {
     const { userId } = job.data;
 
-    // 1. Buscar conversas das últimas 24h
-    const conversations = await this.conversationService.getRecent(userId, 24);
-    if (conversations.length === 0) return;
-
-    // 2. Buscar memória e knowledge atuais
+    // 1. Buscar memória atual (inclui lastConsolidatedAt)
     const currentMemory = await this.userMemoryService.get(userId);
+
+    // 2. Buscar mensagens desde última consolidação
+    const consolidatedFrom = currentMemory.lastConsolidatedAt ?? currentMemory.createdAt;
+    const messages = await this.messageService.getSince(userId, consolidatedFrom);
+    if (messages.length === 0) return; // Nenhuma mensagem nova → skip
+
+    // 3. Buscar knowledge items existentes
     const existingKnowledge = await this.knowledgeService.getAll(userId);
 
-    // 3. Chamar LLM para consolidar
-    const prompt = buildConsolidationPrompt(conversations, currentMemory, existingKnowledge);
+    // 4. Chamar LLM para consolidar
+    const prompt = buildConsolidationPrompt(messages, currentMemory, existingKnowledge);
     const response = await this.llm.chat([{ role: 'user', content: prompt }]);
     const result = parseConsolidationResponse(response);
 
-    // 4. Aplicar atualizações
+    // 5. Aplicar atualizações
     await this.userMemoryService.update(userId, result.memory_updates);
     await this.knowledgeService.createMany(userId, result.new_knowledge_items);
     await this.knowledgeService.updateMany(result.updated_knowledge_items);
 
-    // 5. Registrar consolidação
-    await this.logConsolidation(userId, conversations.length, result);
+    // 6. Registrar consolidação e atualizar lastConsolidatedAt
+    await this.logConsolidation(userId, messages.length, result);
   }
 }
 ```
@@ -984,7 +989,7 @@ A arquitetura de inferência opera em dois níveis complementares:
 │                                                                              │
 │  NÍVEL 1: Batch (Job 3AM - Memory Consolidation)                            │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │ • Processa todas as conversas do dia                                 │  │
+│  │ • Processa mensagens desde última consolidação                       │  │
 │  │ • Encontra padrões (mínimo 3 ocorrências)                           │  │
 │  │ • Salva inferências em knowledge_items e learnedPatterns            │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │

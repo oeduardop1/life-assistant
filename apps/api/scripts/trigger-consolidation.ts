@@ -5,6 +5,7 @@
  * Uso:
  *   pnpm --filter @life-assistant/api trigger:consolidation           # Apenas mostra o token
  *   pnpm --filter @life-assistant/api trigger:consolidation --trigger # Dispara o job
+ *   pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait # Dispara e aguarda resultado
  *
  * Variáveis de ambiente (opcionais):
  *   TEST_USER_EMAIL    - Email do usuário (default: test@example.com)
@@ -52,6 +53,18 @@ interface ConsolidationResponse {
     timestamp: string;
     requestId: string;
   };
+}
+
+interface ConsolidationResult {
+  id: string;
+  user_id: string;
+  messages_processed: number;
+  facts_created: number;
+  facts_updated: number;
+  inferences_created: number;
+  status: 'completed' | 'failed';
+  error_message: string | null;
+  created_at: string;
 }
 
 // =============================================================================
@@ -132,6 +145,93 @@ async function triggerConsolidation(
 }
 
 /**
+ * Wait for job completion by polling memory_consolidations table
+ */
+async function waitForJobResult(
+  token: string,
+  userId: string,
+  startTime: Date,
+  maxWaitMs: number = 60000,
+  pollIntervalMs: number = 2000
+): Promise<ConsolidationResult | null> {
+  console.log(`\n⏳ Aguardando resultado do job (timeout: ${maxWaitMs / 1000}s)...`);
+
+  const deadline = Date.now() + maxWaitMs;
+  let lastCheckedAt = startTime;
+
+  while (Date.now() < deadline) {
+    // Query Supabase directly for the consolidation result
+    const response = await fetch(
+      `${config.supabaseUrl}/rest/v1/memory_consolidations?user_id=eq.${userId}&created_at=gt.${lastCheckedAt.toISOString()}&order=created_at.desc&limit=1`,
+      {
+        headers: {
+          apikey: process.env.SUPABASE_ANON_KEY ?? '',
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`   ⚠️ Erro ao consultar resultado: ${response.status}`);
+      await sleep(pollIntervalMs);
+      continue;
+    }
+
+    const results = (await response.json()) as ConsolidationResult[];
+
+    if (results.length > 0) {
+      return results[0];
+    }
+
+    process.stdout.write('.');
+    await sleep(pollIntervalMs);
+  }
+
+  console.log('\n   ⚠️ Timeout aguardando resultado');
+  return null;
+}
+
+/**
+ * Print consolidation result
+ */
+function printJobResult(result: ConsolidationResult): void {
+  console.log(`\n${'─'.repeat(60)}`);
+
+  if (result.status === 'completed') {
+    console.log('✅ Job completado com sucesso!');
+    console.log(`${'─'.repeat(60)}`);
+    console.log(`   📝 Mensagens processadas: ${result.messages_processed}`);
+    console.log(`   📚 Fatos criados: ${result.facts_created}`);
+    console.log(`   ✏️  Fatos atualizados: ${result.facts_updated}`);
+    console.log(`   🧠 Inferências criadas: ${result.inferences_created}`);
+  } else {
+    console.log('❌ Job falhou!');
+    console.log(`${'─'.repeat(60)}`);
+    console.log(`   📝 Mensagens processadas: ${result.messages_processed}`);
+    if (result.error_message) {
+      console.log(`   ⚠️  Erro:`);
+      // Format error message for better readability
+      const errorLines = result.error_message.split('\n');
+      for (const line of errorLines.slice(0, 10)) {
+        console.log(`      ${line}`);
+      }
+      if (errorLines.length > 10) {
+        console.log(`      ... (${errorLines.length - 10} more lines)`);
+      }
+    }
+  }
+
+  console.log(`${'─'.repeat(60)}`);
+}
+
+/**
+ * Sleep helper
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
  * Print token for manual use
  */
 function printToken(token: string): void {
@@ -158,6 +258,7 @@ Usage: pnpm --filter @life-assistant/api trigger:consolidation [options]
 
 Options:
   --trigger    Trigger the memory consolidation job after getting token
+  --wait       Wait for job completion and show result (implies --trigger)
   --help, -h   Show this help message
 
 Environment Variables:
@@ -173,8 +274,11 @@ Examples:
   # Get token and trigger the job
   pnpm --filter @life-assistant/api trigger:consolidation --trigger
 
+  # Trigger and wait for result (recommended)
+  pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait
+
   # Use different credentials
-  TEST_USER_EMAIL=me@example.com TEST_USER_PASSWORD=mypass pnpm --filter @life-assistant/api trigger:consolidation --trigger
+  TEST_USER_EMAIL=me@example.com TEST_USER_PASSWORD=mypass pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait
 `);
 }
 
@@ -191,7 +295,8 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const shouldTrigger = args.includes('--trigger');
+  const shouldWait = args.includes('--wait');
+  const shouldTrigger = args.includes('--trigger') || shouldWait; // --wait implies --trigger
 
   console.log('🧠 Memory Consolidation Job Trigger');
   console.log(`   Supabase: ${config.supabaseUrl}`);
@@ -206,15 +311,36 @@ async function main(): Promise<void> {
 
     // Trigger job if requested
     if (shouldTrigger) {
+      const startTime = new Date();
       await triggerConsolidation(token, userId);
 
-      console.log(`\n📊 Para verificar o resultado:`);
-      console.log(`   1. Supabase Studio: http://localhost:54323`);
-      console.log(`   2. Query SQL:`);
-      console.log(`      SELECT * FROM memory_consolidations WHERE user_id = '${userId}' ORDER BY created_at DESC LIMIT 1;`);
-      console.log(`      SELECT * FROM knowledge_items WHERE user_id = '${userId}' ORDER BY created_at DESC;`);
+      // Wait for result if requested
+      if (shouldWait) {
+        const result = await waitForJobResult(token, userId, startTime);
+
+        if (result) {
+          printJobResult(result);
+
+          // Exit with error code if job failed
+          if (result.status === 'failed') {
+            process.exit(1);
+          }
+        } else {
+          console.log('\n⚠️ Não foi possível obter o resultado do job.');
+          console.log('   O job pode ainda estar em execução ou ter falhado silenciosamente.');
+          process.exit(1);
+        }
+      } else {
+        console.log(`\n📊 Para verificar o resultado:`);
+        console.log(`   1. Supabase Studio: http://localhost:54323`);
+        console.log(`   2. Query SQL:`);
+        console.log(`      SELECT * FROM memory_consolidations WHERE user_id = '${userId}' ORDER BY created_at DESC LIMIT 1;`);
+        console.log(`      SELECT * FROM knowledge_items WHERE user_id = '${userId}' ORDER BY created_at DESC;`);
+        console.log(`\n💡 Dica: Use --wait para aguardar e ver o resultado automaticamente`);
+      }
     } else {
       console.log(`\n💡 Dica: Use --trigger para disparar o job automaticamente`);
+      console.log(`         Use --trigger --wait para disparar e ver o resultado`);
     }
 
     console.log('\n✨ Done!');

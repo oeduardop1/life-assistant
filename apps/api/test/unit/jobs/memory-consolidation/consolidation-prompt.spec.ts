@@ -370,4 +370,157 @@ describe('parseConsolidationResponse', () => {
     expect(result).toBeDefined();
     expect(result.memory_updates).toEqual({});
   });
+
+  // Tests for null handling (bug fix for LLM responses)
+  describe('null value handling', () => {
+    it('should_convert_null_memory_update_fields_to_undefined', () => {
+      // LLMs often return null instead of omitting optional fields
+      const response = JSON.stringify({
+        memory_updates: {
+          bio: null,
+          occupation: 'Engineer',
+          familyContext: null,
+          currentGoals: null,
+          currentChallenges: ['Challenge 1'],
+          topOfMind: null,
+          values: null,
+          learnedPatterns: null,
+        },
+        new_knowledge_items: [],
+        updated_knowledge_items: [],
+      });
+
+      const result = parseConsolidationResponse(response);
+
+      // null values should be converted to undefined (and thus omitted)
+      expect(result.memory_updates.bio).toBeUndefined();
+      expect(result.memory_updates.occupation).toBe('Engineer');
+      expect(result.memory_updates.familyContext).toBeUndefined();
+      expect(result.memory_updates.currentGoals).toBeUndefined();
+      expect(result.memory_updates.currentChallenges).toEqual(['Challenge 1']);
+      expect(result.memory_updates.topOfMind).toBeUndefined();
+      expect(result.memory_updates.values).toBeUndefined();
+      expect(result.memory_updates.learnedPatterns).toBeUndefined();
+    });
+
+    it('should_handle_all_null_memory_updates', () => {
+      // Edge case: LLM returns all nulls in memory_updates
+      const response = JSON.stringify({
+        memory_updates: {
+          bio: null,
+          occupation: null,
+          familyContext: null,
+          currentGoals: null,
+          currentChallenges: null,
+          topOfMind: null,
+          values: null,
+          learnedPatterns: null,
+        },
+        new_knowledge_items: [],
+        updated_knowledge_items: [],
+      });
+
+      const result = parseConsolidationResponse(response);
+
+      // Should succeed and return empty memory_updates
+      expect(result.memory_updates).toBeDefined();
+      expect(Object.keys(result.memory_updates)).toHaveLength(0);
+    });
+
+    it('should_handle_null_in_arrays', () => {
+      // Edge case: null values inside arrays
+      const response = JSON.stringify({
+        memory_updates: {
+          currentGoals: ['Goal 1', null, 'Goal 2'],
+          values: [null, 'Value 1'],
+        },
+        new_knowledge_items: [],
+        updated_knowledge_items: [],
+      });
+
+      const result = parseConsolidationResponse(response);
+
+      // null values in arrays should be filtered out
+      expect(result.memory_updates.currentGoals).toEqual(['Goal 1', 'Goal 2']);
+      expect(result.memory_updates.values).toEqual(['Value 1']);
+    });
+
+    it('should_handle_null_fields_in_knowledge_items', () => {
+      // Knowledge items with null optional fields
+      const response = JSON.stringify({
+        memory_updates: {},
+        new_knowledge_items: [
+          {
+            type: 'fact',
+            area: null,
+            content: 'Test content',
+            title: null,
+            confidence: 0.9,
+            source: 'ai_inference',
+            inferenceEvidence: null,
+          },
+        ],
+        updated_knowledge_items: [],
+      });
+
+      const result = parseConsolidationResponse(response);
+
+      expect(result.new_knowledge_items).toHaveLength(1);
+      expect(result.new_knowledge_items[0].type).toBe('fact');
+      expect(result.new_knowledge_items[0].content).toBe('Test content');
+      expect(result.new_knowledge_items[0].area).toBeUndefined();
+      expect(result.new_knowledge_items[0].title).toBeUndefined();
+      expect(result.new_knowledge_items[0].inferenceEvidence).toBeUndefined();
+    });
+
+    it('should_handle_null_in_learned_patterns', () => {
+      // Learned patterns with null values
+      const response = JSON.stringify({
+        memory_updates: {
+          learnedPatterns: [
+            {
+              pattern: 'Pattern 1',
+              confidence: 0.8,
+              evidence: ['Evidence 1', null, 'Evidence 2'],
+            },
+          ],
+        },
+        new_knowledge_items: [],
+        updated_knowledge_items: [],
+      });
+
+      const result = parseConsolidationResponse(response);
+
+      expect(result.memory_updates.learnedPatterns).toHaveLength(1);
+      expect(result.memory_updates.learnedPatterns?.[0].evidence).toEqual([
+        'Evidence 1',
+        'Evidence 2',
+      ]);
+    });
+
+    it('should_handle_deeply_nested_null_values', () => {
+      // Complex nested structure with nulls
+      const response = JSON.stringify({
+        memory_updates: {
+          learnedPatterns: [
+            null, // null item in array
+            {
+              pattern: 'Valid pattern',
+              confidence: 0.7,
+              evidence: ['e1', null],
+            },
+          ],
+        },
+        new_knowledge_items: [],
+        updated_knowledge_items: [],
+      });
+
+      const result = parseConsolidationResponse(response);
+
+      // null pattern should be filtered, valid one kept
+      expect(result.memory_updates.learnedPatterns).toHaveLength(1);
+      expect(result.memory_updates.learnedPatterns?.[0].pattern).toBe('Valid pattern');
+      expect(result.memory_updates.learnedPatterns?.[0].evidence).toEqual(['e1']);
+    });
+  });
 });

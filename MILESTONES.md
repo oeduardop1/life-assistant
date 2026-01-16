@@ -2303,6 +2303,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-15 | M1.3 | Bug fix | Corrigido bug crítico no Memory Consolidation (Zod null handling) que impedia criação de knowledge items. Melhorado script trigger (`--wait` flag). 6 novos testes. Docs atualizados (AI_SPECS §6.5, ENGINEERING §7.6) |
 | 2026-01-15 | M1.9 | Chat UX | Markdown rendering com Streamdown + @tailwindcss/typography. Bug fixes: typing indicator (ThinkingIndicator + typewriter + auto-scroll), Memory area cards (ícones Lucide, truncate texto) |
 | 2026-01-15 | M1.9 | UI Impl. | 14 tasks de UI implementadas: ErrorBoundary support link, empty states (Chat/Memory), error states com retry, toasts CRUD (Chat), dashboard skeleton, responsividade (sidebar mobile overlay, layouts responsive). Testes pendentes |
 | 2026-01-15 | M1.9 | Reestruturado | Removidas tasks já implementadas em M0.6/M1.2/M1.4. Mantidas apenas: ajustes de texto (SYSTEM_SPECS §4.1), toasts Chat, responsividade, testes E2E. Tasks: 25→16 |
@@ -2330,4 +2331,4 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 ---
 
 *Última atualização: 15 Janeiro 2026*
-*Revisão: M1.9 — 15 tasks de UI implementadas (estados, toasts, responsividade, Markdown chat). Bug fixes: typing indicator, Memory icons. Testes pendentes.*
+*Revisão: Bug fix crítico Memory Consolidation (Zod null handling). Script trigger com --wait flag. Docs atualizados.*

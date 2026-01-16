@@ -1132,7 +1132,10 @@ Durante desenvolvimento, jobs podem ser disparados manualmente via script ou end
 **Script Automatizado (Recomendado):**
 
 ```bash
-# Autenticar e disparar o job em um único comando
+# Disparar e aguardar resultado (RECOMENDADO)
+pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait
+
+# Autenticar e disparar o job (sem aguardar)
 pnpm --filter @life-assistant/api trigger:consolidation --trigger
 
 # Apenas obter o token (para uso manual)
@@ -1140,8 +1143,18 @@ pnpm --filter @life-assistant/api trigger:consolidation
 
 # Com credenciais customizadas
 TEST_USER_EMAIL=me@example.com TEST_USER_PASSWORD=mypass \
-  pnpm --filter @life-assistant/api trigger:consolidation --trigger
+  pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait
 ```
+
+**Opções do script:**
+
+| Flag | Descrição |
+|------|-----------|
+| `--trigger` | Dispara o job após obter o token |
+| `--wait` | Aguarda conclusão do job e mostra resultado (implica `--trigger`) |
+| `--help` | Mostra ajuda detalhada |
+
+**Output com `--wait`:** O script faz polling da tabela `memory_consolidations` e exibe métricas do job (mensagens processadas, fatos criados, inferências, etc.) ou detalhes de erro se falhou.
 
 **Via curl (manual):**
 
