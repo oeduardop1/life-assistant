@@ -1,7 +1,7 @@
 # Guia de Deploy — Life Assistant
 
 > Guia operacional passo a passo para deploy em produção.
-> Para arquitetura e decisões técnicas, veja [ENGINEERING.md §12](ENGINEERING.md).
+> Para arquitetura e decisões técnicas, veja [engineering.md §12](docs/specs/engineering.md).
 
 ## Visão Geral
 
@@ -444,7 +444,7 @@ curl https://seu-projeto.railway.app/api/health
 ## Referências
 
 ### Documentação Geral
-- [ENGINEERING.md §12](ENGINEERING.md) — Arquitetura de CI/CD
+- [engineering.md §12](docs/specs/engineering.md) — Arquitetura de CI/CD
 - [Vercel Monorepo Docs](https://vercel.com/docs/monorepos)
 - [Railway Docs](https://docs.railway.com/)
 - [Supabase API Keys](https://supabase.com/docs/guides/api/api-keys)

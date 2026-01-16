@@ -1,15 +1,15 @@
-# SYSTEM_SPECS.md — Life Assistant AI
-> **Documento normativo.** Define **regras de negócio, fluxos, estados e comportamentos** do sistema.  
-> Para **O QUE** a aplicação faz (features), ver `PRODUCT_SPECS.md`.  
-> Para **COMO** é construído tecnicamente, ver `ENGINEERING.md`.
+# System Specs — Life Assistant AI
+> **Documento normativo.** Define **regras de negócio, fluxos, estados e comportamentos** do sistema.
+> Para **O QUE** a aplicação faz (features), ver `product.md`.
+> Para **COMO** é construído tecnicamente, ver `engineering.md`.
 >
 > **Precedência (em caso de conflito):**
-> 1. Escopo/features: `PRODUCT_SPECS.md`
-> 2. Regras/fluxos/DoD: `SYSTEM_SPECS.md` ← este documento
-> 3. Tech/infra: `ENGINEERING.md`
-> 4. Modelo de dados: `DATA_MODEL.md`
-> 5. IA/Prompts: `AI_SPECS.md`
-> 6. Integrações: `INTEGRATIONS_SPECS.md`
+> 1. Escopo/features: `product.md`
+> 2. Regras/fluxos/DoD: `system.md` ← este documento
+> 3. Tech/infra: `engineering.md`
+> 4. Modelo de dados: `data-model.md`
+> 5. IA/Prompts: `ai.md`
+> 6. Integrações: `integrations.md`
 >
 > Pendências (TBD): `TBD_TRACKER.md`
 

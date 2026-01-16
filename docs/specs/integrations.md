@@ -1,14 +1,14 @@
-# INTEGRATIONS_SPECS.md — Life Assistant AI
-> **Documento normativo.** Define **integrações externas**, APIs, webhooks e comportamentos.  
-> Para features, ver `PRODUCT_SPECS.md`. Para regras de negócio, ver `SYSTEM_SPECS.md`.
+# Integrations Specs — Life Assistant AI
+> **Documento normativo.** Define **integrações externas**, APIs, webhooks e comportamentos.
+> Para features, ver `product.md`. Para regras de negócio, ver `system.md`.
 >
 > **Precedência (em caso de conflito):**
-> 1. Escopo/features: `PRODUCT_SPECS.md`
-> 2. Regras/fluxos/DoD: `SYSTEM_SPECS.md`
-> 3. Tech/infra: `ENGINEERING.md`
-> 4. IA/Prompts: `AI_SPECS.md`
-> 5. Modelo de dados: `DATA_MODEL.md`
-> 6. **Integrações: `INTEGRATIONS_SPECS.md`** ← este documento
+> 1. Escopo/features: `product.md`
+> 2. Regras/fluxos/DoD: `system.md`
+> 3. Tech/infra: `engineering.md`
+> 4. IA/Prompts: `ai.md`
+> 5. Modelo de dados: `data-model.md`
+> 6. **Integrações: `integrations.md`** ← este documento
 >
 > Pendências (TBD): `TBD_TRACKER.md`
 
@@ -1991,7 +1991,7 @@ class AIService {
   }
 
   // Método auxiliar para Gemini (não suporta input_examples nativo)
-  // Ver ENGINEERING.md §8.5 para detalhes
+  // Ver engineering.md §8.5 para detalhes
   private enrichDescriptionWithExamples(
     description: string,
     examples?: Record<string, unknown>[]
@@ -2116,7 +2116,7 @@ class AIRateLimiter {
 > **Referência:** Artigo Anthropic "Advanced Tool Use" — accuracy 72% → 90%
 
 O campo `inputExamples` melhora accuracy de tool calls fornecendo exemplos concretos.
-Ver `ENGINEERING.md` §8.5 para arquitetura completa e `AI_SPECS.md` §2.4 para boas práticas.
+Ver `engineering.md` §8.5 para arquitetura completa e `ai.md` §2.4 para boas práticas.
 
 #### Claude (Anthropic)
 

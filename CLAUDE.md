@@ -41,12 +41,12 @@ pnpm test:e2e         # E2E tests
 
 | # | Document | Purpose |
 |---|----------|---------|
-| 1 | `PRODUCT_SPECS.md` | Features, personas |
-| 2 | `SYSTEM_SPECS.md` | Business rules, flows |
-| 3 | `ENGINEERING.md` | Tech stack, architecture |
-| 4 | `DATA_MODEL.md` | Database schema |
-| 5 | `AI_SPECS.md` | LLM behavior, prompts |
-| 6 | `INTEGRATIONS_SPECS.md` | External APIs |
+| 1 | `docs/specs/product.md` | Features, personas |
+| 2 | `docs/specs/system.md` | Business rules, flows |
+| 3 | `docs/specs/engineering.md` | Tech stack, architecture |
+| 4 | `docs/specs/data-model.md` | Database schema |
+| 5 | `docs/specs/ai.md` | LLM behavior, prompts |
+| 6 | `docs/specs/integrations.md` | External APIs |
 | - | `MILESTONES.md` | Tasks, progress |
 | - | `TBD_TRACKER.md` | Pending decisions |
 
@@ -181,7 +181,7 @@ Do NOT add TBDs for technical decisions you can make yourself.
 ## Coding Style
 
 - TypeScript strict mode + Zod validation (no `any` without justification)
-- Domain names from `DATA_MODEL.md`
+- Domain names from `docs/specs/data-model.md`
 - Business rules in `application/` layer only
 - Portuguese in user-facing content, English in code
 
@@ -189,11 +189,11 @@ Do NOT add TBDs for technical decisions you can make yourself.
 
 | Topic | Reference |
 |-------|-----------|
-| Architecture | `ENGINEERING.md` §4 |
-| Testing | `ENGINEERING.md` §11 |
-| Security | `SYSTEM_SPECS.md` §6, `ENGINEERING.md` §6 |
-| Commits & PRs | `ENGINEERING.md` §15 |
-| Business Rules | `SYSTEM_SPECS.md` §3 |
-| Multi-tenancy | `ENGINEERING.md` §6, `DATA_MODEL.md` §6 |
-| LLM Abstraction | `ENGINEERING.md` §8 |
-| Jobs | `ENGINEERING.md` §7 |
+| Architecture | `docs/specs/engineering.md` §4 |
+| Testing | `docs/specs/engineering.md` §11 |
+| Security | `docs/specs/system.md` §6, `docs/specs/engineering.md` §6 |
+| Commits & PRs | `docs/specs/engineering.md` §15 |
+| Business Rules | `docs/specs/system.md` §3 |
+| Multi-tenancy | `docs/specs/engineering.md` §6, `docs/specs/data-model.md` §6 |
+| LLM Abstraction | `docs/specs/engineering.md` §8 |
+| Jobs | `docs/specs/engineering.md` §7 |

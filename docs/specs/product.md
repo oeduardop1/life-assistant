@@ -1,18 +1,18 @@
-# PRODUCT_SPECS.md — Life Assistant AI
-> **Documento de especificação funcional (Produto).**  
-> Define **O QUE** a aplicação é, faz e para quem.  
-> Para **COMO** funciona tecnicamente, ver `SYSTEM_SPECS.md` e `ENGINEERING.md`.  
+# Product Specs — Life Assistant AI
+> **Documento de especificação funcional (Produto).**
+> Define **O QUE** a aplicação é, faz e para quem.
+> Para **COMO** funciona tecnicamente, ver `system.md` e `engineering.md`.
 > Para priorização de desenvolvimento, ver `MILESTONES.md`.
 
 ---
 
 ## Precedência em caso de conflito
-- Escopo/features: `PRODUCT_SPECS.md`
-- Regras/fluxos/DoD: `SYSTEM_SPECS.md`
-- Tech/infra: `ENGINEERING.md`
-- Modelo de dados: `DATA_MODEL.md`
-- IA/Prompts: `AI_SPECS.md`
-- Integrações: `INTEGRATIONS_SPECS.md`
+- Escopo/features: `product.md`
+- Regras/fluxos/DoD: `system.md`
+- Tech/infra: `engineering.md`
+- Modelo de dados: `data-model.md`
+- IA/Prompts: `ai.md`
+- Integrações: `integrations.md`
 - Priorização: `MILESTONES.md`
 - Pendências: `TBD_TRACKER.md`
 
@@ -256,7 +256,7 @@ O usuário pode ajustar a importância de cada área para seu contexto. Os pesos
 - **Ações** — Agendar eventos, criar lembretes
 - **Conversas** — Modo conselheira para discussões mais longas
 
-> Detalhes de comandos e sintaxe em `INTEGRATIONS_SPECS.md`
+> Detalhes de comandos e sintaxe em `integrations.md`
 
 ### 5.3 WhatsApp Business
 
@@ -363,7 +363,7 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 | Resolução automática | Resolve contradições com regras de prioridade (item confirmado > maior confiança > mais recente) |
 | Insights temporais | Analisa padrões ao longo do tempo |
 
-> Detalhes técnicos em AI_SPECS.md §6.6 (Raciocínio Inferencial)
+> Detalhes técnicos em ai.md §6.6 (Raciocínio Inferencial)
 
 **Notas Automáticas:**
 
@@ -611,7 +611,7 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 | Widgets customizáveis | Escolher o que ver |
 | Temas | Light/dark mode |
 
-> Regras de cálculo de scores em `SYSTEM_SPECS.md`
+> Regras de cálculo de scores em `system.md`
 
 ### 6.14 Módulo: Metas e Hábitos
 
@@ -990,7 +990,7 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 | 4.0 - 5.9 | Atenção | 🟠 Laranja |
 | 0.0 - 3.9 | Crítico | 🔴 Vermelho |
 
-> Regras detalhadas de cálculo em `SYSTEM_SPECS.md`
+> Regras detalhadas de cálculo em `system.md`
 
 ---
 

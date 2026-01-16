@@ -1,13 +1,13 @@
-# DATA_MODEL.md — Life Assistant AI
-> **Documento normativo.** Define o **modelo de dados completo** do sistema.  
+# Data Model — Life Assistant AI
+> **Documento normativo.** Define o **modelo de dados completo** do sistema.
 > Schema PostgreSQL com Drizzle ORM.
 >
 > **Precedência (em caso de conflito):**
-> 1. Escopo/features: `PRODUCT_SPECS.md`
-> 2. Regras/fluxos/DoD: `SYSTEM_SPECS.md`
-> 3. Tech/infra: `ENGINEERING.md`
-> 4. IA/Prompts: `AI_SPECS.md`
-> 5. **Modelo de dados: `DATA_MODEL.md`** ← este documento
+> 1. Escopo/features: `product.md`
+> 2. Regras/fluxos/DoD: `system.md`
+> 3. Tech/infra: `engineering.md`
+> 4. IA/Prompts: `ai.md`
+> 5. **Modelo de dados: `data-model.md`** ← este documento
 >
 > Pendências (TBD): `TBD_TRACKER.md`
 

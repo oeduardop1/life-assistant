@@ -1,14 +1,14 @@
-# ENGINEERING.md — Life Assistant AI
-> **Documento normativo.** Define **COMO** a aplicação deve ser construída e operada.  
+# Engineering Specs — Life Assistant AI
+> **Documento normativo.** Define **COMO** a aplicação deve ser construída e operada.
 > **Objetivo:** Estrutura sólida desde o início que **não exige refatoração grande** para escalar.
 >
 > **Precedência (em caso de conflito):**
-> 1. Escopo/features: `PRODUCT_SPECS.md`
-> 2. Regras/fluxos/DoD: `SYSTEM_SPECS.md`
-> 3. Tech/infra: `ENGINEERING.md` ← este documento
-> 4. Modelo de dados: `DATA_MODEL.md`
-> 5. IA/Prompts: `AI_SPECS.md`
-> 6. Integrações: `INTEGRATIONS_SPECS.md`
+> 1. Escopo/features: `product.md`
+> 2. Regras/fluxos/DoD: `system.md`
+> 3. Tech/infra: `engineering.md` ← este documento
+> 4. Modelo de dados: `data-model.md`
+> 5. IA/Prompts: `ai.md`
+> 6. Integrações: `integrations.md`
 >
 > Pendências (TBD): `TBD_TRACKER.md`
 
@@ -396,7 +396,7 @@ life-assistant/
 
 **Filosofia de Documentação:**
 - Packages internos utilizam **documentação inline (JSDoc/TSDoc)** em vez de READMEs
-- Especificações centralizadas em `ENGINEERING.md`, `DATA_MODEL.md`, `AI_SPECS.md`, etc.
+- Especificações centralizadas em `engineering.md`, `data-model.md`, `ai.md`, etc.
 - README raiz contém apenas setup essencial e comandos principais
 
 #### Type Encapsulation Pattern
@@ -478,7 +478,7 @@ const notes = await withUserId(userId, async (db) => {
   return db.select().from(schema.notes);
 });
 ```
-Ver: `DATA_MODEL.md` para schema completo, ADR-008 para rationale de tipo.
+Ver: `data-model.md` para schema completo, ADR-008 para rationale de tipo.
 
 **`@life-assistant/config`**
 ```typescript
@@ -512,7 +512,7 @@ import { LifeArea, formatCurrency, normalizeText } from '@life-assistant/shared'
 const amount = formatCurrency(1234.56, 'BRL');  // "R$ 1.234,56"
 const normalized = normalizeText('São Paulo');  // "sao paulo"
 ```
-Ver: `SYSTEM_SPECS.md` §4 para definição de Life Areas e enums.
+Ver: `system.md` §4 para definição de Life Areas e enums.
 
 **`@life-assistant/ai`** (M1.1 - não implementado)
 ```typescript
@@ -525,7 +525,7 @@ import { createLLM } from '@life-assistant/ai';
 const llm = await createLLM('gemini');  // ou 'claude'
 const response = await llm.chat([{ role: 'user', content: 'Hello' }]);
 ```
-Ver: `AI_SPECS.md` para configuração de prompts e providers.
+Ver: `ai.md` para configuração de prompts e providers.
 
 #### Code Documentation Standards
 
@@ -972,7 +972,7 @@ export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
 
 #### Rate Limits por Plano
 
-Conforme `SYSTEM_SPECS.md` §2.6:
+Conforme `system.md` §2.6:
 
 | Plano | Msg/minuto | Msg/hora | Msg/dia |
 |-------|------------|----------|---------|
@@ -1329,7 +1329,7 @@ private enrichDescription(desc: string, examples?: Record<string, unknown>[]): s
 3. **Casos diferentes** - variar valores de enums (ex: `type="weight"` vs `type="expense"`)
 4. **Exemplos válidos** - devem passar validação do schema Zod
 
-Ver `AI_SPECS.md` §6.2 para exemplos completos de cada tool.
+Ver `ai.md` §6.2 para exemplos completos de cada tool.
 
 ---
 
@@ -2159,7 +2159,7 @@ Proposed | Accepted | Deprecated | Superseded
 ## Checklist de PR
 
 ### Obrigatório
-- [ ] Segue `SYSTEM_SPECS.md` (regras e defaults)
+- [ ] Segue `system.md` (regras e defaults)
 - [ ] Usa `application/use-cases` (sem lógica na UI)
 - [ ] RLS/user context garantido em queries
 - [ ] Logs estruturados com `userId`, `requestId`

@@ -316,7 +316,7 @@ Veja `MILESTONES.md` para lista completa de features implementadas e roadmap.
 
 **Milestones concluidos:** Veja `MILESTONES.md` para status atual.
 
-Veja `ENGINEERING.md` §2.2 para documentacao tecnica completa do frontend.
+Veja `docs/specs/engineering.md` §2.2 para documentacao tecnica completa do frontend.
 
 ## API (Backend)
 
@@ -355,7 +355,7 @@ pnpm --filter api test             # Unit tests
 pnpm --filter api test:integration # Integration tests
 ```
 
-Veja `ENGINEERING.md` §2.3 para documentacao tecnica completa do backend.
+Veja `docs/specs/engineering.md` §2.3 para documentacao tecnica completa do backend.
 
 ## Deploy
 
@@ -371,12 +371,12 @@ Para deploy em producao, consulte **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 | Documento | Descricao |
 |-----------|-----------|
-| `PRODUCT_SPECS.md` | O que o app faz, features, personas |
-| `SYSTEM_SPECS.md` | Regras de negocio, fluxos, Definition of Done |
-| `ENGINEERING.md` | Stack tecnica, arquitetura, padroes |
-| `DATA_MODEL.md` | Schema do banco, tabelas, relacionamentos |
-| `AI_SPECS.md` | Comportamento da IA, prompts, Tool Use |
-| `INTEGRATIONS_SPECS.md` | APIs externas (Telegram, Stripe, Calendar) |
+| `docs/specs/product.md` | O que o app faz, features, personas |
+| `docs/specs/system.md` | Regras de negocio, fluxos, Definition of Done |
+| `docs/specs/engineering.md` | Stack tecnica, arquitetura, padroes |
+| `docs/specs/data-model.md` | Schema do banco, tabelas, relacionamentos |
+| `docs/specs/ai.md` | Comportamento da IA, prompts, Tool Use |
+| `docs/specs/integrations.md` | APIs externas (Telegram, Stripe, Calendar) |
 | `MILESTONES.md` | Roadmap de desenvolvimento |
 | `TBD_TRACKER.md` | Decisoes pendentes |
 | `DEPLOYMENT.md` | Guia de deploy em producao |

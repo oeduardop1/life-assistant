@@ -1,13 +1,13 @@
-# AI_SPECS.md — Life Assistant AI
-> **Documento normativo.** Define **comportamento, personalidade, prompts e arquitetura de IA** do sistema.  
-> Para features, ver `PRODUCT_SPECS.md`. Para regras de negócio, ver `SYSTEM_SPECS.md`.
+# AI Specs — Life Assistant AI
+> **Documento normativo.** Define **comportamento, personalidade, prompts e arquitetura de IA** do sistema.
+> Para features, ver `product.md`. Para regras de negócio, ver `system.md`.
 >
 > **Precedência (em caso de conflito):**
-> 1. Escopo/features: `PRODUCT_SPECS.md`
-> 2. Regras/fluxos/DoD: `SYSTEM_SPECS.md`
-> 3. Tech/infra: `ENGINEERING.md`
-> 4. **IA/Prompts: `AI_SPECS.md`** ← este documento
-> 5. Integrações: `INTEGRATIONS_SPECS.md`
+> 1. Escopo/features: `product.md`
+> 2. Regras/fluxos/DoD: `system.md`
+> 3. Tech/infra: `engineering.md`
+> 4. **IA/Prompts: `ai.md`** ← este documento
+> 5. Integrações: `integrations.md`
 >
 > Pendências (TBD): `TBD_TRACKER.md`
 
@@ -230,7 +230,7 @@ O campo `inputExamples` melhora significativamente a accuracy de tool calls forn
 3. **Casos diferentes** — variar valores de enums (ex: `type="weight"` vs `type="expense"`)
 4. **Exemplos válidos** — devem passar validação do schema
 
-Ver `ENGINEERING.md` §8.5 para detalhes de implementação por adapter.
+Ver `engineering.md` §8.5 para detalhes de implementação por adapter.
 
 ---
 
@@ -738,7 +738,7 @@ async function chatWithToolLoop(
 }
 ```
 
-> **Logging:** Tool calls são logados em DEBUG level. Ver ENGINEERING.md §5.4 para detalhes.
+> **Logging:** Tool calls são logados em DEBUG level. Ver engineering.md §5.4 para detalhes.
 > Argumentos completos são armazenados em metadata da mensagem para debugging.
 > ⚠️ Dados sensíveis podem estar incluídos nos argumentos (ver M1.9 para filtro planejado).
 
@@ -945,7 +945,7 @@ export class MemoryConsolidationScheduler {
 O job de consolidação detecta contradições usando LLM com threshold de 0.7.
 Quando detectada contradição entre item existente e novo:
 
-1. Aplica regras de prioridade (ver SYSTEM_SPECS.md §3.X)
+1. Aplica regras de prioridade (ver system.md §3.X)
 2. Item perdedor é marcado como superseded
 3. Registra explicação do motivo da supersession
 4. **Confidence original é preservada** (design de Temporal Knowledge)

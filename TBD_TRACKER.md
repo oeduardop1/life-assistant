@@ -467,12 +467,12 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 
 | Documento | Quando consultar |
 |-----------|------------------|
-| `PRODUCT_SPECS.md` | Features, roadmap, personas |
-| `SYSTEM_SPECS.md` | Regras de negócio, fluxos, limites |
-| `ENGINEERING.md` | Stack, arquitetura, padrões |
-| `AI_SPECS.md` | Prompts, comportamentos de IA |
-| `DATA_MODEL.md` | Schema, tabelas, relações |
-| `INTEGRATIONS_SPECS.md` | APIs externas, webhooks |
+| `docs/specs/product.md` | Features, roadmap, personas |
+| `docs/specs/system.md` | Regras de negócio, fluxos, limites |
+| `docs/specs/engineering.md` | Stack, arquitetura, padrões |
+| `docs/specs/ai.md` | Prompts, comportamentos de IA |
+| `docs/specs/data-model.md` | Schema, tabelas, relações |
+| `docs/specs/integrations.md` | APIs externas, webhooks |
 
 ---
 
