@@ -25,7 +25,7 @@
 ## Fase 0: Fundação (v0.x)
 
 > **Objetivo:** Estabelecer toda a infraestrutura técnica necessária antes de qualquer feature de negócio.
-> **Referências:** `ENGINEERING.md` §1-§10
+> **Referências:** `docs/specs/engineering.md` §1-§10
 
 ### M0.1 — Setup do Monorepo 🟢
 
@@ -36,7 +36,7 @@
 - [x] Inicializar repositório Git
 - [x] Configurar pnpm workspaces (`pnpm-workspace.yaml`)
 - [x] Configurar Turborepo (`turbo.json` com tasks: build, dev, lint, typecheck, test, clean)
-- [x] Criar estrutura de diretórios conforme `ENGINEERING.md` §3.1:
+- [x] Criar estrutura de diretórios conforme `docs/specs/engineering.md` §3.1:
   ```
   apps/web/
   apps/api/
@@ -50,7 +50,7 @@
 - [x] Configurar TypeScript base (`tsconfig.json`) com strict mode
 - [x] Configurar ESLint compartilhado (flat config ESLint 9+)
 - [x] Configurar Prettier
-- [x] Criar `.env.example` com todas as variáveis de `ENGINEERING.md` §16
+- [x] Criar `.env.example` com todas as variáveis de `docs/specs/engineering.md` §16
 - [x] Criar `docker-compose.yml` para desenvolvimento local (PostgreSQL + Redis + MinIO)
 - [x] Documentar comandos no README.md
 - [x] Testar que `pnpm install` e `pnpm build` funcionam
@@ -64,7 +64,7 @@
 
 **Notas:**
 - **07 Jan 2026:** Milestone concluído com sucesso
-- Turborepo v2+ usa `tasks` em vez de `pipeline` - ENGINEERING.md atualizado
+- Turborepo v2+ usa `tasks` em vez de `pipeline` - docs/specs/engineering.md atualizado
 - Docker images atualizadas para versões mais recentes:
   - PostgreSQL 17 (pgvector não é mais necessário — ADR-012)
   - Redis 8 Alpine (`redis:8-alpine`)
@@ -82,7 +82,7 @@
 **Tasks:**
 
 - [x] Configurar tsup para build do package
-- [x] Criar tipos base conforme `DATA_MODEL.md`:
+- [x] Criar tipos base conforme `docs/specs/data-model.md`:
   - [x] `LifeArea` enum (8 áreas)
   - [x] `TrackingType` enum
   - [x] `DecisionStatus` enum
@@ -261,7 +261,7 @@
 
 - [x] Instalar dependências (drizzle-orm, drizzle-kit, pg, dotenv)
 - [x] Configurar `drizzle.config.ts`
-- [x] Criar schemas conforme `DATA_MODEL.md`:
+- [x] Criar schemas conforme `docs/specs/data-model.md`:
   - [x] **Core:** users
   - [x] **Chat:** conversations, messages
   - [x] **Tracking:** tracking_entries, life_balance_history
@@ -273,8 +273,8 @@
   - [x] **Integrations:** user_integrations, calendar_events, budgets, subscriptions
   - [x] **System:** audit_logs, notifications, reminders, export_requests
   - [x] **Embeddings:** embeddings (com pgvector) — **DEPRECADO: ADR-012 remove esta tabela**
-- [x] Criar índices conforme `DATA_MODEL.md` §10
-- [x] Configurar RLS policies conforme `ENGINEERING.md` §6
+- [x] Criar índices conforme `docs/specs/data-model.md` §10
+- [x] Configurar RLS policies conforme `docs/specs/engineering.md` §6
 - [x] Criar migration inicial
 - [x] Criar seed para dados de teste
 - [x] Criar scripts npm: db:generate, db:migrate, db:push, db:studio
@@ -297,7 +297,7 @@
 **Notas:**
 - **07 Jan 2026:** Milestone concluído com sucesso
 - Dependências: drizzle-orm@0.38.4, drizzle-kit@0.30.4, pg@8.16.1, dotenv@17.2.3
-- 28 tabelas implementadas conforme DATA_MODEL.md
+- 28 tabelas implementadas conforme docs/specs/data-model.md
 - 21 enums PostgreSQL definidos
 - RLS policies com otimização de performance: `(SELECT auth.user_id())` em vez de `auth.user_id()` - evita execução por-linha (conforme Supabase docs)
 - Pool error handler adicionado conforme node-postgres best practices
@@ -315,7 +315,7 @@
 **Tasks:**
 
 - [x] Inicializar NestJS com CLI
-- [x] Configurar estrutura de módulos conforme `ENGINEERING.md` §4:
+- [x] Configurar estrutura de módulos conforme `docs/specs/engineering.md` §4:
   ```
   src/
     modules/
@@ -360,7 +360,7 @@
   - [x] ValidationPipe global
   - [x] Global prefix `/api`
   - [x] Graceful shutdown (onModuleDestroy)
-- [x] Criar Dockerfile conforme `ENGINEERING.md` §9.3
+- [x] Criar Dockerfile conforme `docs/specs/engineering.md` §9.3
 - [x] Configurar Vitest + Supertest
 - [x] Escrever testes unitários (100% coverage):
   - [x] AuthGuard tests (7 tests)
@@ -421,7 +421,7 @@
 - [x] Criar .env.example com NEXT_PUBLIC_API_URL
 
 **2. Estrutura de Diretórios:**
-- [x] Configurar estrutura conforme `ENGINEERING.md` §3.1:
+- [x] Configurar estrutura conforme `docs/specs/engineering.md` §3.1:
   ```
   src/app/(auth)/layout.tsx, (app)/layout.tsx, (app)/dashboard/page.tsx,
   layout.tsx, page.tsx, not-found.tsx, error.tsx
@@ -480,8 +480,8 @@
 - [x] Smoke tests: should_load_homepage_successfully, should_toggle_theme_successfully, should_toggle_sidebar_successfully
 
 **14. Documentação:**
-- [x] Atualizar ENGINEERING.md §2.2 com decisões arquiteturais frontend (Tailwind v4, shadcn/ui, State Management, Route Groups)
-- [x] Atualizar ENGINEERING.md §17 com Troubleshooting frontend
+- [x] Atualizar docs/specs/engineering.md §2.2 com decisões arquiteturais frontend (Tailwind v4, shadcn/ui, State Management, Route Groups)
+- [x] Atualizar docs/specs/engineering.md §17 com Troubleshooting frontend
 - [x] Atualizar README.md raiz com seção Web App
 
 **Definition of Done:**
@@ -503,7 +503,7 @@
 - 3 smoke tests E2E via Playwright (homepage, theme toggle, sidebar toggle) - todos passando em 4 browsers
 - Docker com Next.js standalone output, non-root user (nextjs), Node 24 LTS Alpine
 - **Decisão arquitetural:** Type encapsulation pattern implementado (ver ADR-008)
-- **Documentação:** Movida para ENGINEERING.md (§2.2, §17) - sem README separado conforme padrão do projeto
+- **Documentação:** Movida para docs/specs/engineering.md (§2.2, §17) - sem README separado conforme padrão do projeto
 
 ---
 
@@ -511,7 +511,7 @@
 
 **Objetivo:** Implementar fluxo completo de autenticação.
 
-**Referências:** `SYSTEM_SPECS.md` §3.1, `INTEGRATIONS_SPECS.md` §5
+**Referências:** `docs/specs/system.md` §3.1, `docs/specs/integrations.md` §5
 
 **Tasks:**
 
@@ -590,7 +590,7 @@
 
 **Objetivo:** Implementar wizard de configuração inicial após signup.
 
-**Referências:** `SYSTEM_SPECS.md` §3.1
+**Referências:** `docs/specs/system.md` §3.1
 
 **Tasks:**
 
@@ -604,7 +604,7 @@
   - [x] `ProfileStepDto` (name: min 2 chars, timezone: valid IANA timezone)
   - [x] `AreasStepDto` (areas: LifeArea[], min 3, max 8)
   - [x] `TelegramStepDto` (telegramId?: string, skipped: boolean)
-- [x] Criar `OnboardingModule` com Clean Architecture (conforme `ENGINEERING.md` §4):
+- [x] Criar `OnboardingModule` com Clean Architecture (conforme `docs/specs/engineering.md` §4):
   - [x] `OnboardingController` em `presentation/controllers/`
   - [x] `OnboardingService` em `application/services/`
   - [x] DTOs em `presentation/dtos/` com barrel export
@@ -672,7 +672,7 @@
 - [x] Progresso é salvo automaticamente
 - [x] Usuário só acessa app após etapas obrigatórias
 - [x] Skip funciona nas etapas opcionais
-- [x] OnboardingModule segue Clean Architecture (`ENGINEERING.md` §4)
+- [x] OnboardingModule segue Clean Architecture (`docs/specs/engineering.md` §4)
 - [x] DTOs validados com class-validator
 - [x] Middleware redireciona para onboarding quando necessário
 - [x] Callback redireciona para onboarding após verificação de email
@@ -687,7 +687,7 @@
 
 **Objetivo:** Configurar pipeline de integração e deploy contínuo.
 
-**Referências:** `ENGINEERING.md` §12, §13
+**Referências:** `docs/specs/engineering.md` §12, §13
 
 **Completed:** 08 Jan 2026
 
@@ -728,7 +728,7 @@
   - [ ] `RAILWAY_TOKEN`
   - [ ] `SENTRY_DSN`
   - [ ] `SENTRY_AUTH_TOKEN` (para source maps)
-- [x] Documentar branch protection em `ENGINEERING.md` §12.3 (ativar quando tiver time)
+- [x] Documentar branch protection em `docs/specs/engineering.md` §12.3 (ativar quando tiver time)
 
 **Definition of Done:**
 - [x] CI roda em todo push (main, develop, feature/*)
@@ -751,7 +751,7 @@
 
 **Objetivo:** Implementar infraestrutura robusta de testes para desenvolvimento sustentável.
 
-**Referências:** `ENGINEERING.md` §11.5, `ADR-011`, `ADR-013`
+**Referências:** `docs/specs/engineering.md` §11.5, `ADR-011`, `ADR-013`
 
 **Completed:** 13 Jan 2026
 
@@ -775,7 +775,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 **Documentação:**
 - [x] Criar ADR-013: Test Data Management
-- [x] Documentar padrões de teste em `ENGINEERING.md` §11.5
+- [x] Documentar padrões de teste em `docs/specs/engineering.md` §11.5
 
 **Definition of Done:**
 - [x] Seed pode ser executado múltiplas vezes sem criar duplicatas
@@ -794,17 +794,17 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 ## Fase 1: Conselheira (v1.x)
 
 > **Objetivo:** Implementar a feature principal de ajudar o usuário através de chat com IA e memória gerenciada pela IA (ADR-012).
-> **Referências:** `PRODUCT_SPECS.md` §2.1, §6.1, §6.2, `AI_SPECS.md`, `SYSTEM_SPECS.md` §3.2, §3.6
+> **Referências:** `docs/specs/product.md` §2.1, §6.1, §6.2, `docs/specs/ai.md`, `docs/specs/system.md` §3.2, §3.6
 
 ### M1.1 — Package: AI (LLM Abstraction + Tool Use) 🟢
 
 **Objetivo:** Criar abstração de LLM com suporte a Tool Use (Function Calling).
 
-**Referências:** `ENGINEERING.md` §8, `AI_SPECS.md` §2, `ADR-012`
+**Referências:** `docs/specs/engineering.md` §8, `docs/specs/ai.md` §2, `ADR-012`
 
 **Tasks:**
 
-- [x] Criar interface `LLMPort` conforme `ENGINEERING.md` §8.2:
+- [x] Criar interface `LLMPort` conforme `docs/specs/engineering.md` §8.2:
   ```typescript
   interface LLMPort {
     chat(params: ChatParams): Promise<ChatResponse>;
@@ -818,7 +818,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 - [x] **Implementar Tool Use Examples por provider:**
   - [x] Claude: usar campo `input_examples` com beta header `advanced-tool-use-2025-11-20`
   - [x] Gemini: criar método `enrichDescriptionWithExamples()` para workaround
-  - [x] Adicionar exemplos para todas as 7 tools conforme `AI_SPECS.md` §6.2
+  - [x] Adicionar exemplos para todas as 7 tools conforme `docs/specs/ai.md` §6.2
 - [x] Implementar `GeminiAdapter` com suporte a Function Calling
 - [x] Implementar `ClaudeAdapter` com suporte a Tool Use
 - [x] Criar `LLMFactory` que retorna adapter baseado em ENV
@@ -864,7 +864,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 **Objetivo:** Implementar chat com IA com streaming de resposta.
 
-**Referências:** `SYSTEM_SPECS.md` §3.2, `AI_SPECS.md` §4
+**Referências:** `docs/specs/system.md` §3.2, `docs/specs/ai.md` §4
 
 **Tasks:**
 
@@ -884,7 +884,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
   - [x] DELETE /chat/conversations/:id - soft delete (90 dias retenção)
 - [x] Implementar DTOs com class-validator
 - [x] Implementar streaming via Server-Sent Events (SSE)
-- [x] Implementar system prompt base conforme `AI_SPECS.md` §4.1
+- [x] Implementar system prompt base conforme `docs/specs/ai.md` §4.1
 - [ ] ~~Implementar rate limiting por plano~~ → Migrado para **M3.6**
 - [x] Salvar mensagens no banco
 - [x] Implementar tipos de conversa: general, counselor
@@ -943,7 +943,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 **Objetivo:** Implementar sistema de memória com Tool Use e consolidação automática.
 
-**Referências:** `AI_SPECS.md` §6-7, `DATA_MODEL.md` §7, `ADR-012`
+**Referências:** `docs/specs/ai.md` §6-7, `docs/specs/data-model.md` §7, `ADR-012`
 
 **Tasks:**
 
@@ -995,7 +995,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
   - [x] Cria/atualiza knowledge_items
   - [x] Atualiza user_memory
   - [x] Salva registro em memory_consolidations
-- [x] Criar consolidation prompt builder conforme AI_SPECS.md §6.5.2
+- [x] Criar consolidation prompt builder conforme docs/specs/ai.md §6.5.2
 - [x] Criar response parser com validação Zod
 - [x] Implementar scheduling timezone-aware via BullMQ `tz` option
 
@@ -1061,7 +1061,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
   - [x] Criar AdminModule (`apps/api/src/modules/admin/`)
   - [x] Criar AdminJobsController com endpoint `POST /admin/jobs/memory-consolidation/trigger`
   - [x] Proteger endpoint para `NODE_ENV=development`
-  - [x] Documentar uso em `ENGINEERING.md` §7.6
+  - [x] Documentar uso em `docs/specs/engineering.md` §7.6
 
 ---
 
@@ -1069,7 +1069,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 **Objetivo:** Implementar tela para visualizar e gerenciar o que a IA sabe sobre o usuário.
 
-**Referências:** `PRODUCT_SPECS.md` §6.2, `ADR-012`
+**Referências:** `docs/specs/product.md` §6.2, `ADR-012`
 
 **Tasks:**
 
@@ -1145,7 +1145,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 **Objetivo:** Implementar gerenciamento temporal de conhecimento com detecção de mudanças de estado (padrão Zep/Graphiti Temporal Knowledge Graphs).
 
-**Referências:** `AI_SPECS.md` §6.7, `DATA_MODEL.md` §4.5
+**Referências:** `docs/specs/ai.md` §6.7, `docs/specs/data-model.md` §4.5
 
 **Contexto:**
 Sistema detectava contradições de forma inconsistente:
@@ -1176,8 +1176,8 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [x] Estilizar items superseded com badge e opacidade
 
 **Documentação:**
-- [x] Atualizar DATA_MODEL.md com campos temporais
-- [x] Adicionar seção 6.7 ao AI_SPECS.md (Contradiction Detection)
+- [x] Atualizar docs/specs/data-model.md com campos temporais
+- [x] Adicionar seção 6.7 ao docs/specs/ai.md (Contradiction Detection)
 
 **Testes:**
 - [x] Atualizar unit tests para `KnowledgeItemsService.exportAll()`
@@ -1204,7 +1204,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Permitir que a IA faça conexões entre fatos e detecte contradições em tempo real durante conversas.
 
-**Referências:** `AI_SPECS.md` §6.6, `ADR-014`
+**Referências:** `docs/specs/ai.md` §6.6, `ADR-014`
 
 **Tasks:**
 
@@ -1225,7 +1225,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Documentação:**
 - [x] Criar ADR-014: Real-time Inference Architecture
-- [x] Atualizar AI_SPECS.md (§4.1, §6.2, §6.6, §9.1, §9.2)
+- [x] Atualizar docs/specs/ai.md (§4.1, §6.2, §6.6, §9.1, §9.2)
 
 **Testes:**
 - [x] Testes unitários para `analyze_context`:
@@ -1257,20 +1257,20 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar feature opt-in de perspectiva cristã no chat.
 
-**Referências:** `PRODUCT_SPECS.md` §8, `AI_SPECS.md` §4.3
+**Referências:** `docs/specs/product.md` §8, `docs/specs/ai.md` §4.3
 
 **Tasks:**
 
 **Backend:**
 - [ ] Adicionar configuração `christianPerspective: boolean` no user_settings
-- [ ] Implementar system prompt de perspectiva cristã (conforme `AI_SPECS.md` §4.3)
+- [ ] Implementar system prompt de perspectiva cristã (conforme `docs/specs/ai.md` §4.3)
 - [ ] Integrar com chat: aplicar prompt quando habilitado
 
 **Frontend:**
 - [ ] Criar toggle nas configurações do usuário (`/settings/preferences`)
 - [ ] Adicionar seção "Perspectiva Cristã" com explicação
 - [ ] Componente ToggleWithDescription para o setting
-- [ ] Adicionar opção de habilitar perspectiva cristã na etapa 2 do onboarding (toggle opcional junto com seleção de áreas) — conforme `PRODUCT_SPECS.md` §7.1 item 2c
+- [ ] Adicionar opção de habilitar perspectiva cristã na etapa 2 do onboarding (toggle opcional junto com seleção de áreas) — conforme `docs/specs/product.md` §7.1 item 2c
 
 **Testes:**
 - [ ] Teste unitário: prompt correto é aplicado quando habilitado
@@ -1293,7 +1293,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar guardrails para tópicos sensíveis.
 
-**Referências:** `AI_SPECS.md` §8
+**Referências:** `docs/specs/ai.md` §8
 
 **Tasks:**
 
@@ -1354,7 +1354,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 **Finalizar componentes de estado:**
 - [x] ErrorBoundary: adicionar link "Precisa de ajuda?" para suporte
 
-**Alinhar Empty States com `SYSTEM_SPECS.md` §4.1:**
+**Alinhar Empty States com `docs/specs/system.md` §4.1:**
 - [x] Chat: ajustar mensagem para "Converse com sua assistente" + CTA "Iniciar conversa"
 - [x] Memória: ajustar mensagem para "A IA ainda está aprendendo sobre você" + CTA "Iniciar conversa"
 
@@ -1388,7 +1388,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Testes de responsividade (Playwright viewports: mobile 375px, tablet 768px, desktop 1280px)
 
 **Definition of Done:**
-- [x] Empty states alinhados com SYSTEM_SPECS.md §4.1
+- [x] Empty states alinhados com docs/specs/system.md §4.1
 - [x] Error states com botão retry e link suporte
 - [x] Toasts em todas as operações CRUD (Chat + Memória)
 - [x] App responsivo e funcional em mobile, tablet e desktop
@@ -1415,7 +1415,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 **Referências:**
 - [Automatic Context Compaction - Claude Docs](https://platform.claude.com/cookbook/tool-use-automatic-context-compaction)
 - [Effective Context Engineering - Anthropic](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
-- `AI_SPECS.md` §4
+- `docs/specs/ai.md` §4
 
 **Problema:**
 - Atualmente só as últimas 20 mensagens são enviadas ao LLM
@@ -1476,20 +1476,20 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Summary é persistido e reutilizado
 - [ ] Token usage é reduzido em conversas longas
 - [ ] Testes passam
-- [ ] Documentação atualizada (AI_SPECS.md)
+- [ ] Documentação atualizada (docs/specs/ai.md)
 
 ---
 
 ## Fase 2: Tracker (v2.x)
 
 > **Objetivo:** Implementar sistema de tracking de métricas, Life Balance Score, dashboard e relatórios.
-> **Referências:** `PRODUCT_SPECS.md` §2.3, §6.7, §6.8, §6.14, §6.15, §6.17, `SYSTEM_SPECS.md` §3.3, §3.4, §3.9, §3.10
+> **Referências:** `docs/specs/product.md` §2.3, §6.7, §6.8, §6.14, §6.15, §6.17, `docs/specs/system.md` §3.3, §3.4, §3.9, §3.10
 
 ### M2.1 — Módulo: Tracking de Métricas 🔴
 
 **Objetivo:** Implementar registro de métricas de vida.
 
-**Referências:** `SYSTEM_SPECS.md` §3.3
+**Referências:** `docs/specs/system.md` §3.3
 
 **Tasks:**
 
@@ -1500,7 +1500,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] `GetHistoryUseCase` - buscar histórico com filtros
   - [ ] `GetAggregationsUseCase` - cálculos (média, soma, etc)
   - [ ] `TrackingRepository`
-- [ ] Implementar tipos de tracking (conforme `SYSTEM_SPECS.md` §3.3):
+- [ ] Implementar tipos de tracking (conforme `docs/specs/system.md` §3.3):
   - [ ] weight (0-500kg)
   - [ ] water (0-10000ml)
   - [ ] sleep (0-24h, com qualidade 1-10)
@@ -1511,8 +1511,8 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] energy (1-10)
   - [ ] habit
   - [ ] custom
-- [ ] Implementar validações conforme `SYSTEM_SPECS.md` §3.3
-- [ ] Implementar categorias de despesa (conforme `SYSTEM_SPECS.md`)
+- [ ] Implementar validações conforme `docs/specs/system.md` §3.3
+- [ ] Implementar categorias de despesa (conforme `docs/specs/system.md`)
 - [ ] Implementar agregações (média, soma, variação)
 - [ ] Integrar com Tool Use (tracking via chat):
   - [ ] Implementar executor da tool `record_metric` no ToolExecutorService
@@ -1568,7 +1568,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar cálculo do Life Balance Score.
 
-**Referências:** `SYSTEM_SPECS.md` §3.4
+**Referências:** `docs/specs/system.md` §3.4
 
 **Tasks:**
 
@@ -1577,7 +1577,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] Calcular score de cada área (0-100)
   - [ ] Aplicar pesos configuráveis
   - [ ] Calcular Life Balance Score geral
-- [ ] Implementar fórmulas por área (conforme `SYSTEM_SPECS.md` §3.4):
+- [ ] Implementar fórmulas por área (conforme `docs/specs/system.md` §3.4):
   - [ ] Saúde: peso (IMC), exercício, sono, água, alimentação
   - [ ] Financeiro: budget, savings, debt, investments
   - [ ] Relacionamentos: interações, qualidade
@@ -1626,7 +1626,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar dashboard com visão geral da vida do usuário.
 
-**Referências:** `PRODUCT_SPECS.md` §6.14
+**Referências:** `docs/specs/product.md` §6.14
 
 **Tasks:**
 
@@ -1676,7 +1676,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar sistema de metas e tracking de hábitos.
 
-**Referências:** `SYSTEM_SPECS.md` §3.9, `PRODUCT_SPECS.md` §6.15
+**Referências:** `docs/specs/system.md` §3.9, `docs/specs/product.md` §6.15
 
 **Tasks:**
 
@@ -1744,7 +1744,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar geração de relatórios periódicos.
 
-**Referências:** `SYSTEM_SPECS.md` §3.10, `AI_SPECS.md` §7.1, §7.2
+**Referências:** `docs/specs/system.md` §3.10, `docs/specs/ai.md` §7.1, §7.2
 
 **Tasks:**
 
@@ -1753,7 +1753,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] `GenerateMorningSummaryUseCase`
   - [ ] `GenerateWeeklyReportUseCase`
   - [ ] `GenerateMonthlyReportUseCase`
-- [ ] Implementar prompts de relatório (conforme `AI_SPECS.md` §7.1, §7.2)
+- [ ] Implementar prompts de relatório (conforme `docs/specs/ai.md` §7.1, §7.2)
 - [ ] Criar jobs para geração:
   - [ ] Morning summary: configurável (default 07:00), janela de 20 min
   - [ ] Weekly report: domingo 20:00
@@ -1802,13 +1802,13 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 ## Fase 3: Assistente (v3.x)
 
 > **Objetivo:** Implementar integrações externas e funcionalidades de assistente pessoal.
-> **Referências:** `PRODUCT_SPECS.md` §2.2, §5.2, §6.4, §6.5, §6.6, `INTEGRATIONS_SPECS.md`
+> **Referências:** `docs/specs/product.md` §2.2, §5.2, §6.4, §6.5, §6.6, `docs/specs/integrations.md`
 
 ### M3.1 — Integração Telegram 🔴
 
 **Objetivo:** Implementar bot do Telegram para interação rápida.
 
-**Referências:** `INTEGRATIONS_SPECS.md` §2
+**Referências:** `docs/specs/integrations.md` §2
 
 **Tasks:**
 
@@ -1869,7 +1869,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Sincronizar eventos do Google Calendar.
 
-**Referências:** `INTEGRATIONS_SPECS.md` §3
+**Referências:** `docs/specs/integrations.md` §3
 
 **Tasks:**
 
@@ -1927,7 +1927,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar área segura para dados sensíveis.
 
-**Referências:** `SYSTEM_SPECS.md` §3.8, `PRODUCT_SPECS.md` §6.5
+**Referências:** `docs/specs/system.md` §3.8, `docs/specs/product.md` §6.5
 
 **Tasks:**
 
@@ -1988,7 +1988,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar gerenciamento de relacionamentos pessoais.
 
-**Referências:** `SYSTEM_SPECS.md` §3.7, `PRODUCT_SPECS.md` §6.6
+**Referências:** `docs/specs/system.md` §3.7, `docs/specs/product.md` §6.6
 
 **Tasks:**
 
@@ -2049,7 +2049,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar sistema de notificações e check-ins proativos.
 
-**Referências:** `SYSTEM_SPECS.md` §3.11, `PRODUCT_SPECS.md` §6.16, `AI_SPECS.md` §7.4
+**Referências:** `docs/specs/system.md` §3.11, `docs/specs/product.md` §6.16, `docs/specs/ai.md` §7.4
 
 **Tasks:**
 
@@ -2059,7 +2059,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] Canais: push (web), telegram, email, in-app
   - [ ] Respeitar quiet hours
   - [ ] Preferências por tipo
-- [ ] Implementar check-ins proativos (conforme `AI_SPECS.md` §7.4):
+- [ ] Implementar check-ins proativos (conforme `docs/specs/ai.md` §7.4):
   - [ ] Dias sem tracking
   - [ ] Queda de humor
   - [ ] Evento próximo
@@ -2075,14 +2075,14 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] Job diário para verificar follow-ups pendentes e criar notificações
   - [ ] Integração: follow-ups aparecem na lista de check-ins do dia
 - [ ] Criar jobs para envio
-- [ ] Implementar job de notificações de onboarding abandonado (conforme `SYSTEM_SPECS.md` §3.1):
+- [ ] Implementar job de notificações de onboarding abandonado (conforme `docs/specs/system.md` §3.1):
   - [ ] Dia 3: email "Complete seu cadastro para começar a usar o app!"
   - [ ] Dia 7: email "Falta pouco! Termine o cadastro."
   - [ ] Dia 14: email "Seus dados expiram em 16 dias. Complete agora!"
   - [ ] Dia 25: email "Última chance! Seus dados serão removidos em 5 dias."
 - [ ] Criar template de email para lembretes de onboarding
 
-**Backend - Data Retention & Purge Jobs (Per `SYSTEM_SPECS.md` §2.5, `ADR-010`):**
+**Backend - Data Retention & Purge Jobs (Per `docs/specs/system.md` §2.5, `ADR-010`):**
 - [ ] Criar job `purge-soft-deleted-users`:
   - [ ] Executar diariamente
   - [ ] Hard delete registros com `deletedAt > 30 dias`
@@ -2150,7 +2150,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar sistema de assinaturas e pagamentos.
 
-**Referências:** `INTEGRATIONS_SPECS.md` §4
+**Referências:** `docs/specs/integrations.md` §4
 
 **Tasks:**
 
@@ -2164,7 +2164,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - [ ] Rate limiting de mensagens por plano (migrado de M1.2)
   - [ ] Usar Redis (Upstash) para storage distribuído
   - [ ] Implementar ThrottlerBehindProxyGuard para Railway/Vercel
-  - [ ] Limites conforme `SYSTEM_SPECS.md` §2.6
+  - [ ] Limites conforme `docs/specs/system.md` §2.6
 - [ ] Notificar falhas de pagamento
 
 **Frontend:**
@@ -2207,7 +2207,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar upload e armazenamento de arquivos.
 
-**Referências:** `INTEGRATIONS_SPECS.md` §7
+**Referências:** `docs/specs/integrations.md` §7
 
 **Tasks:**
 
@@ -2314,7 +2314,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
   - Integrar no CI via `supabase test db`
   - **Referência:** https://supabase.com/docs/guides/local-development/testing/pgtap-extended
 
-- [ ] Documentar em ENGINEERING.md §6:
+- [ ] Documentar em docs/specs/engineering.md §6:
   - Regra: toda nova tabela com `user_id` DEVE ter RLS na própria migration
   - Template de policy padrão a seguir
   - Referência ao teste pgTAP de validação
@@ -2345,7 +2345,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 | 2026-01-15 | M1.8 | Movido | Confirmação de Tracking via Chat incorporado ao M2.1 — depende de infraestrutura de tracking. M1.9→M1.8, M1.10→M1.9, M1.11→M1.10 |
 | 2026-01-15 | Docs | Atualizado | Gap Analysis: documentados fallbacks (AI_SPECS §10.4), tool loop limits (§6.8), conflict resolution (SYSTEM_SPECS §3.5, AI_SPECS §6.5.5), tool call logging (ENGINEERING §5.5), Raciocínio Inferencial (PRODUCT_SPECS §6.2). Tasks adicionadas: M1.9 (Logging Seguro), Backlog (stale memory) |
 | 2026-01-15 | M1.5 | Removido | Conflita com filosofia Jarvis-first; knowledge_items cobre funcionalidade |
-| 2026-01-15 | M1.4 | Removido | Intent Classification redundante com Tool Use (ADR-012). Seção 5 do AI_SPECS.md removida. Diagrama e comandos no SYSTEM_SPECS.md atualizados. |
+| 2026-01-15 | M1.4 | Removido | Intent Classification redundante com Tool Use (ADR-012). Seção 5 do docs/specs/ai.md removida. Diagrama e comandos no docs/specs/system.md atualizados. |
 | 2026-01-14 | M1.6.1 | Concluído | Temporal Knowledge Management: detecção de mudanças de estado, UI toggle "Ver histórico", export com metadados temporais |
 | 2026-01-14 | M1.6 | Concluído | Memory View completo: endpoints, filtros, UI /memory, testes unit/integration (E2E pendentes) |
 | 2026-01-14 | M1.3 | Correções | Segurança: removido userId do admin endpoint. Bug fix: refreshSchedulers() no onboarding. Testes e docs atualizados |
