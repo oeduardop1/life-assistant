@@ -106,7 +106,7 @@ Exemplo: credenciais faltando, decisão crítica de arquitetura, etc.
 | **Status** | 🔴 Pendente |
 | **Prioridade** | 🟢 Baixa (decidir antes de ir ao mercado) |
 | **Categoria** | Negócio |
-| **Origem** | PRODUCT_SPECS.md §10.1 |
+| **Origem** | docs/specs/product.md §10.1 |
 | **Data** | 2026-01-12 |
 
 **Contexto:**
@@ -139,11 +139,11 @@ _Pendente — decidir antes de lançamento público_
 | **Status** | 🔴 Pendente |
 | **Prioridade** | 🟢 Baixa (decidir antes de ir ao mercado) |
 | **Categoria** | Negócio |
-| **Origem** | PRODUCT_SPECS.md §10.1 |
+| **Origem** | docs/specs/product.md §10.1 |
 | **Data** | 2026-01-12 |
 
 **Contexto:**
-PRODUCT_SPECS menciona "Trial" mas não especifica duração ou condições.
+docs/specs/product.md menciona "Trial" mas não especifica duração ou condições.
 
 **Pergunta/Decisão necessária:**
 - Duração do trial (7, 14, 30 dias?)
@@ -171,7 +171,7 @@ _Pendente — decidir antes de lançamento público_
 | **Status** | 🔴 Pendente |
 | **Prioridade** | 🟢 Baixa (decidir antes de ir ao mercado) |
 | **Categoria** | Negócio |
-| **Origem** | INTEGRATIONS_SPECS.md §7.3 (Stripe) |
+| **Origem** | docs/specs/integrations.md §7.3 (Stripe) |
 | **Data** | 2026-01-12 |
 
 **Contexto:**
@@ -311,7 +311,7 @@ Exemplo: fluxos não especificados, textos de UI, comportamentos visuais, etc.
 | **Status** | 🟢 Resolvido |
 | **Prioridade** | 🟢 Baixa (decisão arquitetural, não bloqueante) |
 | **Categoria** | Técnico |
-| **Origem** | Planejamento de AI_SPECS.md |
+| **Origem** | Planejamento de docs/specs/ai.md |
 | **Data** | 2026-01-11 |
 
 **Contexto:**
@@ -336,7 +336,7 @@ Opção 2 - Tool Use oferece mais controle e se alinha com a filosofia de transp
 
 **Implementação:**
 - Criado ADR-012 documentando a decisão
-- Atualizado AI_SPECS.md, DATA_MODEL.md, ENGINEERING.md, SYSTEM_SPECS.md
+- Atualizado docs/specs/ai.md, docs/specs/data-model.md, docs/specs/engineering.md, docs/specs/system.md
 - Removido pgvector e embeddings do stack
 - Milestones M1.1, M1.3, M1.6 atualizados
 
@@ -349,7 +349,7 @@ Opção 2 - Tool Use oferece mais controle e se alinha com a filosofia de transp
 | **Status** | 🟢 Resolvido |
 | **Prioridade** | 🟢 Baixa (decisão de produto, não bloqueante) |
 | **Categoria** | Negócio/UX |
-| **Origem** | PRODUCT_SPECS.md §6.2 |
+| **Origem** | docs/specs/product.md §6.2 |
 | **Data** | 2026-01-11 |
 
 **Contexto:**
@@ -373,7 +373,7 @@ Opção 2 - Alinha-se com a proposta de valor "você só conversa, a IA organiza
 ✅ Opção 2 - Simplificar para "Memória" com visualização e gestão de knowledge items
 
 **Implementação:**
-- Renomeado "Segundo Cérebro" para "Memória" em PRODUCT_SPECS.md
+- Renomeado "Segundo Cérebro" para "Memória" em docs/specs/product.md
 - Removido Graph View, wikilinks, pastas, templates, Quick Switcher
 - Adicionado sistema de knowledge items com validação/correção
 - Milestone M1.6 atualizado para "Memory View"
@@ -416,9 +416,9 @@ Opção 2 - Dual strategy. Aproveita feature nativa no Claude e mantém compatib
 - Gemini: enriquecer description com exemplos inline via `enrichDescriptionWithExamples()`
 
 **Implementação:**
-- ENGINEERING.md §8.2 (interface ToolDefinition) + §8.5 (nova seção)
-- AI_SPECS.md §2.4 (nova seção) + §6.2 (exemplos em todas 7 tools)
-- INTEGRATIONS_SPECS.md §6.4 (interface) + §6.7 (nova seção)
+- docs/specs/engineering.md §8.2 (interface ToolDefinition) + §8.5 (nova seção)
+- docs/specs/ai.md §2.4 (nova seção) + §6.2 (exemplos em todas 7 tools)
+- docs/specs/integrations.md §6.4 (interface) + §6.7 (nova seção)
 - MILESTONES.md M1.1 (nova task)
 
 ---
@@ -443,7 +443,7 @@ Manter como histórico para referência futura.
 | **Data** | 2026-01-15 |
 
 **Contexto:**
-Ao implementar o rate limiting para o chat, percebi que SYSTEM_SPECS.md define 50 mensagens/dia para Free, mas não especifica se isso inclui mensagens da IA ou apenas do usuário.
+Ao implementar o rate limiting para o chat, percebi que docs/specs/system.md define 50 mensagens/dia para Free, mas não especifica se isso inclui mensagens da IA ou apenas do usuário.
 
 **Pergunta/Decisão necessária:**
 O limite de 50 mensagens/dia conta apenas mensagens do usuário ou o total (usuário + IA)?
