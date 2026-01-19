@@ -10,6 +10,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-19 | M2.6 | Criado | Módulo Finance: planejamento financeiro mensal com rendas, contas fixas, despesas variáveis (recorrentes + pontuais), dívidas com parcelas, investimentos. Dashboard com KPIs, gráficos, notificações de vencimento, integração com IA |
 | 2026-01-16 | M0.8 | Migração | `middleware.ts` → `proxy.ts` (Next.js 16 convention). Corrigido technical debt marcado incorretamente como N/A. Atualizados comentários em server.ts e callback-recovery/route.ts |
 | 2026-01-16 | Backlog | Adicionado | Seção "Segurança e RLS" no Backlog Técnico. 14 tabelas precisam de RLS nas migrations Supabase. Nota adicionada no M0.4 sobre gap identificado |
 | 2026-01-15 | M1.3 | Bug fix | Corrigido bug crítico no Memory Consolidation (Zod null handling) que impedia criação de knowledge items. Melhorado script trigger (`--wait` flag). 6 novos testes. Docs atualizados (AI_SPECS §6.5, ENGINEERING §7.6) |
@@ -39,4 +40,4 @@
 
 ---
 
-*Última atualização: 18 Janeiro 2026*
+*Última atualização: 19 Janeiro 2026*

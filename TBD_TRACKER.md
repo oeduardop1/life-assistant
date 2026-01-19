@@ -70,16 +70,16 @@ _Pendente_
 
 | Status | Quantidade |
 |--------|------------|
-| 🔴 Pendente | 5 |
+| 🔴 Pendente | 6 |
 | 🟡 Em discussão | 0 |
 | 🟢 Resolvido | 3 |
-| **Total** | **8** |
+| **Total** | **9** |
 
 | Prioridade | Quantidade |
 |------------|------------|
 | 🔴 Bloqueante | 0 |
 | 🟡 Alta | 0 |
-| 🟢 Baixa | 8 |
+| 🟢 Baixa | 9 |
 
 ---
 
@@ -271,9 +271,49 @@ Exemplo: regras de negócio, limites, comportamentos de UX, etc.
 
 ## 🔵 Decisões Técnicas
 
-_Nenhum item pendente no momento._
+### [TBD-205] Repensar Modelo de Tracking Diário (M2.1)
 
-<!-- 
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🔴 Pendente |
+| **Prioridade** | 🟢 Baixa |
+| **Categoria** | Negócio/Técnico |
+| **Origem** | Planejamento M2.6 Finance |
+| **Data** | 2026-01-19 |
+
+**Contexto:**
+O M2.1 (Tracking de Métricas) define `tracking_entries` para micro-tracking diário (peso, água, humor, gastos). Com a criação do M2.6 Finance (planejamento financeiro mensal), surge a dúvida se micro-tracking faz sentido para o modelo "baixo atrito" do produto.
+
+O Finance module usa modelo de planejamento mensal (não micro-tracking de gastos diários), o que pode conflitar com a proposta original do M2.1 que incluía tracking de despesas individuais.
+
+**Pergunta/Decisão necessária:**
+- Manter `tracking_entries` para micro-tracking diário?
+- Modificar para modelo híbrido?
+- Remover em favor de planejamento mensal apenas?
+
+**Opções consideradas:**
+1. **Manter como está** — Micro-tracking disponível para quem quiser
+   - Prós: Flexibilidade máxima, dados granulares
+   - Contras: Pode conflitar com filosofia "baixo atrito"
+2. **Simplificar** — Tracking apenas de métricas simples (peso, humor), sem gastos
+   - Prós: Alinhado com filosofia do produto, menos sobreposição com Finance
+   - Contras: Perde granularidade para quem quer
+3. **Remover** — Foco apenas em planejamento mensal (Finance)
+   - Prós: Simplicidade máxima
+   - Contras: Perde funcionalidade de saúde/bem-estar
+
+**Recomendação da IA:**
+Opção 2 — Manter tracking para métricas de saúde/bem-estar (peso, sono, humor, energia), mas não para finanças (coberto pelo M2.6 Finance). Isso alinha com a filosofia "baixo atrito" e evita sobreposição de funcionalidades.
+
+**Decisão:**
+_Pendente — decidir antes de implementar M2.1_
+
+**Implementação:**
+_Pendente_
+
+---
+
+<!--
 Adicionar aqui itens técnicos que precisam de input humano.
 Exemplo: escolha entre abordagens com trade-offs significativos, etc.
 -->
@@ -486,5 +526,5 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 
 ---
 
-*Última atualização: 12 Janeiro 2026*
-*Revisão: Adicionados TBDs de negócio (TBD-100 a TBD-104) para decisão futura antes de go-to-market*
+*Última atualização: 19 Janeiro 2026*
+*Revisão: Adicionado TBD-205 sobre modelo de tracking diário vs Finance module (M2.6)*

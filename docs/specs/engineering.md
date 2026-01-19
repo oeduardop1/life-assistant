@@ -1011,6 +1011,9 @@ export class ChatThrottlerGuard extends ThrottlerBehindProxyGuard {
 | `proactive-checkin` | Check-ins proativos | Baixa |
 | `notifications` | Envio de notificações | Alta |
 | `cleanup-onboarding` | Limpeza de onboardings abandonados (30d) | Baixa |
+| `finance-recurrence` | Gerar registros de rendas/contas/despesas recorrentes (M2.6) | Baixa |
+| `finance-reminders` | Enviar lembretes de vencimento de contas e parcelas (M2.6) | Alta |
+| `finance-overdue-check` | Atualizar status de contas vencidas (M2.6) | Média |
 
 ### 7.2 Idempotência (Obrigatório)
 
@@ -1176,6 +1179,64 @@ Para verificar resultado da consolidação:
 1. Consultar tabela `memory_consolidations` para ver status e métricas
 2. Consultar tabela `knowledge_items` para ver fatos extraídos
 3. Consultar tabela `user_memories` para ver campos atualizados
+
+### 7.5 Jobs do Módulo Finance (M2.6)
+
+#### finance-recurrence
+
+Gera registros recorrentes no início de cada mês.
+
+| Configuração | Valor |
+|--------------|-------|
+| **Cron** | `5 0 1 * *` (00:05 UTC, dia 1) |
+| **Prioridade** | Baixa |
+| **Retentativas** | 3 |
+
+**Processo:**
+1. Para cada usuário ativo:
+   - Buscar `incomes` do mês anterior com `isRecurring = true`
+   - Criar novos registros para o mês atual com `actualAmount = null`
+   - Buscar `bills` do mês anterior com `isRecurring = true`
+   - Criar novos registros com `status = pending`
+   - Buscar `variable_expenses` do mês anterior com `isRecurring = true`
+   - Criar novos registros com `actualAmount = 0`
+
+**JobId:** `finance-recurrence:${monthYear}` (ex: `finance-recurrence:2026-02`)
+
+#### finance-reminders
+
+Envia lembretes de vencimento de contas e parcelas.
+
+| Configuração | Valor |
+|--------------|-------|
+| **Cron** | `0 8 * * *` (08:00 UTC, diário) |
+| **Prioridade** | Alta |
+| **Retentativas** | 3 |
+
+**Processo:**
+1. Para cada usuário ativo (respeitando timezone):
+   - Buscar `bills` com `status = pending` e `dueDay` em 3 dias
+   - Buscar `debts` com `status = active` e `dueDay` em 3 dias
+   - Enviar notificação para cada conta/parcela pendente
+
+**JobId:** `finance-reminder:${userId}:${date}` (ex: `finance-reminder:uuid:2026-01-19`)
+
+#### finance-overdue-check
+
+Atualiza status de contas vencidas.
+
+| Configuração | Valor |
+|--------------|-------|
+| **Cron** | `0 1 * * *` (01:00 UTC, diário) |
+| **Prioridade** | Média |
+| **Retentativas** | 3 |
+
+**Processo:**
+1. Para cada usuário ativo:
+   - Buscar `bills` do mês atual com `status = pending`
+   - Se `dueDay < hoje`: atualizar `status = overdue`
+
+**JobId:** `finance-overdue:${monthYear}:${day}` (ex: `finance-overdue:2026-01:19`)
 
 ---
 

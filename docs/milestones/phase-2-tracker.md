@@ -1,11 +1,15 @@
 # Fase 2: Tracker (v2.x)
 
-> **Objetivo:** Implementar sistema de tracking de métricas, Life Balance Score, dashboard e relatórios.
+> **Objetivo:** Implementar sistema de tracking de métricas, Life Balance Score, dashboard, relatórios e planejamento financeiro.
 > **Referências:** `docs/specs/product.md` §2.3, §6.7, §6.8, §6.14, §6.15, §6.17, `docs/specs/system.md` §3.3, §3.4, §3.9, §3.10
 
 ---
 
 ## M2.1 — Módulo: Tracking de Métricas 🔴
+
+> ⚠️ **Nota:** O modelo de micro-tracking diário (`tracking_entries`) está em revisão.
+> Ver **TBD-205** para decisão sobre manter, modificar ou simplificar este módulo.
+> O módulo M2.6 Finance cobre o tracking financeiro com modelo de planejamento mensal.
 
 **Objetivo:** Implementar registro de métricas de vida.
 
@@ -315,4 +319,128 @@
 - [ ] Monthly report gerado no primeiro dia do mês
 - [ ] Relatórios podem ser visualizados e exportados
 - [ ] Horários configuráveis
+- [ ] Testes passam
+
+---
+
+## M2.6 — Módulo: Finance 🔴
+
+**Objetivo:** Implementar planejamento financeiro mensal de alto nível (controle pessoal, não micro-tracking de gastos).
+
+**Filosofia:** Baixo atrito. Usuário cadastra orçamento no início do mês e marca contas como pagas ao longo do mês.
+
+**Referências:** `docs/specs/system.md` §3.3 (Tracking), `docs/specs/data-model.md` §4.13 (Budgets)
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `finance`:
+  - [ ] `FinanceController` - CRUD de todas as entidades
+  - [ ] `IncomeService` - gerenciar rendas
+  - [ ] `BillService` - gerenciar contas fixas
+  - [ ] `ExpenseService` - gerenciar despesas variáveis
+  - [ ] `DebtService` - gerenciar dívidas com parcelas
+  - [ ] `InvestmentService` - gerenciar investimentos
+  - [ ] `FinanceSummaryUseCase` - calcular KPIs do dashboard
+- [ ] Criar tabelas (migrations):
+  - [ ] `incomes` - fontes de renda (nome, previsto, real, recorrente)
+  - [ ] `bills` - contas fixas (nome, valor, vencimento, status, categoria, recorrente)
+  - [ ] `variable_expenses` - despesas variáveis (nome, previsto, real, recorrente, mês/ano)
+  - [ ] `debts` - dívidas (nome, total, parcelas, valor_parcela, parcela_atual, vencimento)
+  - [ ] `investments` - investimentos (nome, meta, atual, aporte_mensal, prazo)
+- [ ] Implementar recorrências automáticas:
+  - [ ] Job mensal para gerar registros de contas fixas recorrentes
+  - [ ] Job mensal para gerar registros de despesas variáveis recorrentes
+  - [ ] Status inicial: `pending` (a ser marcado como `paid`)
+- [ ] Implementar cálculos de KPIs:
+  - [ ] Renda do mês (soma das rendas reais)
+  - [ ] Total orçado (soma de todos os blocos)
+  - [ ] Total gasto (fixas pagas + variáveis reais + parcelas)
+  - [ ] Saldo (renda - gasto)
+  - [ ] Total investido (soma dos investimentos atuais)
+- [ ] Implementar tool `get_finance_summary` para IA:
+  - [ ] Retorna KPIs, contas pendentes, parcelas próximas
+  - [ ] Permite IA responder "como estão minhas finanças?"
+- [ ] Implementar notificações:
+  - [ ] Início do mês: "Configure seu orçamento de [mês]"
+  - [ ] Conta próxima do vencimento (3 dias antes)
+  - [ ] Assinatura renovando (3 dias antes)
+  - [ ] Parcela de dívida vencendo (3 dias antes)
+  - [ ] Fim do mês: Resumo financeiro
+
+**Frontend:**
+- [ ] Criar página `/finance` (dashboard):
+  - [ ] KPIs em cards (Renda, Orçado, Gasto, Saldo, Investido)
+  - [ ] Gráfico: Orçamento x Real (barras por categoria)
+  - [ ] Gráfico: Distribuição de gastos (pizza)
+  - [ ] Gráfico: Evolução mensal (últimos 6-12 meses)
+  - [ ] Lista de contas pendentes
+  - [ ] Lista de parcelas próximas
+- [ ] Criar página `/finance/income`:
+  - [ ] Lista de fontes de renda
+  - [ ] Criar/editar renda
+  - [ ] Marcar como recorrente
+  - [ ] Previsto vs Real
+- [ ] Criar página `/finance/bills`:
+  - [ ] Lista de contas fixas do mês
+  - [ ] Checkbox para marcar como pago
+  - [ ] Filtros: pendentes, pagas, todas
+  - [ ] Criar/editar conta fixa
+  - [ ] Categorias: moradia, serviços, assinatura, outros
+- [ ] Criar página `/finance/expenses`:
+  - [ ] Seção: Variáveis Recorrentes (aparecem todo mês)
+    - [ ] Defaults: Alimentação/Mercado, Transporte/Gasolina, Lazer/Entretenimento
+    - [ ] Previsto vs Real
+  - [ ] Seção: Variáveis Pontuais (só este mês)
+    - [ ] Criar despesa pontual
+  - [ ] Total de variáveis do mês
+- [ ] Criar página `/finance/debts`:
+  - [ ] Lista de dívidas ativas
+  - [ ] Criar/editar dívida
+  - [ ] Visualizar parcelas (X/Y)
+  - [ ] Marcar parcela como paga
+  - [ ] Progresso da dívida (%)
+- [ ] Criar página `/finance/investments`:
+  - [ ] Lista de investimentos
+  - [ ] Criar/editar investimento (nome livre)
+  - [ ] Campos: nome, meta (opcional), valor atual, aporte mensal, prazo (opcional)
+  - [ ] Progresso da meta (%)
+  - [ ] Total investido
+- [ ] Componentes:
+  - [ ] FinanceKPICard (valor + label + ícone)
+  - [ ] BudgetVsRealChart (barras comparativas)
+  - [ ] ExpenseDistributionChart (pizza)
+  - [ ] MonthlyEvolutionChart (linha)
+  - [ ] BillRow (com checkbox de pago)
+  - [ ] DebtCard (com progresso de parcelas)
+  - [ ] InvestmentCard (com progresso de meta)
+  - [ ] MonthSelector (navegação entre meses)
+  - [ ] RecurrenceToggle (marcar como recorrente)
+
+**Testes:**
+- [ ] Testes unitários:
+  - [ ] Cálculo de KPIs
+  - [ ] Geração de recorrências
+  - [ ] Validações de dívida (parcelas)
+  - [ ] Cálculo de progresso de investimento
+- [ ] Testes de integração:
+  - [ ] CRUD de todas as entidades
+  - [ ] Job de recorrência mensal
+  - [ ] Notificações de vencimento
+  - [ ] Tool `get_finance_summary`
+- [ ] Teste E2E: criar conta fixa → marcar como paga → verificar no dashboard
+- [ ] Teste E2E: criar dívida com parcelas → pagar parcela → verificar progresso
+- [ ] Teste E2E: navegar entre meses
+
+**Definition of Done:**
+- [ ] Dashboard Finance exibe KPIs e gráficos
+- [ ] CRUD de rendas funciona
+- [ ] CRUD de contas fixas funciona (com checkbox pago)
+- [ ] CRUD de despesas variáveis funciona (recorrentes + pontuais)
+- [ ] CRUD de dívidas funciona (com controle de parcelas)
+- [ ] CRUD de investimentos funciona (com progresso de meta)
+- [ ] Recorrências automáticas funcionam (job mensal)
+- [ ] Notificações de vencimento enviadas
+- [ ] IA responde sobre finanças via tool
+- [ ] Navegação entre meses funciona
 - [ ] Testes passam

@@ -325,6 +325,7 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **analyze_context**: Analisar contexto para encontrar conexões, padrões e contradições. Use antes de responder sobre assuntos pessoais importantes
 - **create_reminder**: Criar lembrete
 - **get_tracking_history**: Obter histórico de métricas
+- **get_finance_summary**: Obter resumo financeiro (KPIs, contas pendentes, parcelas). Use quando perguntarem sobre finanças ou situação financeira
 - **update_person**: Atualizar informações de pessoa do CRM
 
 ## Raciocínio Inferencial
@@ -600,6 +601,34 @@ export const tools: ToolDefinition[] = [
       // Mudança de carreira
       { currentTopic: "career change consideration", relatedAreas: ["career", "financial", "personal_growth"], lookForContradictions: false },
     ],
+  },
+  {
+    name: 'get_finance_summary',
+    description: 'Obtém resumo financeiro com KPIs, contas pendentes e parcelas próximas. Use quando o usuário perguntar sobre finanças, orçamento, contas ou situação financeira.',
+    parameters: z.object({
+      period: z.enum(['current_month', 'last_month', 'year']).default('current_month')
+        .describe('Período do resumo: mês atual, mês anterior ou ano'),
+    }),
+    requiresConfirmation: false,
+    inputExamples: [
+      { period: "current_month" },
+      { period: "last_month" },
+      { period: "year" },
+    ],
+    // Retorno esperado:
+    // interface FinanceSummary {
+    //   kpis: {
+    //     income: number;        // Renda do mês (actualAmount)
+    //     budgeted: number;      // Total orçado
+    //     spent: number;         // Total gasto
+    //     balance: number;       // Saldo (income - spent)
+    //     invested: number;      // Total investido
+    //   };
+    //   pendingBills: Array<{ name: string; amount: number; dueDate: string; daysUntilDue: number }>;
+    //   upcomingInstallments: Array<{ debtName: string; installment: string; amount: number; dueDate: string; daysUntilDue: number }>;
+    //   alerts: string[];        // Alertas (contas vencidas, orçamento estourado, etc.)
+    //   monthYear: string;       // Período no formato YYYY-MM
+    // }
   },
 
   // ========== WRITE TOOLS ==========
@@ -1519,7 +1548,7 @@ Fingir que sabe algo que não sabe
 
 | Categoria | Tools | Confirmação |
 |-----------|-------|-------------|
-| **Read** | `search_knowledge`, `get_tracking_history`, `get_person`, `analyze_context` | ❌ Não |
+| **Read** | `search_knowledge`, `get_tracking_history`, `get_person`, `analyze_context`, `get_finance_summary` | ❌ Não |
 | **Write** | `record_metric`, `add_knowledge`, `create_reminder`, `update_person` | ✅ Sim |
 
 ### 9.2 Regras de Confirmação
@@ -1530,6 +1559,7 @@ Fingir que sabe algo que não sabe
 | `get_tracking_history` | ❌ Não | Apenas leitura |
 | `get_person` | ❌ Não | Apenas leitura |
 | `analyze_context` | ❌ Não | Apenas leitura (análise de contexto) |
+| `get_finance_summary` | ❌ Não | Apenas leitura (resumo financeiro) |
 | `record_metric` | ✅ Sim | Modifica dados |
 | `add_knowledge` | ❌ Não | IA confirma naturalmente na resposta |
 | `create_reminder` | ✅ Sim | Cria agendamento |
@@ -1830,5 +1860,5 @@ interface QualityEvaluation {
 
 ---
 
-*Última atualização: 13 Janeiro 2026*
-*Revisão: Adicionado analyze_context tool (§4.1, §6.2, §9.1, §9.2), Raciocínio Inferencial (§4.1), Real-time Inference Architecture (§6.6), referência ADR-014*
+*Última atualização: 19 Janeiro 2026*
+*Revisão: Adicionado tool get_finance_summary (§4.1, §6.2, §9.1, §9.2) para módulo Finance (M2.6)*

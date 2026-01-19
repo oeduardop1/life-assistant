@@ -959,6 +959,168 @@ Que tal uma caminhada de 20min?
 
 ---
 
+### 3.11 Módulo Finance (M2.6)
+
+**O que é:** Planejamento financeiro mensal de alto nível — controle pessoal, não micro-tracking de gastos.
+
+**Filosofia:** Baixo atrito. Usuário cadastra orçamento no início do mês e marca contas como pagas ao longo do mês.
+
+> **Nota:** Este módulo NÃO é micro-tracking de gastos diários. Para decisões sobre tracking_entries, ver TBD-205.
+
+#### Entidades
+
+##### Rendas (Incomes)
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| name | ✅ | Nome da renda (ex: "Salário", "Freelance X") |
+| type | ✅ | `salary`, `freelance`, `bonus`, `passive`, `investment`, `gift`, `other` |
+| frequency | ✅ | `monthly`, `biweekly`, `weekly`, `annual`, `irregular` |
+| expectedAmount | ✅ | Valor previsto |
+| actualAmount | ❌ | Valor recebido (preenchido quando recebe) |
+| isRecurring | ✅ | Se aparece automaticamente todo mês |
+| monthYear | ✅ | Período no formato YYYY-MM |
+
+**Regras:**
+- expectedAmount > 0
+- Rendas recorrentes são copiadas automaticamente no início de cada mês
+- Valor previsto vs real permite análise de variação
+
+##### Contas Fixas (Bills)
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| name | ✅ | Nome da conta (ex: "Aluguel", "Netflix") |
+| category | ✅ | `housing`, `utilities`, `subscription`, `insurance`, `other` |
+| amount | ✅ | Valor da conta |
+| dueDay | ✅ | Dia de vencimento (1-31) |
+| status | ✅ | `pending`, `paid`, `overdue`, `canceled` |
+| isRecurring | ✅ | Se aparece automaticamente todo mês |
+| monthYear | ✅ | Período no formato YYYY-MM |
+| paidAt | ❌ | Timestamp de quando foi marcada como paga |
+
+**Regras:**
+- amount > 0
+- dueDay: 1 ≤ dueDay ≤ 31
+- Contas recorrentes são copiadas automaticamente no início do mês
+- Status muda para `overdue` se dueDay < hoje e status = `pending`
+- Ao marcar como paga: status = `paid`, paidAt = now()
+
+##### Despesas Variáveis (Variable Expenses)
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| name | ✅ | Nome (ex: "Alimentação", "Lazer") |
+| category | ✅ | Categoria de despesa (expense_category enum) |
+| expectedAmount | ✅ | Valor orçado |
+| actualAmount | ❌ | Valor gasto real (atualizado ao longo do mês) |
+| isRecurring | ✅ | Recorrente (automática) ou Pontual (manual) |
+| monthYear | ✅ | Período no formato YYYY-MM |
+
+**Regras:**
+- expectedAmount > 0
+- Despesas recorrentes são copiadas automaticamente no início do mês
+- Defaults recorrentes sugeridos: Alimentação/Mercado, Transporte/Gasolina, Lazer/Entretenimento
+- Despesas pontuais existem apenas no mês específico
+
+##### Dívidas (Debts)
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| name | ✅ | Nome (ex: "Financiamento Carro") |
+| creditor | ❌ | Nome do credor (ex: "Banco X") |
+| totalAmount | ✅ | Valor total da dívida |
+| totalInstallments | ✅ | Número total de parcelas |
+| installmentAmount | ✅ | Valor da parcela mensal |
+| currentInstallment | ✅ | Número da parcela atual |
+| dueDay | ✅ | Dia de vencimento da parcela |
+| status | ✅ | `active`, `paid_off`, `settled`, `defaulted` |
+
+**Regras:**
+- totalAmount > 0
+- totalInstallments > 0
+- installmentAmount > 0
+- currentInstallment: 1 ≤ currentInstallment ≤ totalInstallments
+- dueDay: 1 ≤ dueDay ≤ 31
+- Progresso: `(currentInstallment / totalInstallments) × 100`
+- Ao pagar parcela: currentInstallment++
+- Se currentInstallment > totalInstallments: status = `paid_off`
+
+##### Investimentos (Investments)
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| name | ✅ | Nome livre (ex: "Reserva de Emergência", "Cripto") |
+| type | ✅ | `emergency_fund`, `retirement`, `short_term`, `long_term`, `education`, `custom` |
+| goalAmount | ❌ | Meta (valor alvo) - nullable |
+| currentAmount | ✅ | Valor atual investido |
+| monthlyContribution | ❌ | Aporte mensal planejado |
+| deadline | ❌ | Data alvo para atingir meta |
+
+**Regras:**
+- currentAmount >= 0
+- goalAmount > 0 (se definido)
+- monthlyContribution >= 0 (se definido)
+- Progresso: `(currentAmount / goalAmount) × 100` (se goalAmount definido)
+
+#### KPIs do Dashboard
+
+| KPI | Fórmula | Descrição |
+|-----|---------|-----------|
+| **Renda do Mês** | `SUM(incomes.actualAmount)` | Total recebido no mês |
+| **Total Orçado** | `SUM(bills.amount) + SUM(expenses.expectedAmount) + SUM(debts.installmentAmount)` | Compromissos previstos |
+| **Total Gasto** | `SUM(bills WHERE paid) + SUM(expenses.actualAmount) + SUM(paid installments)` | Dinheiro que saiu |
+| **Saldo** | `Renda - Gasto` | Quanto sobrou/faltou |
+| **Total Investido** | `SUM(investments.currentAmount)` | Patrimônio em investimentos |
+
+#### Gráficos
+
+| Gráfico | Tipo | Dados |
+|---------|------|-------|
+| Orçado vs Real | Barras lado a lado | Por categoria |
+| Distribuição de Gastos | Pizza | Por categoria |
+| Evolução Mensal | Linha | Saldo dos últimos 6 meses |
+
+#### Notificações Financeiras
+
+| Tipo | Quando | Template | Prioridade |
+|------|--------|----------|------------|
+| `bill_due` | 3 dias antes do vencimento | "💰 {bill_name} vence em 3 dias (R$ {amount})" | Alta |
+| `bill_overdue` | No dia do vencimento | "⚠️ {bill_name} venceu hoje!" | Alta |
+| `debt_installment` | 3 dias antes | "💳 Parcela {x}/{y} de {debt_name} vence em 3 dias" | Alta |
+| `month_start` | Dia 1 do mês | "📊 Novo mês! Configure seu orçamento de {month}" | Média |
+| `month_end` | Último dia do mês | "📈 Resumo de {month}: Gastou R$ {spent} de R$ {budget}" | Média |
+
+#### Recorrências (Job Mensal)
+
+**Horário:** Dia 1 do mês, 00:05 UTC
+
+**Processo:**
+1. Buscar bills com `isRecurring = true` do mês anterior
+2. Criar registros para novo mês com `status = pending`
+3. Buscar variable_expenses com `isRecurring = true` do mês anterior
+4. Criar registros para novo mês com `actualAmount = 0`
+5. Buscar incomes com `isRecurring = true` do mês anterior
+6. Criar registros para novo mês com `actualAmount = null`
+
+#### Critérios de Aceite
+
+- [ ] CRUD de Rendas funciona
+- [ ] CRUD de Contas Fixas funciona
+- [ ] Checkbox "Pago" altera status e paidAt
+- [ ] CRUD de Despesas Variáveis funciona
+- [ ] CRUD de Dívidas funciona (com parcelas)
+- [ ] CRUD de Investimentos funciona
+- [ ] Dashboard exibe todos os KPIs
+- [ ] Gráficos renderizam corretamente
+- [ ] Navegação entre meses funciona
+- [ ] Notificações de vencimento enviadas
+- [ ] Job de recorrência gera registros automaticamente
+- [ ] Validações aplicadas em todos os formulários
+- [ ] IA acessa dados financeiros via tool
+
+---
+
 ## 4) Comportamentos de UX (Estados Obrigatórios)
 
 ### 4.1 Empty States
@@ -1406,6 +1568,20 @@ Comportamento similar ao Telegram.
 - [ ] Quiet hours
 - [ ] Preferências
 
+### 8.11 Finance (M2.6)
+
+- [ ] CRUD de Rendas (incomes)
+- [ ] CRUD de Contas Fixas (bills)
+- [ ] CRUD de Despesas Variáveis (variable_expenses)
+- [ ] CRUD de Dívidas (debts)
+- [ ] CRUD de Investimentos (investments)
+- [ ] Dashboard com KPIs
+- [ ] Gráficos (barras, pizza, linha)
+- [ ] Navegação entre meses
+- [ ] Notificações de vencimento
+- [ ] Job de recorrência mensal
+- [ ] Tool get_finance_summary funcional
+
 ---
 
 ## 9) Glossário
@@ -1432,5 +1608,5 @@ Comportamento similar ao Telegram.
 
 ---
 
-*Última atualização: 15 Janeiro 2026*
-*Revisão: Remoção do Sistema de Decisões*
+*Última atualização: 19 Janeiro 2026*
+*Revisão: Adicionado Módulo Finance (M2.6) - seção 3.11 com regras de negócio para rendas, contas fixas, despesas variáveis, dívidas e investimentos*

@@ -67,6 +67,11 @@ erDiagram
     users ||--|| user_memories : has
     users ||--o{ knowledge_items : has
     users ||--o{ memory_consolidations : has
+    users ||--o{ incomes : has
+    users ||--o{ bills : has
+    users ||--o{ variable_expenses : has
+    users ||--o{ debts : has
+    users ||--o{ investments : has
 
     habits ||--o{ habit_freezes : has
 
@@ -474,6 +479,65 @@ CREATE TYPE consolidation_status AS ENUM (
   'failed',
   'partial'
 );
+
+-- ============================================
+-- FINANCE MODULE (M2.6)
+-- ============================================
+
+-- Status de conta fixa
+CREATE TYPE bill_status AS ENUM (
+  'pending',
+  'paid',
+  'overdue',
+  'canceled'
+);
+
+-- Categoria de conta fixa
+CREATE TYPE bill_category AS ENUM (
+  'housing',        -- Moradia (aluguel, condomínio, IPTU)
+  'utilities',      -- Serviços (luz, água, gás, internet)
+  'subscription',   -- Assinaturas (streaming, apps)
+  'insurance',      -- Seguros (saúde, carro, vida)
+  'other'
+);
+
+-- Tipo de renda
+CREATE TYPE income_type AS ENUM (
+  'salary',         -- Salário fixo
+  'freelance',      -- Trabalho freelance
+  'bonus',          -- Bônus, PLR
+  'passive',        -- Renda passiva (dividendos, aluguel)
+  'investment',     -- Retorno de investimentos
+  'gift',           -- Presentes, doações recebidas
+  'other'
+);
+
+-- Frequência de renda
+CREATE TYPE income_frequency AS ENUM (
+  'monthly',        -- Todo mês
+  'biweekly',       -- Quinzenal
+  'weekly',         -- Semanal
+  'annual',         -- Anual (13º, PLR)
+  'irregular'       -- Sem frequência definida
+);
+
+-- Status de dívida
+CREATE TYPE debt_status AS ENUM (
+  'active',         -- Em andamento
+  'paid_off',       -- Quitada
+  'settled',        -- Acordo/quitação antecipada
+  'defaulted'       -- Inadimplente
+);
+
+-- Tipo de investimento
+CREATE TYPE investment_type AS ENUM (
+  'emergency_fund', -- Reserva de emergência
+  'retirement',     -- Aposentadoria
+  'short_term',     -- Curto prazo (< 1 ano)
+  'long_term',      -- Longo prazo (> 5 anos)
+  'education',      -- Educação
+  'custom'          -- Objetivo personalizado
+);
 ```
 
 ### 3.2 Drizzle ORM Enums
@@ -566,6 +630,34 @@ export const knowledgeItemSourceEnum = pgEnum('knowledge_item_source', [
 
 export const consolidationStatusEnum = pgEnum('consolidation_status', [
   'completed', 'failed', 'partial'
+]);
+
+// ============================================
+// FINANCE MODULE (M2.6)
+// ============================================
+
+export const billStatusEnum = pgEnum('bill_status', [
+  'pending', 'paid', 'overdue', 'canceled'
+]);
+
+export const billCategoryEnum = pgEnum('bill_category', [
+  'housing', 'utilities', 'subscription', 'insurance', 'other'
+]);
+
+export const incomeTypeEnum = pgEnum('income_type', [
+  'salary', 'freelance', 'bonus', 'passive', 'investment', 'gift', 'other'
+]);
+
+export const incomeFrequencyEnum = pgEnum('income_frequency', [
+  'monthly', 'biweekly', 'weekly', 'annual', 'irregular'
+]);
+
+export const debtStatusEnum = pgEnum('debt_status', [
+  'active', 'paid_off', 'settled', 'defaulted'
+]);
+
+export const investmentTypeEnum = pgEnum('investment_type', [
+  'emergency_fund', 'retirement', 'short_term', 'long_term', 'education', 'custom'
 ]);
 ```
 
@@ -1609,7 +1701,245 @@ export type Budget = typeof budgets.$inferSelect;
 export type NewBudget = typeof budgets.$inferInsert;
 ```
 
-### 4.14 Subscriptions (Stripe local copy)
+### 4.14 Finance Module (M2.6)
+
+> **Módulo Finance:** Planejamento financeiro mensal de alto nível.
+> Filosofia: baixo atrito — usuário cadastra orçamento no início do mês e marca contas como pagas ao longo do mês.
+> Não é micro-tracking de gastos diários (ver TBD-205 sobre tracking_entries).
+
+#### 4.14.1 Incomes (Rendas)
+
+```typescript
+// packages/database/src/schema/finance/incomes.ts
+
+import { pgTable, uuid, varchar, decimal, boolean, integer, timestamp, index } from 'drizzle-orm/pg-core';
+import { incomeTypeEnum, incomeFrequencyEnum } from '../enums';
+import { users } from '../users';
+
+export const incomes = pgTable('incomes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Basic info
+  name: varchar('name', { length: 255 }).notNull(), // Ex: "Salário", "Freela XYZ"
+  type: incomeTypeEnum('type').notNull(),
+  frequency: incomeFrequencyEnum('frequency').notNull().default('monthly'),
+
+  // Values
+  expectedAmount: decimal('expected_amount', { precision: 12, scale: 2 }).notNull(),
+  actualAmount: decimal('actual_amount', { precision: 12, scale: 2 }), // Preenchido quando recebe
+
+  // Recurrence
+  isRecurring: boolean('is_recurring').notNull().default(true),
+
+  // Period (YYYY-MM format for month, e.g., "2026-01")
+  monthYear: varchar('month_year', { length: 7 }).notNull(), // Format: YYYY-MM
+
+  // Currency
+  currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('incomes_user_id_idx').on(table.userId),
+  monthYearIdx: index('incomes_month_year_idx').on(table.monthYear),
+  userMonthYearIdx: index('incomes_user_month_year_idx').on(table.userId, table.monthYear),
+}));
+
+// Types
+export type Income = typeof incomes.$inferSelect;
+export type NewIncome = typeof incomes.$inferInsert;
+```
+
+#### 4.14.2 Bills (Contas Fixas)
+
+```typescript
+// packages/database/src/schema/finance/bills.ts
+
+import { pgTable, uuid, varchar, decimal, integer, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { billStatusEnum, billCategoryEnum } from '../enums';
+import { users } from '../users';
+
+export const bills = pgTable('bills', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Basic info
+  name: varchar('name', { length: 255 }).notNull(), // Ex: "Aluguel", "Netflix"
+  category: billCategoryEnum('category').notNull(),
+
+  // Value
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
+
+  // Due date
+  dueDay: integer('due_day').notNull(), // 1-31
+
+  // Status
+  status: billStatusEnum('status').notNull().default('pending'),
+  paidAt: timestamp('paid_at', { withTimezone: true }), // When marked as paid
+
+  // Recurrence
+  isRecurring: boolean('is_recurring').notNull().default(true),
+
+  // Period (YYYY-MM format)
+  monthYear: varchar('month_year', { length: 7 }).notNull(),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('bills_user_id_idx').on(table.userId),
+  monthYearIdx: index('bills_month_year_idx').on(table.monthYear),
+  userMonthYearIdx: index('bills_user_month_year_idx').on(table.userId, table.monthYear),
+  statusIdx: index('bills_status_idx').on(table.status),
+  dueDayIdx: index('bills_due_day_idx').on(table.dueDay),
+}));
+
+// Types
+export type Bill = typeof bills.$inferSelect;
+export type NewBill = typeof bills.$inferInsert;
+```
+
+#### 4.14.3 Variable Expenses (Despesas Variáveis)
+
+```typescript
+// packages/database/src/schema/finance/variable-expenses.ts
+
+import { pgTable, uuid, varchar, decimal, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { expenseCategoryEnum } from '../enums';
+import { users } from '../users';
+
+export const variableExpenses = pgTable('variable_expenses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Basic info
+  name: varchar('name', { length: 255 }).notNull(), // Ex: "Alimentação", "Lazer"
+  category: expenseCategoryEnum('category').notNull(),
+
+  // Values
+  expectedAmount: decimal('expected_amount', { precision: 12, scale: 2 }).notNull(), // Orçado
+  actualAmount: decimal('actual_amount', { precision: 12, scale: 2 }).notNull().default('0'), // Gasto real
+
+  // Recurrence
+  // - true = Recorrente (aparece todo mês automaticamente: Alimentação, Transporte, Lazer)
+  // - false = Pontual (só naquele mês específico)
+  isRecurring: boolean('is_recurring').notNull().default(false),
+
+  // Period (YYYY-MM format)
+  monthYear: varchar('month_year', { length: 7 }).notNull(),
+
+  // Currency
+  currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('variable_expenses_user_id_idx').on(table.userId),
+  monthYearIdx: index('variable_expenses_month_year_idx').on(table.monthYear),
+  userMonthYearIdx: index('variable_expenses_user_month_year_idx').on(table.userId, table.monthYear),
+  categoryIdx: index('variable_expenses_category_idx').on(table.category),
+}));
+
+// Types
+export type VariableExpense = typeof variableExpenses.$inferSelect;
+export type NewVariableExpense = typeof variableExpenses.$inferInsert;
+```
+
+#### 4.14.4 Debts (Dívidas)
+
+```typescript
+// packages/database/src/schema/finance/debts.ts
+
+import { pgTable, uuid, varchar, decimal, integer, timestamp, index } from 'drizzle-orm/pg-core';
+import { debtStatusEnum } from '../enums';
+import { users } from '../users';
+
+export const debts = pgTable('debts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Basic info
+  name: varchar('name', { length: 255 }).notNull(), // Ex: "Financiamento Carro"
+  creditor: varchar('creditor', { length: 255 }), // Ex: "Banco X"
+
+  // Total debt
+  totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+
+  // Installments
+  totalInstallments: integer('total_installments').notNull(),
+  installmentAmount: decimal('installment_amount', { precision: 12, scale: 2 }).notNull(),
+  currentInstallment: integer('current_installment').notNull().default(1), // Parcela atual
+
+  // Due date
+  dueDay: integer('due_day').notNull(), // 1-31
+
+  // Status
+  status: debtStatusEnum('status').notNull().default('active'),
+
+  // Currency
+  currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('debts_user_id_idx').on(table.userId),
+  statusIdx: index('debts_status_idx').on(table.status),
+}));
+
+// Types
+export type Debt = typeof debts.$inferSelect;
+export type NewDebt = typeof debts.$inferInsert;
+```
+
+#### 4.14.5 Investments (Investimentos)
+
+```typescript
+// packages/database/src/schema/finance/investments.ts
+
+import { pgTable, uuid, varchar, decimal, date, timestamp, index } from 'drizzle-orm/pg-core';
+import { investmentTypeEnum } from '../enums';
+import { users } from '../users';
+
+export const investments = pgTable('investments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Basic info (user-defined name)
+  name: varchar('name', { length: 255 }).notNull(), // Ex: "Reserva de Emergência", "Viagem Europa"
+  type: investmentTypeEnum('type').notNull().default('custom'),
+
+  // Goal (optional - some investments have no target)
+  goalAmount: decimal('goal_amount', { precision: 12, scale: 2 }), // Meta (nullable)
+
+  // Current state
+  currentAmount: decimal('current_amount', { precision: 12, scale: 2 }).notNull().default('0'),
+  monthlyContribution: decimal('monthly_contribution', { precision: 12, scale: 2 }), // Aporte mensal planejado
+
+  // Timeline (optional)
+  deadline: date('deadline'), // Data alvo para atingir meta
+
+  // Currency
+  currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('investments_user_id_idx').on(table.userId),
+  typeIdx: index('investments_type_idx').on(table.type),
+}));
+
+// Types
+export type Investment = typeof investments.$inferSelect;
+export type NewInvestment = typeof investments.$inferInsert;
+```
+
+### 4.15 Subscriptions (Stripe local copy)
 
 ```typescript
 // packages/database/src/schema/subscriptions.ts
@@ -1922,6 +2252,12 @@ ALTER TABLE habit_freezes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE knowledge_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memory_consolidations ENABLE ROW LEVEL SECURITY;
+-- Finance Module (M2.6)
+ALTER TABLE incomes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE variable_expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE debts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE investments ENABLE ROW LEVEL SECURITY;
 ```
 
 ### 6.2 Policies
@@ -2012,6 +2348,22 @@ CREATE POLICY "Users can only access own knowledge_items" ON knowledge_items
 
 CREATE POLICY "Users can only access own memory_consolidations" ON memory_consolidations
   FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+-- Finance Module (M2.6)
+CREATE POLICY "Users can only access own incomes" ON incomes
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+CREATE POLICY "Users can only access own bills" ON bills
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+CREATE POLICY "Users can only access own variable_expenses" ON variable_expenses
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+CREATE POLICY "Users can only access own debts" ON debts
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+CREATE POLICY "Users can only access own investments" ON investments
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
 ```
 
 ---
@@ -2078,6 +2430,27 @@ CREATE TRIGGER update_user_memories_updated_at
 
 CREATE TRIGGER update_knowledge_items_updated_at
   BEFORE UPDATE ON knowledge_items
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Finance Module (M2.6)
+CREATE TRIGGER update_incomes_updated_at
+  BEFORE UPDATE ON incomes
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER update_bills_updated_at
+  BEFORE UPDATE ON bills
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER update_variable_expenses_updated_at
+  BEFORE UPDATE ON variable_expenses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER update_debts_updated_at
+  BEFORE UPDATE ON debts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER update_investments_updated_at
+  BEFORE UPDATE ON investments
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 ```
 
@@ -2326,8 +2699,14 @@ seed().catch(console.error);
 | `user_memories` | Contexto compacto do usuário (~500-800 tokens) | ✅ |
 | `knowledge_items` | Fatos, preferências, insights do usuário | ✅ |
 | `memory_consolidations` | Log de consolidações de memória | ✅ |
+| **Finance Module (M2.6)** | | |
+| `incomes` | Rendas mensais (salário, freelance, passiva) | ✅ |
+| `bills` | Contas fixas com vencimento (aluguel, luz, assinaturas) | ✅ |
+| `variable_expenses` | Despesas variáveis planejadas (alimentação, lazer) | ✅ |
+| `debts` | Dívidas com parcelas (financiamentos, empréstimos) | ✅ |
+| `investments` | Investimentos com metas e aportes | ✅ |
 
-**Total: 26 tabelas**
+**Total: 31 tabelas**
 
 ---
 
@@ -2360,7 +2739,14 @@ packages/database/
 │   │   ├── exports.ts        # Solicitações LGPD
 │   │   ├── habit-freezes.ts  # Congelamento de streaks
 │   │   ├── memory.ts         # user_memories, knowledge_items, memory_consolidations (ADR-012)
-│   │   └── audit.ts
+│   │   ├── audit.ts
+│   │   └── finance/          # Finance Module (M2.6)
+│   │       ├── index.ts      # Export all finance tables
+│   │       ├── incomes.ts
+│   │       ├── bills.ts
+│   │       ├── variable-expenses.ts
+│   │       ├── debts.ts
+│   │       └── investments.ts
 │   ├── migrations/
 │   │   └── 0001_initial.sql
 │   └── seed/
@@ -2406,5 +2792,5 @@ pnpm drizzle-kit studio
 
 ---
 
-*Última atualização: 15 Janeiro 2026*
-*Revisão: Removido sistema de Decisions (tabelas decisions, decision_options, decision_criteria, decision_scores). Redução de 30 para 26 tabelas.*
+*Última atualização: 19 Janeiro 2026*
+*Revisão: Adicionado Finance Module (M2.6) com 5 novas tabelas (incomes, bills, variable_expenses, debts, investments) e 6 novos enums. Total: 31 tabelas.*

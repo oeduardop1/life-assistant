@@ -472,42 +472,70 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 - Gatilhos identificados
 - Registro de sessões de terapia
 
-### 6.7 Módulo: Financeiro
+### 6.7 Módulo: Financeiro (M2.6)
 
-**Fluxo de Caixa:**
-- Registro de gastos e receitas por categoria
-- Categorias personalizáveis
-- Orçamento mensal com alertas
-- Gastos recorrentes (assinaturas, contas fixas)
-- Taxa de poupança
-- Gráficos de evolução
+> **Filosofia:** Planejamento financeiro mensal com baixo atrito. Usuário define orçamento no início do mês e marca contas como pagas ao longo do período. Não é micro-tracking de gastos diários.
 
-**Patrimônio:**
-- Patrimônio líquido (ativos - passivos)
-- Evolução mensal
+**Rendas (Incomes):**
+- Rendas do mês (salário, freelance, bônus, passiva, investimentos, presente, outros)
+- Valor previsto vs valor real recebido
+- Rendas recorrentes (aparecem automaticamente todo mês)
+- Soma total de receitas do período
+
+**Contas Fixas (Bills):**
+- Contas com valor e dia de vencimento (1-31)
+- Categorias: moradia, serviços, assinatura, outros
+- Checkbox de "pago" com data de pagamento
+- Status: pendente, pago, vencido, cancelado
+- Contas recorrentes (geradas automaticamente)
+- Alerta 3 dias antes do vencimento
+
+**Despesas Variáveis:**
+- Despesas recorrentes (Alimentação, Transporte, Lazer) — automáticas todo mês
+- Despesas pontuais — criadas manualmente, só naquele mês
+- Valor previsto vs valor real gasto
+- Categorias configuráveis
+
+**Dívidas (Debts):**
+- Nome, credor, valor total, número de parcelas
+- Valor e dia de vencimento da parcela
+- Progresso visual: parcela X de Y (barra de progresso)
+- Alerta 3 dias antes de parcela vencer
+- Status: ativa, quitada, renegociada, inadimplente
 
 **Investimentos:**
-- Carteira consolidada por classe de ativo
-- Rentabilidade por ativo e consolidada
-- Aportes mensais
-- Diversificação e dividendos
+- Nome livre (ex: "Reserva de Emergência", "Aposentadoria")
+- Meta opcional (valor alvo + prazo)
+- Valor atual e aporte mensal planejado
+- Progresso: atual / meta × 100%
+- Tipos: reserva, aposentadoria, curto prazo, longo prazo, educação, custom
 
-**Dívidas:**
-- Lista com credor, valor, juros
-- Progresso de quitação
-- Controle de parcelas
-- Sugestão de priorização
+**Dashboard Financeiro:**
+- KPIs principais:
+  - Renda do Mês (soma de receitas)
+  - Total Orçado (compromissos previstos)
+  - Total Gasto (dinheiro que saiu)
+  - Saldo (renda - gasto)
+  - Total Investido (patrimônio em investimentos)
+- Gráficos:
+  - Orçado vs Real (barras comparativas)
+  - Distribuição por categoria (pizza)
+  - Evolução mensal (linha)
+- Alertas de vencimento próximo
+- Navegação entre meses (← Mês Anterior | Mês Atual | Próximo Mês →)
 
-**Metas Financeiras:**
-- Reserva de emergência
-- Objetivos específicos com prazo e valor
-- Progresso visual
+**Notificações:**
+- 3 dias antes: conta fixa vencendo
+- 3 dias antes: parcela de dívida vencendo
+- Dia do vencimento: conta/parcela atrasada
+- Dia 1 do mês: "Configure seu orçamento de [mês]"
+- Último dia: "Resumo de [mês]: Gastou R$ X de R$ Y"
 
-**Empresa (para empreendedores):**
-- Faturamento e lucro líquido
-- Clientes ativos e ticket médio
-- Métricas customizadas
-- Acompanhamento de impostos
+**Funcionalidades Futuras (não implementadas em M2.6):**
+- Patrimônio líquido (ativos - passivos)
+- Integração bancária (Open Finance)
+- Carteira de investimentos com rentabilidade
+- Empresa (para empreendedores)
 
 ### 6.8 Módulo: Profissional
 
@@ -1084,5 +1112,5 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 
 ---
 
-*Última atualização: 15 Janeiro 2026*
+*Última atualização: 19 Janeiro 2026*
 *Revisão: Removido Sistema de Decisões. Funcionalidade de aconselhamento mantida no modo Conselheira da IA, sem módulo formal de decisões.*
