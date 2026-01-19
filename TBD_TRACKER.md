@@ -419,7 +419,7 @@ Opção 2 - Dual strategy. Aproveita feature nativa no Claude e mantém compatib
 - docs/specs/engineering.md §8.2 (interface ToolDefinition) + §8.5 (nova seção)
 - docs/specs/ai.md §2.4 (nova seção) + §6.2 (exemplos em todas 7 tools)
 - docs/specs/integrations.md §6.4 (interface) + §6.7 (nova seção)
-- MILESTONES.md M1.1 (nova task)
+- docs/milestones/phase-1-counselor.md M1.1 (nova task)
 
 ---
 

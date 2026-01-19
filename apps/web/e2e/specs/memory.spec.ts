@@ -15,7 +15,7 @@ import { MemoryPage } from '../pages';
  * - API running (pnpm --filter api dev)
  * - Supabase CLI running (npx supabase start)
  *
- * @see MILESTONES.md M1.6 for Memory View requirements
+ * @see docs/milestones/phase-1-counselor.md M1.6 for Memory View requirements
  */
 
 // =========================================================================

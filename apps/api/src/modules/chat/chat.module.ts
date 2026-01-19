@@ -18,7 +18,7 @@ import { MemoryModule } from '../memory/memory.module';
  * - Send messages and receive streaming responses
  * - Support for different conversation types (general, counselor)
  *
- * @see MILESTONES.md M1.2 for implementation details
+ * @see docs/milestones/phase-1-counselor.md M1.2 for implementation details
  * @see docs/specs/ai.md §4 for system prompts
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */

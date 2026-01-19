@@ -1665,7 +1665,7 @@ Quando o job de consolidação falha:
 #### 10.4.4 Nota: Detecção de Memória Desatualizada
 
 > ⚠️ **Não implementado:** O sistema atualmente não detecta se a memória está desatualizada
-> (ex: consolidação falhou por 7+ dias). Ver task no Backlog Técnico em MILESTONES.md.
+> (ex: consolidação falhou por 7+ dias). Ver task no Backlog Técnico em docs/milestones/backlog.md.
 
 ---
 

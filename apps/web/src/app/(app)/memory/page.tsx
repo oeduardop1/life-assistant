@@ -38,7 +38,7 @@ import type {
  * - CRUD operations for knowledge items
  * - Export functionality
  *
- * @see MILESTONES.md M1.6 for Memory View
+ * @see docs/milestones/phase-1-counselor.md M1.6 for Memory View
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 export default function MemoryPage() {

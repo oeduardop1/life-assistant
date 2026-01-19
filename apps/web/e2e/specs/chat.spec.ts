@@ -16,7 +16,7 @@ import { ChatPage } from '../pages';
  * - Supabase CLI running (npx supabase start)
  * - LLM API key configured (for streaming tests)
  *
- * @see MILESTONES.md M1.2 for chat module requirements
+ * @see docs/milestones/phase-1-counselor.md M1.2 for chat module requirements
  */
 
 // =========================================================================

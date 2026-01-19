@@ -164,5 +164,5 @@ A infraestrutura de dados já existe (ADR-012). Apenas código novo.
 ## References
 
 - [ADR-012: Tool Use + Memory Consolidation](./ADR-012-tool-use-memory-consolidation.md)
-- [AI_SPECS.md §6.5](../../AI_SPECS.md) - Memory Consolidation specification
-- [MILESTONES.md M1.7](../../MILESTONES.md) - Real-time Inference milestone
+- [ai.md §6.5](../specs/ai.md) - Memory Consolidation specification
+- [phase-1-counselor.md M1.7](../milestones/phase-1-counselor.md) - Real-time Inference milestone

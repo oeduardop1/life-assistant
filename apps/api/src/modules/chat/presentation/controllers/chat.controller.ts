@@ -37,7 +37,7 @@ import {
 /**
  * Chat controller - REST + SSE endpoints for chat functionality
  *
- * @see MILESTONES.md M1.2 for implementation details
+ * @see docs/milestones/phase-1-counselor.md M1.2 for implementation details
  */
 @ApiTags('chat')
 @Controller('chat')

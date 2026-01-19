@@ -2,7 +2,7 @@
 > **Documento de especificação funcional (Produto).**
 > Define **O QUE** a aplicação é, faz e para quem.
 > Para **COMO** funciona tecnicamente, ver `system.md` e `engineering.md`.
-> Para priorização de desenvolvimento, ver `MILESTONES.md`.
+> Para priorização de desenvolvimento, ver `docs/milestones/`.
 
 ---
 
@@ -13,7 +13,7 @@
 - Modelo de dados: `data-model.md`
 - IA/Prompts: `ai.md`
 - Integrações: `integrations.md`
-- Priorização: `MILESTONES.md`
+- Priorização: `docs/milestones/`
 - Pendências: `TBD_TRACKER.md`
 
 ---

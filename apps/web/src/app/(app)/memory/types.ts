@@ -2,7 +2,7 @@
  * Memory Module Types
  *
  * Types for memory view and knowledge items management.
- * @see MILESTONES.md M1.6 for Memory View implementation
+ * @see docs/milestones/phase-1-counselor.md M1.6 for Memory View implementation
  */
 
 // =============================================================================

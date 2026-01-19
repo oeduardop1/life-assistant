@@ -40,7 +40,7 @@ import type { UserMemory, KnowledgeItem } from '@life-assistant/database';
 /**
  * Memory controller - REST endpoints for user memory management
  *
- * @see MILESTONES.md M1.6 for Memory View implementation
+ * @see docs/milestones/phase-1-counselor.md M1.6 for Memory View implementation
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @ApiTags('memory')

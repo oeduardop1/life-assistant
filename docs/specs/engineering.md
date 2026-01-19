@@ -857,7 +857,7 @@ logger.info({
 > Isso inclui: queries de busca, **conteúdo completo de knowledge items**, dados pessoais.
 >
 > **Mitigação atual:** DEBUG não habilitado em produção por padrão
-> **Recomendação:** Implementar `SensitiveDataFilter` antes de habilitar DEBUG em prod (ver M1.9 em MILESTONES.md)
+> **Recomendação:** Implementar `SensitiveDataFilter` antes de habilitar DEBUG em prod (ver M1.9 em docs/milestones/phase-1-counselor.md)
 
 #### Dados em Metadata (Banco)
 

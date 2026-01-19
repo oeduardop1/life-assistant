@@ -21,7 +21,7 @@ import { useConversations, useChat } from './hooks';
  * - Empty states for no conversations/no selection
  * - URL-based conversation selection (persists on refresh)
  *
- * @see MILESTONES.md M1.2 for chat module
+ * @see docs/milestones/phase-1-counselor.md M1.2 for chat module
  */
 export default function ChatPage() {
   const router = useRouter();
