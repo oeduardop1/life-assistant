@@ -132,4 +132,4 @@ Usar projeto Supabase Cloud mesmo em desenvolvimento.
 
 - [Supabase CLI Documentation](https://supabase.com/docs/guides/cli)
 - [ADR-002: Supabase para Database e Auth](./ADR-002-supabase-database-auth.md)
-- [ENGINEERING.md §9 - Docker/Infra](../ENGINEERING.md)
+- [engineering.md §9 - Docker/Infra](../specs/engineering.md)

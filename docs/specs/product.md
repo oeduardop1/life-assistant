@@ -143,7 +143,7 @@ A IA opera em três modos que compartilham a mesma memória e contexto:
 
 ## 3) Áreas da Vida
 
-O sistema organiza a vida do usuário em **8 áreas principais** (alinhadas com DATA_MODEL):
+O sistema organiza a vida do usuário em **8 áreas principais** (alinhadas com data-model.md):
 
 | Área | Código | Ícone | Descrição | Métricas Principais |
 |------|--------|-------|-----------|---------------------|

@@ -78,4 +78,4 @@ const { payload } = await jwtVerify(token, secretKey, {
 
 - [jose npm package](https://github.com/panva/jose)
 - [Supabase JWT docs](https://supabase.com/docs/guides/auth/jwts)
-- [ENGINEERING.md §2.3](../ENGINEERING.md)
+- [engineering.md §2.3](../specs/engineering.md)
