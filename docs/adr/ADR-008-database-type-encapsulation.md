@@ -52,7 +52,7 @@ Criar e exportar um tipo `Database` personalizado do pacote `@life-assistant/dat
 
 ### Conformidade com Clean Architecture
 
-Per ENGINEERING.md §1.1, seguimos Clean Architecture com camadas bem definidas:
+Per docs/specs/engineering.md §1.1, seguimos Clean Architecture com camadas bem definidas:
 - A API (presentation/application) não deveria depender de detalhes de infraestrutura (Drizzle ORM)
 - O pacote `database` age como uma **Infrastructure Layer** que abstrai o ORM
 - Consumidores do pacote devem depender de abstrações, não de implementações concretas
@@ -102,7 +102,7 @@ export function getDb(): Database {
 - ✅ **Facilita migração de ORM**: Trocar Drizzle por Prisma/TypeORM = mudar apenas `packages/database`
 - ✅ **Type Safety mantida**: `Database` herda toda tipagem do Drizzle via `ReturnType`
 - ✅ **Resolve erro TypeScript**: Sem mais TS2742 ou module not found
-- ✅ **Consistente com ENGINEERING.md**: Segue padrão de encapsulação de packages
+- ✅ **Consistente com docs/specs/engineering.md**: Segue padrão de encapsulação de packages
 
 ### Negativas
 
@@ -203,7 +203,7 @@ get db(): any {
 
 **Por que não:**
 - Perde type safety completamente
-- Vai contra TypeScript strict mode (ENGINEERING.md §10.1)
+- Vai contra TypeScript strict mode (docs/specs/engineering.md §10.1)
 - Mascara problemas em vez de resolvê-los
 - Não é uma solução arquitetural válida
 
@@ -228,12 +228,12 @@ Este padrão deve ser replicado em:
 - **`@life-assistant/config`**: Já usa tipo `EnvConfig` (correto ✅)
 - **`@life-assistant/shared`**: Tipos são agnósticos (correto ✅)
 
-Veja ENGINEERING.md §3.3 "Package Patterns and Conventions" para mais detalhes.
+Veja docs/specs/engineering.md §3.3 "Package Patterns and Conventions" para mais detalhes.
 
 ## Referências
 
-- Clean Architecture Layers: ENGINEERING.md §1.1
-- Package Dependency Rules: ENGINEERING.md §3.2
+- Clean Architecture Layers: docs/specs/engineering.md §1.1
+- Package Dependency Rules: docs/specs/engineering.md §3.2
 - Drizzle ORM Docs: https://orm.drizzle.team/docs/get-started-postgresql (Context7: /drizzle-team/drizzle-orm-docs)
 - TypeScript Error TS2742: https://github.com/microsoft/TypeScript/issues/
 - Pull Request: Resolve typecheck errors in M0.6 (2026-01-07)

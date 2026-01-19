@@ -10,7 +10,7 @@ Accepted
 
 ## Contexto
 
-O `SYSTEM_SPECS.md` §3.1 especifica que usuários com onboarding abandonado após 30 dias devem ter "dados parciais deletados". Durante a implementação do M0.8 (Onboarding Wizard), foi necessário decidir entre:
+O `docs/specs/system.md` §3.1 especifica que usuários com onboarding abandonado após 30 dias devem ter "dados parciais deletados". Durante a implementação do M0.8 (Onboarding Wizard), foi necessário decidir entre:
 
 1. **Hard delete** — Remoção física dos registros do banco de dados
 2. **Soft delete** — Marcação lógica via campos `deletedAt` e `status`
@@ -88,7 +88,7 @@ DELETE FROM users WHERE ...;
 
 ## Referências
 
-- `SYSTEM_SPECS.md` §3.1 — Onboarding Abandonado
-- `ENGINEERING.md` §7 — Jobs e Filas (BullMQ)
+- `docs/specs/system.md` §3.1 — Onboarding Abandonado
+- `docs/specs/engineering.md` §7 — Jobs e Filas (BullMQ)
 - `apps/api/src/jobs/cleanup-onboarding/cleanup-onboarding.processor.ts` — Implementação
 - LGPD Art. 18 — Direitos do titular dos dados
