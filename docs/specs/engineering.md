@@ -265,6 +265,7 @@ app/
 ### 2.4 AI/LLM
 
 > **ADR-012:** Arquitetura Tool Use + Memory Consolidation (não RAG).
+> **ADR-016:** Decision Support com persistência, follow-up e learning loop.
 
 | Tecnologia | Uso |
 |------------|-----|
@@ -1007,6 +1008,7 @@ export class ChatThrottlerGuard extends ThrottlerBehindProxyGuard {
 | `morning-summary` | Resumo da manhã | Alta |
 | `weekly-report` | Relatório semanal | Média |
 | `memory-consolidation` | Consolidar memória do usuário (ADR-012) | Média |
+| `decision-followup` | Verificar decisões com follow-up pendente (ADR-016) | Média |
 | `sync-calendar` | Sync Google Calendar | Média |
 | `proactive-checkin` | Check-ins proativos | Baixa |
 | `notifications` | Envio de notificações | Alta |

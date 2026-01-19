@@ -68,6 +68,14 @@ Informação sensível criptografada.
 - Requer re-autenticação para acesso
 - Tipos: credential, document, card, note, file
 
+### 1.9 Decision (ADR-016)
+Registro de decisão importante para acompanhamento.
+- **Ciclo de vida:** `draft` → `analyzing` → `ready` → `decided` → `reviewed`
+- Opções com prós/contras estruturados
+- Critérios de avaliação com peso
+- Follow-up automático após período definido (default 30 dias)
+- Learning loop via Memory Consolidation
+
 ---
 
 ## 2) Defaults Normativos
@@ -1147,6 +1155,81 @@ Que tal uma caminhada de 20min?
 - [ ] Job de recorrência gera registros automaticamente
 - [ ] Validações aplicadas em todos os formulários
 - [ ] IA acessa dados financeiros via tool
+
+---
+
+### 3.12 Decisões (ADR-016)
+
+> **Milestone:** M3.8 Decision Support Framework
+
+#### Entidades
+
+| Tabela | Propósito |
+|--------|-----------|
+| `decisions` | Registro principal da decisão |
+| `decision_options` | Opções consideradas com prós/contras |
+| `decision_criteria` | Critérios de avaliação com peso |
+| `decision_scores` | Matriz opção × critério |
+
+#### Ciclo de Vida
+
+```
+draft       → Decisão criada, ainda sendo estruturada
+analyzing   → IA analisando contexto e padrões
+ready       → Opções prontas para escolha
+decided     → Usuário escolheu uma opção
+postponed   → Decisão adiada (prazo ou contexto mudou)
+canceled    → Decisão não mais relevante
+reviewed    → Follow-up concluído com avaliação
+```
+
+#### Fluxo de Criação (via Chat)
+
+```
+1. Usuário discute decisão no Modo Conselheira
+2. IA identifica decisão importante
+3. IA oferece: "Quer que eu salve essa decisão para acompanhamento?"
+4. Se aceitar: tool save_decision com requiresConfirmation = true
+5. Decisão criada com status 'decided' (se já escolheu) ou 'draft'
+6. review_date definido (default: created_at + 30 dias)
+```
+
+#### Fluxo de Follow-up
+
+```
+1. Job diário (3:30 AM, após Memory Consolidation)
+2. Busca decisions com review_date <= hoje e status = 'decided'
+3. Para cada decisão:
+   a. Adiciona mensagem proativa na próxima conversa
+   b. "Há X dias você decidiu: [título]. Como foi?"
+4. Usuário responde → IA extrai:
+   - review_score (1-5)
+   - review_notes
+5. Status atualizado para 'reviewed'
+6. Memory Consolidation extrai padrões de decisões
+```
+
+#### Regras de Negócio
+
+| Regra | Descrição |
+|-------|-----------|
+| **Confirmação obrigatória** | `save_decision` sempre pede confirmação antes de salvar |
+| **Área obrigatória** | Toda decisão deve ter uma `life_area` definida |
+| **Review opt-out** | Usuário pode desativar follow-up por decisão |
+| **Soft delete** | Decisões são soft-deleted (mantidas para learning) |
+| **Decisões triviais** | IA não deve oferecer salvar decisões do dia-a-dia |
+
+#### Critérios de Aceite (M3.8)
+
+- [ ] Tool `save_decision` implementada com confirmação
+- [ ] CRUD de decisões via API e frontend
+- [ ] Opções e critérios podem ser adicionados
+- [ ] Job de follow-up executa diariamente
+- [ ] Notificação proativa aparece na próxima conversa
+- [ ] Memory Consolidation extrai `decision_patterns`
+- [ ] Modo Conselheira consulta decisões passadas similares
+- [ ] Dashboard /decisions lista decisões com filtros
+- [ ] Avaliação pós-decisão (1-5) registrada
 
 ---
 

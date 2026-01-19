@@ -458,3 +458,123 @@
 - [ ] Exports funcionam
 - [ ] Validações de tamanho/tipo aplicadas
 - [ ] Testes passam
+
+---
+
+## M3.8 — Decision Support Framework 🔴
+
+**Objetivo:** Implementar sistema completo de suporte a decisões com persistência, follow-up e learning loop.
+
+**Referências:** `docs/adr/ADR-016-decision-support-architecture.md`, `docs/specs/product.md` §6.18, `docs/specs/system.md` §3.12, `docs/specs/ai.md` §6.9
+
+**Pré-requisitos:** M1.3 (Knowledge Items), M1.7 (Perspectiva Cristã), M3.5 (Notificações Proativas)
+
+> **Nota:** Tabelas `decisions`, `decision_options`, `decision_criteria`, `decision_scores` já existem no banco (M0.4).
+> Este milestone cria o schema TypeScript e implementa a lógica completa.
+
+**Tasks:**
+
+**Database Schema:**
+- [ ] Criar `packages/database/src/schema/decisions.ts`:
+  - [ ] Schema para `decisions` com relações
+  - [ ] Schema para `decision_options`
+  - [ ] Schema para `decision_criteria`
+  - [ ] Schema para `decision_scores`
+  - [ ] Enum `decision_status`
+  - [ ] Types inferidos (Decision, NewDecision, etc.)
+- [ ] Exportar schemas em `packages/database/src/schema/index.ts`
+
+**Backend Services:**
+- [ ] Criar `DecisionRepository`:
+  - [ ] `create(data)` - criar decisão
+  - [ ] `findById(id)` - buscar por ID
+  - [ ] `findByUser(userId, filters)` - listar do usuário
+  - [ ] `findDueForReview(userId)` - buscar pendentes de follow-up
+  - [ ] `update(id, data)` - atualizar
+  - [ ] `softDelete(id)` - soft delete
+- [ ] Criar `DecisionService`:
+  - [ ] `createFromChat(userId, data)` - criar via tool
+  - [ ] `addOption(decisionId, option)` - adicionar opção
+  - [ ] `addCriterion(decisionId, criterion)` - adicionar critério
+  - [ ] `setScore(optionId, criterionId, score)` - pontuar
+  - [ ] `submitReview(id, review)` - registrar follow-up
+  - [ ] `getContext(userId, area)` - buscar decisões similares
+- [ ] Criar `DecisionController`:
+  - [ ] `GET /decisions` - listar
+  - [ ] `GET /decisions/:id` - detalhes
+  - [ ] `POST /decisions` - criar
+  - [ ] `PATCH /decisions/:id` - atualizar
+  - [ ] `POST /decisions/:id/options` - adicionar opção
+  - [ ] `POST /decisions/:id/review` - registrar follow-up
+  - [ ] `DELETE /decisions/:id` - soft delete
+
+**Tool Implementation:**
+- [ ] Criar `SaveDecisionTool`:
+  - [ ] Schema Zod conforme `ai.md` §6.2
+  - [ ] Validação de área
+  - [ ] Criação de decisão + opções
+  - [ ] Cálculo de `review_date`
+  - [ ] Confirmação obrigatória (`requiresConfirmation: true`)
+- [ ] Registrar tool no `ToolExecutorService`
+- [ ] Adicionar tool ao system prompt (§4.1)
+
+**Decision Follow-up Job:**
+- [ ] Criar `DecisionFollowupProcessor`:
+  - [ ] Fila `decision-followup` no BullMQ
+  - [ ] Cron job às 3:30 AM (após Memory Consolidation)
+  - [ ] Buscar decisões com `review_date <= hoje` e `status = 'decided'`
+  - [ ] Criar notificação proativa para próxima conversa
+  - [ ] Idempotência (não duplicar notificações)
+- [ ] Integrar com `NotificationService`
+
+**Memory Consolidation:**
+- [ ] Atualizar prompt de consolidação (§6.5.2):
+  - [ ] Adicionar campo `decision_patterns` no output
+  - [ ] Instruções para extrair padrões de decisões
+- [ ] Implementar persistência de `decision_patterns` em `knowledge_items`
+
+**Frontend:**
+- [ ] Criar página `/decisions`:
+  - [ ] Lista de decisões com filtros (área, status, período)
+  - [ ] Cards com título, área, status, data
+  - [ ] Navegação para detalhes
+- [ ] Criar página `/decisions/[id]`:
+  - [ ] Detalhes da decisão
+  - [ ] Opções com prós/contras
+  - [ ] Critérios e scores (se houver)
+  - [ ] Timeline (criação → decisão → review)
+  - [ ] Formulário de follow-up (se pendente)
+- [ ] Componentes:
+  - [ ] DecisionCard (card resumido)
+  - [ ] DecisionTimeline (histórico visual)
+  - [ ] OptionCard (opção com prós/contras)
+  - [ ] ReviewForm (avaliação 1-5 + notas)
+  - [ ] DecisionFilters (área, status, período)
+- [ ] Integrar no menu lateral
+
+**Testes:**
+- [ ] Testes unitários:
+  - [ ] DecisionRepository (CRUD completo)
+  - [ ] DecisionService (lógica de negócio)
+  - [ ] SaveDecisionTool (validação, criação)
+  - [ ] DecisionFollowupProcessor (job logic)
+- [ ] Testes de integração:
+  - [ ] API endpoints completa
+  - [ ] Tool execution via chat
+  - [ ] Job de follow-up
+  - [ ] Memory Consolidation com decision_patterns
+- [ ] Teste E2E:
+  - [ ] Criar decisão via chat → ver em /decisions
+  - [ ] Follow-up notification → registrar review
+
+**Definition of Done:**
+- [ ] Schema TypeScript criado para todas as tabelas
+- [ ] Tool `save_decision` funciona com confirmação
+- [ ] CRUD de decisões via API
+- [ ] Job de follow-up executa diariamente
+- [ ] Notificação proativa aparece na conversa
+- [ ] Memory Consolidation extrai `decision_patterns`
+- [ ] Modo Conselheira consulta decisões similares
+- [ ] Dashboard /decisions lista decisões com filtros
+- [ ] Avaliação pós-decisão (1-5) registrada
+- [ ] Testes passam

@@ -70,6 +70,7 @@ A IA conhece profundamente o usuário: seu passado, presente, objetivos futuros,
 4. **Visão Holística** — Todas as áreas da vida conectadas e visíveis
 5. **Transparência** — Você vê o que a IA sabe sobre você e pode corrigir
 6. **Rastreabilidade** — Todo número e insight é explicável e rastreável
+7. **Histórico de Decisões** — Acompanhamento de decisões importantes com follow-up e aprendizado (ADR-016)
 
 ### 1.5 North Star
 
@@ -93,11 +94,15 @@ A IA opera em três modos que compartilham a mesma memória e contexto:
 - Identifica padrões de comportamento e decisões passadas
 - Aplica princípios bíblicos quando relevante (se habilitado)
 - Nunca decide pelo usuário; ilumina a decisão
+- **Oferece salvar decisões importantes** para acompanhamento futuro (ADR-016)
+- **Consulta histórico de decisões** similares para contextualizar conselhos
+- **Agenda follow-up** automático para avaliar resultados (30 dias default)
 
 **Exemplos de uso:**
 - "Me ajuda a decidir se aceito essa proposta de emprego"
 - "Estou em dúvida sobre mudar de cidade"
 - "Tive um conflito com meu sócio, como devo abordar?"
+- "Como foi aquela decisão que tomei mês passado?"
 
 ### 2.2 Modo Assistente
 
@@ -249,6 +254,7 @@ O usuário pode ajustar a importância de cada área para seu contexto. Os pesos
 | **Memória** | O que a IA sabe sobre você (fatos, preferências, insights) |
 | **Áreas** | Dashboard detalhado por área da vida |
 | **Tracking** | Registro manual e visualização de métricas |
+| **Decisões** | Histórico de decisões importantes com follow-up e aprendizados (M3.8) |
 | **Pessoas** | CRM pessoal (contatos, relacionamentos) |
 | **Vault** | Informações pessoais seguras |
 | **Relatórios** | Semanais, mensais, trimestrais, anuais |
@@ -727,6 +733,35 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 
 ---
 
+### 6.18 Módulo: Decisões (ADR-016)
+
+> **Milestone:** M3.8 Decision Support Framework
+> **Dependências:** M1.3 (Knowledge Items), M1.7 (Perspectiva Cristã), M3.5 (Alertas)
+
+| Feature | Descrição |
+|---------|-----------|
+| **Registro de Decisão** | Salvar decisões importantes via chat (tool `save_decision`) |
+| **Opções e Critérios** | Estruturar opções com prós/contras e critérios de avaliação |
+| **Análise da IA** | IA analisa contexto, padrões passados, e gera recomendações |
+| **Follow-up Pós-Decisão** | Acompanhamento automático após N dias (default 30) |
+| **Avaliação de Resultado** | Registro de satisfação (1-5) e reflexão sobre a decisão |
+| **Learning Loop** | Memory Consolidation extrai padrões de decisões para melhorar conselhos |
+| **Dashboard /decisions** | Lista de decisões com filtros por área, status, período |
+| **Histórico Contextual** | Modo Conselheira consulta decisões passadas similares |
+
+**Ciclo de Vida:**
+```
+draft → analyzing → ready → decided → [postponed|canceled] → reviewed
+```
+
+**Valor do Módulo:**
+- Histórico de decisões importantes não se perde
+- Follow-up ajuda a avaliar qualidade das decisões
+- IA aprende com outcomes reais para melhorar conselhos futuros
+- Reduz ansiedade pós-decisão ("será que fiz certo?")
+
+---
+
 ## 7) User Journeys
 
 ### 7.1 Jornada: Primeiro Uso (Onboarding)
@@ -1143,4 +1178,4 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 ---
 
 *Última atualização: 19 Janeiro 2026*
-*Revisão: Removido Sistema de Decisões. Funcionalidade de aconselhamento mantida no modo Conselheira da IA, sem módulo formal de decisões.*
+*Revisão: Documentado Sistema de Decisões como M3.8 Decision Support Framework (ADR-016). Tabelas existentes no banco serão ativadas com schema TypeScript, tools, e frontend.*

@@ -72,6 +72,12 @@ erDiagram
     users ||--o{ variable_expenses : has
     users ||--o{ debts : has
     users ||--o{ investments : has
+    users ||--o{ decisions : has
+
+    decisions ||--o{ decision_options : has
+    decisions ||--o{ decision_criteria : has
+    decision_options ||--o{ decision_scores : has
+    decision_criteria ||--o{ decision_scores : evaluates
 
     habits ||--o{ habit_freezes : has
 
@@ -2139,6 +2145,150 @@ export const auditLogs = pgTable('audit_logs', {
 // Types
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
+```
+
+---
+
+### 4.18 Decisions (ADR-016)
+
+> **Nota:** Tabelas já existem no banco (M0.4) mas schema TypeScript será criado em M3.8.
+> Ver ADR-016 para arquitetura completa de suporte a decisões.
+
+```typescript
+// packages/database/src/schema/decisions.ts (M3.8)
+
+import { pgTable, uuid, varchar, text, timestamp, jsonb, index, integer, pgEnum, decimal } from 'drizzle-orm/pg-core';
+import { users } from './users';
+import { lifeArea } from './enums';
+
+// Enum para status do ciclo de vida da decisão
+export const decisionStatus = pgEnum('decision_status', [
+  'draft',      // Criação inicial
+  'analyzing',  // IA analisando
+  'ready',      // Opções prontas para decisão
+  'decided',    // Decisão tomada
+  'postponed',  // Adiada
+  'canceled',   // Cancelada
+  'reviewed',   // Follow-up concluído
+]);
+
+/**
+ * decisions
+ * Armazena decisões importantes do usuário para follow-up e learning loop.
+ */
+export const decisions = pgTable('decisions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Conteúdo
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  area: lifeArea('area').notNull(), // health, financial, relationships, etc.
+
+  // Timeline
+  deadline: timestamp('deadline', { withTimezone: true }),
+
+  // Status
+  status: decisionStatus('status').notNull().default('draft'),
+  chosenOptionId: uuid('chosen_option_id'), // FK para decision_options
+  reasoning: text('reasoning'), // Razão da escolha
+
+  // AI Analysis
+  aiAnalysis: jsonb('ai_analysis'), // { summary, recommendations, risks, patterns }
+
+  // Review (follow-up pós-decisão)
+  reviewDate: timestamp('review_date', { withTimezone: true }), // Quando fazer follow-up
+  reviewScore: integer('review_score'), // 1-5 satisfação com resultado
+  reviewNotes: text('review_notes'), // Reflexão sobre a decisão
+
+  // Soft delete & timestamps
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index('decisions_user_id_idx').on(table.userId),
+  statusIdx: index('decisions_status_idx').on(table.status),
+  areaIdx: index('decisions_area_idx').on(table.area),
+  reviewDateIdx: index('decisions_review_date_idx').on(table.reviewDate),
+}));
+
+/**
+ * decision_options
+ * Opções consideradas para uma decisão.
+ */
+export const decisionOptions = pgTable('decision_options', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  decisionId: uuid('decision_id').notNull().references(() => decisions.id, { onDelete: 'cascade' }),
+
+  title: varchar('title', { length: 255 }).notNull(),
+  pros: jsonb('pros').$type<string[]>().default([]), // Lista de prós
+  cons: jsonb('cons').$type<string[]>().default([]), // Lista de contras
+  score: decimal('score', { precision: 5, scale: 2 }), // Score calculado (opcional)
+  sortOrder: integer('sort_order').notNull().default(0),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  decisionIdIdx: index('decision_options_decision_id_idx').on(table.decisionId),
+}));
+
+/**
+ * decision_criteria
+ * Critérios de avaliação com peso para decisões complexas.
+ */
+export const decisionCriteria = pgTable('decision_criteria', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  decisionId: uuid('decision_id').notNull().references(() => decisions.id, { onDelete: 'cascade' }),
+
+  name: varchar('name', { length: 100 }).notNull(),
+  description: text('description'),
+  weight: decimal('weight', { precision: 3, scale: 2 }).notNull().default('1.00'), // 0.00 a 1.00
+  sortOrder: integer('sort_order').notNull().default(0),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  decisionIdIdx: index('decision_criteria_decision_id_idx').on(table.decisionId),
+}));
+
+/**
+ * decision_scores
+ * Matriz de scores: opção × critério.
+ */
+export const decisionScores = pgTable('decision_scores', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  optionId: uuid('option_id').notNull().references(() => decisionOptions.id, { onDelete: 'cascade' }),
+  criterionId: uuid('criterion_id').notNull().references(() => decisionCriteria.id, { onDelete: 'cascade' }),
+
+  score: decimal('score', { precision: 3, scale: 1 }).notNull(), // Ex: 1-5 ou 1-10
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  optionIdIdx: index('decision_scores_option_id_idx').on(table.optionId),
+  criterionIdIdx: index('decision_scores_criterion_id_idx').on(table.criterionId),
+}));
+
+// Types
+export type Decision = typeof decisions.$inferSelect;
+export type NewDecision = typeof decisions.$inferInsert;
+export type DecisionOption = typeof decisionOptions.$inferSelect;
+export type NewDecisionOption = typeof decisionOptions.$inferInsert;
+export type DecisionCriterion = typeof decisionCriteria.$inferSelect;
+export type NewDecisionCriterion = typeof decisionCriteria.$inferInsert;
+export type DecisionScore = typeof decisionScores.$inferSelect;
+export type NewDecisionScore = typeof decisionScores.$inferInsert;
+```
+
+#### Fluxo de Uso
+
+```
+1. Usuário discute decisão no Modo Conselheira
+2. IA oferece salvar decisão → save_decision tool
+3. Decisão criada com status 'draft' ou 'decided' (se já escolheu)
+4. Opções e critérios podem ser adicionados via UI ou conversa
+5. review_date definido (default: 30 dias)
+6. Job diário verifica review_date e notifica usuário
+7. Follow-up registra review_score e review_notes
+8. Memory Consolidation extrai padrões de decisões
 ```
 
 ---

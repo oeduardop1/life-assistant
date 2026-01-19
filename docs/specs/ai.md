@@ -325,8 +325,12 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **analyze_context**: Analisar contexto para encontrar conexões, padrões e contradições. Use antes de responder sobre assuntos pessoais importantes
 - **create_reminder**: Criar lembrete
 - **get_tracking_history**: Obter histórico de métricas
+- **get_trends**: Analisar tendências e correlações entre métricas. Use quando perguntarem sobre evolução, padrões ou relações entre métricas (ex: "como está meu peso?", "sono afeta meu humor?")
 - **get_finance_summary**: Obter resumo financeiro (KPIs, contas pendentes, parcelas). Use quando perguntarem sobre finanças ou situação financeira
 - **update_person**: Atualizar informações de pessoa do CRM
+- **save_decision**: Salvar decisão importante para acompanhamento futuro (M3.8)
+  - ✅ Usar para: decisões significativas (carreira, finanças, relacionamentos, saúde) que terão consequências mensuráveis
+  - ❌ NÃO usar para: decisões triviais do dia-a-dia
 
 ## Raciocínio Inferencial
 Você deve fazer conexões entre informações para dar respostas mais contextualizadas:
@@ -371,6 +375,12 @@ Você deve fazer conexões entre informações para dar respostas mais contextua
    - Use tom de oferta, não de cobrança: "Quer que eu anote?" vs "Vou registrar"
    - NUNCA pergunte "você registrou X hoje?" (isso cobra tracking)
 11. NÃO cobre tracking não realizado. Se usuário não mencionou métrica, não pergunte.
+12. Para decisões importantes (ADR-016):
+   - Quando usuário tomar ou discutir decisão significativa (carreira, finanças, relacionamentos, saúde)
+   - OFEREÇA salvar para acompanhamento: "Essa parece uma decisão importante. Quer que eu guarde para fazer um acompanhamento depois?"
+   - Se aceitar: use `save_decision` com confirmação
+   - NÃO ofereça para decisões triviais (o que comer, qual roupa usar, etc.)
+   - CONSULTE histórico de decisões similares antes de aconselhar (via search_knowledge)
 
 ## Memória do Usuário
 {user_memory}
@@ -579,6 +589,24 @@ export const tools: ToolDefinition[] = [
     ],
   },
   {
+    name: 'get_trends',
+    description: 'Analisa tendências e correlações entre métricas do usuário. Use quando perguntarem sobre evolução, padrões ou relações entre métricas (ex: "como está meu peso?", "sono afeta meu humor?", "estou melhorando?").',
+    parameters: z.object({
+      types: z.array(z.enum(['weight', 'water', 'sleep', 'exercise', 'mood', 'energy', 'custom'])).min(1).max(5).describe('Tipos de métricas para analisar'),
+      days: z.number().min(7).max(90).default(30).describe('Período em dias para análise'),
+      includeCorrelations: z.boolean().default(true).describe('Se deve calcular correlações entre métricas'),
+    }),
+    requiresConfirmation: false,
+    inputExamples: [
+      // Análise simples de uma métrica
+      { types: ["weight"], days: 30, includeCorrelations: false },
+      // Correlação entre sono e humor
+      { types: ["sleep", "mood"], days: 14, includeCorrelations: true },
+      // Análise completa de saúde
+      { types: ["weight", "sleep", "exercise", "mood"], days: 30, includeCorrelations: true },
+    ],
+  },
+  {
     name: 'get_person',
     description: 'Obtém informações sobre uma pessoa do CRM do usuário',
     parameters: z.object({
@@ -726,6 +754,65 @@ export const tools: ToolDefinition[] = [
       { name: "Ana", updates: { preferences: { "presente_ideal": "livros" } } },
     ],
   },
+  // M3.8 - Decision Support (ADR-016)
+  {
+    name: 'save_decision',
+    description: `Salva uma decisão importante do usuário para acompanhamento futuro.
+
+      QUANDO USAR (ADR-016):
+      - Usuário tomou ou está tomando decisão significativa
+      - Decisão tem consequências que podem ser avaliadas depois
+      - Áreas: carreira, finanças, relacionamentos, saúde, moradia
+
+      QUANDO NÃO USAR:
+      - Decisões triviais do dia-a-dia (o que comer, qual roupa)
+      - Escolhas que não terão impacto duradouro
+
+      FLUXO:
+      1. Detectar que usuário discute/tomou decisão importante
+      2. OFERECER salvar: "Essa parece uma decisão importante. Quer que eu guarde para acompanharmos depois?"
+      3. Se aceitar: preencher parâmetros e confirmar
+      4. Informar sobre follow-up: "Vou lembrar de perguntar como foi daqui a X dias"`,
+    parameters: z.object({
+      title: z.string().describe('Título breve da decisão'),
+      description: z.string().optional().describe('Contexto detalhado da situação'),
+      area: z.enum(['health', 'financial', 'relationships', 'career', 'spirituality', 'leisure', 'personal_growth', 'mental_health']).describe('Área da vida relacionada'),
+      options: z.array(z.object({
+        title: z.string(),
+        pros: z.array(z.string()).optional(),
+        cons: z.array(z.string()).optional(),
+      })).optional().describe('Opções consideradas'),
+      chosenOption: z.string().optional().describe('Opção escolhida, se já decidiu'),
+      reasoning: z.string().optional().describe('Razão da escolha'),
+      reviewDays: z.number().min(7).max(365).default(30).describe('Dias até follow-up'),
+    }),
+    requiresConfirmation: true,  // SEMPRE requer confirmação
+    inputExamples: [
+      // Decisão de carreira
+      {
+        title: "Aceitar proposta de emprego na TechCorp",
+        area: "career",
+        options: [
+          { title: "Aceitar", pros: ["salário 30% maior", "desafio técnico"], cons: ["mudança de cidade"] },
+          { title: "Recusar", pros: ["estabilidade atual"], cons: ["oportunidade perdida"] },
+        ],
+        chosenOption: "Aceitar",
+        reasoning: "O crescimento profissional compensa a mudança",
+        reviewDays: 60,
+      },
+      // Decisão financeira ainda em análise
+      {
+        title: "Comprar ou alugar apartamento",
+        area: "financial",
+        description: "Considerando opções para moradia própria vs aluguel",
+        options: [
+          { title: "Comprar financiado", pros: ["patrimônio"], cons: ["dívida longa"] },
+          { title: "Continuar alugando", pros: ["flexibilidade"], cons: ["não acumula patrimônio"] },
+        ],
+        reviewDays: 30,
+      },
+    ],
+  },
 ];
 ```
 
@@ -830,6 +917,8 @@ export class ToolExecutorService {
         return this.knowledgeService.search(params);
       case 'get_tracking_history':
         return this.trackingService.getHistory(params);
+      case 'get_trends':
+        return this.trackingService.getTrends(params);
       case 'record_metric':
         return this.trackingService.record(params);
       case 'add_knowledge':
@@ -913,6 +1002,15 @@ Analise as conversas recentes e extraia informações para atualizar a memória 
       "id": "uuid do item existente",
       "content": "conteúdo atualizado",
       "confidence": 0.95
+    }
+  ],
+  "decision_patterns": [
+    {
+      "pattern": "descrição do padrão de decisão observado",
+      "frequency": 3,
+      "area": "health|financial|career|...",
+      "suggestion": "sugestão para melhorar decisões futuras",
+      "evidence": ["decisão 1", "decisão 2", "decisão 3"]
     }
   ]
 }
@@ -1281,6 +1379,134 @@ Instruir LLM a:
 
 ---
 
+### 6.9 Decision Follow-up (ADR-016)
+
+> **Milestone:** M3.8 Decision Support Framework
+
+Job diário que verifica decisões com `review_date` próximo e agenda notificações proativas.
+
+#### 6.9.1 Job Implementation
+
+```typescript
+// packages/api/src/modules/ai/jobs/decision-followup.job.ts
+
+@Processor('decision-followup')
+export class DecisionFollowupProcessor {
+  constructor(
+    private readonly decisionService: DecisionService,
+    private readonly notificationService: NotificationService,
+    private readonly logger: Logger,
+  ) {}
+
+  @Process('check-followups')
+  async processFollowups(job: Job<{ userId: string }>) {
+    const { userId } = job.data;
+
+    // Buscar decisões com review_date <= hoje e status = 'decided'
+    const dueDecisions = await this.decisionService.findDueForReview(userId);
+
+    for (const decision of dueDecisions) {
+      const daysSinceDecision = differenceInDays(new Date(), decision.createdAt);
+
+      // Criar notificação proativa para próxima conversa
+      await this.notificationService.createProactive({
+        userId,
+        type: 'decision_followup',
+        title: 'Acompanhamento de decisão',
+        message: this.generateFollowupMessage(decision, daysSinceDecision),
+        metadata: { decisionId: decision.id },
+        expiresAt: addDays(new Date(), 7), // Expira em 7 dias se não visualizar
+      });
+
+      this.logger.log(`Follow-up queued for decision ${decision.id}`);
+    }
+
+    return { processed: dueDecisions.length };
+  }
+
+  private generateFollowupMessage(decision: Decision, days: number): string {
+    return `Há ${days} dias você decidiu: "${decision.title}". Como foi essa decisão? Gostaria de registrar o resultado?`;
+  }
+}
+```
+
+#### 6.9.2 Scheduling
+
+```typescript
+// packages/api/src/modules/ai/ai.module.ts
+
+@Module({})
+export class AiModule implements OnModuleInit {
+  async onModuleInit() {
+    // Decision follow-up - 3:30 AM (após Memory Consolidation às 3:00 AM)
+    await this.jobQueue.add(
+      'check-followups',
+      {},
+      {
+        repeat: { cron: '30 3 * * *' },
+        jobId: 'decision-followup-daily',
+      }
+    );
+  }
+}
+```
+
+#### 6.9.3 Fluxo de Follow-up na Conversa
+
+Quando usuário inicia conversa e há notificação pendente de follow-up:
+
+```typescript
+// packages/api/src/modules/chat/services/chat.service.ts
+
+async getConversationContext(userId: string): Promise<ConversationContext> {
+  // ... busca contexto normal ...
+
+  // Verificar notificações proativas pendentes
+  const proactiveNotifications = await this.notificationService.getPending(userId, 'decision_followup');
+
+  if (proactiveNotifications.length > 0) {
+    context.proactiveMessages = proactiveNotifications.map(n => ({
+      type: 'decision_followup',
+      message: n.message,
+      decisionId: n.metadata.decisionId,
+    }));
+  }
+
+  return context;
+}
+```
+
+#### 6.9.4 Extração de Review
+
+Quando usuário responde ao follow-up, a IA deve extrair:
+
+```typescript
+// Schema para extração de review
+const reviewExtractionSchema = z.object({
+  satisfaction: z.number().min(1).max(5).describe('Satisfação com a decisão (1-5)'),
+  outcome: z.string().describe('Descrição do resultado'),
+  wouldDecideDifferently: z.boolean().describe('Se tomaria decisão diferente'),
+  lessonsLearned: z.string().optional().describe('Aprendizados'),
+});
+```
+
+System prompt para extração:
+
+```markdown
+O usuário está respondendo sobre uma decisão passada.
+Extraia as seguintes informações da resposta:
+- Satisfação com a decisão (1-5)
+- Descrição do resultado
+- Se tomaria decisão diferente
+- Aprendizados (se mencionados)
+
+Decisão original: {decision.title}
+Opção escolhida: {decision.chosenOption}
+Resposta do usuário: {userResponse}
+```
+
+---
+
 ## 7) Prompts por Funcionalidade
 
 ### 7.1 Morning Summary
@@ -1577,7 +1803,7 @@ Fingir que sabe algo que não sabe
 
 | Categoria | Tools | Confirmação |
 |-----------|-------|-------------|
-| **Read** | `search_knowledge`, `get_tracking_history`, `get_person`, `analyze_context`, `get_finance_summary` | ❌ Não |
+| **Read** | `search_knowledge`, `get_tracking_history`, `get_trends`, `get_person`, `analyze_context`, `get_finance_summary` | ❌ Não |
 | **Write** | `record_metric`, `add_knowledge`, `create_reminder`, `update_person` | ✅ Sim |
 
 ### 9.2 Regras de Confirmação
@@ -1586,6 +1812,7 @@ Fingir que sabe algo que não sabe
 |------|-------------------|--------|
 | `search_knowledge` | ❌ Não | Apenas leitura |
 | `get_tracking_history` | ❌ Não | Apenas leitura |
+| `get_trends` | ❌ Não | Apenas leitura (análise de tendências) |
 | `get_person` | ❌ Não | Apenas leitura |
 | `analyze_context` | ❌ Não | Apenas leitura (análise de contexto) |
 | `get_finance_summary` | ❌ Não | Apenas leitura (resumo financeiro) |

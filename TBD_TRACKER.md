@@ -72,14 +72,14 @@ _Pendente_
 |--------|------------|
 | 🔴 Pendente | 5 |
 | 🟡 Em discussão | 0 |
-| 🟢 Resolvido | 4 |
-| **Total** | **9** |
+| 🟢 Resolvido | 5 |
+| **Total** | **10** |
 
 | Prioridade | Quantidade |
 |------------|------------|
 | 🔴 Bloqueante | 0 |
 | 🟡 Alta | 0 |
-| 🟢 Baixa | 9 |
+| 🟢 Baixa | 10 |
 
 ---
 
@@ -477,7 +477,53 @@ Filosofia adotada:
 - Criado ADR-015 documentando a filosofia de tracking de baixo atrito
 - Atualizados: product.md (§2.3, §3, §6.6, §6.10, §7.2, §7.6), system.md (§2.3, §3.3, §3.4), ai.md (record_metric, §6.5, §4.1), data-model.md (§4.3)
 - Reformulado M2.1 em phase-2-tracker.md com nova filosofia
-- Removido `get_trends` do M2.1 (movido para backlog/M3.x)
+- Movido `get_trends` do M2.1 para M2.2 (junto com Life Balance Score)
+
+---
+
+### [TBD-206] Escopo do Sistema de Decisões
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🟢 Resolvido |
+| **Prioridade** | 🟢 Baixa |
+| **Categoria** | Técnico/Negócio |
+| **Origem** | Análise de divergências docs/analise-divergencias-visao.md |
+| **Data** | 2026-01-19 |
+
+**Contexto:**
+Durante análise de divergências entre visão do produto e estado atual, descobriu-se que tabelas de decisões (`decisions`, `decision_options`, `decision_criteria`, `decision_scores`) já existem no banco de dados (migration snapshot M0.4), mas nunca foram implementadas. Linha 1146 do product.md dizia "Removido Sistema de Decisões".
+
+**Pergunta/Decisão necessária:**
+O que fazer com as tabelas de decisões existentes no banco?
+
+**Opções consideradas:**
+1. **ATIVAR** — Criar schema TypeScript para as tabelas existentes, documentar em todas as specs, implementar como M3.8 Decision Support
+   - Prós: Aproveita trabalho existente, alinha com visão "JARVIS-first", habilita learning loop
+   - Contras: ~120-155h de desenvolvimento
+2. **REMOVER** — Apagar tabelas do banco, documentar que foi descartado
+   - Prós: Simplifica codebase, menos código para manter
+   - Contras: Perde funcionalidade valiosa para o produto
+
+**Recomendação da IA:**
+Opção 1 — ATIVAR. As tabelas já existem, o sistema de decisões é diferencial importante (histórico + learning loop + follow-up), e alinha com a visão "JARVIS-first" do produto.
+
+**Decisão:**
+✅ Opção 1 — ATIVAR tabelas existentes como M3.8 Decision Support
+
+Escopo definido:
+- Criar schema TypeScript para tabelas existentes
+- Documentar em todas as specs (product.md, system.md, ai.md, data-model.md)
+- Criar ADR-016 Decision Support Architecture
+- Implementar como M3.8 em phase-3-assistant.md
+- Tool `save_decision` com requiresConfirmation: true
+- Follow-up pós-decisão via job diário
+- Learning loop para melhoria de conselhos
+
+**Implementação:**
+- Criado ADR-016 documentando arquitetura de suporte a decisões
+- Atualizados: product.md (§1.4, §2.1, §5.1, §6.X, linha 1146), system.md (§1.X, §3.X), ai.md (§4.1, §6.2, §6.5, §6.X), data-model.md (§4.X), engineering.md
+- Criado M3.8 em phase-3-assistant.md com tasks completas
 
 ---
 
@@ -545,4 +591,4 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 ---
 
 *Última atualização: 19 Janeiro 2026*
-*Revisão: Resolvido TBD-205 com decisão de Modelo Híbrido Orientado a Conversa (ADR-015)*
+*Revisão: Resolvido TBD-206 com decisão de ativar tabelas de decisões existentes como M3.8 (ADR-016)*

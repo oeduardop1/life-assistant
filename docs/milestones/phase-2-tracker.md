@@ -99,15 +99,15 @@
 
 ---
 
-## M2.2 — Life Balance Score 🔴
+## M2.2 — Life Balance Score + Trends Analysis 🔴
 
-**Objetivo:** Implementar cálculo do Life Balance Score.
+**Objetivo:** Implementar cálculo do Life Balance Score e análise de tendências/correlações entre métricas.
 
-**Referências:** `docs/specs/system.md` §3.4
+**Referências:** `docs/specs/system.md` §3.4, `docs/specs/ai.md` §6.2
 
 **Tasks:**
 
-**Backend:**
+**Backend — Life Balance Score:**
 - [ ] Criar serviço `ScoreCalculator`:
   - [ ] Calcular score de cada área (0-100)
   - [ ] Aplicar pesos configuráveis
@@ -123,6 +123,67 @@
 - [ ] Criar job para cálculo diário (00:00 UTC)
 - [ ] Armazenar histórico de scores
 
+**Backend — Trends Analysis (Tool `get_trends`):**
+
+> **Nota:** Usa agregações de M2.1 (`GetAggregationsUseCase`) como base. NÃO duplicar cálculos de média/soma/variação.
+
+- [ ] Criar tool schema `get_trends` em `packages/ai/src/schemas/tools/`:
+  ```typescript
+  {
+    name: 'get_trends',
+    description: 'Analisa tendências e correlações entre métricas do usuário. Use quando perguntarem sobre evolução, padrões ou relações entre métricas.',
+    parameters: {
+      types: z.array(TrackingType).min(1).max(5),  // Métricas para analisar
+      days: z.number().min(7).max(90).default(30), // Período
+      includeCorrelations: z.boolean().default(true), // Calcular correlações
+    },
+    requiresConfirmation: false,  // READ tool
+  }
+  ```
+- [ ] Criar serviço `TrendsAnalyzer`:
+  - [ ] `analyzeTrend(data: number[], days: number)`: Retorna direção (up/down/stable), variação %, força
+  - [ ] `calculateCorrelation(dataA: number[], dataB: number[])`: Retorna coeficiente de Pearson (-1 a 1)
+  - [ ] `interpretCorrelation(coefficient: number, typeA: TrackingType, typeB: TrackingType)`: Gera texto interpretativo
+  - [ ] `generateInsights(metrics: MetricTrend[], correlations: Correlation[])`: Gera lista de insights acionáveis
+- [ ] Criar `GetTrendsUseCase`:
+  - [ ] Buscar dados via `GetHistoryUseCase` (M2.1)
+  - [ ] Buscar agregações via `GetAggregationsUseCase` (M2.1)
+  - [ ] Aplicar análise de tendência por métrica
+  - [ ] Calcular correlações entre pares de métricas (se `includeCorrelations=true`)
+  - [ ] Gerar insights baseados em padrões detectados
+  - [ ] Retornar estrutura completa para LLM interpretar
+- [ ] Implementar executor da tool `get_trends` no `ToolExecutorService`
+- [ ] Formato de retorno:
+  ```typescript
+  {
+    metrics: {
+      [type: TrackingType]: {
+        trend: 'up' | 'down' | 'stable',
+        change: number,        // Variação % no período
+        avg: number,           // Média (via M2.1)
+        min: number,
+        max: number,
+        dataPoints: number,    // Quantidade de registros
+        confidence: 'high' | 'medium' | 'low', // Baseado em dataPoints
+      }
+    },
+    correlations: [
+      {
+        pair: [TrackingType, TrackingType],
+        coefficient: number,   // -1 a 1 (Pearson)
+        strength: 'strong' | 'moderate' | 'weak' | 'none',
+        direction: 'positive' | 'negative',
+        interpretation: string, // Texto explicativo
+      }
+    ],
+    insights: string[],        // Lista de insights acionáveis
+    warnings: [
+      { metric: TrackingType, message: string } // Ex: "Dados insuficientes"
+    ],
+    period: { start: Date, end: Date, days: number },
+  }
+  ```
+
 **Frontend:**
 - [ ] Componentes de Score:
   - [ ] LifeBalanceGauge (velocímetro 0-100 com cores)
@@ -136,7 +197,7 @@
 - [ ] Gráfico de evolução dos scores
 - [ ] Página `/settings/weights` para configurar pesos
 
-**Testes:**
+**Testes — Life Balance Score:**
 - [ ] Testes unitários para ScoreCalculator:
   - [ ] Cálculo correto de cada área
   - [ ] Aplicação correta dos pesos
@@ -147,12 +208,40 @@
   - [ ] Histórico é armazenado corretamente
 - [ ] Teste E2E: verificar scores no dashboard após tracking
 
+**Testes — Trends Analysis:**
+- [ ] Testes unitários para TrendsAnalyzer:
+  - [ ] `analyzeTrend`: dados crescentes → trend='up', change > 0
+  - [ ] `analyzeTrend`: dados decrescentes → trend='down', change < 0
+  - [ ] `analyzeTrend`: dados estáveis (variação < 5%) → trend='stable'
+  - [ ] `analyzeTrend`: poucos dados (< 3) → confidence='low'
+  - [ ] `calculateCorrelation`: correlação perfeita positiva → 1.0
+  - [ ] `calculateCorrelation`: correlação perfeita negativa → -1.0
+  - [ ] `calculateCorrelation`: sem correlação → próximo de 0
+  - [ ] `interpretCorrelation`: gera texto correto por força/direção
+  - [ ] `generateInsights`: gera insights relevantes
+- [ ] Testes unitários para GetTrendsUseCase:
+  - [ ] Retorna estrutura correta com métricas válidas
+  - [ ] Retorna warnings para métricas sem dados
+  - [ ] Calcula correlações apenas se `includeCorrelations=true`
+  - [ ] Limita correlações a pares relevantes (não calcula sleep×sleep)
+- [ ] Testes de integração:
+  - [ ] Tool `get_trends` executa via ToolExecutorService
+  - [ ] Usa dados reais de tracking_entries
+  - [ ] Correlação sleep×mood retorna resultado coerente
+
 **Definition of Done:**
 - [ ] Scores calculados corretamente
 - [ ] Pesos configuráveis pelo usuário
-- [ ] Histórico armazenado
-- [ ] Job diário funcionando
+- [ ] Histórico de scores armazenado
+- [ ] Job diário de score funcionando
 - [ ] UI exibe scores com tendências
+- [ ] Tool `get_trends` funciona:
+  - [ ] Retorna tendências por métrica (direção, variação, confiança)
+  - [ ] Calcula correlações entre métricas (Pearson)
+  - [ ] Gera insights acionáveis em português
+  - [ ] Retorna warnings para dados insuficientes
+- [ ] IA consegue responder "como está minha saúde?" com análise de tendências
+- [ ] IA consegue responder "sono afeta meu humor?" com correlação
 - [ ] Testes passam
 
 ---

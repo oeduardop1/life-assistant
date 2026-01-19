@@ -98,7 +98,6 @@ O dashboard `/tracking` continua existindo, mas como **opção secundária**:
 
 - **Scores menos precisos**: Para usuários que não fazem tracking, scores são aproximados
 - **Redesign necessário**: M2.1 precisa ser reformulado
-- **Features avançadas adiadas**: `get_trends` (correlações) movido para backlog
 
 ### Neutros
 
@@ -154,7 +153,7 @@ O dashboard `/tracking` continua existindo, mas como **opção secundária**:
 | **Tipos** | 10 tipos (incluindo expense) | 7 tipos (expense via M2.6) |
 | **Fluxo** | Tracking via chat | Captura conversacional com confirmação |
 | **Frontend** | QuickTrackForm destaque | Dashboard opcional |
-| **get_trends** | Incluído | Removido (backlog) |
+| **get_trends** | Incluído em M2.1 | Movido para M2.2 (junto com Life Balance Score) |
 | **DoD** | Assume tracking ativo | "Sistema funciona sem tracking" |
 
 ## References

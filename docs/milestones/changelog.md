@@ -10,6 +10,8 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-19 | M3.8 | Criado | Decision Support Framework (ADR-016): persistência de decisões, tool `save_decision`, follow-up job, learning loop via Memory Consolidation. Tabelas já existem no banco (M0.4), milestone cria schema TypeScript e implementação completa |
+| 2026-01-19 | Docs | Atualizado | Documentação completa de Decision Support: product.md (§1.4, §2.1, §5.1, §6.18), system.md (§1.9, §3.12), ai.md (§4.1, §6.2, §6.5.2, §6.9), data-model.md (§4.18), engineering.md (§2.4, §7.1). TBD-206 resolvido |
 | 2026-01-19 | M2.6 | Criado | Módulo Finance: planejamento financeiro mensal com rendas, contas fixas, despesas variáveis (recorrentes + pontuais), dívidas com parcelas, investimentos. Dashboard com KPIs, gráficos, notificações de vencimento, integração com IA |
 | 2026-01-16 | M0.8 | Migração | `middleware.ts` → `proxy.ts` (Next.js 16 convention). Corrigido technical debt marcado incorretamente como N/A. Atualizados comentários em server.ts e callback-recovery/route.ts |
 | 2026-01-16 | Backlog | Adicionado | Seção "Segurança e RLS" no Backlog Técnico. 14 tabelas precisam de RLS nas migrations Supabase. Nota adicionada no M0.4 sobre gap identificado |
