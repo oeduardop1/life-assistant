@@ -123,21 +123,30 @@ A IA opera em três modos que compartilham a mesma memória e contexto:
 
 **Propósito:** Medir, acompanhar e visualizar a evolução do usuário em todas as áreas.
 
+**Filosofia:** Baixo atrito (ADR-015). O tracking acontece naturalmente via conversa quando o usuário menciona métricas. Dashboard manual disponível para quem prefere controle direto.
+
 **Comportamentos:**
-- Registra métricas de forma passiva (extraindo de conversas)
-- Permite registro ativo por comandos rápidos
-- Calcula scores por área da vida
+- **Captura conversacional:** Detecta métricas mencionadas naturalmente e pede confirmação antes de registrar
+- **Dashboard opcional:** Permite registro manual por formulários (para quem prefere)
+- Calcula scores por área da vida (quando há dados)
 - Gera relatórios periódicos (semanal, mensal, trimestral, anual)
-- Identifica tendências e padrões
-- Alerta sobre desvios e riscos
+- Identifica tendências e padrões (quando há dados suficientes)
 - Celebra conquistas e marcos
-- Correlaciona métricas entre diferentes áreas
+- Sistema funciona normalmente sem nenhum tracking ativo
+
+**Fluxo de captura conversacional:**
+```
+Usuário: "Voltei da academia, fiz 45 minutos de musculação"
+IA: "Ótimo treino! Quer que eu registre: 45min de musculação?"
+Usuário: "Sim"
+IA: "Registrado! Você já treinou 3x essa semana"
+```
 
 **Exemplos de uso:**
-- "Peso 82.1" → Registra peso
-- "Treinei peito e tríceps hoje, 45 minutos"
-- "Como estou evoluindo na área financeira?"
-- Dashboard mostrando scores e gráficos de evolução
+- "Fui ao médico, estou com 82kg" → IA oferece registrar peso (com confirmação)
+- "Treinei peito e tríceps hoje, 45 minutos" → IA oferece registrar exercício
+- "Como estou evoluindo na área financeira?" → Dashboard/relatórios
+- Dashboard opcional para registro manual e visualização
 
 ---
 
@@ -145,16 +154,20 @@ A IA opera em três modos que compartilham a mesma memória e contexto:
 
 O sistema organiza a vida do usuário em **8 áreas principais** (alinhadas com data-model.md):
 
-| Área | Código | Ícone | Descrição | Métricas Principais |
-|------|--------|-------|-----------|---------------------|
-| **Saúde** | `health` | 💪 | Física, sono, alimentação, exercício | Peso, treinos, sono, água, exames |
-| **Financeiro** | `financial` | 💰 | Renda, gastos, investimentos, patrimônio | Gastos, patrimônio, taxa poupança |
+| Área | Código | Ícone | Descrição | Métricas (quando registradas) |
+|------|--------|-------|-----------|-------------------------------|
+| **Saúde** | `health` | 💪 | Física, sono, alimentação, exercício | Peso, treinos, sono, exames |
+| **Financeiro** | `financial` | 💰 | Renda, gastos, investimentos, patrimônio | Orçamento mensal (M2.6), patrimônio |
 | **Profissional** | `career` | 🏢 | Carreira, negócio, projetos | Faturamento, clientes, metas |
-| **Relacionamentos** | `relationships` | 👥 | Família, amigos, networking | Tempo de qualidade, interações |
-| **Espiritual** | `spirituality` | ⛪ | Devocional, igreja, crescimento na fé | Consistência, leitura bíblica |
+| **Relacionamentos** | `relationships` | 👥 | Família, amigos, networking | Tempo de qualidade (auto-reportado) |
+| **Espiritual** | `spirituality` | ⛪ | Devocional, igreja, crescimento na fé | Leitura bíblica, reflexões |
 | **Crescimento Pessoal** | `personal_growth` | 📚 | Aprendizado, cursos, livros | Livros lidos, horas de estudo |
-| **Saúde Mental** | `mental_health` | 🧠 | Humor, estresse, ansiedade, terapia | Humor, estresse, sessões |
+| **Saúde Mental** | `mental_health` | 🧠 | Humor, estresse, ansiedade, terapia | Humor, estresse (quando reportado) |
 | **Lazer** | `leisure` | 🎮 | Hobbies, férias, diversão, equilíbrio | Horas de lazer, satisfação |
+
+> **Nota (ADR-015):** Nenhuma métrica é obrigatória. O sistema funciona sem tracking ativo.
+> Quando o usuário menciona métricas em conversa, a IA oferece registrar com confirmação.
+> Dashboard manual disponível para usuários que preferem registrar ativamente.
 
 ### 3.1 Conexões entre Áreas
 
@@ -434,27 +447,29 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 
 ### 6.6 Módulo: Saúde
 
-**Métricas Corporais:**
+> **Filosofia (ADR-015):** Tracking de baixo atrito. Métricas são capturadas via conversa natural com confirmação, ou registradas manualmente no dashboard por quem preferir. Nenhuma métrica é obrigatória.
+
+**Métricas Corporais (quando registradas):**
 - Peso, gordura corporal, medidas, IMC
-- Meta de peso com progresso visual
+- Meta de peso com progresso visual (opcional, definida pelo usuário)
 
-**Exercícios:**
-- Registro de treinos (tipo, duração, exercícios)
-- Exercícios detalhados (séries, repetições, carga)
+**Exercícios (quando registrados):**
+- Registro de treinos via conversa ("treinei 45min de musculação") ou dashboard
+- Exercícios detalhados (séries, repetições, carga) — para quem quer detalhar
 - PRs (recordes pessoais)
-- Frequência semanal e volume total
-- Integração com Google Fit e Strava
+- Frequência semanal e volume total (calculados quando há dados)
+- Integração com Google Fit e Strava (importação opcional)
 
-**Nutrição:**
-- Registro de refeições
-- Calorias e macros (proteína, carboidrato, gordura)
-- Consumo de água com meta
-- Aderência ao plano alimentar
+**Nutrição (quando registrada):**
+- Registro de refeições via conversa ou dashboard
+- Calorias e macros (para quem quer acompanhar)
+- Notas sobre alimentação
+- Sem metas diárias impostas
 
-**Sono:**
-- Horas dormidas e qualidade
-- Consistência de horários
-- Média semanal
+**Sono (quando registrado):**
+- Horas dormidas e qualidade (quando mencionado em conversa)
+- Consistência de horários (quando há dados suficientes)
+- Média calculada automaticamente
 
 **Saúde Médica:**
 - Histórico de consultas (data, médico, resultado)
@@ -466,10 +481,10 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 - Alertas de exames periódicos
 - Preparação automática para consultas
 
-**Saúde Mental:**
-- Registro de humor
-- Níveis de ansiedade e estresse
-- Gatilhos identificados
+**Saúde Mental (quando registrada):**
+- Registro de humor (quando mencionado: "estou me sentindo bem hoje")
+- Níveis de ansiedade e estresse (quando reportados)
+- Gatilhos identificados pela IA via conversas
 - Registro de sessões de terapia
 
 ### 6.7 Módulo: Financeiro (M2.6)
@@ -576,20 +591,22 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 
 ### 6.10 Módulo: Espiritual
 
+> **Filosofia (ADR-015):** Tracking de baixo atrito. Métricas espirituais são capturadas quando o usuário menciona em conversa. Não há "streak obrigatório" — o sistema celebra consistência quando existe, mas não penaliza ausência de registros.
+
 | Feature | Descrição |
 |---------|-----------|
-| Devocional diário | Tracking de consistência |
-| Streak de devocional | Dias consecutivos |
-| Plano de leitura bíblica | Com progresso |
+| Devocional | Registro quando usuário menciona (conversa ou dashboard) |
+| Consistência | Visualização de frequência (quando há dados) |
+| Plano de leitura bíblica | Com progresso (opcional) |
 | Livro/capítulo atual | Onde parou |
 | Versículos importantes | Salvos com contexto |
-| Frequência na igreja | Registro de presença |
+| Frequência na igreja | Registro quando mencionado |
 | Participação em grupos | Célula, ministério, etc. |
-| Dízimos e ofertas | Registro com histórico anual |
-| Reflexões espirituais | Notas e insights de quiet time |
+| Dízimos e ofertas | Via M2.6 Finance |
+| Reflexões espirituais | Notas de quiet time (armazenadas na Memória) |
 | Orações | Pedidos e respostas |
-| Jejum | Registro de períodos |
-| Versículo do dia | Personalizado pelo contexto |
+| Jejum | Registro de períodos (quando mencionado) |
+| Versículo do dia | Personalizado pelo contexto
 
 ### 6.11 Módulo: Estudos
 
@@ -735,42 +752,50 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 
 ### 7.2 Jornada: Dia Típico
 
+> **Nota (ADR-015):** Esta jornada reflete a filosofia de baixo atrito. Tracking via conversa sempre pede confirmação. Finanças são gerenciadas via M2.6 (planejamento mensal), não micro-tracking de gastos.
+
 ```
 MANHÃ (Telegram/WhatsApp)
 07:00 - Recebe resumo do dia:
         "Bom dia! Hoje você tem:
          - 10h: Call com cliente X
          - 15h: Dentista
-         Lembretes: Pagar conta de luz
-         Seu streak de devocional está em 12 dias 🔥"
+         Lembretes: Pagar conta de luz"
 
-07:15 - "Peso 82.1" → "Registrado! Você está 0.3kg abaixo da semana passada 📉"
-07:30 - "Fiz devocional" → "Marcado! 13 dias seguidos 🔥"
+07:15 - "Fui ao médico ontem, estou com 82.1kg"
+        → "Legal que foi ao médico! Quer que eu registre seu peso de 82.1kg?"
+        → "Sim"
+        → "Registrado! Você está 0.3kg abaixo do último registro 📉"
+
+07:30 - "Fiz devocional hoje de manhã, li Salmos 23"
+        → "Que bom! Quer que eu anote o devocional de hoje?"
+        → "Pode anotar"
+        → "Anotado! Você tem feito devocional com frequência ultimamente"
 
 DURANTE O DIA (Telegram)
 10:30 - "A call foi ótima, acho que vamos fechar o contrato"
-        → IA registra no contexto do cliente
-        
-12:00 - "Gastei 45 reais no almoço" → "Registrado em Alimentação. 
-         Você está em R$890 de R$1.200 do orçamento do mês."
-         
+        → IA registra no contexto do cliente (Memória)
+
+12:00 - "O almoço estava ótimo hoje, fui naquele restaurante novo"
+        → IA registra na Memória (contexto), NÃO como tracking financeiro
+        → Finanças são gerenciadas via M2.6 (planejamento mensal)
+
 14:00 - "Marca revisão do carro pra próxima segunda 9h"
         → "Agendado: Revisão do carro - Segunda, 13/01 às 9h"
-        
+
 16:00 - "Estou pensando em aceitar aquele projeto freelancer..."
         → IA inicia modo conselheira, traz contexto relevante
 
-NOITE (Web App)
-21:00 - Abre dashboard:
-        - Score do dia: 7.8
-        - Destaques: devocional, treino, reunião produtiva
-        - Atenção: sono abaixo da média ontem
-        
-21:15 - Revisa métricas da semana
-21:30 - Lê insight: "Você tem dormido em média 6.2h nas 
-        últimas 2 semanas. Isso pode estar afetando
-        sua produtividade - seus scores profissionais
-        caíram 15% no mesmo período."
+NOITE (Web App - opcional)
+21:00 - Abre dashboard (quando quiser):
+        - Score geral baseado nos dados registrados
+        - Destaques: devocional, reunião produtiva
+        - Métricas que você registrou esta semana
+
+21:15 - Revisa histórico de métricas (se houver)
+21:30 - Lê insight (quando há dados suficientes):
+        "Baseado no que você compartilhou, percebi que você
+         mencionou cansaço algumas vezes nas últimas semanas."
 ```
 
 ### 7.3 Jornada: Tomando uma Decisão Importante
@@ -906,6 +931,8 @@ NOITE (Web App)
 
 ### 7.6 Jornada: Revisão Semanal
 
+> **Nota (ADR-015):** Relatórios são baseados apenas nas métricas que o usuário registrou. Áreas sem dados mostram score neutro (50) sem penalização.
+
 ```
 DOMINGO, 20H - Notificação:
 "Seu relatório semanal está pronto! 📊"
@@ -913,31 +940,34 @@ DOMINGO, 20H - Notificação:
 RELATÓRIO SEMANAL - 06 a 12 de Janeiro
 
 SCORE GERAL: 7.4/10 (↑ +0.3 vs semana anterior)
+> Baseado nas métricas que você registrou esta semana
 
 POR ÁREA:
-💪 Saúde:        7.8 ↑  Treinou 4x, peso estável
-💰 Financeiro:   7.0 ↓  Gastos extras com carro
-🏢 Profissional: 8.2 ↑  Fechou projeto importante
-👨‍👩‍👧 Familiar:     7.5 =  Tempo de qualidade OK
-⛪ Espiritual:   9.0 ↑  Devocional 7/7 dias! 🔥
-📚 Estudos:      6.0 ↓  Não leu esta semana
-😊 Bem-estar:    7.2 =  Estresse moderado
+💪 Saúde:        7.8 ↑  Treinou 4x (registrado via conversa)
+💰 Financeiro:   7.0 ↓  Orçamento 85% utilizado (M2.6)
+🏢 Profissional: 8.2 ↑  Mencionou reunião produtiva
+👨‍👩‍👧 Familiar:     --  --  Sem métricas registradas
+⛪ Espiritual:   8.0 ↑  3 devocionais registrados
+📚 Estudos:      --  --  Sem métricas registradas
+😊 Bem-estar:    7.2 =  Humor bom (mencionado em conversa)
 
 DESTAQUES DA SEMANA 🏆
-- Devocional perfeito (7/7 dias)
+- 3 devocionais registrados
 - Fechou contrato com cliente X
-- Peso mais baixo dos últimos 2 meses
+- Peso estável (82kg)
 
-PONTOS DE ATENÇÃO ⚠️
-- Sono abaixo de 7h em 4 dias
-- Nenhuma leitura registrada
-- Gasto não planejado: R$450 mecânico
+O QUE VOCÊ COMPARTILHOU 📝
+- Treinou 4x na academia
+- Mencionou estar se sentindo bem
+- Reunião produtiva com cliente
 
-INSIGHT DA SEMANA 💡
-"Suas semanas com devocional acima de 85% têm
-score de bem-estar 20% maior. Continue assim!"
+INSIGHT DA SEMANA 💡 (quando há dados suficientes)
+"Nas semanas que você mencionou devocional,
+também relatou estar se sentindo melhor!"
 
 [Salvar na Memória] [Exportar PDF]
+
+Quer registrar algo mais sobre essa semana?
 ```
 
 ---

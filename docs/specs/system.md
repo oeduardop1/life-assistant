@@ -97,14 +97,17 @@ Informação sensível criptografada.
 | Peso Saúde Mental | `1.0` | ✅ Sim (0.0-2.0) |
 | Frequência de cálculo | Diário (00:00 UTC) | ❌ Não |
 
-### 2.3 Tracking
+### 2.3 Tracking (Opcional)
 
-| Métrica | Meta Default | Configurável |
-|---------|--------------|--------------|
-| Água diária | `2000ml` | ✅ Sim |
-| Sono diário | `8h` | ✅ Sim |
-| Exercício semanal | `150min` | ✅ Sim |
-| Budget mensal | Não definido | ✅ Sim |
+> **Filosofia (ADR-015):** Tracking é opcional. O sistema funciona sem metas definidas.
+> Usuário pode definir metas se quiser, mas não são impostas.
+
+| Métrica | Meta Default | Configurável | Obrigatória |
+|---------|--------------|--------------|-------------|
+| Água | Não definida | ✅ Sim | ❌ Não |
+| Sono | Não definida | ✅ Sim | ❌ Não |
+| Exercício | Não definido | ✅ Sim | ❌ Não |
+| Budget mensal | Não definido (via M2.6) | ✅ Sim | ❌ Não |
 
 ### 2.4 Notificações
 
@@ -284,7 +287,16 @@ flowchart TB
 
 ### 3.3 Tracking
 
-**O que é:** Sistema de registro de métricas pessoais.
+**O que é:** Sistema de registro de métricas pessoais com captura conversacional e dashboard opcional.
+
+> **Filosofia (ADR-015):** Tracking de baixo atrito.
+>
+> **Dois modos de registro:**
+> 1. **Captura conversacional:** IA detecta métricas em conversa natural e pede confirmação antes de registrar
+> 2. **Dashboard manual:** Formulários para registro ativo (opcional)
+>
+> **Confirmação sempre obrigatória:** Antes de salvar, IA SEMPRE confirma dados com usuário.
+> O sistema funciona normalmente sem nenhum tracking ativo.
 
 #### Tipos de Tracking
 
@@ -366,23 +378,33 @@ enum ExpenseCategory {
 
 #### Critérios de Aceite
 
-- [ ] Registrar peso via chat e formulário
-- [ ] Registrar água via chat e formulário
-- [ ] Registrar gasto com categoria
-- [ ] Registrar exercício com tipo e duração
-- [ ] Registrar sono com qualidade
-- [ ] Registrar humor/energia
+**Captura Conversacional (modo principal):**
+- [ ] IA detecta métricas mencionadas em conversa natural
+- [ ] IA SEMPRE pede confirmação antes de registrar
+- [ ] Usuário pode corrigir valores antes de confirmar
+- [ ] Usuário pode recusar registro ("não precisa")
+
+**Dashboard Manual (modo opcional):**
+- [ ] Formulários disponíveis para registro direto
 - [ ] Visualizar histórico de cada métrica
-- [ ] Gráficos de evolução
+- [ ] Gráficos de evolução (quando há dados)
 - [ ] Comparativo com período anterior
+
+**Validações:**
 - [ ] Validações aplicadas corretamente
-- [ ] Atualização do Area Score em tempo real
+- [ ] Atualização do Area Score (quando há dados)
+- [ ] Sistema funciona sem nenhum tracking (empty states)
 
 ---
 
 ### 3.4 Life Balance Score
 
 **O que é:** Sistema de pontuação que mede o equilíbrio entre as áreas da vida.
+
+> **Nota (ADR-015):** O cálculo se adapta aos dados disponíveis.
+> - Se há dados: calcula normalmente
+> - Se não há dados: área retorna **50 (neutro)** sem penalização
+> - O sistema NÃO "cobra" tracking não realizado
 
 #### Fórmula Geral
 
@@ -398,9 +420,9 @@ Life Balance Score = Σ (Area Score × Area Weight) / Σ Area Weight
 |------------|------|---------|
 | Peso | 20% | Baseado no IMC (ver fórmula abaixo) |
 | Exercício | 30% | `(min_semana / meta_min) × 100`, max 100 |
-| Sono | 25% | `(horas_media / meta_horas) × 100`, ajustado por qualidade |
-| Água | 15% | `(ml_diario / meta_ml) × 100`, max 100 |
-| Alimentação | 10% | Baseado em registros de refeições (ver abaixo) |
+| Sono | 25% | Se registrado: `(horas_media / meta_horas) × 100`. Se não: **50** |
+| Água | 15% | Se registrado: `(ml_registrado / meta_ml) × 100`. Se não: **50** |
+| Alimentação | 10% | Se registrado: baseado em frequência. Se não: **50** |
 
 **Cálculo do componente Peso (IMC):**
 ```
@@ -475,18 +497,25 @@ Mensagem: "Cadastre pessoas importantes para acompanhar relacionamentos"
 
 #### Comportamento com Dados Insuficientes
 
+> **ADR-015:** O sistema NÃO penaliza ou "cobra" tracking não realizado.
+
 Quando não há dados suficientes para calcular um componente ou área:
 
 | Situação | Comportamento |
 |----------|---------------|
-| Componente sem dados | Retorna **50** (neutro) e exibe aviso |
-| Área inteira sem dados | Retorna **50** para a área |
-| Menos de 7 dias de dados | Calcula com dados disponíveis + aviso |
+| Componente sem dados | Retorna **50** (neutro), sem penalização |
+| Área inteira sem dados | Retorna **50** para a área, sem penalização |
+| Menos de 7 dias de dados | Calcula com dados disponíveis |
 | Usuário novo (< 3 dias) | Não calcula Life Balance, mostra onboarding |
+| Métrica opcional não registrada | Componente retorna **50**, sem mensagem de cobrança |
 
-**Mensagens de aviso:**
-- "Dados insuficientes para cálculo preciso. Continue registrando!"
-- "Área [X] sem dados suficientes - registre para melhorar a precisão"
+**Mensagens informativas (não de cobrança):**
+- "Score baseado nas métricas que você compartilhou"
+- "Área [X] calculada com os dados disponíveis"
+
+**Mensagens que NÃO devem aparecer:**
+- ~~"Dados insuficientes - continue registrando!"~~ (cobra tracking)
+- ~~"Registre para melhorar a precisão"~~ (cobra tracking)
 
 #### Critérios de Aceite
 

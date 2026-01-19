@@ -365,6 +365,12 @@ Você deve fazer conexões entre informações para dar respostas mais contextua
 9. Após salvar algo na memória, informe que o usuário pode revisar em /memory:
    - "Guardei isso na sua memória. Você pode revisar ou corrigir em /memory se precisar."
    - Use essa frase apenas na primeira vez que salvar algo em uma conversa (evitar repetição)
+10. Para tracking (peso, exercício, água, humor, etc.) — ADR-015:
+   - SEMPRE pergunte antes de registrar: "Quer que eu registre...?"
+   - NUNCA registre métricas sem confirmação explícita
+   - Use tom de oferta, não de cobrança: "Quer que eu anote?" vs "Vou registrar"
+   - NUNCA pergunte "você registrou X hoje?" (isso cobra tracking)
+11. NÃO cobre tracking não realizado. Se usuário não mencionou métrica, não pergunte.
 
 ## Memória do Usuário
 {user_memory}
@@ -636,25 +642,39 @@ export const tools: ToolDefinition[] = [
   // Os demais WRITE tools (record_metric, create_reminder, update_person) requerem confirmação
   {
     name: 'record_metric',
-    description: 'Registra uma métrica do usuário. SEMPRE confirme os dados antes de chamar.',
+    description: `Registra uma métrica do usuário detectada em conversa natural.
+
+      FILOSOFIA (ADR-015): Captura conversacional de baixo atrito.
+
+      FLUXO OBRIGATÓRIO:
+      1. Detectar métrica mencionada naturalmente pelo usuário
+      2. OFERECER registrar (não insistir): "Quer que eu registre...?"
+      3. Executar APENAS após confirmação explícita do usuário
+
+      NUNCA:
+      - Registrar sem confirmação
+      - Perguntar "você registrou X hoje?" (cobra tracking)
+      - Insistir se usuário recusar
+
+      Exemplo de fluxo correto:
+      - Usuário: "Voltei do médico, estou com 82kg"
+      - IA: "Legal que foi ao médico! Quer que eu registre seu peso de 82kg?"
+      - Usuário: "Sim" / "Não precisa"`,
     parameters: z.object({
-      type: z.string().describe('Tipo: weight, expense, mood, water, sleep, exercise'),
+      type: z.string().describe('Tipo: weight, water, sleep, exercise, mood, energy'),
       value: z.number(),
       unit: z.string().optional(),
       date: z.string().describe('ISO date string'),
-      category: z.string().optional().describe('Para expenses: categoria'),
-      notes: z.string().optional(),
+      notes: z.string().optional().describe('Contexto adicional da conversa'),
     }),
-    requiresConfirmation: true,
+    requiresConfirmation: true,  // SEMPRE true
     inputExamples: [
-      // Peso - com unit
-      { type: "weight", value: 82.5, unit: "kg", date: "2026-01-12" },
-      // Gasto - com category
-      { type: "expense", value: 150, date: "2026-01-12", category: "food", notes: "Mercado semanal" },
-      // Humor - sem unit, sem category
-      { type: "mood", value: 7, date: "2026-01-12" },
-      // Água - unit diferente
-      { type: "water", value: 2000, unit: "ml", date: "2026-01-12" },
+      // Peso - captura conversacional
+      { type: "weight", value: 82.5, unit: "kg", date: "2026-01-12", notes: "Mencionado em conversa sobre consulta médica" },
+      // Exercício - captura conversacional
+      { type: "exercise", value: 45, unit: "min", date: "2026-01-12", notes: "Musculação - peito e tríceps" },
+      // Humor - captura conversacional
+      { type: "mood", value: 7, date: "2026-01-12", notes: "Usuário disse estar se sentindo bem" },
     ],
   },
   {
@@ -827,6 +847,15 @@ export class ToolExecutorService {
 ## 6.5) Memory Consolidation
 
 > **ADR-012:** Job assíncrono que extrai conhecimento de conversas a cada 24h.
+
+> **Nota (ADR-015):** Memory Consolidation extrai **CONHECIMENTO** (fatos, preferências, insights).
+>
+> **Métricas de tracking** (peso, exercício, água, humor) **NÃO são extraídas automaticamente**.
+> Métricas só são registradas via:
+> 1. Tool `record_metric` com confirmação explícita do usuário
+> 2. Dashboard manual (formulários)
+>
+> Isso garante que tracking sempre tem consentimento explícito do usuário.
 
 ### 6.5.1 Conceito
 

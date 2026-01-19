@@ -70,9 +70,9 @@ _Pendente_
 
 | Status | Quantidade |
 |--------|------------|
-| 🔴 Pendente | 6 |
+| 🔴 Pendente | 5 |
 | 🟡 Em discussão | 0 |
-| 🟢 Resolvido | 3 |
+| 🟢 Resolvido | 4 |
 | **Total** | **9** |
 
 | Prioridade | Quantidade |
@@ -271,47 +271,7 @@ Exemplo: regras de negócio, limites, comportamentos de UX, etc.
 
 ## 🔵 Decisões Técnicas
 
-### [TBD-205] Repensar Modelo de Tracking Diário (M2.1)
-
-| Campo | Valor |
-|-------|-------|
-| **Status** | 🔴 Pendente |
-| **Prioridade** | 🟢 Baixa |
-| **Categoria** | Negócio/Técnico |
-| **Origem** | Planejamento M2.6 Finance |
-| **Data** | 2026-01-19 |
-
-**Contexto:**
-O M2.1 (Tracking de Métricas) define `tracking_entries` para micro-tracking diário (peso, água, humor, gastos). Com a criação do M2.6 Finance (planejamento financeiro mensal), surge a dúvida se micro-tracking faz sentido para o modelo "baixo atrito" do produto.
-
-O Finance module usa modelo de planejamento mensal (não micro-tracking de gastos diários), o que pode conflitar com a proposta original do M2.1 que incluía tracking de despesas individuais.
-
-**Pergunta/Decisão necessária:**
-- Manter `tracking_entries` para micro-tracking diário?
-- Modificar para modelo híbrido?
-- Remover em favor de planejamento mensal apenas?
-
-**Opções consideradas:**
-1. **Manter como está** — Micro-tracking disponível para quem quiser
-   - Prós: Flexibilidade máxima, dados granulares
-   - Contras: Pode conflitar com filosofia "baixo atrito"
-2. **Simplificar** — Tracking apenas de métricas simples (peso, humor), sem gastos
-   - Prós: Alinhado com filosofia do produto, menos sobreposição com Finance
-   - Contras: Perde granularidade para quem quer
-3. **Remover** — Foco apenas em planejamento mensal (Finance)
-   - Prós: Simplicidade máxima
-   - Contras: Perde funcionalidade de saúde/bem-estar
-
-**Recomendação da IA:**
-Opção 2 — Manter tracking para métricas de saúde/bem-estar (peso, sono, humor, energia), mas não para finanças (coberto pelo M2.6 Finance). Isso alinha com a filosofia "baixo atrito" e evita sobreposição de funcionalidades.
-
-**Decisão:**
-_Pendente — decidir antes de implementar M2.1_
-
-**Implementação:**
-_Pendente_
-
----
+_Nenhum item pendente no momento._
 
 <!--
 Adicionar aqui itens técnicos que precisam de input humano.
@@ -463,6 +423,64 @@ Opção 2 - Dual strategy. Aproveita feature nativa no Claude e mantém compatib
 
 ---
 
+### [TBD-205] Repensar Modelo de Tracking Diário (M2.1)
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🟢 Resolvido |
+| **Prioridade** | 🟢 Baixa |
+| **Categoria** | Negócio/Técnico |
+| **Origem** | Planejamento M2.6 Finance |
+| **Data** | 2026-01-19 |
+
+**Contexto:**
+O M2.1 (Tracking de Métricas) define `tracking_entries` para micro-tracking diário (peso, água, humor, gastos). Com a criação do M2.6 Finance (planejamento financeiro mensal), surge a dúvida se micro-tracking faz sentido para o modelo "baixo atrito" do produto.
+
+O Finance module usa modelo de planejamento mensal (não micro-tracking de gastos diários), o que pode conflitar com a proposta original do M2.1 que incluía tracking de despesas individuais.
+
+**Pergunta/Decisão necessária:**
+- Manter `tracking_entries` para micro-tracking diário?
+- Modificar para modelo híbrido?
+- Remover em favor de planejamento mensal apenas?
+
+**Opções consideradas:**
+1. **Manter como está** — Micro-tracking disponível para quem quiser
+   - Prós: Flexibilidade máxima, dados granulares
+   - Contras: Pode conflitar com filosofia "baixo atrito"
+2. **Simplificar** — Tracking apenas de métricas simples (peso, humor), sem gastos
+   - Prós: Alinhado com filosofia do produto, menos sobreposição com Finance
+   - Contras: Perde granularidade para quem quer
+3. **Remover** — Foco apenas em planejamento mensal (Finance)
+   - Prós: Simplicidade máxima
+   - Contras: Perde funcionalidade de saúde/bem-estar
+4. **Modelo Híbrido Orientado a Conversa** — Captura conversacional + dashboard manual opcional
+   - Prós: Baixo atrito como default, poder para quem quer, alinhado com M2.6 Finance
+   - Contras: Requer redesign do M2.1, tracking_entries muda de propósito
+
+**Recomendação da IA:**
+Opção 4 — Modelo híbrido que combina:
+- Captura conversacional: IA detecta métricas em conversa natural e pede confirmação
+- Dashboard manual opcional: Formulários para usuários que preferem registrar ativamente
+- Mesma filosofia do M2.6 Finance aplicada a todas as áreas
+
+**Decisão:**
+✅ Opção 4 — Modelo Híbrido Orientado a Conversa (ADR-015)
+
+Filosofia adotada:
+- Tracking via conversa natural com confirmação obrigatória
+- Dashboard manual opcional para usuários que querem controle/metas
+- `tracking_entries` passa a registrar apenas métricas confirmadas pelo usuário
+- Mesma abordagem do M2.6 Finance aplicada a todas as áreas
+- Sistema funciona normalmente sem nenhum tracking ativo
+
+**Implementação:**
+- Criado ADR-015 documentando a filosofia de tracking de baixo atrito
+- Atualizados: product.md (§2.3, §3, §6.6, §6.10, §7.2, §7.6), system.md (§2.3, §3.3, §3.4), ai.md (record_metric, §6.5, §4.1), data-model.md (§4.3)
+- Reformulado M2.1 em phase-2-tracker.md com nova filosofia
+- Removido `get_trends` do M2.1 (movido para backlog/M3.x)
+
+---
+
 <!--
 Mover itens resolvidos para cá com a decisão tomada.
 Manter como histórico para referência futura.
@@ -527,4 +545,4 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 ---
 
 *Última atualização: 19 Janeiro 2026*
-*Revisão: Adicionado TBD-205 sobre modelo de tracking diário vs Finance module (M2.6)*
+*Revisão: Resolvido TBD-205 com decisão de Modelo Híbrido Orientado a Conversa (ADR-015)*

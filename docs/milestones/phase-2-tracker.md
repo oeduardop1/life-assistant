@@ -5,22 +5,20 @@
 
 ---
 
-## M2.1 — Módulo: Tracking de Métricas 🔴
+## M2.1 — Módulo: Tracking de Métricas (Baixo Atrito) 🔴
 
-> ⚠️ **Nota:** O modelo de micro-tracking diário (`tracking_entries`) está em revisão.
-> Ver **TBD-205** para decisão sobre manter, modificar ou simplificar este módulo.
-> O módulo M2.6 Finance cobre o tracking financeiro com modelo de planejamento mensal.
+**Objetivo:** Implementar captura conversacional de métricas com confirmação obrigatória e dashboard opcional.
 
-**Objetivo:** Implementar registro de métricas de vida.
+**Filosofia:** Baixo atrito (ADR-015). IA detecta métricas na conversa e oferece registrar. Dashboard é secundário, para quem prefere controle direto. Sistema funciona normalmente sem nenhum tracking.
 
-**Referências:** `docs/specs/system.md` §3.3
+**Referências:** `docs/specs/system.md` §3.3, `docs/adr/ADR-015-tracking-low-friction-philosophy.md`
 
 **Tasks:**
 
 **Backend:**
 - [ ] Criar módulo `tracking`:
   - [ ] `TrackingController` - CRUD de entries
-  - [ ] `RecordMetricUseCase` - validar e salvar
+  - [ ] `RecordMetricUseCase` - validar e salvar (requer confirmação)
   - [ ] `GetHistoryUseCase` - buscar histórico com filtros
   - [ ] `GetAggregationsUseCase` - cálculos (média, soma, etc)
   - [ ] `TrackingRepository`
@@ -29,61 +27,74 @@
   - [ ] water (0-10000ml)
   - [ ] sleep (0-24h, com qualidade 1-10)
   - [ ] exercise (tipo, duração, intensidade)
-  - [ ] expense (valor, categoria)
-  - [ ] income
   - [ ] mood (1-10)
   - [ ] energy (1-10)
-  - [ ] habit
   - [ ] custom
+  - ~~expense/income~~ → Usar M2.6 Finance
 - [ ] Implementar validações conforme `docs/specs/system.md` §3.3
-- [ ] Implementar categorias de despesa (conforme `docs/specs/system.md`)
 - [ ] Implementar agregações (média, soma, variação)
-- [ ] Integrar com Tool Use (tracking via chat):
+- [ ] Integrar com Tool Use (captura conversacional):
   - [ ] Implementar executor da tool `record_metric` no ToolExecutorService
-  - [ ] Implementar fluxo de confirmação no chat:
-    1. Usuário menciona métrica ("pesei 82kg")
-    2. IA extrai dados e chama `record_metric` com `requiresConfirmation: true`
-    3. Frontend exibe card de confirmação
-    4. Usuário confirma → executa tool
-  - [ ] Criar `ConfirmationService` para gerenciar estado de confirmação
-  - [ ] Permitir correções (valor, data, categoria)
-- [ ] Implementar tool `get_trends` para análise de correlação (JARVIS-first):
-  - [ ] Input: `{ areas?: LifeArea[], period?: string, metrics?: string[] }`
-  - [ ] Output: correlações detectadas, tendências, insights
-  - [ ] Exemplos de correlação: stress + gastos impulsivos, sono + energia, exercício + humor
-  - [ ] Integrar com Tool Use para resposta contextualizada
-  - [ ] Usar agregações do `GetAggregationsUseCase`
+  - [ ] Fluxo de captura conversacional (ADR-015, ai.md §9.3):
+    1. Usuário menciona métrica naturalmente ("voltei do médico, estou com 82kg")
+    2. LLM chama `record_metric` com `requiresConfirmation: true`
+    3. Tool loop PARA e retorna `pendingConfirmation`
+    4. IA pergunta via texto: "Quer que eu registre seu peso de 82kg? 👍"
+    5. Usuário responde via texto: "Sim" / "Na verdade foi 82.5" / "Não"
+    6. Se confirmado → executa tool; Se correção → ajusta e pergunta novamente
+    7. NUNCA registrar sem confirmação explícita
+  - [ ] Implementar lógica de `pendingConfirmation` no Tool Loop (pausa e aguarda)
+    - Nota: Esta lógica é genérica e será reutilizada por outras tools
+      (`create_reminder`, `update_person`) em milestones futuros
+  - [ ] Armazenar estado de confirmação pendente (expira em 5 min)
+  - [ ] Permitir correções via conversa (valor, data, tipo)
+  - [ ] IA NUNCA deve cobrar tracking não realizado
 
 **Frontend:**
-- [ ] Criar página `/tracking`:
-  - [ ] Formulários rápidos por tipo de métrica
-  - [ ] Histórico com filtros
-  - [ ] Gráficos de evolução
+- [ ] Criar página `/tracking` (dashboard opcional):
+  - [ ] Empty state amigável quando não há dados:
+    - "Você ainda não registrou nenhuma métrica. Converse comigo sobre seu dia e eu posso registrar para você, ou use os formulários abaixo."
+  - [ ] Formulários para registro manual (secundário)
+  - [ ] Histórico com filtros (quando há dados)
+  - [ ] Gráficos de evolução (quando há dados)
+  - [ ] Sem widgets de "meta diária" ou "streak" impostos
 - [ ] Componentes:
-  - [ ] QuickTrackForm (botões para registrar comum)
+  - [ ] TrackingEmptyState (mensagem amigável)
+  - [ ] ManualTrackForm (formulários por tipo)
   - [ ] MetricChart (gráfico de linha/barra)
   - [ ] TrackingHistory (lista com filtros)
-  - [ ] CategoryPicker (para despesas)
-  - [ ] ConfirmationCard (exibe dados extraídos via chat)
-  - [ ] Botões de Confirmar/Corrigir/Cancelar no chat
-  - [ ] Formulário inline para correções
+  - Nota: Confirmação de métricas é 100% conversacional (JARVIS-first)
+    - Não há cards ou botões de confirmação
+    - IA pergunta via texto, usuário responde via texto
+    - Ver ai.md §9.3 para fluxo completo
 
 **Testes:**
-- [ ] Testes unitários para validações
-- [ ] Teste unitário: extração de dados de mensagens
-- [ ] Teste unitário: fluxo de confirmação
-- [ ] Teste de integração: mensagem implícita → confirmação → registro
-- [ ] Teste E2E: registrar peso → ver no histórico
-- [ ] Teste E2E: fluxo completo de tracking via chat com confirmação
+- [ ] Testes unitários para validações de métricas
+- [ ] Teste unitário: `pendingConfirmation` pausa tool loop corretamente
+- [ ] Teste unitário: expiração de confirmação pendente (5 min)
+- [ ] Teste unitário: rejeição de registro sem confirmação textual
+- [ ] Teste de integração: mensagem natural → IA pergunta → "Sim" → registra
+- [ ] Teste de integração: mensagem natural → IA pergunta → correção → IA re-pergunta → "Sim" → registra
+- [ ] Teste de integração: mensagem natural → IA pergunta → "Não" → NÃO registra
+- [ ] Teste E2E: registrar peso via formulário manual → ver no histórico
+- [ ] Teste E2E: fluxo conversacional completo (pergunta textual + resposta textual)
+- [ ] Teste E2E: dashboard exibe empty state quando sem dados
 
 **Definition of Done:**
-- [ ] Todos os tipos de tracking funcionam
+- [ ] Sistema funciona normalmente sem nenhum tracking (não penaliza)
+- [ ] Todos os tipos de tracking funcionam (7 tipos, sem expense/income)
 - [ ] Validações aplicadas
 - [ ] Agregações calculadas corretamente
-- [ ] Gráficos de evolução funcionam
-- [ ] Tracking via chat funciona
-- [ ] Tracking via conversa sempre pede confirmação
-- [ ] Correções de métricas funcionam
+- [ ] Dashboard é opcional com empty state amigável
+- [ ] Gráficos funcionam quando há dados
+- [ ] Captura conversacional funciona (JARVIS-first):
+  - [ ] IA pergunta via texto ("Quer que eu registre...? 👍")
+  - [ ] Usuário confirma/corrige/recusa via texto
+  - [ ] Sem botões ou cards de confirmação
+- [ ] `pendingConfirmation` pausa tool loop até resposta do usuário
+- [ ] IA nunca registra sem confirmação textual explícita
+- [ ] IA nunca cobra tracking não realizado
+- [ ] Correções via conversa funcionam (IA ajusta e re-pergunta)
 - [ ] Testes passam
 
 ---

@@ -892,6 +892,17 @@ export type NewMessage = typeof messages.$inferInsert;
 
 ### 4.3 Tracking Entries
 
+> **ADR-015:** A tabela `tracking_entries` armazena métricas registradas pelo usuário.
+>
+> **Filosofia:** Tracking de baixo atrito. Métricas são registradas apenas com confirmação explícita do usuário.
+>
+> **Fontes de dados (source):**
+> - `'conversation'`: Captura conversacional com confirmação (modo principal)
+> - `'form'`: Dashboard manual (modo opcional)
+> - `'telegram'`: Via comandos do Telegram
+>
+> O sistema funciona normalmente sem dados nesta tabela. Scores calculam componentes como 50 (neutro) quando não há dados.
+
 ```typescript
 // packages/database/src/schema/tracking.ts
 
