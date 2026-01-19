@@ -156,12 +156,13 @@ life-assistant/
 │   ├── database/            # Schema Drizzle + migrations
 │   └── shared/              # Tipos e utilitarios compartilhados
 ├── supabase/                # Migrations e seeds do banco
-├── infra/
-│   └── docker/              # Docker Compose para dev local
 ├── scripts/                 # Scripts de automacao
 ├── docs/
-│   └── adr/                 # Architecture Decision Records
-└── [spec files]             # Documentacao de especificacoes
+│   ├── adr/                 # Architecture Decision Records
+│   ├── specs/               # Product, system, engineering specs
+│   └── milestones/          # Tasks and progress
+└── infra/
+    └── docker/              # Docker Compose para dev local
 ```
 
 ## Referencia de Desenvolvimento
@@ -312,9 +313,9 @@ pnpm --filter web test:e2e
 
 ### Status do Projeto
 
-Veja `MILESTONES.md` para lista completa de features implementadas e roadmap.
+Veja `docs/milestones/` para lista completa de features implementadas e roadmap.
 
-**Milestones concluidos:** Veja `MILESTONES.md` para status atual.
+**Milestones concluidos:** Veja `docs/milestones/` para status atual.
 
 Veja `docs/specs/engineering.md` §2.2 para documentacao tecnica completa do frontend.
 
@@ -377,7 +378,7 @@ Para deploy em producao, consulte **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 | `docs/specs/data-model.md` | Schema do banco, tabelas, relacionamentos |
 | `docs/specs/ai.md` | Comportamento da IA, prompts, Tool Use |
 | `docs/specs/integrations.md` | APIs externas (Telegram, Stripe, Calendar) |
-| `MILESTONES.md` | Roadmap de desenvolvimento |
+| `docs/milestones/` | Roadmap de desenvolvimento |
 | `TBD_TRACKER.md` | Decisoes pendentes |
 | `DEPLOYMENT.md` | Guia de deploy em producao |
 

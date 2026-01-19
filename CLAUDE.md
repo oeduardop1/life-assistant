@@ -4,18 +4,21 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Life Assistant AI is a SaaS platform with integrated AI that serves as a personal assistant, second brain, counselor, and life tracker. See `MILESTONES.md` for current progress.
+Life Assistant AI is a SaaS platform with integrated AI that serves as a personal assistant, second brain, counselor, and life tracker. See `docs/milestones/` for current progress.
 
 **Stack:** Next.js + NestJS + PostgreSQL (Supabase) + Drizzle + BullMQ + Redis
 
 **Architecture:** Modular Monolith + Clean Architecture (presentation/application/domain/infrastructure)
 ```
 life-assistant/
-├── apps/web/     # Next.js frontend
-├── apps/api/     # NestJS backend
-├── packages/     # Shared libraries
-├── docs/adr/     # Architecture Decision Records
-└── infra/        # Docker, deployment
+├── apps/web/        # Next.js frontend
+├── apps/api/        # NestJS backend
+├── packages/        # Shared libraries
+├── docs/            # Documentation
+│   ├── adr/         # Architecture Decision Records
+│   ├── specs/       # Product, system, engineering specs
+│   └── milestones/  # Tasks and progress
+└── infra/           # Docker, deployment
 ```
 
 ## Infrastructure
@@ -47,7 +50,7 @@ pnpm test:e2e         # E2E tests
 | 4 | `docs/specs/data-model.md` | Database schema |
 | 5 | `docs/specs/ai.md` | LLM behavior, prompts |
 | 6 | `docs/specs/integrations.md` | External APIs |
-| - | `MILESTONES.md` | Tasks, progress |
+| - | `docs/milestones/` | Tasks, progress |
 | - | `TBD_TRACKER.md` | Pending decisions |
 
 **In case of conflict, follow precedence order.**
@@ -58,7 +61,7 @@ pnpm test:e2e         # E2E tests
 - "implement M0.X..."
 - "create a plan for milestone..."
 - "work on milestone..."
-- Any reference to tasks in MILESTONES.md
+- Any reference to tasks in docs/milestones/
 
 **SKIP THIS PROTOCOL FOR:** Documentation, questions, refactoring, code review, or any task not tied to a milestone.
 
@@ -68,7 +71,7 @@ Do NOT skip steps. Do NOT start planning or coding before completing steps 1-3.
 ### Step 1: Validate Milestone Completeness
 
 Before creating a plan or writing any code:
-1. Read the task in `MILESTONES.md`
+1. Read the task in the appropriate phase file (`docs/milestones/phase-*.md`)
 2. Check: do the tasks cover 100% of what needs to be implemented?
    - Include all features, edge cases, error handling
    - Include all tests: unit, integration, E2E (if UI)
@@ -77,14 +80,14 @@ Before creating a plan or writing any code:
    🔍 Milestone gaps found:
    - Missing: [what's not covered]
    - Proposed tasks: [list of tasks to add]
-   → Awaiting authorization to update MILESTONES.md
+   → Awaiting authorization to update the milestone file
 ```
    **STOP and wait for authorization. Do NOT proceed until approved.**
 
 ### Step 2: Validate Documentation
 
 After Step 1 is complete:
-1. Read relevant project docs (PRODUCT_SPECS, SYSTEM_SPECS, ENGINEERING, etc.)
+1. Read relevant project docs (product.md, system.md, engineering.md, etc.)
 2. Query Context7 for ALL libraries/frameworks involved in this task
 3. Compare: does project documentation match Context7 best practices?
 4. If divergence found:
@@ -110,8 +113,8 @@ After Steps 1-2 are complete:
 
 ### Step 4: Implement
 
-- Follow patterns from `ENGINEERING.md`
-- Cite source when stating rules: "Per `SYSTEM_SPECS.md` §3.2..."
+- Follow patterns from `docs/specs/engineering.md`
+- Cite source when stating rules: "Per `docs/specs/system.md` §3.2..."
 - Prefer CLI scaffolding over manual file creation
 
 ### Step 5: Test & Fix
@@ -126,7 +129,7 @@ After Steps 1-2 are complete:
 
 ### Step 6: Complete
 
-1. Update `MILESTONES.md` (see "Updating MILESTONES.md" section below)
+1. Update milestone files (see "Updating Milestones" section below)
 2. Request confirmation before marking task complete
 
 ## Authorization Required
@@ -137,14 +140,30 @@ After Steps 1-2 are complete:
 - Adding tasks to milestones
 - Marking tasks as completed
 
-## Updating MILESTONES.md
+## Updating Milestones
 
-After implementation:
+After implementation, update TWO files:
+
+### 1. Phase File (`docs/milestones/phase-*.md`)
+
+Identify the correct phase file based on milestone number:
+- M0.x → `phase-0-foundation.md`
+- M1.x → `phase-1-counselor.md`
+- M2.x → `phase-2-tracker.md`
+- M3.x → `phase-3-assistant.md`
+
+Then:
 1. Mark tasks: `- [ ]` → `- [x]`
 2. Update milestone title emoji: 🟡 → 🟢
 3. Add "Notas" section with date and key implementation details
-4. Add row to "Histórico de Progresso" table (date, milestone, action, notes)
-5. Update "Última atualização" at bottom of file
+
+### 2. Changelog (`docs/milestones/changelog.md`)
+
+1. Add row to table (or create new month section):
+   ```
+   | YYYY-MM-DD | M#.# | Ação | Notas breves |
+   ```
+2. Update "Última atualização: DD Mês YYYY" at bottom of file
 
 **Task markers:**
 - `- [ ]` Pending
