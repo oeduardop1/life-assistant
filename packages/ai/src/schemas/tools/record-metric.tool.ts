@@ -26,12 +26,14 @@ export type RecordMetricParams = z.infer<typeof recordMetricParamsSchema>;
  * record_metric tool definition.
  *
  * Used to record a metric for the user.
- * This is a WRITE tool - requires user confirmation.
+ * Confirmation is handled via system interception (ADR-015).
+ * When LLM calls this tool, system pauses and asks user to confirm.
+ * User response is detected by ChatService.detectUserIntent().
  */
 export const recordMetricTool: ToolDefinition<typeof recordMetricParamsSchema> = {
   name: 'record_metric',
   description:
-    'Record a metric for the user. ALWAYS confirm the data with the user before calling this tool.',
+    'Record a metric for the user. The system will automatically ask the user for confirmation.',
   parameters: recordMetricParamsSchema,
   requiresConfirmation: true,
   inputExamples: [

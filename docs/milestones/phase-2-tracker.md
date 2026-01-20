@@ -37,15 +37,17 @@
   - [x] Implementar executor da tool `record_metric` no ToolExecutorService
   - [x] Fluxo de captura conversacional (ADR-015, ai.md §9.3):
     1. Usuário menciona métrica naturalmente ("voltei do médico, estou com 82kg")
-    2. LLM chama `record_metric` com `requiresConfirmation: true`
-    3. Tool loop PARA e retorna `pendingConfirmation`
-    4. IA pergunta via texto: "Quer que eu registre seu peso de 82kg? 👍"
-    5. Usuário responde via texto: "Sim" / "Na verdade foi 82.5" / "Não"
-    6. Se confirmado → executa tool; Se correção → ajusta e pergunta novamente
-    7. NUNCA registrar sem confirmação explícita
-  - [x] Implementar lógica de `pendingConfirmation` no Tool Loop (pausa e aguarda)
-    - Nota: Esta lógica é genérica e será reutilizada por outras tools
-      (`create_reminder`, `update_person`) em milestones futuros
+    2. IA chama `record_metric` → Sistema intercepta (`requiresConfirmation: true`)
+    3. Sistema salva `pendingConfirmation` no Redis (TTL 5min)
+    4. IA pergunta: "Quer que eu registre seu peso de 82kg?"
+    5. Usuário responde: "Sim" / "Na verdade foi 82.5" / "Não"
+    6. Sistema detecta intent ANTES de novo tool loop (`ChatService.detectUserIntent()`)
+    7. Se "confirm" → Executa tool diretamente (sem novo loop)
+    8. Se "reject" → Cancela
+    9. Se "correction"/"unrelated" → Limpa pendente, inicia novo loop
+  - [x] Implementar lógica de `pendingConfirmation` no Tool Loop (infraestrutura genérica)
+    - Nota: Esta lógica é usada por `record_metric`, `create_reminder`, `update_person`
+    - Sistema controla confirmação via intent detection (não depende do prompt da IA)
   - [x] Armazenar estado de confirmação pendente (expira em 5 min)
 
 **Frontend:**

@@ -300,10 +300,11 @@ flowchart TB
 > **Filosofia (ADR-015):** Tracking de baixo atrito.
 >
 > **Dois modos de registro:**
-> 1. **Captura conversacional:** IA detecta métricas em conversa natural e pede confirmação antes de registrar
+> 1. **Captura conversacional:** IA detecta métricas em conversa natural e pede confirmação via texto antes de registrar
 > 2. **Dashboard manual:** Formulários para registro ativo (opcional)
 >
-> **Confirmação sempre obrigatória:** Antes de salvar, IA SEMPRE confirma dados com usuário.
+> **Confirmação via prompt:** Antes de salvar, IA SEMPRE pergunta ao usuário via texto ("Quer que eu registre...?").
+> A confirmação é controlada pela IA no prompt, não pelo sistema (evita loop de confirmação dupla).
 > O sistema funciona normalmente sem nenhum tracking ativo.
 
 #### Tipos de Tracking

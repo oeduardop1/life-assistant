@@ -136,14 +136,21 @@ O dashboard `/tracking` continua existindo, mas como **opção secundária**:
 {
   name: 'record_metric',
   description: `Registra métrica do usuário detectada em conversa natural.
-    FLUXO OBRIGATÓRIO:
-    1. Detectar métrica na fala do usuário
-    2. Perguntar se quer registrar
-    3. Executar APENAS após confirmação explícita
-    NUNCA registrar sem confirmação.`,
-  requiresConfirmation: true,  // SEMPRE true
+    O sistema automaticamente pede confirmação antes de executar.`,
+  requiresConfirmation: true,  // Confirmação via SISTEMA
 }
 ```
+
+> **Nota (2026-01-20):** `record_metric` usa `requiresConfirmation: true` com detecção
+> automática de intent pelo sistema. Quando o usuário responde à confirmação:
+> - "sim/pode/ok" → Sistema executa tool diretamente
+> - "não/cancela" → Sistema cancela
+> - Correção (ex: "75.5 kg") → Novo tool loop com valor corrigido
+> - Mensagem não relacionada → Cancela e processa nova mensagem
+>
+> A confirmação é garantida pelo SISTEMA, não pela IA (que poderia ignorar).
+> Padrões de detecção em `ChatService.detectUserIntent()`.
+> Tools como `create_reminder` e `update_person` também usam `requiresConfirmation: true`.
 
 ### Milestone M2.1 Reformulado
 

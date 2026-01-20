@@ -676,28 +676,25 @@ export const tools: ToolDefinition[] = [
   },
 
   // ========== WRITE TOOLS ==========
-  // Nota: add_knowledge não requer confirmação (IA confirma na resposta)
-  // Os demais WRITE tools (record_metric, create_reminder, update_person) requerem confirmação
+  // Nota: add_knowledge NÃO requer confirmação via sistema (IA confirma naturalmente na resposta)
+  // record_metric, create_reminder, update_person requerem confirmação via sistema
   {
     name: 'record_metric',
     description: `Registra uma métrica do usuário detectada em conversa natural.
 
-      FILOSOFIA (ADR-015): Captura conversacional de baixo atrito.
+      FILOSOFIA (ADR-015): Captura conversacional de baixo atrito com confirmação via SISTEMA.
 
-      FLUXO OBRIGATÓRIO:
-      1. Detectar métrica mencionada naturalmente pelo usuário
-      2. OFERECER registrar (não insistir): "Quer que eu registre...?"
-      3. Executar APENAS após confirmação explícita do usuário
+      FLUXO (controlado pelo sistema):
+      1. IA detecta métrica mencionada naturalmente pelo usuário
+      2. IA chama record_metric
+      3. Sistema intercepta (requiresConfirmation=true) e pergunta ao usuário
+      4. Sistema detecta resposta do usuário:
+         - "sim/pode/ok" → Executa tool
+         - "não/cancela" → Cancela
+         - Correção (ex: "75.5 kg") → Inicia novo loop com valor corrigido
+         - Mensagem não relacionada → Cancela e processa nova mensagem
 
-      NUNCA:
-      - Registrar sem confirmação
-      - Perguntar "você registrou X hoje?" (cobra tracking)
-      - Insistir se usuário recusar
-
-      Exemplo de fluxo correto:
-      - Usuário: "Voltei do médico, estou com 82kg"
-      - IA: "Legal que foi ao médico! Quer que eu registre seu peso de 82kg?"
-      - Usuário: "Sim" / "Não precisa"`,
+      A IA NÃO controla a confirmação - o SISTEMA garante que ela sempre acontece.`,
     parameters: z.object({
       type: z.string().describe('Tipo: weight, water, sleep, exercise, mood, energy'),
       value: z.number(),
@@ -705,7 +702,7 @@ export const tools: ToolDefinition[] = [
       date: z.string().describe('ISO date string'),
       notes: z.string().optional().describe('Contexto adicional da conversa'),
     }),
-    requiresConfirmation: true,  // SEMPRE true
+    requiresConfirmation: true,  // Confirmação via SISTEMA (ADR-015)
     inputExamples: [
       // Peso - captura conversacional
       { type: "weight", value: 82.5, unit: "kg", date: "2026-01-12", notes: "Mencionado em conversa sobre consulta médica" },
@@ -951,7 +948,7 @@ export class ToolExecutorService {
 >
 > **Métricas de tracking** (peso, exercício, água, humor) **NÃO são extraídas automaticamente**.
 > Métricas só são registradas via:
-> 1. Tool `record_metric` com confirmação explícita do usuário
+> 1. Tool `record_metric` (sistema requer confirmação antes de executar)
 > 2. Dashboard manual (formulários)
 >
 > Isso garante que tracking sempre tem consentimento explícito do usuário.
@@ -1832,37 +1829,54 @@ Fingir que sabe algo que não sabe
 | `update_person` | ✅ Sim | Modifica dados |
 
 **Exceções (não requer confirmação via UI):**
-- Usuário já confirmou na mesma mensagem: "anota 82kg de peso"
 - `add_knowledge`: IA salva diretamente e confirma na resposta (ex: "Anotei que você é consultor de investimentos")
 
-### 9.3 Fluxo de Confirmação
+### 9.3 Fluxo de Confirmação (via Sistema)
 
 ```
 Usuário: "Pesei 82kg hoje de manhã"
 
-[LLM chama tool: record_metric com requiresConfirmation=true]
+[IA chama record_metric]
+[Sistema intercepta (requiresConfirmation=true)]
+[Sistema armazena pendingConfirmation em Redis (TTL 5min)]
 
-IA: "Vou registrar seu peso de 82kg para hoje (06/01/2026). Confirma? 👍"
-
-[Sistema aguarda resposta do usuário]
+IA: "Quer que eu registre seu peso de 82kg para hoje (06/01/2026)?"
 
 Usuário: "Sim"
 
-[Sistema executa tool com parâmetros confirmados]
+[Sistema detecta intent "confirm"]
+[Sistema executa record_metric diretamente (sem novo tool loop)]
 
-IA: "Pronto! Peso de 82kg registrado ✓"
+IA: "Pronto! Registrei seu peso de 82kg."
 ```
+
+> **Nota:** A confirmação é controlada pelo SISTEMA, não pela IA.
+> O sistema detecta automaticamente a resposta do usuário:
+> - "sim/pode/ok" → Intent `confirm` → Executa tool
+> - "não/cancela" → Intent `reject` → Cancela
+> - Correção (ex: "75.5 kg") → Intent `correction` → Novo tool loop
+> - Outra mensagem → Intent `unrelated` → Cancela e processa nova mensagem
 
 ### 9.4 Correções Pré-Confirmação
 
 ```
 Usuário: "Pesei 82kg hoje de manhã"
-IA: "Vou registrar seu peso de 82kg para hoje (06/01/2026). Confirma? 👍"
-Usuário: "Na verdade foi ontem"
+[Sistema armazena pendingConfirmation]
+IA: "Quer que eu registre seu peso de 82kg para hoje (06/01/2026)?"
 
-[LLM corrige parâmetros e chama tool novamente com nova data]
+Usuário: "Na verdade é 82.5kg"
 
-IA: "Entendido! Vou registrar seu peso de 82kg para ontem (05/01/2026). Confirma?"
+[Sistema detecta intent "correction" (padrão numérico)]
+[Sistema cancela pendingConfirmation]
+[Novo tool loop inicia com contexto atualizado]
+
+IA: "Entendi! Quer que eu registre 82.5kg?"
+Usuário: "Sim"
+
+[Sistema detecta intent "confirm"]
+[Executa record_metric com 82.5kg]
+
+IA: "Pronto! Registrei seu peso de 82.5kg."
 ```
 
 **Dados que podem ser corrigidos:**
@@ -1874,16 +1888,30 @@ IA: "Entendido! Vou registrar seu peso de 82kg para ontem (05/01/2026). Confirma
 ### 9.5 Persistência de Confirmação Pendente
 
 ```typescript
-// Quando há tool call pendente de confirmação
-interface ConversationState {
-  pendingToolCall?: {
-    toolName: string;
-    params: Record<string, any>;
-    message: string;  // Mensagem que foi mostrada ao usuário
-    createdAt: Date;
-    expiresAt: Date;  // 5 minutos
-  };
+// Confirmação pendente armazenada em Redis (via ConfirmationStateService)
+interface StoredConfirmation {
+  confirmationId: string;
+  conversationId: string;
+  userId: string;
+  toolCall: ToolCall;
+  toolName: string;
+  message: string;
+  iteration: number;
+  createdAt: string;
+  expiresAt: string;  // TTL 5 minutos
 }
+```
+
+### 9.6 Detecção de Intent do Usuário
+
+```typescript
+// ChatService.detectUserIntent()
+type ConfirmationIntent = 'confirm' | 'reject' | 'correction' | 'unrelated';
+
+// Padrões detectados:
+const confirmPatterns = [/^(sim|yes|ok|pode|faz|faça)$/i, ...];
+const rejectPatterns = [/^(não|no|cancela|deixa)$/i, ...];
+const correctionPatterns = [/^(na verdade|errei)/i, /^\d+[.,]?\d*\s*(kg|ml)/i, ...];
 ```
 
 ---

@@ -10,6 +10,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-20 | M2.1 | Bug fix | Fix confirmation loop (Gap 1): Sistema agora detecta intent do usuário ("sim"/"não"/correção) ANTES de iniciar tool loop. `requiresConfirmation: true` mantido. Intent detection via regex em `ChatService.detectUserIntent()`. Fix adicional: `find()` → `findLast()` para pegar mensagem mais recente. +197 linhas chat.service.ts, +250 linhas testes |
 | 2026-01-20 | M2.1 | Concluído | Testes completos (243 total): 42 unit backend, 9 integration, 22 component, 8 hooks, 162 E2E. Tasks expandidas de 10 para 25. Fixes E2E: sidebar toggle, mobile-chrome skips, memory search debounce |
 | 2026-01-19 | M3.8 | Criado | Decision Support Framework (ADR-016): persistência de decisões, tool `save_decision`, follow-up job, learning loop via Memory Consolidation. Tabelas já existem no banco (M0.4), milestone cria schema TypeScript e implementação completa |
 | 2026-01-19 | Docs | Atualizado | Documentação completa de Decision Support: product.md (§1.4, §2.1, §5.1, §6.18), system.md (§1.9, §3.12), ai.md (§4.1, §6.2, §6.5.2, §6.9), data-model.md (§4.18), engineering.md (§2.4, §7.1). TBD-206 resolvido |

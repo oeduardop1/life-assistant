@@ -223,11 +223,11 @@ describe('tool-loop.service', () => {
      * @see ADR-015 for details on confirmation flow
      */
     describe('pendingConfirmation', () => {
-      // Tool definition that requires confirmation (like record_metric)
+      // Tool definition that requires confirmation (like create_reminder in M3.1)
       const confirmationRequiredTool: ToolDefinition = {
-        name: 'record_metric',
-        description: 'Record a metric that requires user confirmation',
-        parameters: z.object({ type: z.string(), value: z.number() }),
+        name: 'create_reminder',
+        description: 'Create a reminder that requires user confirmation',
+        parameters: z.object({ title: z.string(), datetime: z.string() }),
         requiresConfirmation: true,
       };
 
@@ -241,16 +241,16 @@ describe('tool-loop.service', () => {
 
       it('should_pause_loop_when_tool_requires_confirmation', async () => {
         const response: ChatWithToolsResponse = {
-          content: 'Let me record that weight for you.',
+          content: 'Let me create that reminder for you.',
           usage: { inputTokens: 10, outputTokens: 20 },
           finishReason: 'tool_calls',
           toolCalls: [
-            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+            { id: 'call_1', name: 'create_reminder', arguments: { title: 'Buy groceries', datetime: '2026-01-20T10:00:00' } },
           ],
         };
         vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
 
-        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Register 75kg' }], {
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Remind me to buy groceries' }], {
           tools: [confirmationRequiredTool],
           executor: mockExecutor,
           context: testContext,
@@ -263,16 +263,16 @@ describe('tool-loop.service', () => {
 
       it('should_return_pending_confirmation_in_response', async () => {
         const response: ChatWithToolsResponse = {
-          content: 'Recording your weight...',
+          content: 'Creating your reminder...',
           usage: { inputTokens: 10, outputTokens: 20 },
           finishReason: 'tool_calls',
           toolCalls: [
-            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+            { id: 'call_1', name: 'create_reminder', arguments: { title: 'Buy groceries', datetime: '2026-01-20T10:00:00' } },
           ],
         };
         vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
 
-        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'My weight is 75kg' }], {
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Remind me to buy groceries tomorrow at 10am' }], {
           tools: [confirmationRequiredTool],
           executor: mockExecutor,
           context: testContext,
@@ -282,8 +282,8 @@ describe('tool-loop.service', () => {
         expect(result.pendingConfirmation?.toolCall).toEqual(
           expect.objectContaining({
             id: 'call_1',
-            name: 'record_metric',
-            arguments: { type: 'weight', value: 75 },
+            name: 'create_reminder',
+            arguments: { title: 'Buy groceries', datetime: '2026-01-20T10:00:00' },
           })
         );
         expect(result.pendingConfirmation?.toolDefinition).toBe(confirmationRequiredTool);
@@ -294,16 +294,16 @@ describe('tool-loop.service', () => {
       it('should_resume_loop_after_user_confirms', async () => {
         // First call returns tool call requiring confirmation
         const response1: ChatWithToolsResponse = {
-          content: 'Recording your weight...',
+          content: 'Creating your reminder...',
           usage: { inputTokens: 10, outputTokens: 20 },
           finishReason: 'tool_calls',
           toolCalls: [
-            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+            { id: 'call_1', name: 'create_reminder', arguments: { title: 'Buy groceries', datetime: '2026-01-20T10:00:00' } },
           ],
         };
         // Response after tool execution completes
         const response2: ChatWithToolsResponse = {
-          content: 'Done! I recorded your weight as 75kg.',
+          content: 'Done! I created a reminder for "Buy groceries" at 10am.',
           usage: { inputTokens: 30, outputTokens: 40 },
           finishReason: 'stop',
         };
@@ -319,13 +319,13 @@ describe('tool-loop.service', () => {
 
         vi.mocked(mockExecutor.execute).mockResolvedValueOnce({
           toolCallId: 'call_1',
-          toolName: 'record_metric',
-          content: '{"success": true, "entryId": "entry-123"}',
+          toolName: 'create_reminder',
+          content: '{"success": true, "reminderId": "reminder-123"}',
           success: true,
         });
 
         // First call pauses with pending confirmation
-        const result1 = await runToolLoop(mockLLM, [{ role: 'user', content: 'My weight is 75kg' }], {
+        const result1 = await runToolLoop(mockLLM, [{ role: 'user', content: 'Remind me to buy groceries tomorrow at 10am' }], {
           tools: [confirmationRequiredTool],
           executor: mockExecutor,
           context: testContext,
@@ -353,26 +353,26 @@ describe('tool-loop.service', () => {
 
         // Now executor should have been called
         expect(mockExecutor.execute).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'call_1', name: 'record_metric' }),
+          expect.objectContaining({ id: 'call_1', name: 'create_reminder' }),
           testContext
         );
         expect(result2.pendingConfirmation).toBeUndefined();
-        expect(result2.content).toBe('Done! I recorded your weight as 75kg.');
+        expect(result2.content).toBe('Done! I created a reminder for "Buy groceries" at 10am.');
       });
 
       it('should_not_execute_tool_when_user_rejects', async () => {
         const response: ChatWithToolsResponse = {
-          content: 'Recording your weight...',
+          content: 'Creating your reminder...',
           usage: { inputTokens: 10, outputTokens: 20 },
           finishReason: 'tool_calls',
           toolCalls: [
-            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+            { id: 'call_1', name: 'create_reminder', arguments: { title: 'Buy groceries', datetime: '2026-01-20T10:00:00' } },
           ],
         };
         vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
 
         // Get pending confirmation
-        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'My weight is 75kg' }], {
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Remind me to buy groceries tomorrow at 10am' }], {
           tools: [confirmationRequiredTool],
           executor: mockExecutor,
           context: testContext,
@@ -427,14 +427,14 @@ describe('tool-loop.service', () => {
 
       it('should_handle_mixed_tools_with_and_without_confirmation', async () => {
         const response: ChatWithToolsResponse = {
-          content: 'Let me search and record...',
+          content: 'Let me search and create a reminder...',
           usage: { inputTokens: 10, outputTokens: 20 },
           finishReason: 'tool_calls',
           toolCalls: [
             // First tool does NOT require confirmation
-            { id: 'call_1', name: 'search_knowledge', arguments: { query: 'weight history' } },
+            { id: 'call_1', name: 'search_knowledge', arguments: { query: 'reminders' } },
             // Second tool REQUIRES confirmation - loop should pause here
-            { id: 'call_2', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+            { id: 'call_2', name: 'create_reminder', arguments: { title: 'Buy groceries', datetime: '2026-01-20T10:00:00' } },
           ],
         };
 
@@ -448,31 +448,31 @@ describe('tool-loop.service', () => {
 
         // Note: In the current implementation, the loop processes tools in order
         // and pauses at the FIRST tool requiring confirmation
-        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Search and record' }], {
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Search and create reminder' }], {
           tools: [noConfirmationTool, confirmationRequiredTool],
           executor: mockExecutor,
           context: testContext,
         });
 
         // The first tool (search_knowledge) should execute
-        // The second tool (record_metric) should pause for confirmation
+        // The second tool (create_reminder) should pause for confirmation
         expect(result.pendingConfirmation).toBeDefined();
-        expect(result.pendingConfirmation?.toolCall.name).toBe('record_metric');
+        expect(result.pendingConfirmation?.toolCall.name).toBe('create_reminder');
       });
 
       it('should_preserve_previous_tool_calls_in_pending_confirmation', async () => {
         const response: ChatWithToolsResponse = {
-          content: 'First some search, then recording...',
+          content: 'Creating the reminder...',
           usage: { inputTokens: 10, outputTokens: 20 },
           finishReason: 'tool_calls',
           toolCalls: [
-            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+            { id: 'call_1', name: 'create_reminder', arguments: { title: 'Buy groceries', datetime: '2026-01-20T10:00:00' } },
           ],
         };
 
         vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
 
-        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Record weight' }], {
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Create reminder' }], {
           tools: [confirmationRequiredTool],
           executor: mockExecutor,
           context: testContext,

@@ -430,6 +430,7 @@ describe('ChatService', () => {
       mockConversationRepository.findById.mockResolvedValue(mockConversation);
       mockContextBuilder.buildSystemPrompt.mockResolvedValue('System prompt');
       mockMessageRepository.getRecentMessages.mockResolvedValue(mockMessages);
+      mockConfirmationStateService.getLatest.mockResolvedValue(null);
       mockLLM.stream.mockReturnValue(mockStreamGenerator());
       mockMessageRepository.create.mockResolvedValue(
         createMockMessage({ role: 'assistant', content: 'Hello there!' })
@@ -441,6 +442,255 @@ describe('ChatService', () => {
       const firstEvent = await firstValueFrom(observable);
 
       expect(firstEvent.data).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Confirmation Intent Detection Tests (ADR-015)
+  // ==========================================================================
+
+  describe('detectUserIntent (private method)', () => {
+    // Access private method for testing via prototype
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const callDetectUserIntent = (service: ChatService, message: string) =>
+      (service as any).detectUserIntent(message);
+
+    describe('confirm patterns', () => {
+      const confirmCases = [
+        'sim',
+        'Sim',
+        'SIM',
+        'yes',
+        'ok',
+        's',
+        'pode',
+        'registra',
+        'confirmo',
+        'isso',
+        'faz',
+        'faça',
+        'pode sim',
+        'pode fazer',
+        'pode registrar',
+        'faz isso',
+        'faça isso',
+        'faz aí',
+        'faça aí',
+      ];
+
+      confirmCases.forEach((input) => {
+        it(`should detect "${input}" as confirm`, () => {
+          const result = callDetectUserIntent(chatService, input);
+          expect(result).toBe('confirm');
+        });
+      });
+    });
+
+    describe('reject patterns', () => {
+      const rejectCases = [
+        'não',
+        'Não',
+        'NÃO',
+        'no',
+        'nao',
+        'n',
+        'cancela',
+        'deixa',
+        'esquece',
+        'para',
+        'não precisa',
+        'não quero',
+        'não registra',
+      ];
+
+      rejectCases.forEach((input) => {
+        it(`should detect "${input}" as reject`, () => {
+          const result = callDetectUserIntent(chatService, input);
+          expect(result).toBe('reject');
+        });
+      });
+    });
+
+    describe('correction patterns', () => {
+      const correctionCases = [
+        'na verdade é 75.5',
+        'errei, é 82kg',
+        'corrigi, são 3 litros',
+        '75.5 kg',
+        '2000 ml',
+        '8 horas',
+        '30 min',
+        '2.5 litros',
+      ];
+
+      correctionCases.forEach((input) => {
+        it(`should detect "${input}" as correction`, () => {
+          const result = callDetectUserIntent(chatService, input);
+          expect(result).toBe('correction');
+        });
+      });
+    });
+
+    describe('unrelated patterns', () => {
+      const unrelatedCases = [
+        'qual a previsão do tempo?',
+        'me conta uma piada',
+        'como você está?',
+        'obrigado pela ajuda',
+        'vamos falar de outra coisa',
+        'qual é a capital da França?',
+      ];
+
+      unrelatedCases.forEach((input) => {
+        it(`should detect "${input}" as unrelated`, () => {
+          const result = callDetectUserIntent(chatService, input);
+          expect(result).toBe('unrelated');
+        });
+      });
+    });
+  });
+
+  describe('handlePendingConfirmationFromMessage', () => {
+    const mockPendingConfirmation = {
+      confirmationId: 'conf-123',
+      conversationId: 'conv-123',
+      userId: 'user-123',
+      toolCall: {
+        id: 'tool-1',
+        name: 'record_metric',
+        arguments: { type: 'weight', value: 75, unit: 'kg', date: '2026-01-20' },
+      },
+      toolName: 'record_metric',
+      message: 'Registrar peso: 75 kg?',
+      iteration: 1,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    };
+
+    it('should_return_false_when_no_pending_confirmation', async () => {
+      mockConfirmationStateService.getLatest.mockResolvedValue(null);
+
+      const subject = {
+        next: vi.fn(),
+        complete: vi.fn(),
+      };
+
+      // Access private method
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (chatService as any).handlePendingConfirmationFromMessage(
+        'user-123',
+        'conv-123',
+        'sim',
+        subject
+      );
+
+      expect(result).toBe(false);
+      expect(subject.next).not.toHaveBeenCalled();
+    });
+
+    it('should_execute_tool_when_user_confirms', async () => {
+      mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
+      mockConfirmationStateService.confirm.mockResolvedValue(mockPendingConfirmation);
+      mockTrackingToolExecutor.execute.mockResolvedValue({
+        success: true,
+        content: JSON.stringify({ message: 'Registrado!' }),
+      });
+      mockMessageRepository.create.mockResolvedValue(createMockMessage());
+
+      const subject = {
+        next: vi.fn(),
+        complete: vi.fn(),
+      };
+
+      // Access private method
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (chatService as any).handlePendingConfirmationFromMessage(
+        'user-123',
+        'conv-123',
+        'sim',
+        subject
+      );
+
+      expect(result).toBe(true);
+      expect(mockTrackingToolExecutor.execute).toHaveBeenCalled();
+      expect(mockConfirmationStateService.confirm).toHaveBeenCalledWith('conv-123', 'conf-123');
+      expect(subject.complete).toHaveBeenCalled();
+    });
+
+    it('should_reject_confirmation_when_user_says_no', async () => {
+      mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
+      mockConfirmationStateService.reject.mockResolvedValue(true);
+      mockMessageRepository.create.mockResolvedValue(createMockMessage());
+
+      const subject = {
+        next: vi.fn(),
+        complete: vi.fn(),
+      };
+
+      // Access private method
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (chatService as any).handlePendingConfirmationFromMessage(
+        'user-123',
+        'conv-123',
+        'não',
+        subject
+      );
+
+      expect(result).toBe(true);
+      expect(mockTrackingToolExecutor.execute).not.toHaveBeenCalled();
+      expect(mockConfirmationStateService.reject).toHaveBeenCalledWith('conv-123', 'conf-123');
+      expect(subject.next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'response',
+          data: { content: 'Ok, cancelado.' },
+        })
+      );
+    });
+
+    it('should_clear_confirmation_and_return_false_on_correction', async () => {
+      mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
+      mockConfirmationStateService.reject.mockResolvedValue(true);
+
+      const subject = {
+        next: vi.fn(),
+        complete: vi.fn(),
+      };
+
+      // Access private method
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (chatService as any).handlePendingConfirmationFromMessage(
+        'user-123',
+        'conv-123',
+        '75.5 kg',
+        subject
+      );
+
+      expect(result).toBe(false);
+      expect(mockConfirmationStateService.reject).toHaveBeenCalledWith('conv-123', 'conf-123');
+      expect(subject.complete).not.toHaveBeenCalled();
+    });
+
+    it('should_clear_confirmation_and_return_false_on_unrelated_message', async () => {
+      mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
+      mockConfirmationStateService.reject.mockResolvedValue(true);
+
+      const subject = {
+        next: vi.fn(),
+        complete: vi.fn(),
+      };
+
+      // Access private method
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (chatService as any).handlePendingConfirmationFromMessage(
+        'user-123',
+        'conv-123',
+        'qual a previsão do tempo?',
+        subject
+      );
+
+      expect(result).toBe(false);
+      expect(mockConfirmationStateService.reject).toHaveBeenCalledWith('conv-123', 'conf-123');
+      expect(subject.complete).not.toHaveBeenCalled();
     });
   });
 });

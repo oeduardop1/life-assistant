@@ -260,6 +260,20 @@ export class ChatService {
       20 // Last 20 messages for context
     );
 
+    // Check for pending confirmation BEFORE starting tool loop
+    // This handles user responses like "sim", "não", or corrections
+    // Use findLast() to get the MOST RECENT user message (not the first one)
+    const lastUserMessage = recentMessages.findLast(m => m.role === 'user')?.content ?? '';
+    const handled = await this.handlePendingConfirmationFromMessage(
+      userId,
+      conversationId,
+      lastUserMessage,
+      subject
+    );
+    if (handled) {
+      return;
+    }
+
     // Convert to LLM message format
     const llmMessages: LLMMessage[] = recentMessages.map((msg) => ({
       role: msg.role as 'user' | 'assistant' | 'system' | 'tool',
@@ -411,6 +425,189 @@ export class ChatService {
     await this.conversationRepository.update(userId, conversationId, { title });
 
     return title;
+  }
+
+  // ==========================================================================
+  // Confirmation Intent Detection (ADR-015: Low Friction Tracking)
+  // ==========================================================================
+
+  /**
+   * User intent when responding to a pending confirmation
+   */
+  private detectUserIntent(message: string): 'confirm' | 'reject' | 'correction' | 'unrelated' {
+    const normalized = message.trim().toLowerCase();
+
+    // Confirm patterns - short affirmative responses
+    const confirmPatterns = [
+      /^(sim|yes|ok|s|pode|registr[ae]|confirm[ao]|isso|faz|faça)$/i,
+      /^pode\s+(sim|fazer|registrar)/i,
+      /^(faz|faça)\s+(isso|aí)/i,
+    ];
+    if (confirmPatterns.some(p => p.test(normalized))) {
+      return 'confirm';
+    }
+
+    // Reject patterns
+    const rejectPatterns = [
+      /^(não|no|nao|n|cancela|deixa|esquece|para)$/i,
+      /^não\s+(precisa|quero|registra)/i,
+    ];
+    if (rejectPatterns.some(p => p.test(normalized))) {
+      return 'reject';
+    }
+
+    // Correction patterns (new value or explicit correction)
+    const correctionPatterns = [
+      /^(na verdade|errei|corrigi|é|era|são)/i,
+      /^\d+[.,]?\d*\s*(kg|ml|litros?|horas?|min)/i,
+    ];
+    if (correctionPatterns.some(p => p.test(normalized))) {
+      return 'correction';
+    }
+
+    return 'unrelated';
+  }
+
+  /**
+   * Handle user response to a pending confirmation
+   * Returns true if handled (no need for tool loop), false otherwise
+   */
+  private async handlePendingConfirmationFromMessage(
+    userId: string,
+    conversationId: string,
+    userMessage: string,
+    subject: Subject<MessageEvent>
+  ): Promise<boolean> {
+    const pending = await this.confirmationStateService.getLatest(conversationId);
+    if (pending?.userId !== userId) {
+      return false;
+    }
+
+    const intent = this.detectUserIntent(userMessage);
+    this.logger.log(`Detected user intent: ${intent} for pending confirmation ${pending.confirmationId}`);
+
+    switch (intent) {
+      case 'confirm':
+        return await this.executeConfirmedToolFromMessage(pending, subject);
+
+      case 'reject':
+        await this.confirmationStateService.reject(conversationId, pending.confirmationId);
+        subject.next({ type: 'response', data: { content: 'Ok, cancelado.' } });
+        subject.next({ data: { content: 'Ok, cancelado.', done: true } });
+
+        // Save rejection message
+        await this.messageRepository.create(pending.userId, {
+          conversationId,
+          role: 'assistant',
+          content: 'Ok, cancelado.',
+          metadata: { rejectedConfirmation: { confirmationId: pending.confirmationId } },
+        });
+
+        subject.complete();
+        return true;
+
+      case 'correction':
+      case 'unrelated':
+        // Clear pending and let new tool loop handle
+        await this.confirmationStateService.reject(conversationId, pending.confirmationId);
+        this.logger.log(`Clearing pending confirmation due to ${intent} intent`);
+        return false;
+    }
+  }
+
+  /**
+   * Execute a confirmed tool from message detection and stream response
+   */
+  private async executeConfirmedToolFromMessage(
+    confirmation: StoredConfirmation,
+    subject: Subject<MessageEvent>
+  ): Promise<boolean> {
+    try {
+      const { toolCall } = confirmation;
+
+      this.logger.log(
+        `Executing confirmed tool ${toolCall.name} from message for conversation ${confirmation.conversationId}`
+      );
+
+      // Execute the tool directly
+      const result = await this.combinedExecutor.execute(toolCall, {
+        userId: confirmation.userId,
+        conversationId: confirmation.conversationId,
+      });
+
+      // Remove confirmation from Redis
+      await this.confirmationStateService.confirm(
+        confirmation.conversationId,
+        confirmation.confirmationId
+      );
+
+      // Emit tool result
+      subject.next({
+        type: 'tool_result',
+        data: { toolName: toolCall.name, result: result.content, success: result.success },
+      });
+
+      // Generate response message
+      let responseMessage: string;
+      if (!result.success) {
+        responseMessage = `Ocorreu um erro ao registrar: ${result.error ?? 'Erro desconhecido'}`;
+      } else {
+        responseMessage = this.generateToolSuccessMessage(toolCall);
+      }
+
+      subject.next({ type: 'response', data: { content: responseMessage } });
+      subject.next({ data: { content: responseMessage, done: true } });
+
+      // Save assistant message
+      await this.messageRepository.create(confirmation.userId, {
+        conversationId: confirmation.conversationId,
+        role: 'assistant',
+        content: responseMessage,
+        metadata: {
+          toolExecution: {
+            toolName: toolCall.name,
+            toolCallId: toolCall.id,
+            success: result.success,
+            error: result.error,
+          },
+        },
+      });
+
+      subject.complete();
+      return true;
+    } catch (error) {
+      this.logger.error(`Error executing confirmed tool: ${String(error)}`);
+      subject.next({
+        type: 'error',
+        data: { message: 'Erro ao executar ação confirmada.' },
+      });
+      subject.next({ data: { content: 'Erro ao executar ação confirmada.', done: true, error: 'execution_error' } });
+      subject.complete();
+      return true;
+    }
+  }
+
+  /**
+   * Generate success message for confirmed tool execution
+   */
+  private generateToolSuccessMessage(toolCall: ToolCall): string {
+    if (toolCall.name === 'record_metric') {
+      const args = toolCall.arguments;
+      const typeLabels: Record<string, string> = {
+        weight: 'peso',
+        water: 'água',
+        sleep: 'sono',
+        exercise: 'exercício',
+        mood: 'humor',
+        energy: 'energia',
+      };
+      const typeKey = typeof args.type === 'string' ? args.type : '';
+      const type = typeLabels[typeKey] ?? typeKey;
+      const value = typeof args.value === 'number' || typeof args.value === 'string' ? args.value : '';
+      const unit = typeof args.unit === 'string' ? ` ${args.unit}` : '';
+      return `Pronto! Registrei seu ${type} de ${String(value)}${unit}.`;
+    }
+    return 'Pronto! Ação executada com sucesso.';
   }
 
   // ==========================================================================
