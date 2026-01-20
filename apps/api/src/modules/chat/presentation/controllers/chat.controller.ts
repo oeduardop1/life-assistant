@@ -229,6 +229,90 @@ export class ChatController {
     return this.chatService.streamResponse(userId, conversationId);
   }
 
+  // ==========================================================================
+  // Confirmation Endpoints (ADR-015: Low Friction Tracking)
+  // ==========================================================================
+
+  /**
+   * Confirm a pending tool execution
+   *
+   * When a tool requires confirmation (e.g., record_metric), this endpoint
+   * executes the tool and returns the result via SSE stream.
+   *
+   * @see ADR-015 for Low Friction Tracking Philosophy
+   */
+  @Sse('conversations/:id/confirm/:confirmationId')
+  @Public()
+  @SkipTransform()
+  @UseGuards(SseAuthGuard)
+  @ApiOperation({ summary: 'Confirm pending tool execution' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid', description: 'Conversation ID' })
+  @ApiParam({ name: 'confirmationId', type: 'string', description: 'Confirmation ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'SSE stream with tool execution result',
+  })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 404, description: 'Confirmation not found or expired' })
+  async confirmToolExecution(
+    @SseCurrentUser() userId: string,
+    @Param('id', ParseUUIDPipe) conversationId: string,
+    @Param('confirmationId') confirmationId: string
+  ): Promise<Observable<MessageEvent>> {
+    return this.chatService.confirmToolExecution(userId, conversationId, confirmationId);
+  }
+
+  /**
+   * Reject a pending tool execution
+   *
+   * When a tool requires confirmation but the user rejects it,
+   * this endpoint cancels the tool execution.
+   */
+  @Post('conversations/:id/reject/:confirmationId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reject pending tool execution' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid', description: 'Conversation ID' })
+  @ApiParam({ name: 'confirmationId', type: 'string', description: 'Confirmation ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tool execution rejected',
+  })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  @ApiResponse({ status: 404, description: 'Confirmation not found or expired' })
+  async rejectToolExecution(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) conversationId: string,
+    @Param('confirmationId') confirmationId: string,
+    @Body('reason') reason?: string
+  ): Promise<{ success: boolean; message: string }> {
+    return this.chatService.rejectToolExecution(
+      userId,
+      conversationId,
+      confirmationId,
+      reason
+    );
+  }
+
+  /**
+   * Get pending confirmation for a conversation
+   */
+  @Get('conversations/:id/pending-confirmation')
+  @ApiOperation({ summary: 'Get pending confirmation for conversation' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending confirmation details or null',
+  })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  async getPendingConfirmation(
+    @CurrentUser('id') _userId: string,
+    @Param('id', ParseUUIDPipe) conversationId: string
+  ): Promise<{ confirmation: unknown }> {
+    const confirmation =
+      await this.chatService.getPendingConfirmation(conversationId);
+    return { confirmation };
+  }
+
   /**
    * Map Conversation entity to response DTO
    */

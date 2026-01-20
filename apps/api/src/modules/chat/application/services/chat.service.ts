@@ -6,16 +6,26 @@ import {
   searchKnowledgeTool,
   addKnowledgeTool,
   analyzeContextTool,
+  recordMetricTool,
+  getTrackingHistoryTool,
   type LLMPort,
   type Message as LLMMessage,
   type ToolLoopConfig,
   type ToolDefinition,
+  type ToolExecutor,
+  type ToolCall,
+  type ToolExecutionContext,
+  type ToolExecutionResult,
+  type PendingConfirmation,
+  createErrorResult,
 } from '@life-assistant/ai';
 import type { Conversation, Message } from '@life-assistant/database';
 import { ContextBuilderService } from './context-builder.service';
+import { ConfirmationStateService, type StoredConfirmation } from './confirmation-state.service';
 import { ConversationRepository } from '../../infrastructure/repositories/conversation.repository';
 import { MessageRepository } from '../../infrastructure/repositories/message.repository';
 import { MemoryToolExecutorService } from '../../../memory/application/services/memory-tool-executor.service';
+import { TrackingToolExecutorService } from '../../../tracking/application/services/tracking-tool-executor.service';
 import type { CreateConversationDto } from '../../presentation/dtos/create-conversation.dto';
 import type { SendMessageDto } from '../../presentation/dtos/send-message.dto';
 
@@ -41,25 +51,63 @@ export class ChatService {
   private readonly llm: LLMPort;
 
   /**
-   * Tools currently available for memory operations.
-   * More tools will be added in future milestones.
+   * Tools currently available for the chat service.
    *
    * @see docs/specs/ai.md §6.2 for tool definitions
    * @see ADR-014 for analyze_context (Real-time Inference)
+   * @see ADR-015 for Low Friction Tracking Philosophy
    */
   private readonly availableTools: ToolDefinition[] = [
+    // Memory tools
     searchKnowledgeTool,
     addKnowledgeTool,
     analyzeContextTool,
+    // Tracking tools (M2.1)
+    recordMetricTool,
+    getTrackingHistoryTool,
   ];
+
+  /**
+   * Tool name to executor mapping
+   */
+  private readonly toolToExecutorMap: Record<string, 'memory' | 'tracking'> = {
+    search_knowledge: 'memory',
+    add_knowledge: 'memory',
+    analyze_context: 'memory',
+    record_metric: 'tracking',
+    get_tracking_history: 'tracking',
+  };
+
+  /**
+   * Combined tool executor that routes to appropriate service
+   */
+  private readonly combinedExecutor: ToolExecutor;
 
   constructor(
     private readonly contextBuilder: ContextBuilderService,
+    private readonly confirmationStateService: ConfirmationStateService,
     private readonly conversationRepository: ConversationRepository,
     private readonly messageRepository: MessageRepository,
-    private readonly memoryToolExecutor: MemoryToolExecutorService
+    private readonly memoryToolExecutor: MemoryToolExecutorService,
+    private readonly trackingToolExecutor: TrackingToolExecutorService
   ) {
     this.llm = createLLMFromEnv();
+
+    // Create combined executor that routes to appropriate service
+    this.combinedExecutor = {
+      execute: async (toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult> => {
+        const executorType = this.toolToExecutorMap[toolCall.name];
+
+        switch (executorType) {
+          case 'memory':
+            return this.memoryToolExecutor.execute(toolCall, context);
+          case 'tracking':
+            return this.trackingToolExecutor.execute(toolCall, context);
+          default:
+            return createErrorResult(toolCall, new Error(`Unknown tool: ${toolCall.name}`));
+        }
+      },
+    };
   }
 
   /**
@@ -225,7 +273,7 @@ export class ChatService {
       // Create tool loop config
       const toolLoopConfig: ToolLoopConfig = {
         tools: this.availableTools,
-        executor: this.memoryToolExecutor,
+        executor: this.combinedExecutor,
         context: { userId, conversationId },
         systemPrompt,
         maxIterations: 5,
@@ -249,8 +297,20 @@ export class ChatService {
         },
       };
 
-      // Run tool loop - tools execute directly without confirmation
+      // Run tool loop - may pause for confirmation
       const result = await runToolLoop(this.llm, llmMessages, toolLoopConfig);
+
+      // Check if tool loop paused for confirmation (ADR-015)
+      if (result.pendingConfirmation) {
+        await this.handlePendingConfirmation(
+          userId,
+          conversationId,
+          result.pendingConfirmation,
+          result.content,
+          subject
+        );
+        return;
+      }
 
       // Emit final content - handle empty responses
       let fullContent = result.content;
@@ -351,5 +411,261 @@ export class ChatService {
     await this.conversationRepository.update(userId, conversationId, { title });
 
     return title;
+  }
+
+  // ==========================================================================
+  // Confirmation Handling (ADR-015: Low Friction Tracking)
+  // ==========================================================================
+
+  /**
+   * Handle pending confirmation from tool loop
+   *
+   * Stores the confirmation state and emits a confirmation request via SSE.
+   */
+  private async handlePendingConfirmation(
+    userId: string,
+    conversationId: string,
+    pendingConfirmation: PendingConfirmation,
+    llmContent: string,
+    subject: Subject<MessageEvent>
+  ): Promise<void> {
+    const { toolCall, toolDefinition, iteration } = pendingConfirmation;
+
+    this.logger.log(
+      `Tool ${toolCall.name} requires confirmation for conversation ${conversationId}`
+    );
+
+    // Store confirmation state in Redis
+    const storedConfirmation = await this.confirmationStateService.store(
+      userId,
+      conversationId,
+      toolCall,
+      toolDefinition,
+      iteration
+    );
+
+    // Build confirmation message with LLM content
+    const confirmationMessage = llmContent || storedConfirmation.message;
+
+    // Emit confirmation request via SSE
+    subject.next({
+      type: 'confirmation_required',
+      data: {
+        confirmationId: storedConfirmation.confirmationId,
+        toolName: toolCall.name,
+        toolArgs: toolCall.arguments,
+        message: confirmationMessage,
+        expiresAt: storedConfirmation.expiresAt,
+      },
+    });
+
+    // Save assistant message asking for confirmation
+    await this.messageRepository.create(userId, {
+      conversationId,
+      role: 'assistant',
+      content: confirmationMessage,
+      metadata: {
+        pendingConfirmation: {
+          confirmationId: storedConfirmation.confirmationId,
+          toolName: toolCall.name,
+          toolArgs: toolCall.arguments,
+        },
+      },
+    });
+
+    subject.next({
+      data: { content: confirmationMessage, done: true, awaitingConfirmation: true },
+    });
+
+    subject.complete();
+  }
+
+  /**
+   * Get pending confirmation for a conversation
+   */
+  async getPendingConfirmation(
+    conversationId: string
+  ): Promise<StoredConfirmation | null> {
+    return this.confirmationStateService.getLatest(conversationId);
+  }
+
+  /**
+   * Confirm a pending tool execution
+   *
+   * Executes the tool and continues the conversation.
+   */
+  async confirmToolExecution(
+    userId: string,
+    conversationId: string,
+    confirmationId: string
+  ): Promise<Observable<MessageEvent>> {
+    const subject = new Subject<MessageEvent>();
+
+    // Get and remove confirmation from Redis
+    const confirmation = await this.confirmationStateService.confirm(
+      conversationId,
+      confirmationId
+    );
+
+    if (!confirmation) {
+      subject.next({
+        data: {
+          content: 'A confirmação expirou ou não foi encontrada. Por favor, tente novamente.',
+          done: true,
+          error: 'confirmation_expired',
+        },
+      });
+      subject.complete();
+      return subject.asObservable();
+    }
+
+    // Process confirmed tool execution
+    this.processConfirmedToolExecution(userId, conversationId, confirmation, subject).catch(
+      (error: unknown) => {
+        this.logger.error('Confirmed tool execution error:', error);
+        subject.next({
+          data: {
+            content: 'Erro ao executar a ação. Por favor, tente novamente.',
+            done: true,
+            error: 'execution_error',
+          },
+        });
+        subject.complete();
+      }
+    );
+
+    return subject.asObservable();
+  }
+
+  /**
+   * Reject a pending tool execution
+   *
+   * Cancels the tool and responds to the user.
+   */
+  async rejectToolExecution(
+    userId: string,
+    conversationId: string,
+    confirmationId: string,
+    reason?: string
+  ): Promise<{ success: boolean; message: string }> {
+    const rejected = await this.confirmationStateService.reject(
+      conversationId,
+      confirmationId
+    );
+
+    if (!rejected) {
+      return {
+        success: false,
+        message: 'A confirmação expirou ou não foi encontrada.',
+      };
+    }
+
+    // Save rejection message
+    const rejectionMessage = reason
+      ? `Entendi, não vou registrar. ${reason}`
+      : 'Tudo bem, não vou registrar essa informação.';
+
+    await this.messageRepository.create(userId, {
+      conversationId,
+      role: 'assistant',
+      content: rejectionMessage,
+      metadata: {
+        rejectedConfirmation: {
+          confirmationId,
+          reason,
+        },
+      },
+    });
+
+    return {
+      success: true,
+      message: rejectionMessage,
+    };
+  }
+
+  /**
+   * Process a confirmed tool execution
+   */
+  private async processConfirmedToolExecution(
+    userId: string,
+    conversationId: string,
+    confirmation: StoredConfirmation,
+    subject: Subject<MessageEvent>
+  ): Promise<void> {
+    const { toolCall } = confirmation;
+
+    this.logger.log(
+      `Executing confirmed tool ${toolCall.name} for conversation ${conversationId}`
+    );
+
+    // Execute the tool directly
+    const result = await this.combinedExecutor.execute(toolCall, {
+      userId,
+      conversationId,
+    });
+
+    if (!result.success) {
+      subject.next({
+        data: {
+          content: `Ocorreu um erro ao registrar: ${result.error ?? 'Erro desconhecido'}`,
+          done: true,
+          error: result.error,
+        },
+      });
+
+      await this.messageRepository.create(userId, {
+        conversationId,
+        role: 'assistant',
+        content: `Ocorreu um erro ao registrar: ${result.error ?? 'Erro desconhecido'}`,
+        metadata: {
+          toolExecution: {
+            toolName: toolCall.name,
+            success: false,
+            error: result.error,
+          },
+        },
+      });
+
+      subject.complete();
+      return;
+    }
+
+    // Parse result content for a nice message
+    let successMessage: string;
+    try {
+      const resultData = JSON.parse(result.content) as { message?: string };
+      successMessage = resultData.message ?? 'Registrado com sucesso!';
+    } catch {
+      successMessage = 'Registrado com sucesso!';
+    }
+
+    // Emit success
+    subject.next({
+      data: {
+        content: successMessage,
+        done: true,
+        toolResult: {
+          toolName: toolCall.name,
+          success: true,
+        },
+      },
+    });
+
+    // Save success message
+    await this.messageRepository.create(userId, {
+      conversationId,
+      role: 'assistant',
+      content: successMessage,
+      metadata: {
+        toolExecution: {
+          toolName: toolCall.name,
+          toolCallId: toolCall.id,
+          success: true,
+          result: result.content,
+        },
+      },
+    });
+
+    subject.complete();
   }
 }

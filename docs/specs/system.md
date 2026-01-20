@@ -315,9 +315,7 @@ enum TrackingType {
   WATER = 'water',
   SLEEP = 'sleep',
   EXERCISE = 'exercise',
-  MEAL = 'meal',
-  MEDICATION = 'medication',
-  
+
   // Financeiro
   EXPENSE = 'expense',
   INCOME = 'income',

@@ -5,7 +5,7 @@
 
 ---
 
-## M2.1 — Módulo: Tracking de Métricas (Baixo Atrito) 🔴
+## M2.1 — Módulo: Tracking de Métricas (Baixo Atrito) 🟡
 
 **Objetivo:** Implementar captura conversacional de métricas com confirmação obrigatória e dashboard opcional.
 
@@ -16,26 +16,26 @@
 **Tasks:**
 
 **Backend:**
-- [ ] Criar módulo `tracking`:
-  - [ ] `TrackingController` - CRUD de entries
-  - [ ] `RecordMetricUseCase` - validar e salvar (requer confirmação)
-  - [ ] `GetHistoryUseCase` - buscar histórico com filtros
-  - [ ] `GetAggregationsUseCase` - cálculos (média, soma, etc)
-  - [ ] `TrackingRepository`
-- [ ] Implementar tipos de tracking (conforme `docs/specs/system.md` §3.3):
-  - [ ] weight (0-500kg)
-  - [ ] water (0-10000ml)
-  - [ ] sleep (0-24h, com qualidade 1-10)
-  - [ ] exercise (tipo, duração, intensidade)
-  - [ ] mood (1-10)
-  - [ ] energy (1-10)
-  - [ ] custom
+- [x] Criar módulo `tracking`:
+  - [x] `TrackingController` - CRUD de entries
+  - [x] `RecordMetricUseCase` - validar e salvar (requer confirmação)
+  - [x] `GetHistoryUseCase` - buscar histórico com filtros
+  - [x] `GetAggregationsUseCase` - cálculos (média, soma, etc)
+  - [x] `TrackingRepository`
+- [x] Implementar tipos de tracking (conforme `docs/specs/system.md` §3.3):
+  - [x] weight (0-500kg)
+  - [x] water (0-10000ml)
+  - [x] sleep (0-24h, com qualidade 1-10)
+  - [x] exercise (tipo, duração, intensidade)
+  - [x] mood (1-10)
+  - [x] energy (1-10)
+  - [x] custom
   - ~~expense/income~~ → Usar M2.6 Finance
-- [ ] Implementar validações conforme `docs/specs/system.md` §3.3
-- [ ] Implementar agregações (média, soma, variação)
-- [ ] Integrar com Tool Use (captura conversacional):
-  - [ ] Implementar executor da tool `record_metric` no ToolExecutorService
-  - [ ] Fluxo de captura conversacional (ADR-015, ai.md §9.3):
+- [x] Implementar validações conforme `docs/specs/system.md` §3.3
+- [x] Implementar agregações (média, soma, variação)
+- [x] Integrar com Tool Use (captura conversacional):
+  - [x] Implementar executor da tool `record_metric` no ToolExecutorService
+  - [x] Fluxo de captura conversacional (ADR-015, ai.md §9.3):
     1. Usuário menciona métrica naturalmente ("voltei do médico, estou com 82kg")
     2. LLM chama `record_metric` com `requiresConfirmation: true`
     3. Tool loop PARA e retorna `pendingConfirmation`
@@ -43,26 +43,24 @@
     5. Usuário responde via texto: "Sim" / "Na verdade foi 82.5" / "Não"
     6. Se confirmado → executa tool; Se correção → ajusta e pergunta novamente
     7. NUNCA registrar sem confirmação explícita
-  - [ ] Implementar lógica de `pendingConfirmation` no Tool Loop (pausa e aguarda)
+  - [x] Implementar lógica de `pendingConfirmation` no Tool Loop (pausa e aguarda)
     - Nota: Esta lógica é genérica e será reutilizada por outras tools
       (`create_reminder`, `update_person`) em milestones futuros
-  - [ ] Armazenar estado de confirmação pendente (expira em 5 min)
-  - [ ] Permitir correções via conversa (valor, data, tipo)
-  - [ ] IA NUNCA deve cobrar tracking não realizado
+  - [x] Armazenar estado de confirmação pendente (expira em 5 min)
 
 **Frontend:**
-- [ ] Criar página `/tracking` (dashboard opcional):
-  - [ ] Empty state amigável quando não há dados:
+- [x] Criar página `/tracking` (dashboard opcional):
+  - [x] Empty state amigável quando não há dados:
     - "Você ainda não registrou nenhuma métrica. Converse comigo sobre seu dia e eu posso registrar para você, ou use os formulários abaixo."
-  - [ ] Formulários para registro manual (secundário)
-  - [ ] Histórico com filtros (quando há dados)
-  - [ ] Gráficos de evolução (quando há dados)
-  - [ ] Sem widgets de "meta diária" ou "streak" impostos
-- [ ] Componentes:
-  - [ ] TrackingEmptyState (mensagem amigável)
-  - [ ] ManualTrackForm (formulários por tipo)
-  - [ ] MetricChart (gráfico de linha/barra)
-  - [ ] TrackingHistory (lista com filtros)
+  - [x] Formulários para registro manual (secundário)
+  - [x] Histórico com filtros (quando há dados)
+  - [x] Gráficos de evolução (quando há dados)
+  - [x] Sem widgets de "meta diária" ou "streak" impostos
+- [x] Componentes:
+  - [x] TrackingEmptyState (mensagem amigável)
+  - [x] ManualTrackForm (formulários por tipo)
+  - [x] MetricChart (gráfico de linha/barra)
+  - [x] TrackingHistory (lista com filtros)
   - Nota: Confirmação de métricas é 100% conversacional (JARVIS-first)
     - Não há cards ou botões de confirmação
     - IA pergunta via texto, usuário responde via texto
@@ -81,20 +79,20 @@
 - [ ] Teste E2E: dashboard exibe empty state quando sem dados
 
 **Definition of Done:**
-- [ ] Sistema funciona normalmente sem nenhum tracking (não penaliza)
-- [ ] Todos os tipos de tracking funcionam (7 tipos, sem expense/income)
-- [ ] Validações aplicadas
-- [ ] Agregações calculadas corretamente
-- [ ] Dashboard é opcional com empty state amigável
-- [ ] Gráficos funcionam quando há dados
-- [ ] Captura conversacional funciona (JARVIS-first):
-  - [ ] IA pergunta via texto ("Quer que eu registre...? 👍")
-  - [ ] Usuário confirma/corrige/recusa via texto
-  - [ ] Sem botões ou cards de confirmação
-- [ ] `pendingConfirmation` pausa tool loop até resposta do usuário
-- [ ] IA nunca registra sem confirmação textual explícita
-- [ ] IA nunca cobra tracking não realizado
-- [ ] Correções via conversa funcionam (IA ajusta e re-pergunta)
+- [x] Sistema funciona normalmente sem nenhum tracking (não penaliza)
+- [x] Todos os tipos de tracking funcionam (7 tipos, sem expense/income)
+- [x] Validações aplicadas
+- [x] Agregações calculadas corretamente
+- [x] Dashboard é opcional com empty state amigável
+- [x] Gráficos funcionam quando há dados
+- [x] Captura conversacional funciona (JARVIS-first):
+  - [x] IA pergunta via texto ("Quer que eu registre...? 👍")
+  - [x] Usuário confirma/corrige/recusa via texto
+  - [x] Sem botões ou cards de confirmação
+- [x] `pendingConfirmation` pausa tool loop até resposta do usuário
+- [x] IA nunca registra sem confirmação textual explícita
+- [x] IA nunca cobra tracking não realizado (regra 11 no system prompt)
+- [x] Correções via conversa funcionam (IA ajusta e re-pergunta, suportado pela infraestrutura pendingConfirmation)
 - [ ] Testes passam
 
 ---

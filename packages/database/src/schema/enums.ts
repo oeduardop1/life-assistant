@@ -41,8 +41,6 @@ export const trackingTypeEnum = pgEnum('tracking_type', [
   'water',
   'sleep',
   'exercise',
-  'meal',
-  'medication',
   'expense',
   'income',
   'investment',

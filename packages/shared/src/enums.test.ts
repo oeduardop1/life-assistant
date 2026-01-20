@@ -48,24 +48,26 @@ describe('LifeArea', () => {
 });
 
 describe('TrackingType', () => {
-  it('should have 13 values', () => {
-    expect(Object.values(TrackingType)).toHaveLength(13);
+  // 11 types: M2.1 (7) + M2.4 (1) + M2.6 (3) - meal/medication removed per ADR-015
+  it('should have 11 values', () => {
+    expect(Object.values(TrackingType)).toHaveLength(11);
   });
 
   it('should have correct values', () => {
+    // M2.1 types
     expect(TrackingType.WEIGHT).toBe('weight');
     expect(TrackingType.WATER).toBe('water');
     expect(TrackingType.SLEEP).toBe('sleep');
     expect(TrackingType.EXERCISE).toBe('exercise');
-    expect(TrackingType.MEAL).toBe('meal');
-    expect(TrackingType.MEDICATION).toBe('medication');
-    expect(TrackingType.EXPENSE).toBe('expense');
-    expect(TrackingType.INCOME).toBe('income');
-    expect(TrackingType.INVESTMENT).toBe('investment');
-    expect(TrackingType.HABIT).toBe('habit');
     expect(TrackingType.MOOD).toBe('mood');
     expect(TrackingType.ENERGY).toBe('energy');
     expect(TrackingType.CUSTOM).toBe('custom');
+    // M2.4 types
+    expect(TrackingType.HABIT).toBe('habit');
+    // M2.6 types
+    expect(TrackingType.EXPENSE).toBe('expense');
+    expect(TrackingType.INCOME).toBe('income');
+    expect(TrackingType.INVESTMENT).toBe('investment');
   });
 });
 

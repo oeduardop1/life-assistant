@@ -1,6 +1,7 @@
 /**
  * Tool loop service for orchestrating LLM conversations with tool use.
  * @module services/tool-loop.service
+ * @see ADR-015 for Low Friction Tracking Philosophy (pendingConfirmation)
  */
 
 import type {
@@ -17,6 +18,25 @@ import type {
 } from './tool-executor.service.js';
 import { createErrorResult, createSuccessResult } from './tool-executor.service.js';
 import { MaxIterationsExceededError, ToolNotFoundError } from '../errors/ai.errors.js';
+
+/**
+ * Pending confirmation state for tools that require user confirmation.
+ * @see ADR-015 for Low Friction Tracking Philosophy
+ */
+export interface PendingConfirmation {
+  /** Tool call that needs confirmation */
+  toolCall: ToolCall;
+  /** Tool definition (for access to metadata) */
+  toolDefinition: ToolDefinition;
+  /** Current iteration number */
+  iteration: number;
+  /** Messages up to this point (for resuming) */
+  messages: Message[];
+  /** All tool calls made before this one */
+  previousToolCalls: ToolCall[];
+  /** All tool results before this one */
+  previousToolResults: ToolExecutionResult[];
+}
 
 /**
  * Configuration for the tool loop.
@@ -38,6 +58,8 @@ export interface ToolLoopConfig {
   maxTokens?: number;
   /** Callback for each iteration (useful for logging/debugging) */
   onIteration?: (iteration: number, response: ChatWithToolsResponse) => void;
+  /** Skip confirmation check (for resuming after confirmation) */
+  skipConfirmationFor?: string;
 }
 
 /**
@@ -54,6 +76,8 @@ export interface ToolLoopResult {
   toolResults: ToolExecutionResult[];
   /** Final conversation messages */
   messages: Message[];
+  /** Pending confirmation if loop paused for user confirmation */
+  pendingConfirmation?: PendingConfirmation;
 }
 
 /**
@@ -66,22 +90,30 @@ export const DEFAULT_MAX_ITERATIONS = 5;
  *
  * The loop continues until:
  * 1. The LLM responds without tool calls (completed)
- * 2. Max iterations reached (throws MaxIterationsExceededError)
+ * 2. A tool requires confirmation (returns pendingConfirmation)
+ * 3. Max iterations reached (throws MaxIterationsExceededError)
  *
  * @param llm - LLM adapter to use
  * @param messages - Initial conversation messages
  * @param config - Tool loop configuration
- * @returns Tool loop result
+ * @returns Tool loop result (may include pendingConfirmation)
+ *
+ * @see ADR-015 for Low Friction Tracking Philosophy (pendingConfirmation)
  *
  * @example
  * ```typescript
  * const result = await runToolLoop(llm, messages, {
- *   tools: [searchKnowledgeTool, addKnowledgeTool],
+ *   tools: [searchKnowledgeTool, recordMetricTool],
  *   executor: myToolExecutor,
  *   systemPrompt: 'You are a helpful assistant.',
  * });
  *
- * console.log(result.content);
+ * if (result.pendingConfirmation) {
+ *   // Tool requires user confirmation before execution
+ *   console.log('Awaiting confirmation for:', result.pendingConfirmation.toolCall.name);
+ * } else {
+ *   console.log(result.content);
+ * }
  * ```
  */
 export async function runToolLoop(
@@ -93,6 +125,11 @@ export async function runToolLoop(
   const messages: Message[] = [...initialMessages];
   const allToolCalls: ToolCall[] = [];
   const allToolResults: ToolExecutionResult[] = [];
+
+  // Create a map of tool definitions for quick lookup
+  const toolDefinitionMap = new Map<string, ToolDefinition>(
+    config.tools.map((tool) => [tool.name, tool])
+  );
 
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
     // Call LLM with tools
@@ -125,8 +162,41 @@ export async function runToolLoop(
       toolCalls: response.toolCalls,
     });
 
-    // Process each tool call - execute directly without confirmation
+    // Process each tool call
     for (const toolCall of response.toolCalls) {
+      const toolDefinition = toolDefinitionMap.get(toolCall.name);
+
+      // Check if tool requires confirmation (ADR-015)
+      // Skip confirmation check if this tool was already confirmed
+      const shouldSkipConfirmation = config.skipConfirmationFor === toolCall.id;
+
+      if (
+        toolDefinition?.requiresConfirmation === true &&
+        !shouldSkipConfirmation
+      ) {
+        // Return pending confirmation - loop pauses here
+        // The caller is responsible for:
+        // 1. Storing this state
+        // 2. Asking user for confirmation
+        // 3. Resuming the loop with confirmed/rejected tool call
+        return {
+          content: response.content,
+          iterations: iteration,
+          toolCalls: allToolCalls,
+          toolResults: allToolResults,
+          messages,
+          pendingConfirmation: {
+            toolCall,
+            toolDefinition,
+            iteration,
+            messages: [...messages],
+            previousToolCalls: [...allToolCalls],
+            previousToolResults: [...allToolResults],
+          },
+        };
+      }
+
+      // Execute tool (either doesn't require confirmation or was confirmed)
       allToolCalls.push(toolCall);
 
       const result = await executeToolCall(config.executor, toolCall, config.context);

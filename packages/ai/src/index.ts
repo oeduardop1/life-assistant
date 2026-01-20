@@ -75,6 +75,7 @@ export {
   DEFAULT_MAX_ITERATIONS,
   type ToolLoopConfig,
   type ToolLoopResult,
+  type PendingConfirmation,
 } from './services/index.js';
 
 // ============================================================================

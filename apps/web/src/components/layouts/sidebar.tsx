@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageSquare, Brain, Settings } from 'lucide-react';
+import { Home, MessageSquare, Brain, Activity, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +23,11 @@ const navigation = [
     name: 'Chat',
     href: '/chat',
     icon: MessageSquare,
+  },
+  {
+    name: 'Tracking',
+    href: '/tracking',
+    icon: Activity,
   },
   {
     name: 'Memória',

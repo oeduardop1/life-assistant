@@ -24,13 +24,14 @@ export enum LifeArea {
 }
 
 // TrackingType - Tipos de métricas rastreáveis
+// M2.1: weight, water, sleep, exercise, mood, energy, custom
+// M2.4: habit
+// M2.6: expense, income, investment
 export enum TrackingType {
   WEIGHT = 'weight',
   WATER = 'water',
   SLEEP = 'sleep',
   EXERCISE = 'exercise',
-  MEAL = 'meal',
-  MEDICATION = 'medication',
   EXPENSE = 'expense',
   INCOME = 'income',
   INVESTMENT = 'investment',

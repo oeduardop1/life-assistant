@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { MemoryModule } from './modules/memory/memory.module';
+import { TrackingModule } from './modules/tracking/tracking.module';
 import { AdminModule } from './modules/admin/admin.module';
 
 // Jobs
@@ -66,6 +67,7 @@ import { AllExceptionsFilter } from './common/filters/index';
     OnboardingModule,
     ChatModule,
     MemoryModule,
+    TrackingModule,
 
     // Background jobs
     JobsModule,
