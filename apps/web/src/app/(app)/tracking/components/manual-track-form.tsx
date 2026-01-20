@@ -119,13 +119,20 @@ export function ManualTrackForm({ open, onOpenChange, defaultType = 'weight' }: 
         custom: 'personal_growth',
       };
 
+      // Combine date and time into ISO 8601 if time is provided
+      let entryTime: string | undefined;
+      if (data.entryTime) {
+        // data.entryTime is "HH:mm", combine with date to create ISO 8601
+        entryTime = `${data.entryDate}T${data.entryTime}:00`;
+      }
+
       await createEntry.mutateAsync({
         type: data.type,
         area: areaMap[data.type],
         value,
         unit: data.unit || defaultUnit,
         entryDate: data.entryDate,
-        entryTime: data.entryTime || undefined,
+        entryTime,
         source: 'form',
       });
 
