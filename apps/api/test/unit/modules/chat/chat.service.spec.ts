@@ -21,6 +21,18 @@ vi.mock('@life-assistant/ai', () => ({
     description: 'Analyze context for connections, patterns, and contradictions',
     parameters: {},
   },
+  // Tracking tools (M2.1)
+  recordMetricTool: {
+    name: 'record_metric',
+    description: 'Record a metric entry',
+    parameters: {},
+    requiresConfirmation: true,
+  },
+  getTrackingHistoryTool: {
+    name: 'get_tracking_history',
+    description: 'Get tracking history',
+    parameters: {},
+  },
 }));
 
 import { ChatService } from '../../../../src/modules/chat/application/services/chat.service.js';
@@ -97,7 +109,18 @@ describe('ChatService', () => {
   let mockContextBuilder: {
     buildSystemPrompt: ReturnType<typeof vi.fn>;
   };
+  let mockConfirmationStateService: {
+    store: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    getLatest: ReturnType<typeof vi.fn>;
+    confirm: ReturnType<typeof vi.fn>;
+    reject: ReturnType<typeof vi.fn>;
+    clearAll: ReturnType<typeof vi.fn>;
+  };
   let mockMemoryToolExecutor: {
+    execute: ReturnType<typeof vi.fn>;
+  };
+  let mockTrackingToolExecutor: {
     execute: ReturnType<typeof vi.fn>;
   };
   let mockLLM: {
@@ -131,7 +154,20 @@ describe('ChatService', () => {
       buildSystemPrompt: vi.fn(),
     };
 
+    mockConfirmationStateService = {
+      store: vi.fn(),
+      get: vi.fn(),
+      getLatest: vi.fn(),
+      confirm: vi.fn(),
+      reject: vi.fn(),
+      clearAll: vi.fn(),
+    };
+
     mockMemoryToolExecutor = {
+      execute: vi.fn(),
+    };
+
+    mockTrackingToolExecutor = {
       execute: vi.fn(),
     };
 
@@ -146,12 +182,14 @@ describe('ChatService', () => {
     vi.mocked(createLLMFromEnv).mockReturnValue(mockLLM as unknown as ReturnType<typeof createLLMFromEnv>);
 
     // Create service instance with mocks
-    // Constructor order: contextBuilder, conversationRepository, messageRepository, memoryToolExecutor
+    // Constructor order: contextBuilder, confirmationStateService, conversationRepository, messageRepository, memoryToolExecutor, trackingToolExecutor
     chatService = new ChatService(
       mockContextBuilder as unknown as ConstructorParameters<typeof ChatService>[0],
-      mockConversationRepository as unknown as ConstructorParameters<typeof ChatService>[1],
-      mockMessageRepository as unknown as ConstructorParameters<typeof ChatService>[2],
-      mockMemoryToolExecutor as unknown as ConstructorParameters<typeof ChatService>[3]
+      mockConfirmationStateService as unknown as ConstructorParameters<typeof ChatService>[1],
+      mockConversationRepository as unknown as ConstructorParameters<typeof ChatService>[2],
+      mockMessageRepository as unknown as ConstructorParameters<typeof ChatService>[3],
+      mockMemoryToolExecutor as unknown as ConstructorParameters<typeof ChatService>[4],
+      mockTrackingToolExecutor as unknown as ConstructorParameters<typeof ChatService>[5]
     );
   });
 

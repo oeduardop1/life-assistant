@@ -116,8 +116,8 @@ describe('enums', () => {
       expect(trackingTypeEnum.enumName).toBe('tracking_type');
     });
 
-    it('should have 13 tracking types', () => {
-      expect(trackingTypeEnum.enumValues).toHaveLength(13);
+    it('should have 11 tracking types', () => {
+      expect(trackingTypeEnum.enumValues).toHaveLength(11);
     });
 
     it('should have all expected values', () => {
@@ -126,8 +126,6 @@ describe('enums', () => {
         'water',
         'sleep',
         'exercise',
-        'meal',
-        'medication',
         'expense',
         'income',
         'investment',

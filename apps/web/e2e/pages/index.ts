@@ -6,3 +6,4 @@ export { DashboardPage } from './dashboard.page';
 export { OnboardingPage } from './onboarding.page';
 export { ChatPage } from './chat.page';
 export { MemoryPage } from './memory.page';
+export { TrackingPage } from './tracking.page';

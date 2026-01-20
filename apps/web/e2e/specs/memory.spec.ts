@@ -80,7 +80,8 @@ test.describe('Memory Page Load', () => {
     await page.waitForLoadState('networkidle');
 
     // Page should have the main elements
-    await expect(page.getByText('Conhecimentos')).toBeVisible();
+    // Use first() since 'Conhecimentos' appears in both sidebar and page title
+    await expect(page.getByText('Conhecimentos').first()).toBeVisible();
     await expect(memoryPage.addButton).toBeVisible();
     await expect(memoryPage.exportButton).toBeVisible();
   });
@@ -98,9 +99,8 @@ test.describe('Memory Page Load', () => {
     // Wait for page to load
     await page.waitForLoadState('networkidle');
 
-    // Should show search and filter elements
+    // Should show search input (auto-search with debounce, no button)
     await expect(memoryPage.searchInput).toBeVisible();
-    await expect(memoryPage.searchButton).toBeVisible();
   });
 });
 

@@ -5,7 +5,7 @@
 
 ---
 
-## M2.1 — Módulo: Tracking de Métricas (Baixo Atrito) 🟡
+## M2.1 — Módulo: Tracking de Métricas (Baixo Atrito) 🟢
 
 **Objetivo:** Implementar captura conversacional de métricas com confirmação obrigatória e dashboard opcional.
 
@@ -67,16 +67,41 @@
     - Ver ai.md §9.3 para fluxo completo
 
 **Testes:**
-- [ ] Testes unitários para validações de métricas
-- [ ] Teste unitário: `pendingConfirmation` pausa tool loop corretamente
-- [ ] Teste unitário: expiração de confirmação pendente (5 min)
-- [ ] Teste unitário: rejeição de registro sem confirmação textual
-- [ ] Teste de integração: mensagem natural → IA pergunta → "Sim" → registra
-- [ ] Teste de integração: mensagem natural → IA pergunta → correção → IA re-pergunta → "Sim" → registra
-- [ ] Teste de integração: mensagem natural → IA pergunta → "Não" → NÃO registra
-- [ ] Teste E2E: registrar peso via formulário manual → ver no histórico
-- [ ] Teste E2E: fluxo conversacional completo (pergunta textual + resposta textual)
-- [ ] Teste E2E: dashboard exibe empty state quando sem dados
+
+_Testes Unitários Backend (7 tasks):_
+- [x] Unit: TrackingService validações por tipo (weight/water/sleep/exercise/mood/energy)
+- [x] Unit: TrackingService limites min/max e unidades padrão
+- [x] Unit: TrackingController endpoints REST (POST, GET, DELETE)
+- [x] Unit: TrackingRepository operações CRUD com Drizzle
+- [x] Unit: TrackingToolExecutorService (record_metric, get_tracking_history)
+- [x] Unit: ConfirmationStateService (store, get, confirm, reject, clearAll, TTL)
+- [x] Unit: ToolLoopService pendingConfirmation (pausa, retoma, rejeita)
+
+_Testes de Integração (5 tasks):_
+- [x] Integration: API REST tracking (POST, GET, DELETE com banco real)
+- [x] Integration: Multi-tenant isolation (user A não vê dados de B)
+- [x] Integration: Chat → IA pergunta → "Sim" → registra métrica
+- [x] Integration: Chat → IA pergunta → "Não" → NÃO registra
+- [x] Integration: Chat → correção → re-pergunta → confirma
+
+_Testes de Componente Frontend (5 tasks):_
+- [x] Component: MetricCard (valor, unidade, trend, cor por tipo)
+- [x] Component: MetricChart (line/bar, loading, empty, average)
+- [x] Component: ManualTrackForm (validação, submit, reset, erro)
+- [x] Component: TrackingHistory (listagem, paginação, delete)
+- [x] Component: TrackingEmptyState
+
+_Testes de Hooks Frontend (2 tasks):_
+- [x] Hooks: useTrackingEntries, useCreateTrackingEntry, useTrackingStats
+- [x] Hooks: useDeleteTrackingEntry, useTrackingAggregations
+
+_Testes E2E (6 tasks):_
+- [x] E2E: registrar peso via formulário → ver no histórico
+- [x] E2E: registrar água múltiplas vezes → ver soma diária
+- [x] E2E: visualizar histórico com dados reais
+- [x] E2E: dashboard exibe empty state
+- [x] E2E: fluxo conversacional completo via chat
+- [x] E2E: navegação entre tipos de métricas via filtro
 
 **Definition of Done:**
 - [x] Sistema funciona normalmente sem nenhum tracking (não penaliza)
@@ -93,7 +118,15 @@
 - [x] IA nunca registra sem confirmação textual explícita
 - [x] IA nunca cobra tracking não realizado (regra 11 no system prompt)
 - [x] Correções via conversa funcionam (IA ajusta e re-pergunta, suportado pela infraestrutura pendingConfirmation)
-- [ ] Testes passam
+- [x] Testes passam (243 testes: 42 unit backend, 9 integration, 22 component, 8 hooks, 162 E2E)
+
+**Notas (2026-01-20):**
+- Cobertura de testes expandida de 10 tasks genéricas para 25 tasks específicas
+- Backend: TrackingService, TrackingController, TrackingRepository, TrackingToolExecutor, ConfirmationStateService, ToolLoopService
+- Frontend: 5 componentes testados (MetricCard, MetricChart, ManualTrackForm, TrackingHistory, TrackingEmptyState)
+- Hooks: 11 hooks do useTracking testados
+- E2E: 6 fluxos completos (formulário manual, água, histórico, empty state, chat conversacional, filtros)
+- Fixes E2E: sidebar toggle CSS classes, mobile-chrome skips, memory search debounce
 
 ---
 

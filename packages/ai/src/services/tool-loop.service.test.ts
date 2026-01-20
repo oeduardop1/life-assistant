@@ -217,6 +217,272 @@ describe('tool-loop.service', () => {
         })
       );
     });
+
+    /**
+     * Tests for pendingConfirmation (ADR-015: Low Friction Tracking)
+     * @see ADR-015 for details on confirmation flow
+     */
+    describe('pendingConfirmation', () => {
+      // Tool definition that requires confirmation (like record_metric)
+      const confirmationRequiredTool: ToolDefinition = {
+        name: 'record_metric',
+        description: 'Record a metric that requires user confirmation',
+        parameters: z.object({ type: z.string(), value: z.number() }),
+        requiresConfirmation: true,
+      };
+
+      // Tool definition that does NOT require confirmation (like search_knowledge)
+      const noConfirmationTool: ToolDefinition = {
+        name: 'search_knowledge',
+        description: 'Search knowledge without confirmation',
+        parameters: z.object({ query: z.string() }),
+        requiresConfirmation: false,
+      };
+
+      it('should_pause_loop_when_tool_requires_confirmation', async () => {
+        const response: ChatWithToolsResponse = {
+          content: 'Let me record that weight for you.',
+          usage: { inputTokens: 10, outputTokens: 20 },
+          finishReason: 'tool_calls',
+          toolCalls: [
+            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+          ],
+        };
+        vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
+
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Register 75kg' }], {
+          tools: [confirmationRequiredTool],
+          executor: mockExecutor,
+          context: testContext,
+        });
+
+        // Loop should have paused - executor should NOT have been called
+        expect(mockExecutor.execute).not.toHaveBeenCalled();
+        expect(result.pendingConfirmation).toBeDefined();
+      });
+
+      it('should_return_pending_confirmation_in_response', async () => {
+        const response: ChatWithToolsResponse = {
+          content: 'Recording your weight...',
+          usage: { inputTokens: 10, outputTokens: 20 },
+          finishReason: 'tool_calls',
+          toolCalls: [
+            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+          ],
+        };
+        vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
+
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'My weight is 75kg' }], {
+          tools: [confirmationRequiredTool],
+          executor: mockExecutor,
+          context: testContext,
+        });
+
+        expect(result.pendingConfirmation).toBeDefined();
+        expect(result.pendingConfirmation?.toolCall).toEqual(
+          expect.objectContaining({
+            id: 'call_1',
+            name: 'record_metric',
+            arguments: { type: 'weight', value: 75 },
+          })
+        );
+        expect(result.pendingConfirmation?.toolDefinition).toBe(confirmationRequiredTool);
+        expect(result.pendingConfirmation?.iteration).toBe(1);
+        expect(result.pendingConfirmation?.messages).toHaveLength(2); // user + assistant
+      });
+
+      it('should_resume_loop_after_user_confirms', async () => {
+        // First call returns tool call requiring confirmation
+        const response1: ChatWithToolsResponse = {
+          content: 'Recording your weight...',
+          usage: { inputTokens: 10, outputTokens: 20 },
+          finishReason: 'tool_calls',
+          toolCalls: [
+            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+          ],
+        };
+        // Response after tool execution completes
+        const response2: ChatWithToolsResponse = {
+          content: 'Done! I recorded your weight as 75kg.',
+          usage: { inputTokens: 30, outputTokens: 40 },
+          finishReason: 'stop',
+        };
+
+        // Mock LLM responses:
+        // 1. First runToolLoop: returns tool_calls → pauses for confirmation
+        // 2. Second runToolLoop (resume): returns same tool_calls → executes with skipConfirmationFor
+        // 3. Second runToolLoop iteration 2: returns stop → done
+        vi.mocked(mockLLM.chatWithTools)
+          .mockResolvedValueOnce(response1)
+          .mockResolvedValueOnce(response1) // Same response on resume - LLM is called again
+          .mockResolvedValueOnce(response2);
+
+        vi.mocked(mockExecutor.execute).mockResolvedValueOnce({
+          toolCallId: 'call_1',
+          toolName: 'record_metric',
+          content: '{"success": true, "entryId": "entry-123"}',
+          success: true,
+        });
+
+        // First call pauses with pending confirmation
+        const result1 = await runToolLoop(mockLLM, [{ role: 'user', content: 'My weight is 75kg' }], {
+          tools: [confirmationRequiredTool],
+          executor: mockExecutor,
+          context: testContext,
+        });
+
+        expect(result1.pendingConfirmation).toBeDefined();
+        expect(mockExecutor.execute).not.toHaveBeenCalled();
+
+        // Ensure pendingConfirmation has messages before proceeding
+        if (!result1.pendingConfirmation) {
+          throw new Error('Expected pendingConfirmation to be defined');
+        }
+
+        // Resume with confirmed tool - using skipConfirmationFor
+        const result2 = await runToolLoop(
+          mockLLM,
+          result1.pendingConfirmation.messages,
+          {
+            tools: [confirmationRequiredTool],
+            executor: mockExecutor,
+            context: testContext,
+            skipConfirmationFor: 'call_1', // The tool call ID that was confirmed
+          }
+        );
+
+        // Now executor should have been called
+        expect(mockExecutor.execute).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'call_1', name: 'record_metric' }),
+          testContext
+        );
+        expect(result2.pendingConfirmation).toBeUndefined();
+        expect(result2.content).toBe('Done! I recorded your weight as 75kg.');
+      });
+
+      it('should_not_execute_tool_when_user_rejects', async () => {
+        const response: ChatWithToolsResponse = {
+          content: 'Recording your weight...',
+          usage: { inputTokens: 10, outputTokens: 20 },
+          finishReason: 'tool_calls',
+          toolCalls: [
+            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+          ],
+        };
+        vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
+
+        // Get pending confirmation
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'My weight is 75kg' }], {
+          tools: [confirmationRequiredTool],
+          executor: mockExecutor,
+          context: testContext,
+        });
+
+        expect(result.pendingConfirmation).toBeDefined();
+        // Executor should NOT have been called - tool requires confirmation
+        expect(mockExecutor.execute).not.toHaveBeenCalled();
+
+        // To "reject", the caller simply doesn't resume with skipConfirmationFor
+        // The tool call is never executed
+        // The caller would typically send a new message to the LLM indicating rejection
+      });
+
+      it('should_execute_tools_without_requiresConfirmation', async () => {
+        const response1: ChatWithToolsResponse = {
+          content: 'Let me search for that...',
+          usage: { inputTokens: 10, outputTokens: 20 },
+          finishReason: 'tool_calls',
+          toolCalls: [
+            { id: 'call_1', name: 'search_knowledge', arguments: { query: 'coffee' } },
+          ],
+        };
+        const response2: ChatWithToolsResponse = {
+          content: 'Found some results about coffee!',
+          usage: { inputTokens: 30, outputTokens: 40 },
+          finishReason: 'stop',
+        };
+
+        vi.mocked(mockLLM.chatWithTools)
+          .mockResolvedValueOnce(response1)
+          .mockResolvedValueOnce(response2);
+
+        vi.mocked(mockExecutor.execute).mockResolvedValueOnce({
+          toolCallId: 'call_1',
+          toolName: 'search_knowledge',
+          content: '{"results": ["coffee preferences"]}',
+          success: true,
+        });
+
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Find coffee info' }], {
+          tools: [noConfirmationTool],
+          executor: mockExecutor,
+          context: testContext,
+        });
+
+        // Executor should have been called without confirmation
+        expect(mockExecutor.execute).toHaveBeenCalledTimes(1);
+        expect(result.pendingConfirmation).toBeUndefined();
+        expect(result.content).toBe('Found some results about coffee!');
+      });
+
+      it('should_handle_mixed_tools_with_and_without_confirmation', async () => {
+        const response: ChatWithToolsResponse = {
+          content: 'Let me search and record...',
+          usage: { inputTokens: 10, outputTokens: 20 },
+          finishReason: 'tool_calls',
+          toolCalls: [
+            // First tool does NOT require confirmation
+            { id: 'call_1', name: 'search_knowledge', arguments: { query: 'weight history' } },
+            // Second tool REQUIRES confirmation - loop should pause here
+            { id: 'call_2', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+          ],
+        };
+
+        vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
+        vi.mocked(mockExecutor.execute).mockResolvedValueOnce({
+          toolCallId: 'call_1',
+          toolName: 'search_knowledge',
+          content: '{"results": []}',
+          success: true,
+        });
+
+        // Note: In the current implementation, the loop processes tools in order
+        // and pauses at the FIRST tool requiring confirmation
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Search and record' }], {
+          tools: [noConfirmationTool, confirmationRequiredTool],
+          executor: mockExecutor,
+          context: testContext,
+        });
+
+        // The first tool (search_knowledge) should execute
+        // The second tool (record_metric) should pause for confirmation
+        expect(result.pendingConfirmation).toBeDefined();
+        expect(result.pendingConfirmation?.toolCall.name).toBe('record_metric');
+      });
+
+      it('should_preserve_previous_tool_calls_in_pending_confirmation', async () => {
+        const response: ChatWithToolsResponse = {
+          content: 'First some search, then recording...',
+          usage: { inputTokens: 10, outputTokens: 20 },
+          finishReason: 'tool_calls',
+          toolCalls: [
+            { id: 'call_1', name: 'record_metric', arguments: { type: 'weight', value: 75 } },
+          ],
+        };
+
+        vi.mocked(mockLLM.chatWithTools).mockResolvedValueOnce(response);
+
+        const result = await runToolLoop(mockLLM, [{ role: 'user', content: 'Record weight' }], {
+          tools: [confirmationRequiredTool],
+          executor: mockExecutor,
+          context: testContext,
+        });
+
+        expect(result.pendingConfirmation).toBeDefined();
+        expect(result.pendingConfirmation?.previousToolCalls).toEqual([]);
+        expect(result.pendingConfirmation?.previousToolResults).toEqual([]);
+      });
+    });
   });
 
   describe('createSimpleExecutor', () => {

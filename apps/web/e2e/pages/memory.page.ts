@@ -16,7 +16,6 @@ export class MemoryPage {
   readonly itemsList: Locator;
   readonly filterBar: Locator;
   readonly searchInput: Locator;
-  readonly searchButton: Locator;
   readonly typeFilter: Locator;
   readonly areaFilter: Locator;
   readonly sourceFilter: Locator;
@@ -46,7 +45,6 @@ export class MemoryPage {
     this.itemsList = page.locator('[data-testid="knowledge-items-list"]');
     this.filterBar = page.locator('[data-testid="memory-filter-bar"]');
     this.searchInput = page.getByPlaceholder('Buscar conhecimentos...');
-    this.searchButton = page.getByRole('button', { name: 'Buscar' });
     this.typeFilter = page.locator('[data-testid="filter-type"]');
     this.areaFilter = page.locator('[data-testid="filter-area"]');
     this.sourceFilter = page.locator('[data-testid="filter-source"]');
@@ -88,11 +86,13 @@ export class MemoryPage {
   }
 
   /**
-   * Search for knowledge items
+   * Search for knowledge items (auto-search with 300ms debounce)
    */
   async search(query: string) {
     await this.searchInput.fill(query);
-    await this.searchButton.click();
+    // Wait for debounce (300ms) + network
+    await this.page.waitForTimeout(500);
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -100,7 +100,9 @@ export class MemoryPage {
    */
   async clearSearch() {
     await this.searchInput.clear();
-    await this.searchButton.click();
+    // Wait for debounce (300ms) + network
+    await this.page.waitForTimeout(500);
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
