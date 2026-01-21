@@ -181,7 +181,9 @@ _Testes E2E (6 tasks):_
     description: 'Analisa tendências e correlações entre métricas do usuário. Use quando perguntarem sobre evolução, padrões ou relações entre métricas.',
     parameters: {
       types: z.array(TrackingType).min(1).max(5),  // Métricas para analisar
-      days: z.number().min(7).max(90).default(30), // Período
+      days: z.number().min(7).max(365).default(30), // Período em dias (7-365)
+      period: z.enum(['week', 'month', 'quarter', 'semester', 'year', 'all']).optional(), // Período predefinido (sobrescreve days)
+      // Mapeamento: week=7, month=30, quarter=90, semester=180, year=365, all=todos os dados
       includeCorrelations: z.boolean().default(true), // Calcular correlações
     },
     requiresConfirmation: false,  // READ tool
@@ -192,12 +194,19 @@ _Testes E2E (6 tasks):_
   - [ ] `calculateCorrelation(dataA: number[], dataB: number[])`: Retorna coeficiente de Pearson (-1 a 1)
   - [ ] `interpretCorrelation(coefficient: number, typeA: TrackingType, typeB: TrackingType)`: Gera texto interpretativo
   - [ ] `generateInsights(metrics: MetricTrend[], correlations: Correlation[])`: Gera lista de insights acionáveis
+  - [ ] `calculateDataDensity(dataPoints: number, days: number)`: Calcula densidade de registros
+    - Retorna: 'high' (>=70%), 'medium' (30-70%), 'low' (<30%)
+  - [ ] `generateSparseDataSuggestion(density: DataDensity, days: number, type: TrackingType)`: Gera sugestão para dados esparsos
 - [ ] Criar `GetTrendsUseCase`:
+  - [ ] Resolver período predefinido para dias (week=7, month=30, quarter=90, semester=180, year=365)
+  - [ ] Para 'all': buscar data do primeiro registro do usuário
   - [ ] Buscar dados via `GetHistoryUseCase` (M2.1)
   - [ ] Buscar agregações via `GetAggregationsUseCase` (M2.1)
+  - [ ] Calcular densidade de dados por métrica
   - [ ] Aplicar análise de tendência por métrica
   - [ ] Calcular correlações entre pares de métricas (se `includeCorrelations=true`)
   - [ ] Gerar insights baseados em padrões detectados
+  - [ ] Gerar sugestões para métricas com densidade='low'
   - [ ] Retornar estrutura completa para LLM interpretar
 - [ ] Implementar executor da tool `get_trends` no `ToolExecutorService`
 - [ ] Formato de retorno:
@@ -211,7 +220,9 @@ _Testes E2E (6 tasks):_
         min: number,
         max: number,
         dataPoints: number,    // Quantidade de registros
-        confidence: 'high' | 'medium' | 'low', // Baseado em dataPoints
+        confidence: 'high' | 'medium' | 'low', // Baseado em dataPoints E density
+        density: 'high' | 'medium' | 'low',    // Densidade de dados (registros/dias)
+        suggestion?: string,   // Sugestão se dados esparsos
       }
     },
     correlations: [
@@ -225,9 +236,13 @@ _Testes E2E (6 tasks):_
     ],
     insights: string[],        // Lista de insights acionáveis
     warnings: [
-      { metric: TrackingType, message: string } // Ex: "Dados insuficientes"
+      {
+        metric: TrackingType,
+        message: string,
+        type: 'sparse_data' | 'insufficient_data'  // Tipo do aviso
+      }
     ],
-    period: { start: Date, end: Date, days: number },
+    period: { start: Date, end: Date, days: number, preset?: string },
   }
   ```
 
@@ -261,20 +276,31 @@ _Testes E2E (6 tasks):_
   - [ ] `analyzeTrend`: dados decrescentes → trend='down', change < 0
   - [ ] `analyzeTrend`: dados estáveis (variação < 5%) → trend='stable'
   - [ ] `analyzeTrend`: poucos dados (< 3) → confidence='low'
+  - [ ] `analyzeTrend`: período 180 dias funciona corretamente
+  - [ ] `analyzeTrend`: período 365 dias funciona corretamente
   - [ ] `calculateCorrelation`: correlação perfeita positiva → 1.0
   - [ ] `calculateCorrelation`: correlação perfeita negativa → -1.0
   - [ ] `calculateCorrelation`: sem correlação → próximo de 0
   - [ ] `interpretCorrelation`: gera texto correto por força/direção
   - [ ] `generateInsights`: gera insights relevantes
+  - [ ] `calculateDataDensity`: 10 dias, 7 registros → 'high' (70%)
+  - [ ] `calculateDataDensity`: 30 dias, 9 registros → 'low' (30%)
+  - [ ] `calculateDataDensity`: 90 dias, 45 registros → 'medium' (50%)
+  - [ ] `calculateDataDensity`: 365 dias, 50 registros → 'low' (~14%)
+  - [ ] `generateSparseDataSuggestion`: density='low' → retorna sugestão
 - [ ] Testes unitários para GetTrendsUseCase:
   - [ ] Retorna estrutura correta com métricas válidas
-  - [ ] Retorna warnings para métricas sem dados
+  - [ ] Retorna warnings para métricas sem dados (type='insufficient_data')
+  - [ ] Retorna warnings para dados esparsos (type='sparse_data')
   - [ ] Calcula correlações apenas se `includeCorrelations=true`
   - [ ] Limita correlações a pares relevantes (não calcula sleep×sleep)
+  - [ ] Resolve período predefinido corretamente (week→7, month→30, etc.)
+  - [ ] Período 'all' busca todos os dados disponíveis
 - [ ] Testes de integração:
   - [ ] Tool `get_trends` executa via ToolExecutorService
   - [ ] Usa dados reais de tracking_entries
   - [ ] Correlação sleep×mood retorna resultado coerente
+  - [ ] Período 'year' funciona com dados de 365 dias
 
 **Definition of Done:**
 - [ ] Scores calculados corretamente
@@ -287,8 +313,14 @@ _Testes E2E (6 tasks):_
   - [ ] Calcula correlações entre métricas (Pearson)
   - [ ] Gera insights acionáveis em português
   - [ ] Retorna warnings para dados insuficientes
+  - [ ] Suporta períodos de 7 a 365 dias
+  - [ ] Suporta períodos predefinidos (week/month/quarter/semester/year/all)
+  - [ ] Calcula densidade de dados por métrica (high/medium/low)
+  - [ ] Gera warnings tipados (sparse_data/insufficient_data)
+  - [ ] Gera sugestões quando dados são insuficientes para análise confiável
 - [ ] IA consegue responder "como está minha saúde?" com análise de tendências
 - [ ] IA consegue responder "sono afeta meu humor?" com correlação
+- [ ] IA consegue responder "como está meu peso no último ano?" com análise de longo prazo
 - [ ] Testes passam
 
 ---

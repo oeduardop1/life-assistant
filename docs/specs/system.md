@@ -399,6 +399,33 @@ enum ExpenseCategory {
 | Sono médio | `AVG(duration)` | 7 dias |
 | Humor médio | `AVG(mood)` | 7 dias |
 
+#### Densidade de Dados para Análise de Tendências
+
+Quando a IA analisa tendências via `get_trends`, o sistema calcula a **densidade de dados**:
+
+```
+density = dataPoints / days
+```
+
+| Densidade | Fórmula | Comportamento |
+|-----------|---------|---------------|
+| **Alta** | >= 70% | Análise confiável, sem warnings |
+| **Média** | 30-70% | Análise possível, confidence='medium' |
+| **Baixa** | < 30% | Warning 'sparse_data', suggestion gerada |
+
+**Exemplos:**
+- 7 registros em 10 dias = 70% → density='high'
+- 9 registros em 30 dias = 30% → density='low'
+- 2 registros em 90 dias = 2.2% → density='low' + warning
+
+**Regras:**
+1. Densidade afeta `confidence` junto com `dataPoints`
+2. Se density='low': sistema gera `suggestion` com recomendação
+3. Nunca penalizar usuário por dados esparsos (ADR-015)
+4. Sugestões são informativas, não cobranças:
+   - ✅ "Para análise mais precisa de 90 dias, tente registrar peso semanalmente"
+   - ❌ "Dados insuficientes! Registre mais para ver resultados"
+
 #### Critérios de Aceite
 
 **Captura Conversacional (modo principal):**

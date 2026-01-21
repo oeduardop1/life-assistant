@@ -622,10 +622,11 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: 'get_trends',
-    description: 'Analisa tendências e correlações entre métricas do usuário. Use quando perguntarem sobre evolução, padrões ou relações entre métricas (ex: "como está meu peso?", "sono afeta meu humor?", "estou melhorando?").',
+    description: 'Analisa tendências e correlações entre métricas do usuário. Use quando perguntarem sobre evolução, padrões ou relações entre métricas (ex: "como está meu peso?", "sono afeta meu humor?", "estou melhorando?", "como foi meu ano?").',
     parameters: z.object({
       types: z.array(z.enum(['weight', 'water', 'sleep', 'exercise', 'mood', 'energy', 'custom'])).min(1).max(5).describe('Tipos de métricas para analisar'),
-      days: z.number().min(7).max(90).default(30).describe('Período em dias para análise'),
+      days: z.number().min(7).max(365).default(30).describe('Período em dias para análise (7-365)'),
+      period: z.enum(['week', 'month', 'quarter', 'semester', 'year', 'all']).optional().describe('Período predefinido (sobrescreve days): week=7, month=30, quarter=90, semester=180, year=365, all=todos'),
       includeCorrelations: z.boolean().default(true).describe('Se deve calcular correlações entre métricas'),
     }),
     requiresConfirmation: false,
@@ -636,6 +637,10 @@ export const tools: ToolDefinition[] = [
       { types: ["sleep", "mood"], days: 14, includeCorrelations: true },
       // Análise completa de saúde
       { types: ["weight", "sleep", "exercise", "mood"], days: 30, includeCorrelations: true },
+      // Análise de longo prazo (1 ano)
+      { types: ["weight"], period: "year", includeCorrelations: false },
+      // Todos os dados disponíveis
+      { types: ["mood", "energy"], period: "all", includeCorrelations: true },
     ],
   },
   {
