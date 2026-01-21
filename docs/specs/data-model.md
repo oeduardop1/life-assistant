@@ -1910,7 +1910,7 @@ export type NewVariableExpense = typeof variableExpenses.$inferInsert;
 ```typescript
 // packages/database/src/schema/finance/debts.ts
 
-import { pgTable, uuid, varchar, decimal, integer, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, decimal, integer, timestamp, boolean, text, index } from 'drizzle-orm/pg-core';
 import { debtStatusEnum } from '../enums';
 import { users } from '../users';
 
@@ -1925,13 +1925,18 @@ export const debts = pgTable('debts', {
   // Total debt
   totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
 
-  // Installments
-  totalInstallments: integer('total_installments').notNull(),
-  installmentAmount: decimal('installment_amount', { precision: 12, scale: 2 }).notNull(),
-  currentInstallment: integer('current_installment').notNull().default(1), // Parcela atual
+  // Negotiation status
+  // - true: Dívida negociada com parcelas definidas (entra no Total Orçado)
+  // - false: Dívida pendente de negociação (NÃO entra no Total Orçado, apenas no Total de Dívidas)
+  isNegotiated: boolean('is_negotiated').notNull().default(true),
 
-  // Due date
-  dueDay: integer('due_day').notNull(), // 1-31
+  // Installments (nullable quando isNegotiated = false)
+  totalInstallments: integer('total_installments'), // Obrigatório se isNegotiated = true
+  installmentAmount: decimal('installment_amount', { precision: 12, scale: 2 }), // Obrigatório se isNegotiated = true
+  currentInstallment: integer('current_installment').default(1), // Parcela atual (1 = primeira parcela a pagar)
+
+  // Due date (nullable quando isNegotiated = false)
+  dueDay: integer('due_day'), // 1-31, obrigatório se isNegotiated = true
 
   // Status
   status: debtStatusEnum('status').notNull().default('active'),
@@ -1939,18 +1944,35 @@ export const debts = pgTable('debts', {
   // Currency
   currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
 
+  // Notes (útil para contexto da dívida/negociação)
+  notes: text('notes'),
+
   // Timestamps
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   userIdIdx: index('debts_user_id_idx').on(table.userId),
   statusIdx: index('debts_status_idx').on(table.status),
+  isNegotiatedIdx: index('debts_is_negotiated_idx').on(table.isNegotiated),
 }));
 
 // Types
 export type Debt = typeof debts.$inferSelect;
 export type NewDebt = typeof debts.$inferInsert;
 ```
+
+**Regras de Validação:**
+- Se `isNegotiated = true`: campos `totalInstallments`, `installmentAmount`, `dueDay` são obrigatórios
+- Se `isNegotiated = false`: campos de parcelas são ignorados (dívida pendente de negociação)
+- Ao pagar parcela: incrementar `currentInstallment`
+- Se `currentInstallment > totalInstallments`: status automaticamente `paid_off`
+
+**Cálculos de Progresso (por dívida):**
+- Parcelas pagas: `currentInstallment - 1`
+- Parcelas restantes: `totalInstallments - (currentInstallment - 1)`
+- Progresso (%): `((currentInstallment - 1) / totalInstallments) * 100`
+- Valor pago: `(currentInstallment - 1) * installmentAmount`
+- Valor restante: `totalAmount - valorPago`
 
 #### 4.14.5 Investments (Investimentos)
 
@@ -2992,5 +3014,5 @@ pnpm drizzle-kit studio
 
 ---
 
-*Última atualização: 19 Janeiro 2026*
-*Revisão: Adicionado Finance Module (M2.2) com 5 novas tabelas (incomes, bills, variable_expenses, debts, investments) e 6 novos enums. Total: 31 tabelas.*
+*Última atualização: 21 Janeiro 2026*
+*Revisão: Dívidas não negociadas (isNegotiated), campos de parcelas nullable, campo notes, cálculos de progresso por dívida*

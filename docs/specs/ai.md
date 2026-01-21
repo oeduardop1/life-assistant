@@ -360,6 +360,10 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **get_tracking_history**: Obter histórico de métricas
 - **get_trends**: Analisar tendências e correlações entre métricas. Use quando perguntarem sobre evolução, padrões ou relações entre métricas (ex: "como está meu peso?", "sono afeta meu humor?")
 - **get_finance_summary**: Obter resumo financeiro (KPIs, contas pendentes, parcelas). Use quando perguntarem sobre finanças ou situação financeira
+- **get_pending_bills**: Listar contas fixas pendentes de pagamento. Use para lembrar o usuário de contas a pagar
+- **mark_bill_paid**: Marcar conta fixa como paga. Use quando o usuário informar que pagou uma conta
+- **create_expense**: Registrar despesa variável. Use quando o usuário mencionar um gasto
+- **get_debt_progress**: Obter progresso de pagamento das dívidas. Use para mostrar evolução das dívidas
 - **update_person**: Atualizar informações de pessoa do CRM
 - **save_decision**: Salvar decisão importante para acompanhamento futuro (M1.11)
   - ✅ Usar para: decisões significativas (carreira, finanças, relacionamentos, saúde) que terão consequências mensuráveis
@@ -691,15 +695,143 @@ export const tools: ToolDefinition[] = [
     // interface FinanceSummary {
     //   kpis: {
     //     income: number;        // Renda do mês (actualAmount)
-    //     budgeted: number;      // Total orçado
+    //     budgeted: number;      // Total orçado (excluindo dívidas não negociadas)
     //     spent: number;         // Total gasto
     //     balance: number;       // Saldo (income - spent)
     //     invested: number;      // Total investido
     //   };
-    //   pendingBills: Array<{ name: string; amount: number; dueDate: string; daysUntilDue: number }>;
+    //   debts: {
+    //     totalDebts: number;           // Soma de todas as dívidas (negociadas + não negociadas)
+    //     monthlyInstallment: number;   // Soma das parcelas mensais (só negociadas)
+    //     totalPaid: number;            // Total já pago em dívidas
+    //     totalRemaining: number;       // Total restante a pagar
+    //     negotiatedCount: number;      // Quantidade de dívidas negociadas
+    //     pendingNegotiationCount: number; // Quantidade de dívidas não negociadas
+    //   };
+    //   pendingBills: Array<{ name: string; amount: number; dueDate: string; daysUntilDue: number; status: 'pending'|'overdue' }>;
     //   upcomingInstallments: Array<{ debtName: string; installment: string; amount: number; dueDate: string; daysUntilDue: number }>;
     //   alerts: string[];        // Alertas (contas vencidas, orçamento estourado, etc.)
     //   monthYear: string;       // Período no formato YYYY-MM
+    // }
+  },
+  {
+    name: 'get_pending_bills',
+    description: 'Retorna contas fixas pendentes de pagamento no mês. Use para lembrar o usuário de contas a pagar ou verificar status de pagamentos.',
+    parameters: z.object({
+      month: z.number().min(1).max(12).optional()
+        .describe('Mês (1-12). Se omitido, usa mês atual'),
+      year: z.number().min(2020).max(2100).optional()
+        .describe('Ano. Se omitido, usa ano atual'),
+    }),
+    requiresConfirmation: false,
+    inputExamples: [
+      {},
+      { month: 1, year: 2026 },
+    ],
+    // Retorno esperado:
+    // interface PendingBillsResponse {
+    //   bills: Array<{
+    //     id: string;
+    //     name: string;
+    //     category: string;
+    //     amount: number;
+    //     dueDay: number;
+    //     status: 'pending' | 'overdue';
+    //     daysUntilDue: number;
+    //   }>;
+    //   summary: {
+    //     totalPending: number;
+    //     totalOverdue: number;
+    //     countPending: number;
+    //     countOverdue: number;
+    //   };
+    //   monthYear: string;
+    // }
+  },
+  {
+    name: 'mark_bill_paid',
+    description: 'Marca uma conta fixa como paga no mês. Use quando o usuário informar que pagou uma conta específica.',
+    parameters: z.object({
+      billId: z.string().uuid()
+        .describe('ID da conta fixa (UUID)'),
+      month: z.number().min(1).max(12).optional()
+        .describe('Mês do pagamento. Se omitido, usa mês atual'),
+      year: z.number().min(2020).max(2100).optional()
+        .describe('Ano do pagamento. Se omitido, usa ano atual'),
+    }),
+    requiresConfirmation: true, // WRITE operation
+    inputExamples: [
+      { billId: '123e4567-e89b-12d3-a456-426614174000' },
+      { billId: '123e4567-e89b-12d3-a456-426614174000', month: 1, year: 2026 },
+    ],
+    // Retorno esperado:
+    // interface MarkBillPaidResponse {
+    //   success: boolean;
+    //   bill: { id: string; name: string; amount: number; };
+    //   paidAt: string; // ISO date
+    // }
+  },
+  {
+    name: 'create_expense',
+    description: 'Cria uma nova despesa variável. Use quando o usuário mencionar um gasto ou quiser registrar uma despesa.',
+    parameters: z.object({
+      name: z.string().min(1).max(100)
+        .describe('Nome da despesa'),
+      category: z.enum(['alimentacao', 'transporte', 'lazer', 'saude', 'educacao', 'vestuario', 'outros'])
+        .describe('Categoria da despesa'),
+      budgetedAmount: z.number().positive().optional()
+        .describe('Valor orçado (planejado)'),
+      actualAmount: z.number().positive().optional()
+        .describe('Valor real gasto'),
+      isRecurring: z.boolean().optional().default(false)
+        .describe('Se é despesa recorrente mensal'),
+    }),
+    requiresConfirmation: true, // WRITE operation
+    inputExamples: [
+      { name: 'Mercado', category: 'alimentacao', actualAmount: 450.00 },
+      { name: 'Uber', category: 'transporte', budgetedAmount: 200, actualAmount: 180, isRecurring: true },
+    ],
+    // Retorno esperado:
+    // interface CreateExpenseResponse {
+    //   success: boolean;
+    //   expense: { id: string; name: string; category: string; actualAmount: number; };
+    // }
+  },
+  {
+    name: 'get_debt_progress',
+    description: 'Retorna progresso de pagamento das dívidas negociadas. Inclui parcelas pagas, restantes e percentual de conclusão.',
+    parameters: z.object({
+      debtId: z.string().uuid().optional()
+        .describe('ID da dívida específica. Se omitido, retorna todas as dívidas.'),
+    }),
+    requiresConfirmation: false,
+    inputExamples: [
+      {},
+      { debtId: '123e4567-e89b-12d3-a456-426614174000' },
+    ],
+    // Retorno esperado:
+    // interface DebtProgressResponse {
+    //   debts: Array<{
+    //     id: string;
+    //     name: string;
+    //     creditor?: string;
+    //     totalAmount: number;
+    //     installmentAmount: number;
+    //     totalInstallments: number;
+    //     paidInstallments: number;
+    //     remainingInstallments: number;
+    //     totalPaid: number;
+    //     totalRemaining: number;
+    //     percentComplete: number;
+    //     nextDueDate?: string;
+    //     isNegotiated: boolean;
+    //   }>;
+    //   summary: {
+    //     totalDebts: number;
+    //     totalPaid: number;
+    //     totalRemaining: number;
+    //     averageProgress: number;
+    //   };
     // }
   },
 
@@ -1938,8 +2070,8 @@ Fingir que sabe algo que não sabe
 
 | Categoria | Tools | Confirmação |
 |-----------|-------|-------------|
-| **Read** | `search_knowledge`, `get_tracking_history`, `get_trends`, `get_person`, `analyze_context`, `get_finance_summary` | ❌ Não |
-| **Write** | `record_metric`, `update_metric`, `delete_metric`, `add_knowledge`, `create_reminder`, `update_person` | ✅ Sim |
+| **Read** | `search_knowledge`, `get_tracking_history`, `get_trends`, `get_person`, `analyze_context`, `get_finance_summary`, `get_pending_bills`, `get_debt_progress` | ❌ Não |
+| **Write** | `record_metric`, `update_metric`, `delete_metric`, `add_knowledge`, `create_reminder`, `update_person`, `mark_bill_paid`, `create_expense` | ✅ Sim |
 
 ### 9.2 Regras de Confirmação
 
@@ -1951,12 +2083,16 @@ Fingir que sabe algo que não sabe
 | `get_person` | ❌ Não | Apenas leitura |
 | `analyze_context` | ❌ Não | Apenas leitura (análise de contexto) |
 | `get_finance_summary` | ❌ Não | Apenas leitura (resumo financeiro) |
+| `get_pending_bills` | ❌ Não | Apenas leitura (contas pendentes) |
+| `get_debt_progress` | ❌ Não | Apenas leitura (progresso de dívidas) |
 | `record_metric` | ✅ Sim | Modifica dados |
 | `update_metric` | ✅ Sim | Modifica dados existentes |
 | `delete_metric` | ✅ Sim | Remove dados existentes |
 | `add_knowledge` | ❌ Não | IA confirma naturalmente na resposta |
 | `create_reminder` | ✅ Sim | Cria agendamento |
 | `update_person` | ✅ Sim | Modifica dados |
+| `mark_bill_paid` | ✅ Sim | Modifica status de pagamento |
+| `create_expense` | ✅ Sim | Cria registro financeiro |
 
 **Exceções (não requer confirmação via UI):**
 - `add_knowledge`: IA salva diretamente e confirma na resposta (ex: "Anotei que você é consultor de investimentos")
@@ -2368,5 +2504,5 @@ interface QualityEvaluation {
 
 ---
 
-*Última atualização: 19 Janeiro 2026*
-*Revisão: Adicionado tool get_finance_summary (§4.1, §6.2, §9.1, §9.2) para módulo Finance (M2.2)*
+*Última atualização: 21 Janeiro 2026*
+*Revisão: Adicionados 4 novos tools de Finance (get_pending_bills, mark_bill_paid, create_expense, get_debt_progress) e atualizado get_finance_summary com KPIs de dívidas (§4.1, §6.2, §9.1, §9.2) para módulo Finance (M2.2)*

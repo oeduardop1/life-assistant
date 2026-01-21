@@ -516,10 +516,17 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 - Categorias configuráveis
 
 **Dívidas (Debts):**
-- Nome, credor, valor total, número de parcelas
-- Valor e dia de vencimento da parcela
+- Nome, credor, valor total
+- Dívidas negociadas: número de parcelas, valor da parcela, dia de vencimento
+- Dívidas não negociadas: apenas valor total conhecido (aguardando negociação)
+  - Campo de notas para contexto da negociação
+  - Não entram no Total Orçado (sem parcelas definidas)
+  - Podem ser marcadas como "negociada" quando parcelas forem definidas
 - Progresso visual: parcela X de Y (barra de progresso)
-- Alerta 3 dias antes de parcela vencer
+- Overview por dívida: parcelas pagas, valor pago, valor restante, % conclusão
+- Pagar parcela: incrementa contador, atualiza progresso automaticamente
+- Quitação automática ao pagar última parcela
+- Alerta 3 dias antes de parcela vencer (apenas dívidas negociadas)
 - Status: ativa, quitada, renegociada, inadimplente
 
 **Investimentos:**
@@ -532,10 +539,15 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 **Dashboard Financeiro:**
 - KPIs principais:
   - Renda do Mês (soma de receitas)
-  - Total Orçado (compromissos previstos)
+  - Total Orçado (compromissos previstos - exclui dívidas não negociadas)
   - Total Gasto (dinheiro que saiu)
   - Saldo (renda - gasto)
   - Total Investido (patrimônio em investimentos)
+- KPIs de Dívidas:
+  - Total de Dívidas (todas - negociadas + pendentes de negociação)
+  - Parcela Mensal Total (soma das parcelas de dívidas ativas)
+  - Total Já Pago (valor quitado em todas as dívidas)
+  - Total Restante (quanto ainda falta pagar)
 - Gráficos:
   - Orçado vs Real (barras comparativas)
   - Distribuição por categoria (pizza)
@@ -549,6 +561,26 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 - Dia do vencimento: conta/parcela atrasada
 - Dia 1 do mês: "Configure seu orçamento de [mês]"
 - Último dia: "Resumo de [mês]: Gastou R$ X de R$ Y"
+
+**Acesso via Conversa (IA):**
+
+O usuário pode interagir com suas finanças através de conversa natural com a IA:
+
+*Consultas:*
+- "Qual meu resumo financeiro deste mês?" → get_finance_summary
+- "Quais contas ainda preciso pagar?" → get_pending_bills
+- "Como está o pagamento das minhas dívidas?" → get_debt_progress
+- "Quanto já paguei do financiamento do carro?" → get_debt_progress
+
+*Ações:*
+- "Paguei a conta de luz" → mark_bill_paid (com confirmação)
+- "Gastei R$150 no mercado ontem" → create_expense (com confirmação)
+- "Acabei de pagar a parcela do cartão" → (futuro: pay_installment)
+
+*Alertas Proativos:*
+- IA lembra contas próximas do vencimento durante conversa
+- IA alerta sobre contas vencidas ao iniciar chat
+- IA pode sugerir resumo semanal de gastos vs orçamento
 
 **Funcionalidades Futuras (não implementadas em M2.2):**
 - Patrimônio líquido (ativos - passivos)
@@ -1175,5 +1207,5 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 
 ---
 
-*Última atualização: 19 Janeiro 2026*
-*Revisão: Documentado Sistema de Decisões como M1.11 Decision Support Core + M3.7 Decision Follow-up (ADR-016). Tabelas existentes no banco serão ativadas com schema TypeScript, tools, e frontend.*
+*Última atualização: 21 Janeiro 2026*
+*Revisão: Dívidas não negociadas, novos KPIs de dívidas (Total de Dívidas, Parcela Mensal Total, Total Já Pago, Total Restante), overview por dívida com progresso*

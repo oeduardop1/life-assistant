@@ -159,6 +159,8 @@ _Testes E2E (6 tasks):_
 **Tasks:**
 
 **Backend:**
+
+_Módulo e Estrutura:_
 - [ ] Criar módulo `finance`:
   - [ ] `FinanceController` - CRUD de todas as entidades
   - [ ] `IncomeService` - gerenciar rendas
@@ -167,108 +169,430 @@ _Testes E2E (6 tasks):_
   - [ ] `DebtService` - gerenciar dívidas com parcelas
   - [ ] `InvestmentService` - gerenciar investimentos
   - [ ] `FinanceSummaryUseCase` - calcular KPIs do dashboard
-- [ ] Criar tabelas (migrations):
-  - [ ] `incomes` - fontes de renda (nome, previsto, real, recorrente)
-  - [ ] `bills` - contas fixas (nome, valor, vencimento, status, categoria, recorrente)
-  - [ ] `variable_expenses` - despesas variáveis (nome, previsto, real, recorrente, mês/ano)
-  - [ ] `debts` - dívidas (nome, total, parcelas, valor_parcela, parcela_atual, vencimento)
-  - [ ] `investments` - investimentos (nome, meta, atual, aporte_mensal, prazo)
-- [ ] Implementar recorrências automáticas:
-  - [ ] Job mensal para gerar registros de contas fixas recorrentes
-  - [ ] Job mensal para gerar registros de despesas variáveis recorrentes
-  - [ ] Status inicial: `pending` (a ser marcado como `paid`)
-- [ ] Implementar cálculos de KPIs:
-  - [ ] Renda do mês (soma das rendas reais)
-  - [ ] Total orçado (soma de todos os blocos)
-  - [ ] Total gasto (fixas pagas + variáveis reais + parcelas)
-  - [ ] Saldo (renda - gasto)
-  - [ ] Total investido (soma dos investimentos atuais)
-- [ ] Implementar tool `get_finance_summary` para IA:
-  - [ ] Retorna KPIs, contas pendentes, parcelas próximas
+
+_Tabelas (Migrations):_
+- [ ] Criar tabelas:
+  - [ ] `incomes` - fontes de renda (nome, tipo, frequência, previsto, real, recorrente, monthYear)
+  - [ ] `bills` - contas fixas (nome, categoria, valor, vencimento, status, paidAt, recorrente, monthYear)
+  - [ ] `variable_expenses` - despesas variáveis (nome, categoria, previsto, real, recorrente, monthYear)
+  - [ ] `debts` - dívidas (nome, credor, total, isNegotiated, parcelas, valor_parcela, parcela_atual, vencimento, status, notes)
+  - [ ] `investments` - investimentos (nome, tipo, meta, atual, aporte_mensal, prazo)
+
+_Endpoints REST:_
+- [ ] Implementar CRUD completo para cada entidade:
+  - [ ] `POST /finance/incomes` - criar renda
+  - [ ] `GET /finance/incomes` - listar rendas (com filtros)
+  - [ ] `GET /finance/incomes/:id` - obter renda
+  - [ ] `PATCH /finance/incomes/:id` - atualizar renda
+  - [ ] `DELETE /finance/incomes/:id` - excluir renda
+  - [ ] (idem para bills, expenses, debts, investments)
+- [ ] Implementar endpoints de ação específicos:
+  - [ ] `PATCH /finance/bills/:id/mark-paid` - marcar conta como paga (status='paid', paidAt=now())
+  - [ ] `PATCH /finance/bills/:id/mark-unpaid` - desmarcar conta (status='pending', paidAt=null)
+  - [ ] `PATCH /finance/debts/:id/pay-installment` - pagar parcela (currentInstallment++, auto-quitação)
+  - [ ] `PATCH /finance/debts/:id/negotiate` - negociar dívida (preencher parcelas, isNegotiated=true)
+  - [ ] `PATCH /finance/investments/:id/update-value` - atualizar valor atual do investimento
+- [ ] Implementar endpoint de resumo:
+  - [ ] `GET /finance/summary` - retorna todos os KPIs do mês selecionado
+
+_Jobs e Recorrências:_
+- [ ] Implementar job mensal de recorrências (dia 1, 00:05 UTC):
+  - [ ] Copiar bills com `isRecurring=true` para novo mês (status='pending')
+  - [ ] Copiar variable_expenses com `isRecurring=true` para novo mês (actualAmount=0)
+  - [ ] Copiar incomes com `isRecurring=true` para novo mês (actualAmount=null)
+- [ ] Implementar job diário de verificação de vencimentos (00:30 UTC):
+  - [ ] Atualizar bills para `status='overdue'` se dueDay < hoje e status='pending'
+
+_Cálculos e KPIs:_
+- [ ] Implementar cálculos de KPIs principais:
+  - [ ] Renda do mês: `SUM(incomes.actualAmount)`
+  - [ ] Total orçado: `SUM(bills.amount) + SUM(expenses.expectedAmount) + SUM(debts.installmentAmount WHERE isNegotiated=true AND status='active')`
+  - [ ] Total gasto: `SUM(bills WHERE paid) + SUM(expenses.actualAmount) + SUM(parcelas pagas no mês)`
+  - [ ] Saldo: `Renda - Gasto`
+  - [ ] Total investido: `SUM(investments.currentAmount)`
+- [ ] Implementar cálculos de KPIs de dívidas:
+  - [ ] Total de dívidas: `SUM(debts.totalAmount)` (todas)
+  - [ ] Parcela mensal total: `SUM(debts.installmentAmount WHERE isNegotiated=true AND status='active')`
+  - [ ] Total já pago: `SUM((currentInstallment - 1) × installmentAmount)` para dívidas negociadas
+  - [ ] Total restante: `Total de dívidas - Total já pago`
+- [ ] Implementar cálculos por dívida individual:
+  - [ ] Parcelas pagas: `currentInstallment - 1`
+  - [ ] Parcelas restantes: `totalInstallments - (currentInstallment - 1)`
+  - [ ] Progresso (%): `((currentInstallment - 1) / totalInstallments) × 100`
+  - [ ] Valor pago: `(currentInstallment - 1) × installmentAmount`
+  - [ ] Valor restante: `totalAmount - valorPago`
+- [ ] Implementar cálculo de progresso de investimento:
+  - [ ] Progresso (%): `(currentAmount / goalAmount) × 100` (se goalAmount definido)
+
+_Validações (Zod):_
+- [ ] Implementar schemas de validação para cada entidade:
+  - [ ] Income: expectedAmount > 0, monthYear formato YYYY-MM
+  - [ ] Bill: amount > 0, dueDay 1-31, monthYear formato YYYY-MM
+  - [ ] Expense: expectedAmount > 0, actualAmount >= 0, monthYear formato YYYY-MM
+  - [ ] Investment: currentAmount >= 0, goalAmount > 0 (se definido), monthlyContribution >= 0
+- [ ] Implementar validação condicional para dívidas:
+  - [ ] totalAmount > 0 (sempre)
+  - [ ] Se `isNegotiated=true`: totalInstallments > 0, installmentAmount > 0, dueDay 1-31, currentInstallment 1-totalInstallments
+  - [ ] Se `isNegotiated=false`: campos de parcelas ignorados/opcionais
+
+_Filtros e Paginação:_
+- [ ] Implementar query params para filtros:
+  - [ ] `monthYear` - filtrar por mês (obrigatório para bills, expenses, incomes)
+  - [ ] `status` - filtrar por status (pending, paid, overdue para bills; active, paid_off para debts)
+  - [ ] `category` - filtrar por categoria
+  - [ ] `isRecurring` - filtrar recorrentes/pontuais
+  - [ ] `isNegotiated` - filtrar dívidas negociadas/pendentes
+- [ ] Implementar paginação:
+  - [ ] `limit` - quantidade de registros (default 50, max 100)
+  - [ ] `offset` - pular registros
+  - [ ] Retornar metadata: `{ data: [], total: number, limit: number, offset: number }`
+
+_Tools para IA:_
+- [ ] Implementar tool `get_finance_summary`:
+  - [ ] Retorna todos os KPIs do mês atual
+  - [ ] Retorna lista de contas pendentes (próximas 5)
+  - [ ] Retorna lista de parcelas próximas (próximas 5)
   - [ ] Permite IA responder "como estão minhas finanças?"
-- [ ] Implementar notificações:
-  - [ ] Início do mês: "Configure seu orçamento de [mês]"
-  - [ ] Conta próxima do vencimento (3 dias antes)
-  - [ ] Assinatura renovando (3 dias antes)
-  - [ ] Parcela de dívida vencendo (3 dias antes)
-  - [ ] Fim do mês: Resumo financeiro
+- [ ] Implementar tool `get_pending_bills`:
+  - [ ] Retorna contas pendentes do mês com detalhes
+  - [ ] Permite IA responder "quais contas tenho que pagar?"
+- [ ] Implementar tool `mark_bill_paid`:
+  - [ ] Marca conta como paga via conversa
+  - [ ] `requiresConfirmation: true`
+  - [ ] Permite IA executar "marque a conta de luz como paga"
+- [ ] Implementar tool `create_expense`:
+  - [ ] Cria despesa pontual via conversa
+  - [ ] `requiresConfirmation: true`
+  - [ ] Permite IA executar "gastei 50 reais no mercado"
+- [ ] Implementar tool `get_debt_progress`:
+  - [ ] Retorna progresso detalhado de uma ou todas as dívidas
+  - [ ] Permite IA responder "como está minha dívida do carro?"
+
+_Notificações:_
+- [ ] Implementar notificações financeiras:
+  - [ ] `month_start` - Dia 1: "📊 Novo mês! Configure seu orçamento de {month}"
+  - [ ] `bill_due` - 3 dias antes: "💰 {bill_name} vence em 3 dias (R$ {amount})"
+  - [ ] `bill_overdue` - No dia: "⚠️ {bill_name} venceu hoje!"
+  - [ ] `subscription_renewal` - 3 dias antes: "🔄 {subscription} renova em 3 dias"
+  - [ ] `debt_installment` - 3 dias antes: "💳 Parcela {x}/{y} de {debt_name} vence em 3 dias"
+  - [ ] `month_end` - Último dia: "📈 Resumo de {month}: Gastou R$ {spent} de R$ {budget}"
 
 **Frontend:**
-- [ ] Criar página `/finance` (dashboard):
-  - [ ] KPIs em cards (Renda, Orçado, Gasto, Saldo, Investido)
-  - [ ] Gráfico: Orçamento x Real (barras por categoria)
-  - [ ] Gráfico: Distribuição de gastos (pizza)
-  - [ ] Gráfico: Evolução mensal (últimos 6-12 meses)
-  - [ ] Lista de contas pendentes
-  - [ ] Lista de parcelas próximas
-- [ ] Criar página `/finance/income`:
-  - [ ] Lista de fontes de renda
-  - [ ] Criar/editar renda
-  - [ ] Marcar como recorrente
-  - [ ] Previsto vs Real
-- [ ] Criar página `/finance/bills`:
-  - [ ] Lista de contas fixas do mês
-  - [ ] Checkbox para marcar como pago
-  - [ ] Filtros: pendentes, pagas, todas
-  - [ ] Criar/editar conta fixa
-  - [ ] Categorias: moradia, serviços, assinatura, outros
-- [ ] Criar página `/finance/expenses`:
-  - [ ] Seção: Variáveis Recorrentes (aparecem todo mês)
-    - [ ] Defaults: Alimentação/Mercado, Transporte/Gasolina, Lazer/Entretenimento
-    - [ ] Previsto vs Real
-  - [ ] Seção: Variáveis Pontuais (só este mês)
-    - [ ] Criar despesa pontual
-  - [ ] Total de variáveis do mês
-- [ ] Criar página `/finance/debts`:
-  - [ ] Lista de dívidas ativas
-  - [ ] Criar/editar dívida
-  - [ ] Visualizar parcelas (X/Y)
-  - [ ] Marcar parcela como paga
-  - [ ] Progresso da dívida (%)
-- [ ] Criar página `/finance/investments`:
-  - [ ] Lista de investimentos
-  - [ ] Criar/editar investimento (nome livre)
-  - [ ] Campos: nome, meta (opcional), valor atual, aporte mensal, prazo (opcional)
-  - [ ] Progresso da meta (%)
-  - [ ] Total investido
-- [ ] Componentes:
-  - [ ] FinanceKPICard (valor + label + ícone)
-  - [ ] BudgetVsRealChart (barras comparativas)
-  - [ ] ExpenseDistributionChart (pizza)
-  - [ ] MonthlyEvolutionChart (linha)
-  - [ ] BillRow (com checkbox de pago)
-  - [ ] DebtCard (com progresso de parcelas)
-  - [ ] InvestmentCard (com progresso de meta)
-  - [ ] MonthSelector (navegação entre meses)
-  - [ ] RecurrenceToggle (marcar como recorrente)
+
+_Navegação e Layout:_
+- [ ] Adicionar item "Finanças" no sidebar principal (`components/layouts/sidebar.tsx`):
+  - [ ] href: `/finance`, icon: `Wallet` (Lucide)
+- [ ] Criar layout compartilhado `/finance/layout.tsx`:
+  - [ ] Header com título "Finanças" + MonthSelector (à direita)
+  - [ ] Tabs horizontais abaixo do header (Visão Geral, Rendas, Contas, Despesas, Dívidas, Investimentos)
+  - [ ] Tab ativa destacada (baseado em pathname)
+
+_Página Dashboard `/finance` (Visão Geral):_
+- [ ] Criar página `/finance/page.tsx`
+- [ ] KPI Cards Grid (8 cards):
+  - [ ] Renda do Mês (TrendingUp, green)
+  - [ ] Total Orçado (Target, blue)
+  - [ ] Total Gasto (ShoppingCart, orange)
+  - [ ] Saldo (Wallet, green/red baseado em positivo/negativo)
+  - [ ] Total Investido (PiggyBank, purple)
+  - [ ] Total de Dívidas (CreditCard, red)
+  - [ ] Parcela Mensal Total (Calendar, yellow)
+  - [ ] Total Já Pago (CheckCircle, green)
+- [ ] Gráficos (Recharts):
+  - [ ] Orçado vs Real (BarChart lado a lado por categoria)
+  - [ ] Distribuição de Gastos (PieChart por categoria)
+  - [ ] Evolução Mensal (LineChart últimos 6 meses)
+- [ ] Listas Resumidas:
+  - [ ] Contas pendentes (próximas 5)
+  - [ ] Parcelas próximas (próximas 5)
+- [ ] Estados: Loading (Skeleton), Empty (EmptyState), Error (AlertCircle + retry)
+
+_Página Rendas `/finance/income`:_
+- [ ] Criar página `/finance/income/page.tsx`
+- [ ] Header: Título + Botão "Nova Renda"
+- [ ] Lista de Rendas (IncomeCard ou Table):
+  - [ ] Nome + categoria + badge recorrente
+  - [ ] Previsto vs Real (com indicador de variação)
+  - [ ] Ações: Editar, Excluir
+- [ ] Totais: Soma previsto, soma real, variação
+- [ ] Modal CreateIncomeModal:
+  - [ ] Nome (text), Categoria (select), Valor previsto (number), Valor real (number, opcional), Recorrente (switch)
+- [ ] Modal EditIncomeModal (preenchido com dados existentes)
+- [ ] Dialog ConfirmDelete
+- [ ] Estados: Loading, Empty, Error
+
+_Página Contas Fixas `/finance/bills`:_
+- [ ] Criar página `/finance/bills/page.tsx`
+- [ ] Header: Título + Filtros (Todas, Pendentes, Pagas) + Botão "Nova Conta"
+- [ ] Lista de Contas (BillRow):
+  - [ ] Checkbox de pago (com toast de confirmação)
+  - [ ] Nome + categoria + valor + vencimento
+  - [ ] Badge de status (pendente/pago/vencido)
+  - [ ] Badge recorrente
+  - [ ] Ações: Editar, Excluir
+- [ ] Totais: Soma total, soma pagas, soma pendentes
+- [ ] Modal CreateBillModal:
+  - [ ] Nome (text), Categoria (select), Valor (number), Dia de vencimento (1-31), Recorrente (switch)
+- [ ] Estados: Loading, Empty, Error
+
+_Página Despesas Variáveis `/finance/expenses`:_
+- [ ] Criar página `/finance/expenses/page.tsx`
+- [ ] Seção: Variáveis Recorrentes:
+  - [ ] Cards para cada categoria (Alimentação, Transporte, Lazer, etc.)
+  - [ ] Previsto vs Real com barra de progresso
+  - [ ] Botão editar (atualizar valor real)
+- [ ] Seção: Variáveis Pontuais:
+  - [ ] Lista de despesas pontuais do mês
+  - [ ] Botão "Nova Despesa Pontual"
+- [ ] Totais: Soma previsto, soma real, variação
+- [ ] Modal CreateExpenseModal:
+  - [ ] Nome (text), Categoria (select), Valor previsto (number), Valor real (number), Recorrente (switch)
+- [ ] Estados: Loading, Empty, Error
+
+_Página Dívidas `/finance/debts`:_
+- [ ] Criar página `/finance/debts/page.tsx`
+- [ ] KPI Cards de Dívidas (no topo):
+  - [ ] Total de Dívidas (todas)
+  - [ ] Parcela Mensal Total
+  - [ ] Total Já Pago
+  - [ ] Total Restante
+- [ ] Seção: Dívidas Negociadas (com parcelas):
+  - [ ] DebtCard para cada dívida:
+    - [ ] Nome + credor
+    - [ ] Valor total + parcela X de Y
+    - [ ] DebtProgressBar (visual)
+    - [ ] DebtStats (valor pago, restante, %)
+    - [ ] PayInstallmentButton (botão pagar parcela)
+    - [ ] Ações: Editar, Excluir
+- [ ] Seção: Dívidas Pendentes de Negociação:
+  - [ ] DebtCard simplificado (nome, valor total, notas)
+  - [ ] Botão "Negociar" (abre modal para preencher parcelas)
+- [ ] Modal CreateDebtModal:
+  - [ ] Nome (text), Credor (text, opcional), Valor total (number)
+  - [ ] Toggle "Já negociada?" (switch)
+  - [ ] Se negociada: Número de parcelas, Valor da parcela, Dia de vencimento
+  - [ ] Notas (textarea, opcional)
+- [ ] Modal NegotiateDebtModal (preencher parcelas de dívida pendente)
+- [ ] Dialog PayInstallmentConfirm (confirmação de pagamento)
+- [ ] Estados: Loading, Empty, Error
+
+_Página Investimentos `/finance/investments`:_
+- [ ] Criar página `/finance/investments/page.tsx`
+- [ ] Header: Título + Total Investido + Botão "Novo Investimento"
+- [ ] Lista de Investimentos (InvestmentCard):
+  - [ ] Nome + tipo (badge)
+  - [ ] Valor atual
+  - [ ] Meta + prazo (se definidos)
+  - [ ] Barra de progresso (atual/meta %)
+  - [ ] Aporte mensal planejado
+  - [ ] Ações: Editar, Atualizar valor, Excluir
+- [ ] Modal CreateInvestmentModal:
+  - [ ] Nome (text), Tipo (select), Valor atual (number), Meta (number, opcional), Prazo (date, opcional), Aporte mensal (number, opcional)
+- [ ] Modal UpdateValueModal (atualizar valor atual)
+- [ ] Estados: Loading, Empty, Error
+
+_Componentes Reutilizáveis (`components/finance/`):_
+- [ ] `FinanceKPICard.tsx` - Props: title, value, icon, color, trend?, variation?
+- [ ] `MonthSelector.tsx` - Setas ← → para navegar entre meses, callbacks onPrevMonth/onNextMonth
+- [ ] `FinanceNavTabs.tsx` - Tabs horizontais com ícones + labels, baseado em links (Next.js Link)
+- [ ] `BillRow.tsx` - Checkbox + nome + valor + vencimento + status + ações
+- [ ] `DebtCard.tsx` - Diferencia negociada vs pendente, progresso visual para negociadas
+- [ ] `DebtProgressBar.tsx` - Barra visual de progresso
+- [ ] `DebtStats.tsx` - Grid: parcelas pagas, restantes, %, valor pago, valor restante
+- [ ] `InvestmentCard.tsx` - Nome, tipo, valor, progresso de meta
+- [ ] `ProgressBar.tsx` - Componente genérico de barra de progresso
+- [ ] `BudgetVsRealChart.tsx` - BarChart comparativo (Recharts)
+- [ ] `ExpenseDistributionChart.tsx` - PieChart por categoria (Recharts)
+- [ ] `MonthlyEvolutionChart.tsx` - LineChart de evolução (Recharts)
+
+_Hooks de Dados (`hooks/finance/`):_
+- [ ] `useIncomes.ts` - CRUD de rendas
+- [ ] `useBills.ts` - CRUD de contas fixas
+- [ ] `useExpenses.ts` - CRUD de despesas variáveis
+- [ ] `useDebts.ts` - CRUD de dívidas + payInstallment
+- [ ] `useInvestments.ts` - CRUD de investimentos
+- [ ] `useFinanceSummary.ts` - KPIs do dashboard
+- [ ] `useMonthNavigation.ts` - Estado do mês selecionado
 
 **Testes:**
-- [ ] Testes unitários:
-  - [ ] Cálculo de KPIs
-  - [ ] Geração de recorrências
-  - [ ] Validações de dívida (parcelas)
-  - [ ] Cálculo de progresso de investimento
-- [ ] Testes de integração:
-  - [ ] CRUD de todas as entidades
-  - [ ] Job de recorrência mensal
-  - [ ] Notificações de vencimento
-  - [ ] Tool `get_finance_summary`
-- [ ] Teste E2E: criar conta fixa → marcar como paga → verificar no dashboard
-- [ ] Teste E2E: criar dívida com parcelas → pagar parcela → verificar progresso
-- [ ] Teste E2E: navegar entre meses
+
+_Testes Unitários Backend - Cálculos:_
+- [ ] Cálculo de KPIs principais (renda, orçado, gasto, saldo, investido)
+- [ ] Cálculo de KPIs de dívidas (total, parcela mensal, pago, restante)
+- [ ] Cálculo de progresso por dívida (parcelas pagas, restantes, %, valores)
+- [ ] Cálculo de progresso de investimento (currentAmount / goalAmount)
+- [ ] Exclusão de dívidas não negociadas do Total Orçado
+
+_Testes Unitários Backend - Validações:_
+- [ ] Validação Income: expectedAmount > 0, monthYear formato YYYY-MM
+- [ ] Validação Bill: amount > 0, dueDay 1-31
+- [ ] Validação Expense: expectedAmount > 0, actualAmount >= 0
+- [ ] Validação Investment: currentAmount >= 0, goalAmount > 0 (se definido)
+- [ ] Validação Debt condicional: isNegotiated=true requer parcelas, isNegotiated=false ignora
+- [ ] Validação Debt: totalAmount > 0, currentInstallment dentro do range
+
+_Testes Unitários Backend - Services:_
+- [ ] IncomeService: CRUD operations
+- [ ] BillService: CRUD + markPaid/markUnpaid
+- [ ] ExpenseService: CRUD operations
+- [ ] DebtService: CRUD + payInstallment + negotiate
+- [ ] InvestmentService: CRUD + updateValue
+- [ ] FinanceSummaryUseCase: cálculo de todos os KPIs
+
+_Testes Unitários Backend - Jobs:_
+- [ ] Job de recorrência: copia bills, expenses, incomes corretamente
+- [ ] Job de recorrência: não duplica registros se já existem
+- [ ] Job de vencimento: atualiza status para overdue corretamente
+- [ ] Job de vencimento: não altera bills já pagas
+
+_Testes Unitários Backend - Tools:_
+- [ ] Tool get_finance_summary: retorna KPIs corretos
+- [ ] Tool get_pending_bills: retorna apenas pendentes do mês
+- [ ] Tool mark_bill_paid: marca corretamente com confirmação
+- [ ] Tool create_expense: cria despesa pontual com confirmação
+- [ ] Tool get_debt_progress: retorna progresso detalhado
+
+_Testes de Integração - Endpoints:_
+- [ ] CRUD de todas as entidades (incomes, bills, expenses, debts, investments)
+- [ ] Endpoint mark-paid: atualiza status e paidAt
+- [ ] Endpoint pay-installment: incrementa e faz auto-quitação
+- [ ] Endpoint negotiate: preenche parcelas e atualiza isNegotiated
+- [ ] Endpoint update-value: atualiza currentAmount do investimento
+- [ ] Endpoint summary: retorna todos os KPIs
+
+_Testes de Integração - Filtros e Paginação:_
+- [ ] Filtro por monthYear funciona
+- [ ] Filtro por status funciona (pending, paid, overdue)
+- [ ] Filtro por category funciona
+- [ ] Filtro por isNegotiated funciona
+- [ ] Paginação com limit e offset funciona
+- [ ] Retorna metadata correta (total, limit, offset)
+
+_Testes de Integração - Jobs:_
+- [ ] Job de recorrência mensal executa corretamente
+- [ ] Job de verificação de vencimentos executa corretamente
+- [ ] Notificações de vencimento são criadas
+
+_Testes de Integração - Tools:_
+- [ ] Tool get_finance_summary via ToolExecutorService
+- [ ] Tool get_pending_bills via ToolExecutorService
+- [ ] Tool mark_bill_paid com fluxo de confirmação
+- [ ] Tool create_expense com fluxo de confirmação
+
+_Testes de Integração - Regras de Negócio:_
+- [ ] Criar dívida não negociada → verificar que NÃO entra no total orçado
+- [ ] Pagar parcela → verificar atualização de KPIs
+- [ ] Pagar última parcela → verificar status = 'paid_off'
+- [ ] Negociar dívida → verificar que ENTRA no total orçado
+
+_Testes de Componente Frontend:_
+- [ ] Component: FinanceKPICard (valor, label, ícone, cor, trend)
+- [ ] Component: MonthSelector (navegação, callbacks)
+- [ ] Component: FinanceNavTabs (tabs ativas, navegação)
+- [ ] Component: BillRow (checkbox, status badge, ações)
+- [ ] Component: DebtCard (negociada vs pendente, progresso)
+- [ ] Component: DebtProgressBar (renderização, estados)
+- [ ] Component: DebtStats (grid de estatísticas)
+- [ ] Component: InvestmentCard (valor, meta, progresso)
+- [ ] Component: ProgressBar (genérico, variações)
+- [ ] Component: BudgetVsRealChart (dados, loading, empty)
+- [ ] Component: ExpenseDistributionChart (dados, loading, empty)
+- [ ] Component: MonthlyEvolutionChart (dados, loading, empty)
+
+_Testes de Hooks Frontend:_
+- [ ] Hook: useIncomes (fetch, create, update, delete)
+- [ ] Hook: useBills (fetch, create, update, delete, markPaid)
+- [ ] Hook: useExpenses (fetch, create, update, delete)
+- [ ] Hook: useDebts (fetch, create, update, delete, payInstallment, negotiate)
+- [ ] Hook: useInvestments (fetch, create, update, delete, updateValue)
+- [ ] Hook: useFinanceSummary (fetch, cálculos)
+- [ ] Hook: useMonthNavigation (estado, prev, next)
+
+_Testes E2E:_
+- [ ] E2E: navegar para /finance via sidebar
+- [ ] E2E: navegação entre tabs do finance
+- [ ] E2E: criar conta fixa → marcar como paga → verificar no dashboard
+- [ ] E2E: criar dívida com parcelas → pagar parcela → verificar progresso
+- [ ] E2E: criar dívida não negociada → negociar → verificar atualização de KPIs
+- [ ] E2E: criar dívida → pagar parcelas → verificar progresso → quitar
+- [ ] E2E: navegar entre meses com MonthSelector
+- [ ] E2E: criar renda → verificar no dashboard
+- [ ] E2E: criar investimento → atualizar valor → verificar progresso
+- [ ] E2E: estados empty e loading funcionam em todas as páginas
 
 **Definition of Done:**
-- [ ] Dashboard Finance exibe KPIs e gráficos
-- [ ] CRUD de rendas funciona
+
+_Navegação e Layout:_
+- [ ] Item "Finanças" aparece no sidebar principal (ícone Wallet)
+- [ ] Tabs horizontais funcionam para navegação entre sub-páginas
+- [ ] MonthSelector navega entre meses corretamente
+- [ ] Layout compartilhado renderiza em todas as páginas do finance
+
+_Funcionalidades CRUD:_
+- [ ] Dashboard Finance exibe KPIs (8 cards) e gráficos (3 tipos)
+- [ ] CRUD de rendas funciona (criar, editar, excluir)
 - [ ] CRUD de contas fixas funciona (com checkbox pago)
 - [ ] CRUD de despesas variáveis funciona (recorrentes + pontuais)
 - [ ] CRUD de dívidas funciona (com controle de parcelas)
 - [ ] CRUD de investimentos funciona (com progresso de meta)
-- [ ] Recorrências automáticas funcionam (job mensal)
-- [ ] Notificações de vencimento enviadas
-- [ ] IA responde sobre finanças via tool
-- [ ] Navegação entre meses funciona
-- [ ] Testes passam
+
+_Endpoints de Ação:_
+- [ ] `mark-paid` / `mark-unpaid` funcionam para bills
+- [ ] `pay-installment` funciona com auto-quitação
+- [ ] `negotiate` funciona para converter dívida pendente
+- [ ] `update-value` funciona para investimentos
+
+_Jobs e Automações:_
+- [ ] Job de recorrência mensal copia bills, expenses, incomes
+- [ ] Job de verificação de vencimentos atualiza status para overdue
+- [ ] Notificações de vencimento enviadas (3 dias antes, no dia)
+
+_Filtros e Paginação:_
+- [ ] Filtro por monthYear funciona em todas as entidades
+- [ ] Filtro por status funciona (pending, paid, overdue, active, paid_off)
+- [ ] Filtro por category funciona
+- [ ] Paginação com limit/offset funciona
+
+_Tools para IA:_
+- [ ] `get_finance_summary` retorna KPIs e pendências
+- [ ] `get_pending_bills` retorna contas a pagar
+- [ ] `mark_bill_paid` marca conta via conversa (com confirmação)
+- [ ] `create_expense` cria despesa via conversa (com confirmação)
+- [ ] `get_debt_progress` retorna progresso das dívidas
+
+_Dívidas não negociadas:_
+- [ ] Podem ser criadas (apenas valor total, sem parcelas)
+- [ ] NÃO entram no Total Orçado
+- [ ] Podem ser marcadas como "negociada" (preencher parcelas via modal/endpoint)
+
+_KPIs de dívidas:_
+- [ ] "Total de Dívidas" soma todas (negociadas + pendentes)
+- [ ] "Parcela Mensal Total" soma apenas negociadas ativas
+- [ ] "Total Já Pago" calcula corretamente
+- [ ] "Total Restante" calcula corretamente
+
+_Pagamento de parcelas:_
+- [ ] Botão "Pagar Parcela" incrementa currentInstallment
+- [ ] Dívida é quitada automaticamente ao pagar última parcela
+- [ ] Progresso visual por dívida (barra, %, valores)
+
+_Validações:_
+- [ ] Validações Zod aplicadas em todos os endpoints
+- [ ] Validação condicional de dívidas (isNegotiated) funciona
+- [ ] Erros de validação retornam mensagens claras
+
+_Estados UI:_
+- [ ] Loading: Skeleton cards/rows em todas as páginas
+- [ ] Empty: EmptyState com ícone + título + descrição + CTA
+- [ ] Error: AlertCircle + mensagem + botão retry
+- [ ] Success: Toast via Sonner
+
+_Testes:_
+- [ ] Testes unitários backend passam (cálculos, validações, services, jobs, tools)
+- [ ] Testes de integração passam (endpoints, filtros, jobs, tools)
+- [ ] Testes de componentes frontend passam
+- [ ] Testes de hooks frontend passam
+- [ ] Testes E2E passam
 
 ---
 

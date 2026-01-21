@@ -1146,21 +1146,39 @@ Que tal uma caminhada de 20min?
 | name | ✅ | Nome (ex: "Financiamento Carro") |
 | creditor | ❌ | Nome do credor (ex: "Banco X") |
 | totalAmount | ✅ | Valor total da dívida |
-| totalInstallments | ✅ | Número total de parcelas |
-| installmentAmount | ✅ | Valor da parcela mensal |
-| currentInstallment | ✅ | Número da parcela atual |
-| dueDay | ✅ | Dia de vencimento da parcela |
+| isNegotiated | ✅ | `true` = parcelas definidas, `false` = aguardando negociação |
+| totalInstallments | Condicional | Número total de parcelas (obrigatório se `isNegotiated = true`) |
+| installmentAmount | Condicional | Valor da parcela mensal (obrigatório se `isNegotiated = true`) |
+| currentInstallment | Condicional | Parcela atual - 1 = primeira a pagar (obrigatório se `isNegotiated = true`) |
+| dueDay | Condicional | Dia de vencimento da parcela (obrigatório se `isNegotiated = true`) |
 | status | ✅ | `active`, `paid_off`, `settled`, `defaulted` |
+| notes | ❌ | Contexto sobre a dívida/negociação |
 
-**Regras:**
+**Regras Gerais:**
 - totalAmount > 0
-- totalInstallments > 0
-- installmentAmount > 0
-- currentInstallment: 1 ≤ currentInstallment ≤ totalInstallments
-- dueDay: 1 ≤ dueDay ≤ 31
-- Progresso: `(currentInstallment / totalInstallments) × 100`
-- Ao pagar parcela: currentInstallment++
-- Se currentInstallment > totalInstallments: status = `paid_off`
+- Se `isNegotiated = true`:
+  - totalInstallments > 0
+  - installmentAmount > 0
+  - currentInstallment: 1 ≤ currentInstallment ≤ totalInstallments
+  - dueDay: 1 ≤ dueDay ≤ 31
+
+**Dívidas Não Negociadas (`isNegotiated = false`):**
+- Campos de parcelas são opcionais/ignorados
+- NÃO entram no cálculo de "Total Orçado"
+- ENTRAM no cálculo de "Total de Dívidas"
+- Não geram notificações de vencimento
+- Ao negociar: atualizar `isNegotiated = true` e preencher campos de parcelas
+
+**Fluxo de Pagamento de Parcela:**
+- Ao pagar parcela: `currentInstallment++`
+- Se `currentInstallment > totalInstallments`: `status = 'paid_off'`
+
+**Cálculos de Progresso (por dívida):**
+- Parcelas pagas: `currentInstallment - 1`
+- Parcelas restantes: `totalInstallments - (currentInstallment - 1)`
+- Progresso (%): `((currentInstallment - 1) / totalInstallments) × 100`
+- Valor pago: `(currentInstallment - 1) × installmentAmount`
+- Valor restante: `totalAmount - valorPago`
 
 ##### Investimentos (Investments)
 
@@ -1181,13 +1199,24 @@ Que tal uma caminhada de 20min?
 
 #### KPIs do Dashboard
 
+##### KPIs Principais
+
 | KPI | Fórmula | Descrição |
 |-----|---------|-----------|
 | **Renda do Mês** | `SUM(incomes.actualAmount)` | Total recebido no mês |
-| **Total Orçado** | `SUM(bills.amount) + SUM(expenses.expectedAmount) + SUM(debts.installmentAmount)` | Compromissos previstos |
+| **Total Orçado** | `SUM(bills.amount) + SUM(expenses.expectedAmount) + SUM(debts.installmentAmount WHERE isNegotiated = true AND status = 'active')` | Compromissos previstos (exclui dívidas não negociadas) |
 | **Total Gasto** | `SUM(bills WHERE paid) + SUM(expenses.actualAmount) + SUM(paid installments)` | Dinheiro que saiu |
 | **Saldo** | `Renda - Gasto` | Quanto sobrou/faltou |
 | **Total Investido** | `SUM(investments.currentAmount)` | Patrimônio em investimentos |
+
+##### KPIs de Dívidas
+
+| KPI | Fórmula | Descrição |
+|-----|---------|-----------|
+| **Total de Dívidas** | `SUM(debts.totalAmount)` | Todas as dívidas (negociadas + não negociadas) |
+| **Parcela Mensal Total** | `SUM(debts.installmentAmount WHERE isNegotiated = true AND status = 'active')` | Soma das parcelas mensais de dívidas ativas |
+| **Total Já Pago** | `SUM((currentInstallment - 1) × installmentAmount)` | Valor já quitado em todas as dívidas negociadas |
+| **Total Restante** | `Total de Dívidas - Total Já Pago` | Quanto ainda falta pagar |
 
 #### Gráficos
 
@@ -1219,21 +1248,120 @@ Que tal uma caminhada de 20min?
 5. Buscar incomes com `isRecurring = true` do mês anterior
 6. Criar registros para novo mês com `actualAmount = null`
 
+#### Atualização de Status Vencido (Job Diário)
+
+**Horário:** Diário às 00:30 UTC
+
+**Processo:**
+1. Buscar bills com `status = pending` e `dueDay < dia_atual` no mês atual
+2. Atualizar status para `overdue`
+3. Buscar debt installments com status pendente e vencidas
+4. Atualizar status para `overdue`
+5. Criar alerta de contas vencidas para próxima conversa
+
+**Notificação:** Alerta proativo via chat se houver contas/parcelas vencidas.
+
+#### Operações Financeiras
+
+| Entidade | CREATE | READ | UPDATE | DELETE | Via IA (Tools) |
+|----------|--------|------|--------|--------|----------------|
+| Income | ✅ | ✅ | ✅ | ✅ | Parcial (get_finance_summary) |
+| Bill | ✅ | ✅ | ✅ | ✅ | get_pending_bills, mark_bill_paid |
+| VariableExpense | ✅ | ✅ | ✅ | ✅ | create_expense, get_finance_summary |
+| Debt | ✅ | ✅ | ✅ | ✅ | get_debt_progress, get_finance_summary |
+| Investment | ✅ | ✅ | ✅ | ✅ | Parcial (get_finance_summary) |
+
+#### Filtros e Paginação
+
+Todos os endpoints de listagem (GET /incomes, /bills, /expenses, /debts, /investments) suportam:
+
+| Parâmetro | Tipo | Descrição | Aplicável a |
+|-----------|------|-----------|-------------|
+| `month` | number (1-12) | Filtrar por mês | Todos |
+| `year` | number (2020-2100) | Filtrar por ano | Todos |
+| `category` | string | Filtrar por categoria | Bills, Expenses |
+| `status` | enum | Filtrar por status (paid/pending/overdue) | Bills |
+| `isRecurring` | boolean | Filtrar por recorrência | Bills, Expenses, Incomes |
+| `isNegotiated` | boolean | Filtrar por negociação | Debts |
+| `page` | number | Página atual (default: 1) | Todos |
+| `limit` | number | Itens por página (default: 20, max: 100) | Todos |
+
+**Resposta Paginada:**
+```json
+{
+  "data": [...],
+  "meta": {
+    "total": 100,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 5
+  }
+}
+```
+
+#### Estados e Transições
+
+##### Contas Fixas (Bills)
+```
+pending ─── mark_bill_paid() ───→ paid
+    │
+    └── job diário (se venceu) ─→ overdue ─── mark_bill_paid() ───→ paid
+```
+
+##### Dívidas (Debts)
+```
+Criação com isNegotiated=false:
+  not_negotiated ─── negociar() ───→ negotiated (active)
+
+Criação com isNegotiated=true:
+  negotiated (active) ─── pagar_parcela() ───→ partially_paid
+                                                    │
+  partially_paid ─── pagar_parcela() (última) ─────→ paid_off
+```
+
+##### Parcelas de Dívida (Debt Installments)
+```
+pending ─── pagar() ───→ paid
+    │
+    └── job diário (se venceu) ─→ overdue ─── pagar() ───→ paid
+```
+
 #### Critérios de Aceite
 
+**CRUD e UI:**
 - [ ] CRUD de Rendas funciona
 - [ ] CRUD de Contas Fixas funciona
 - [ ] Checkbox "Pago" altera status e paidAt
 - [ ] CRUD de Despesas Variáveis funciona
 - [ ] CRUD de Dívidas funciona (com parcelas)
 - [ ] CRUD de Investimentos funciona
-- [ ] Dashboard exibe todos os KPIs
+- [ ] Dashboard exibe todos os KPIs (incluindo KPIs de dívidas)
 - [ ] Gráficos renderizam corretamente
 - [ ] Navegação entre meses funciona
+- [ ] Validações Zod aplicadas em todos os endpoints
+
+**Jobs e Automação:**
+- [ ] Job mensal de recorrência gera registros automaticamente (dia 1, 00:05 UTC)
+- [ ] Job diário atualiza status para overdue (00:30 UTC)
 - [ ] Notificações de vencimento enviadas
-- [ ] Job de recorrência gera registros automaticamente
-- [ ] Validações aplicadas em todos os formulários
-- [ ] IA acessa dados financeiros via tool
+
+**Filtros e Paginação:**
+- [ ] Filtros por mês/ano funcionam em todos os endpoints
+- [ ] Filtros por categoria/status funcionam onde aplicável
+- [ ] Paginação implementada com meta no response
+
+**Tools de IA:**
+- [ ] get_finance_summary retorna KPIs completos (incluindo dívidas)
+- [ ] get_pending_bills lista contas pendentes/vencidas
+- [ ] mark_bill_paid marca conta como paga
+- [ ] create_expense cria despesa variável
+- [ ] get_debt_progress retorna progresso de dívidas
+
+**Regras de Negócio:**
+- [ ] Dívidas não negociadas excluídas de Total Orçado
+- [ ] Dívidas não negociadas incluídas em Total de Dívidas
+- [ ] Pagamento de parcela incrementa currentInstallment
+- [ ] Última parcela altera status para paid_off
 
 ---
 
@@ -1773,6 +1901,18 @@ Comportamento similar ao Telegram.
 - [ ] Job de recorrência mensal
 - [ ] Tool get_finance_summary funcional
 
+**Dívidas - Funcionalidades Específicas:**
+- [ ] Criar dívidas não negociadas (apenas valor total, sem parcelas)
+- [ ] Dívidas não negociadas NÃO entram no Total Orçado
+- [ ] KPI "Total de Dívidas" soma todas (negociadas + pendentes)
+- [ ] KPI "Parcela Mensal Total" soma apenas negociadas ativas
+- [ ] KPI "Total Já Pago" calcula corretamente
+- [ ] KPI "Total Restante" calcula corretamente
+- [ ] Marcar dívida como negociada (preencher parcelas)
+- [ ] Pagar parcela (incrementa currentInstallment)
+- [ ] Quitação automática ao pagar última parcela
+- [ ] Progresso visual por dívida (barra, %, valores)
+
 ---
 
 ## 9) Glossário
@@ -1799,5 +1939,5 @@ Comportamento similar ao Telegram.
 
 ---
 
-*Última atualização: 19 Janeiro 2026*
-*Revisão: Adicionado Módulo Finance (M2.2) - seção 3.11 com regras de negócio para rendas, contas fixas, despesas variáveis, dívidas e investimentos*
+*Última atualização: 21 Janeiro 2026*
+*Revisão: Dívidas não negociadas (isNegotiated), novos KPIs de dívidas (Total de Dívidas, Parcela Mensal Total, Total Já Pago, Total Restante), cálculos de progresso por dívida*
