@@ -23,11 +23,23 @@ export type GetTrackingHistoryParams = z.infer<typeof getTrackingHistoryParamsSc
  *
  * Used to get historical data for user metrics.
  * This is a READ tool - does not require user confirmation.
+ *
+ * CRITICAL: The response includes a real UUID 'id' for each entry.
+ * This ID MUST be used when calling update_metric or delete_metric.
  */
 export const getTrackingHistoryTool: ToolDefinition<typeof getTrackingHistoryParamsSchema> = {
   name: 'get_tracking_history',
-  description:
-    'Get historical data for user metrics (weight, expenses, mood, water, sleep, etc.). Returns data points over the specified time period.',
+  description: `Obtém histórico de métricas do usuário (peso, gastos, humor, água, sono, etc.).
+
+    RETORNA para cada entry:
+    - id: UUID real do banco de dados (ex: "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+    - date: data do registro
+    - value: valor numérico
+    - unit: unidade de medida
+
+    IMPORTANTE: O campo "id" retornado é o UUID REAL do banco de dados.
+    Este ID DEVE ser usado como "entryId" ao chamar update_metric ou delete_metric.
+    NUNCA invente IDs - use EXATAMENTE o ID retornado por esta tool.`,
   parameters: getTrackingHistoryParamsSchema,
   requiresConfirmation: false,
   inputExamples: [

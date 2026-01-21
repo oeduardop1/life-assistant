@@ -203,6 +203,28 @@ const llm = LLMFactory.create(config.llmProvider);
 - Fallback automático se provider falhar
 - Otimização de custo por tipo de tarefa (ex: usar modelo menor para tarefas simples)
 
+#### Tipo `ToolChoice` Estendido
+
+O tipo `ToolChoice` foi estendido para suportar forçar uma tool específica:
+
+```typescript
+type ToolChoice =
+  | 'auto'      // LLM decide quando usar tools
+  | 'required'  // LLM deve usar alguma tool
+  | 'none'      // LLM não pode usar tools
+  | { type: 'tool'; toolName: string };  // Forçar tool específica
+
+// Exemplo: forçar respond_to_confirmation
+await llm.chatWithTools({
+  tools: [respondToConfirmationTool],
+  toolChoice: { type: 'tool', toolName: 'respond_to_confirmation' },
+});
+```
+
+**Implementação por provider:**
+- **Claude:** `{ type: 'tool', name: 'tool_name' }`
+- **Gemini:** `mode: ANY` + `allowedFunctionNames: ['tool_name']`
+
 ### 2.4 Tool Use Examples
 
 > **Referência:** Artigo Anthropic "Advanced Tool Use" — accuracy de tool calls 72% → 90%
@@ -710,6 +732,106 @@ export const tools: ToolDefinition[] = [
       { type: "exercise", value: 45, unit: "min", date: "2026-01-12", notes: "Musculação - peito e tríceps" },
       // Humor - captura conversacional
       { type: "mood", value: 7, date: "2026-01-12", notes: "Usuário disse estar se sentindo bem" },
+    ],
+  },
+  {
+    name: 'update_metric',
+    description: `Corrige um registro de métrica existente.
+
+      ⚠️ REGRA CRÍTICA SOBRE entryId:
+      - O entryId DEVE ser o UUID EXATO retornado por get_tracking_history
+      - NUNCA invente, gere ou fabrique IDs (como "sleep-12345" ou "entry-xxx")
+      - IDs reais são UUIDs no formato: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      - Copie o ID EXATAMENTE como aparece na resposta de get_tracking_history
+
+      QUANDO USAR:
+      - Usuário quer CORRIGIR um valor JÁ REGISTRADO
+      - Usuário diz "errei", "não era X, era Y", "corrigi", "o certo é"
+
+      FLUXO OBRIGATÓRIO:
+      1. PRIMEIRO: Chamar get_tracking_history para obter os registros
+      2. SEGUNDO: Extrair o campo "id" do entry correto da resposta
+      3. TERCEIRO: Chamar update_metric usando esse ID EXATO como entryId
+      4. Sistema pedirá confirmação ao usuário
+
+      EXEMPLO DE FLUXO CORRETO:
+      1. get_tracking_history({ type: "sleep", days: 7 })
+      2. Resposta inclui: { entries: [{ id: "f47ac10b-58cc-4372-a567-0e02b2c3d479", value: 5.5, ... }] }
+      3. update_metric({ entryId: "f47ac10b-58cc-4372-a567-0e02b2c3d479", value: 4 })
+
+      NUNCA use record_metric para corrigir - isso cria duplicatas!`,
+    parameters: z.object({
+      entryId: z.string().describe('UUID REAL do entry a atualizar. DEVE ser o ID EXATO retornado por get_tracking_history. NUNCA invente IDs.'),
+      value: z.number().describe('Novo valor'),
+      unit: z.string().optional().describe('Nova unidade (se mudar)'),
+      reason: z.string().optional().describe('Motivo da correção'),
+    }),
+    requiresConfirmation: true,  // Confirmação via SISTEMA (ADR-015)
+    inputExamples: [
+      { entryId: "f47ac10b-58cc-4372-a567-0e02b2c3d479", value: 61.7, reason: "Usuário corrigiu valor errado" },
+    ],
+  },
+  {
+    name: 'delete_metric',
+    description: `Remove um registro de métrica.
+
+      ⚠️ REGRA CRÍTICA SOBRE entryId:
+      - O entryId DEVE ser o UUID EXATO retornado por get_tracking_history
+      - NUNCA invente, gere ou fabrique IDs (como "sleep-12345" ou "entry-xxx")
+      - IDs reais são UUIDs no formato: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      - Copie o ID EXATAMENTE como aparece na resposta de get_tracking_history
+
+      ATENÇÃO: Ação destrutiva. Use APENAS quando usuário EXPLICITAMENTE pedir para deletar.
+
+      QUANDO USAR:
+      - Usuário diz "apaga", "deleta", "remove" um registro
+      - Registro foi feito por engano
+
+      FLUXO OBRIGATÓRIO:
+      1. PRIMEIRO: Chamar get_tracking_history para obter os registros
+      2. SEGUNDO: Mostrar ao usuário qual registro será deletado (data e valor)
+      3. TERCEIRO: Extrair o campo "id" EXATO do entry da resposta
+      4. QUARTO: Chamar delete_metric usando esse ID como entryId
+      5. Sistema pedirá confirmação final
+
+      NUNCA delete sem confirmação explícita do usuário!`,
+    parameters: z.object({
+      entryId: z.string().describe('UUID REAL do entry a deletar. DEVE ser o ID EXATO retornado por get_tracking_history. NUNCA invente IDs.'),
+      reason: z.string().optional().describe('Motivo da exclusão'),
+    }),
+    requiresConfirmation: true,  // Confirmação via SISTEMA (ADR-015)
+    inputExamples: [
+      { entryId: "f47ac10b-58cc-4372-a567-0e02b2c3d479", reason: "Usuário pediu para remover registro duplicado" },
+    ],
+  },
+
+  // ========== INTERNAL TOOLS (não em allTools) ==========
+  // Nota: respond_to_confirmation NÃO está em allTools.
+  // É usada internamente com toolChoice forçado para detecção de intent.
+  {
+    name: 'respond_to_confirmation',
+    description: `Analisa resposta do usuário a uma confirmação pendente e determina sua intenção.
+
+      Esta tool é usada com toolChoice FORÇADO para garantir execução determinística.
+      NÃO está disponível no fluxo normal de tools - apenas para detecção de intent.
+
+      Guidelines de detecção:
+      - "confirm": Usuário concorda (sim, ok, pode, beleza, manda ver, vai lá, tá certo, bora, etc.)
+      - "reject": Usuário recusa (não, cancela, deixa, esquece, para, não precisa, etc.)
+      - "correct": Usuário fornece valor diferente (na verdade 81, errei era 80kg, são 83, etc.)`,
+    parameters: z.object({
+      intent: z.enum(['confirm', 'reject', 'correct']).describe('Intent detectada'),
+      correctedValue: z.number().optional().describe('Se intent é "correct", o novo valor'),
+      correctedUnit: z.string().optional().describe('Se intent é "correct", a unidade'),
+      confidence: z.number().min(0).max(1).describe('Nível de confiança (0-1)'),
+      reasoning: z.string().optional().describe('Explicação da detecção'),
+    }),
+    requiresConfirmation: false,  // Esta tool NÃO requer confirmação
+    inputExamples: [
+      { intent: 'confirm', confidence: 0.95, reasoning: 'Usuário disse "sim"' },
+      { intent: 'confirm', confidence: 0.92, reasoning: 'Usuário disse "beleza" - confirmação coloquial' },
+      { intent: 'reject', confidence: 0.95, reasoning: 'Usuário disse "não, deixa"' },
+      { intent: 'correct', correctedValue: 81, correctedUnit: 'kg', confidence: 0.90, reasoning: 'Usuário corrigiu para 81kg' },
     ],
   },
   {
@@ -1811,7 +1933,7 @@ Fingir que sabe algo que não sabe
 | Categoria | Tools | Confirmação |
 |-----------|-------|-------------|
 | **Read** | `search_knowledge`, `get_tracking_history`, `get_trends`, `get_person`, `analyze_context`, `get_finance_summary` | ❌ Não |
-| **Write** | `record_metric`, `add_knowledge`, `create_reminder`, `update_person` | ✅ Sim |
+| **Write** | `record_metric`, `update_metric`, `delete_metric`, `add_knowledge`, `create_reminder`, `update_person` | ✅ Sim |
 
 ### 9.2 Regras de Confirmação
 
@@ -1824,6 +1946,8 @@ Fingir que sabe algo que não sabe
 | `analyze_context` | ❌ Não | Apenas leitura (análise de contexto) |
 | `get_finance_summary` | ❌ Não | Apenas leitura (resumo financeiro) |
 | `record_metric` | ✅ Sim | Modifica dados |
+| `update_metric` | ✅ Sim | Modifica dados existentes |
+| `delete_metric` | ✅ Sim | Remove dados existentes |
 | `add_knowledge` | ❌ Não | IA confirma naturalmente na resposta |
 | `create_reminder` | ✅ Sim | Cria agendamento |
 | `update_person` | ✅ Sim | Modifica dados |
@@ -1831,7 +1955,7 @@ Fingir que sabe algo que não sabe
 **Exceções (não requer confirmação via UI):**
 - `add_knowledge`: IA salva diretamente e confirma na resposta (ex: "Anotei que você é consultor de investimentos")
 
-### 9.3 Fluxo de Confirmação (via Sistema)
+### 9.3 Fluxo de Confirmação (via Sistema + LLM)
 
 ```
 Usuário: "Pesei 82kg hoje de manhã"
@@ -1842,20 +1966,40 @@ Usuário: "Pesei 82kg hoje de manhã"
 
 IA: "Quer que eu registre seu peso de 82kg para hoje (06/01/2026)?"
 
-Usuário: "Sim"
+Usuário: "Beleza"
 
-[Sistema detecta intent "confirm"]
+[Sistema detecta confirmação pendente]
+[Sistema chama LLM com toolChoice FORÇADO: respond_to_confirmation]
+[LLM retorna: { intent: 'confirm', confidence: 0.92, reasoning: 'beleza = confirmação coloquial' }]
 [Sistema executa record_metric diretamente (sem novo tool loop)]
 
 IA: "Pronto! Registrei seu peso de 82kg."
 ```
 
-> **Nota:** A confirmação é controlada pelo SISTEMA, não pela IA.
-> O sistema detecta automaticamente a resposta do usuário:
-> - "sim/pode/ok" → Intent `confirm` → Executa tool
-> - "não/cancela" → Intent `reject` → Cancela
-> - Correção (ex: "75.5 kg") → Intent `correction` → Novo tool loop
-> - Outra mensagem → Intent `unrelated` → Cancela e processa nova mensagem
+> **Nota:** A detecção de intent usa LLM com tool forçada (`respond_to_confirmation`).
+> Isso permite reconhecer variações naturais como "beleza", "manda ver", "tá certo", "bora".
+>
+> **SEM FALLBACK PARA REGEX:** Se a LLM falhar, retorna erro explícito ao usuário
+> pedindo para tentar novamente. A confirmação pendente permanece ativa.
+
+**Intents detectadas:**
+- `confirm`: Usuário concorda (sim, ok, pode, beleza, manda ver, bora, etc.)
+- `reject`: Usuário recusa (não, cancela, deixa, esquece, etc.)
+- `correct`: Usuário fornece valor diferente (na verdade 81, errei, são 83, etc.)
+- `error`: Falha na LLM (exibe mensagem de erro, mantém confirmação pendente)
+
+**Mensagens de confirmação por tool:**
+
+| Tool | Formato da Mensagem | Exemplo |
+|------|---------------------|---------|
+| `record_metric` | `Registrar {tipo}: {valor} {unidade} em {data}?` | "Registrar peso: 82 kg em 2026-01-20?" |
+| `update_metric` | (IA pergunta antes) | "Você quer corrigir o valor de 2000ml para 1900ml?" |
+| `delete_metric` | (IA pergunta antes) | "Quer que eu remova o registro de sono de 5h?" |
+| `add_knowledge` | `Salvar conhecimento: "{preview}"?` | "Salvar conhecimento: 'é consultor de investimentos'?" |
+| `create_reminder` | `Executar create_reminder?` | (genérico) |
+| `update_person` | `Executar update_person?` | (genérico) |
+
+> **Nota sobre update_metric/delete_metric:** A IA pergunta de forma amigável ANTES de chamar a tool. Quando o usuário responde com confirmação ("pode atualizar", "sim", "corrige"), o sistema detecta e executa diretamente sem pedir confirmação novamente. Isso evita confirmação dupla.
 
 ### 9.4 Correções Pré-Confirmação
 
@@ -1902,17 +2046,81 @@ interface StoredConfirmation {
 }
 ```
 
-### 9.6 Detecção de Intent do Usuário
+### 9.6 Detecção de Intent do Usuário (via LLM)
+
+A detecção de intent usa a tool `respond_to_confirmation` com execução forçada:
 
 ```typescript
-// ChatService.detectUserIntent()
-type ConfirmationIntent = 'confirm' | 'reject' | 'correction' | 'unrelated';
+// ChatService.detectUserIntentViaLLM()
+const response = await this.llm.chatWithTools({
+  messages: [{ role: 'user', content: userMessage }],
+  systemPrompt: `Analise a resposta do usuário à confirmação: "${pendingConfirmation.message}"`,
+  tools: [respondToConfirmationTool],
+  toolChoice: { type: 'tool', toolName: 'respond_to_confirmation' },
+  temperature: 0, // Máxima previsibilidade
+});
 
-// Padrões detectados:
-const confirmPatterns = [/^(sim|yes|ok|pode|faz|faça)$/i, ...];
-const rejectPatterns = [/^(não|no|cancela|deixa)$/i, ...];
-const correctionPatterns = [/^(na verdade|errei)/i, /^\d+[.,]?\d*\s*(kg|ml)/i, ...];
+// Resultado:
+type ConfirmationIntent = 'confirm' | 'reject' | 'correction' | 'error';
 ```
+
+**Vantagens sobre regex:**
+- Reconhece variações naturais ("beleza", "manda ver", "vai lá", "bora")
+- Extrai valores corrigidos automaticamente ("na verdade 81" → `{ intent: 'correct', correctedValue: 81 }`)
+- Confiança quantificada (0-1) para monitoramento
+
+**Tratamento de erros:**
+- Se LLM falhar: retorna `{ intent: 'error', errorMessage: '...' }`
+- Confirmação pendente **permanece ativa** para retry
+- **NÃO há fallback para regex** - regex já provou ser falho para linguagem natural
+
+### 9.7 Correções Pós-Registro
+
+Quando o usuário quer corrigir uma métrica JÁ REGISTRADA:
+
+| Cenário | Tool a usar | Resultado |
+|---------|-------------|-----------|
+| Novo registro | `record_metric` | Cria entrada nova |
+| Corrigir valor | `update_metric` | Atualiza entrada existente |
+| Deletar erro | `delete_metric` | Remove entrada |
+
+**⚠️ REGRA CRÍTICA sobre entryId:**
+- O `entryId` DEVE ser o UUID EXATO retornado por `get_tracking_history`
+- NUNCA inventar IDs como "entry-123", "sleep-12345", etc.
+- IDs reais são UUIDs: `f47ac10b-58cc-4372-a567-0e02b2c3d479`
+
+**Fluxo de correção:**
+1. IA detecta que usuário quer corrigir (palavras: "errei", "não era", "corrigi")
+2. IA chama `get_tracking_history` para encontrar o registro
+3. IA mostra os dados e pergunta de forma amigável se deve corrigir
+4. Usuário confirma → IA chama `update_metric` com o ID EXATO
+5. Sistema detecta que mensagem do usuário já era confirmação → executa diretamente
+
+**Exemplo - Correção imediata:**
+```
+Usuário: "Dormi 5h hoje"
+IA: "Quer que eu registre?" → Sim → Registrado
+Usuário: "Errei, foi 4h"
+IA: [chama get_tracking_history]
+   → Resposta: { entries: [{ id: "f47ac10b-58cc-4372-a567-0e02b2c3d479", value: 5, date: "2026-01-20" }] }
+IA: "Encontrei o registro de sono de hoje (5h). Quer que eu corrija para 4h?"
+Usuário: "Sim, pode corrigir"
+IA: [chama update_metric({ entryId: "f47ac10b-58cc-4372-a567-0e02b2c3d479", value: 4 })]
+   → Sistema detecta "sim, pode corrigir" como confirmação → executa diretamente
+IA: "Pronto! Corrigido para 4h"
+```
+
+**Exemplo - Correção de dia anterior:**
+```
+Usuário: "Lembrei que ontem dormi 6h, não 5h. Corrige pra mim."
+IA: [chama get_tracking_history({ type: "sleep", days: 7 })]
+   → Resposta: { entries: [{ id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", value: 5, date: "2026-01-19" }] }
+IA: [chama update_metric({ entryId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", value: 6 })]
+   → Sistema detecta "corrige pra mim" como confirmação → executa diretamente
+IA: "Pronto! Corrigido para 6h"
+```
+
+> **Nota:** Quando o usuário já expressa intenção de corrigir/deletar na mensagem ("corrige pra mim", "pode atualizar", "apaga"), o sistema executa diretamente sem pedir confirmação adicional.
 
 ---
 

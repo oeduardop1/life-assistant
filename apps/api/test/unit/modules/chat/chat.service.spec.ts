@@ -33,6 +33,31 @@ vi.mock('@life-assistant/ai', () => ({
     description: 'Get tracking history',
     parameters: {},
   },
+  updateMetricTool: {
+    name: 'update_metric',
+    description: 'Update a metric entry',
+    parameters: {},
+    requiresConfirmation: true,
+  },
+  deleteMetricTool: {
+    name: 'delete_metric',
+    description: 'Delete a metric entry',
+    parameters: {},
+    requiresConfirmation: true,
+  },
+  deleteMetricsTool: {
+    name: 'delete_metrics',
+    description: 'Delete multiple metric entries',
+    parameters: {},
+    requiresConfirmation: true,
+  },
+  // Confirmation detection tool (LLM-based)
+  respondToConfirmationTool: {
+    name: 'respond_to_confirmation',
+    description: 'Analyze user response to confirmation prompt',
+    parameters: {},
+    requiresConfirmation: false,
+  },
 }));
 
 import { ChatService } from '../../../../src/modules/chat/application/services/chat.service.js';
@@ -127,6 +152,7 @@ describe('ChatService', () => {
     stream: ReturnType<typeof vi.fn>;
     generateText: ReturnType<typeof vi.fn>;
     chat: ReturnType<typeof vi.fn>;
+    chatWithTools: ReturnType<typeof vi.fn>;
     getInfo: ReturnType<typeof vi.fn>;
   };
 
@@ -176,6 +202,7 @@ describe('ChatService', () => {
       stream: vi.fn(),
       generateText: vi.fn(),
       chat: vi.fn(),
+      chatWithTools: vi.fn(),
       getInfo: vi.fn().mockReturnValue({ name: 'test', model: 'test-model' }),
     };
 
@@ -447,125 +474,52 @@ describe('ChatService', () => {
 
   // ==========================================================================
   // Confirmation Intent Detection Tests (ADR-015)
+  // Uses LLM-based detection instead of regex patterns
   // ==========================================================================
 
-  describe('detectUserIntent (private method)', () => {
-    // Access private method for testing via prototype
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const callDetectUserIntent = (service: ChatService, message: string) =>
-      (service as any).detectUserIntent(message);
-
-    describe('confirm patterns', () => {
-      const confirmCases = [
-        'sim',
-        'Sim',
-        'SIM',
-        'yes',
-        'ok',
-        's',
-        'pode',
-        'registra',
-        'confirmo',
-        'isso',
-        'faz',
-        'faça',
-        'pode sim',
-        'pode fazer',
-        'pode registrar',
-        'faz isso',
-        'faça isso',
-        'faz aí',
-        'faça aí',
-      ];
-
-      confirmCases.forEach((input) => {
-        it(`should detect "${input}" as confirm`, () => {
-          const result = callDetectUserIntent(chatService, input);
-          expect(result).toBe('confirm');
-        });
-      });
-    });
-
-    describe('reject patterns', () => {
-      const rejectCases = [
-        'não',
-        'Não',
-        'NÃO',
-        'no',
-        'nao',
-        'n',
-        'cancela',
-        'deixa',
-        'esquece',
-        'para',
-        'não precisa',
-        'não quero',
-        'não registra',
-      ];
-
-      rejectCases.forEach((input) => {
-        it(`should detect "${input}" as reject`, () => {
-          const result = callDetectUserIntent(chatService, input);
-          expect(result).toBe('reject');
-        });
-      });
-    });
-
-    describe('correction patterns', () => {
-      const correctionCases = [
-        'na verdade é 75.5',
-        'errei, é 82kg',
-        'corrigi, são 3 litros',
-        '75.5 kg',
-        '2000 ml',
-        '8 horas',
-        '30 min',
-        '2.5 litros',
-      ];
-
-      correctionCases.forEach((input) => {
-        it(`should detect "${input}" as correction`, () => {
-          const result = callDetectUserIntent(chatService, input);
-          expect(result).toBe('correction');
-        });
-      });
-    });
-
-    describe('unrelated patterns', () => {
-      const unrelatedCases = [
-        'qual a previsão do tempo?',
-        'me conta uma piada',
-        'como você está?',
-        'obrigado pela ajuda',
-        'vamos falar de outra coisa',
-        'qual é a capital da França?',
-      ];
-
-      unrelatedCases.forEach((input) => {
-        it(`should detect "${input}" as unrelated`, () => {
-          const result = callDetectUserIntent(chatService, input);
-          expect(result).toBe('unrelated');
-        });
-      });
-    });
-  });
-
   describe('handlePendingConfirmationFromMessage', () => {
+    const mockToolCall = {
+      id: 'tool-1',
+      name: 'record_metric',
+      arguments: { type: 'weight', value: 75, unit: 'kg', date: '2026-01-20' },
+    };
     const mockPendingConfirmation = {
       confirmationId: 'conf-123',
       conversationId: 'conv-123',
       userId: 'user-123',
-      toolCall: {
-        id: 'tool-1',
-        name: 'record_metric',
-        arguments: { type: 'weight', value: 75, unit: 'kg', date: '2026-01-20' },
-      },
+      toolCall: mockToolCall,
+      toolCalls: [mockToolCall], // NEW: array of all tool calls
       toolName: 'record_metric',
+      toolNames: ['record_metric'], // NEW: array of all tool names
       message: 'Registrar peso: 75 kg?',
       iteration: 1,
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     };
+
+    /**
+     * Helper to mock LLM chatWithTools response for intent detection
+     */
+    function mockLLMIntentResponse(intent: 'confirm' | 'reject' | 'correct', options?: {
+      correctedValue?: number;
+      correctedUnit?: string;
+      confidence?: number;
+    }) {
+      mockLLM.chatWithTools.mockResolvedValue({
+        content: '',
+        finishReason: 'tool_calls',
+        toolCalls: [{
+          id: 'tc-1',
+          name: 'respond_to_confirmation',
+          arguments: {
+            intent,
+            confidence: options?.confidence ?? 0.95,
+            ...(options?.correctedValue !== undefined && { correctedValue: options.correctedValue }),
+            ...(options?.correctedUnit && { correctedUnit: options.correctedUnit }),
+          },
+        }],
+      });
+    }
 
     it('should_return_false_when_no_pending_confirmation', async () => {
       mockConfirmationStateService.getLatest.mockResolvedValue(null);
@@ -597,6 +551,9 @@ describe('ChatService', () => {
       });
       mockMessageRepository.create.mockResolvedValue(createMockMessage());
 
+      // Mock LLM to detect 'confirm' intent
+      mockLLMIntentResponse('confirm');
+
       const subject = {
         next: vi.fn(),
         complete: vi.fn(),
@@ -612,6 +569,7 @@ describe('ChatService', () => {
       );
 
       expect(result).toBe(true);
+      expect(mockLLM.chatWithTools).toHaveBeenCalled();
       expect(mockTrackingToolExecutor.execute).toHaveBeenCalled();
       expect(mockConfirmationStateService.confirm).toHaveBeenCalledWith('conv-123', 'conf-123');
       expect(subject.complete).toHaveBeenCalled();
@@ -621,6 +579,9 @@ describe('ChatService', () => {
       mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
       mockConfirmationStateService.reject.mockResolvedValue(true);
       mockMessageRepository.create.mockResolvedValue(createMockMessage());
+
+      // Mock LLM to detect 'reject' intent
+      mockLLMIntentResponse('reject');
 
       const subject = {
         next: vi.fn(),
@@ -637,19 +598,27 @@ describe('ChatService', () => {
       );
 
       expect(result).toBe(true);
+      expect(mockLLM.chatWithTools).toHaveBeenCalled();
       expect(mockTrackingToolExecutor.execute).not.toHaveBeenCalled();
       expect(mockConfirmationStateService.reject).toHaveBeenCalledWith('conv-123', 'conf-123');
       expect(subject.next).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'response',
-          data: { content: 'Ok, cancelado.' },
+          data: { content: 'Ok, cancelado.', done: true },
         })
       );
     });
 
-    it('should_clear_confirmation_and_return_false_on_correction', async () => {
+    it('should_execute_tool_with_corrected_value_when_correction_detected', async () => {
       mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
-      mockConfirmationStateService.reject.mockResolvedValue(true);
+      mockConfirmationStateService.confirm.mockResolvedValue(mockPendingConfirmation);
+      mockTrackingToolExecutor.execute.mockResolvedValue({
+        success: true,
+        content: JSON.stringify({ message: 'Registrado!' }),
+      });
+      mockMessageRepository.create.mockResolvedValue(createMockMessage());
+
+      // Mock LLM to detect 'correct' intent with new value
+      mockLLMIntentResponse('correct', { correctedValue: 75.5, correctedUnit: 'kg' });
 
       const subject = {
         next: vi.fn(),
@@ -665,14 +634,62 @@ describe('ChatService', () => {
         subject
       );
 
-      expect(result).toBe(false);
-      expect(mockConfirmationStateService.reject).toHaveBeenCalledWith('conv-123', 'conf-123');
-      expect(subject.complete).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+      expect(mockLLM.chatWithTools).toHaveBeenCalled();
+      // Should execute with corrected value
+      expect(mockTrackingToolExecutor.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          arguments: expect.objectContaining({
+            value: 75.5,
+            unit: 'kg',
+          }),
+        }),
+        expect.anything()
+      );
+      expect(subject.complete).toHaveBeenCalled();
+    });
+
+    it('should_ask_for_clarification_when_correction_has_no_value', async () => {
+      mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
+
+      // Mock LLM to detect 'correct' intent without a value
+      mockLLMIntentResponse('correct'); // No correctedValue
+
+      const subject = {
+        next: vi.fn(),
+        complete: vi.fn(),
+      };
+
+      // Access private method
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (chatService as any).handlePendingConfirmationFromMessage(
+        'user-123',
+        'conv-123',
+        'na verdade outro valor',
+        subject
+      );
+
+      expect(result).toBe(true);
+      expect(mockLLM.chatWithTools).toHaveBeenCalled();
+      expect(mockTrackingToolExecutor.execute).not.toHaveBeenCalled();
+      // Changed: no more duplicate SSE events - content is sent only once with done: true
+      expect(subject.next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { content: 'Qual seria o valor correto?', done: true },
+        })
+      );
     });
 
     it('should_clear_confirmation_and_return_false_on_unrelated_message', async () => {
       mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
-      mockConfirmationStateService.reject.mockResolvedValue(true);
+      mockConfirmationStateService.clearAll.mockResolvedValue(undefined);
+
+      // Mock LLM with no tool call (shouldn't happen, but fallback to error)
+      mockLLM.chatWithTools.mockResolvedValue({
+        content: '',
+        finishReason: 'stop',
+        toolCalls: [],
+      });
 
       const subject = {
         next: vi.fn(),
@@ -688,9 +705,45 @@ describe('ChatService', () => {
         subject
       );
 
-      expect(result).toBe(false);
-      expect(mockConfirmationStateService.reject).toHaveBeenCalledWith('conv-123', 'conf-123');
-      expect(subject.complete).not.toHaveBeenCalled();
+      // When LLM returns no tool call, it's treated as error and returns true
+      expect(result).toBe(true);
+      expect(mockLLM.chatWithTools).toHaveBeenCalled();
+    });
+
+    it('should_return_error_message_and_keep_confirmation_pending_when_llm_fails', async () => {
+      mockConfirmationStateService.getLatest.mockResolvedValue(mockPendingConfirmation);
+
+      // Mock LLM to throw an error
+      mockLLM.chatWithTools.mockRejectedValue(new Error('LLM error'));
+
+      const subject = {
+        next: vi.fn(),
+        complete: vi.fn(),
+      };
+
+      // Access private method
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (chatService as any).handlePendingConfirmationFromMessage(
+        'user-123',
+        'conv-123',
+        'sim',
+        subject
+      );
+
+      expect(result).toBe(true);
+      expect(mockLLM.chatWithTools).toHaveBeenCalled();
+      // Confirmation should NOT be cleared - user can retry
+      expect(mockConfirmationStateService.clearAll).not.toHaveBeenCalled();
+      expect(mockConfirmationStateService.reject).not.toHaveBeenCalled();
+      // Changed: no more duplicate SSE events - content is sent only once with done: true
+      expect(subject.next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            content: expect.stringContaining('problema'),
+            done: true,
+          },
+        })
+      );
     });
   });
 });

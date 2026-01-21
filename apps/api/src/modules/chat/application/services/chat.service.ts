@@ -8,6 +8,9 @@ import {
   analyzeContextTool,
   recordMetricTool,
   getTrackingHistoryTool,
+  updateMetricTool,
+  deleteMetricTool,
+  respondToConfirmationTool,
   type LLMPort,
   type Message as LLMMessage,
   type ToolLoopConfig,
@@ -17,6 +20,7 @@ import {
   type ToolExecutionContext,
   type ToolExecutionResult,
   type PendingConfirmation,
+  type RespondToConfirmationParams,
   createErrorResult,
 } from '@life-assistant/ai';
 import type { Conversation, Message } from '@life-assistant/database';
@@ -39,6 +43,17 @@ export interface MessageEvent {
 }
 
 /**
+ * Result of LLM-based intent detection
+ */
+interface IntentDetectionResult {
+  intent: 'confirm' | 'reject' | 'correction' | 'unrelated' | 'error';
+  correctedValue?: number | undefined;
+  correctedUnit?: string | undefined;
+  confidence: number;
+  errorMessage?: string | undefined;
+}
+
+/**
  * Chat service - Orchestrates chat interactions with LLM and Tool Use
  *
  * @see docs/specs/ai.md §2 for architecture
@@ -56,6 +71,9 @@ export class ChatService {
    * @see docs/specs/ai.md §6.2 for tool definitions
    * @see ADR-014 for analyze_context (Real-time Inference)
    * @see ADR-015 for Low Friction Tracking Philosophy
+   *
+   * Note: delete_metrics (batch) was removed - LLM hallucinates entry IDs.
+   * Parallel delete_metric calls work correctly and are confirmed together.
    */
   private readonly availableTools: ToolDefinition[] = [
     // Memory tools
@@ -65,6 +83,8 @@ export class ChatService {
     // Tracking tools (M2.1)
     recordMetricTool,
     getTrackingHistoryTool,
+    updateMetricTool,
+    deleteMetricTool,
   ];
 
   /**
@@ -76,6 +96,8 @@ export class ChatService {
     analyze_context: 'memory',
     record_metric: 'tracking',
     get_tracking_history: 'tracking',
+    update_metric: 'tracking',
+    delete_metric: 'tracking',
   };
 
   /**
@@ -321,6 +343,7 @@ export class ChatService {
           conversationId,
           result.pendingConfirmation,
           result.content,
+          lastUserMessage,
           subject
         );
         return;
@@ -432,45 +455,117 @@ export class ChatService {
   // ==========================================================================
 
   /**
-   * User intent when responding to a pending confirmation
+   * Detect user intent via LLM with forced tool execution.
+   * Uses toolChoice: { type: 'tool', toolName: 'respond_to_confirmation' }
+   * to guarantee deterministic execution.
+   *
+   * NO FALLBACK TO REGEX: If LLM fails, returns explicit error.
+   * Regex-based detection is proven flawed for natural language variations.
+   *
+   * @see ADR-015 Low Friction Tracking Philosophy
    */
-  private detectUserIntent(message: string): 'confirm' | 'reject' | 'correction' | 'unrelated' {
+  private async detectUserIntentViaLLM(
+    userMessage: string,
+    pendingConfirmation: StoredConfirmation
+  ): Promise<IntentDetectionResult> {
+    const systemPrompt = `You are analyzing a user's response to a confirmation prompt.
+
+The pending confirmation is: "${pendingConfirmation.message}"
+Tool: ${pendingConfirmation.toolName}
+Arguments: ${JSON.stringify(pendingConfirmation.toolCall.arguments)}
+
+The user responded with: "${userMessage}"
+
+Analyze the user's message and determine their intent using the respond_to_confirmation tool.`;
+
+    try {
+      const response = await this.llm.chatWithTools({
+        messages: [{ role: 'user', content: userMessage }],
+        systemPrompt,
+        tools: [respondToConfirmationTool],
+        toolChoice: { type: 'tool', toolName: 'respond_to_confirmation' },
+        temperature: 0, // Maximum determinism
+      });
+
+      const toolCall = response.toolCalls?.[0];
+      if (toolCall) {
+        const args = toolCall.arguments as RespondToConfirmationParams;
+
+        // Map 'correct' to 'correction' for backwards compatibility
+        const intent: 'confirm' | 'reject' | 'correction' =
+          args.intent === 'correct' ? 'correction' : args.intent;
+
+        this.logger.log(`LLM detected intent: ${intent} with confidence ${String(args.confidence)}`);
+
+        return {
+          intent,
+          confidence: args.confidence,
+          ...(args.correctedValue !== undefined && { correctedValue: args.correctedValue }),
+          ...(args.correctedUnit !== undefined && { correctedUnit: args.correctedUnit }),
+        };
+      }
+
+      // No tool call returned (shouldn't happen with forced tool_choice)
+      this.logger.warn('No tool call returned despite forced tool_choice');
+      return {
+        intent: 'error',
+        confidence: 0,
+        errorMessage: 'Não consegui processar sua resposta. Pode tentar novamente?',
+      };
+
+    } catch (error) {
+      this.logger.error('Error detecting user intent via LLM', { error });
+      // NO FALLBACK TO REGEX - Return explicit error
+      // Regex is proven flawed for natural language (misses "beleza", "manda ver", etc.)
+      // Better to fail explicitly than fail silently
+      return {
+        intent: 'error',
+        confidence: 0,
+        errorMessage: 'Desculpe, tive um problema ao processar. Pode tentar novamente?',
+      };
+    }
+  }
+
+  /**
+   * Check if user message is a confirmation for update/delete operations
+   * Used to avoid double confirmation when AI already asked nicely
+   */
+  private isUpdateDeleteConfirmation(message: string): boolean {
     const normalized = message.trim().toLowerCase();
 
-    // Confirm patterns - short affirmative responses
-    const confirmPatterns = [
-      /^(sim|yes|ok|s|pode|registr[ae]|confirm[ao]|isso|faz|faça)$/i,
-      /^pode\s+(sim|fazer|registrar)/i,
+    // Patterns that indicate user is confirming an update/delete operation
+    const updateDeleteConfirmPatterns = [
+      // Generic confirmations
+      /^(sim|yes|ok|s|pode|isso|faz|faça)$/i,
+      /^pode\s+(sim|fazer)/i,
       /^(faz|faça)\s+(isso|aí)/i,
-    ];
-    if (confirmPatterns.some(p => p.test(normalized))) {
-      return 'confirm';
-    }
+      /^sim[,.]?\s+(pode|faz|faça)/i,
 
-    // Reject patterns
-    const rejectPatterns = [
-      /^(não|no|nao|n|cancela|deixa|esquece|para)$/i,
-      /^não\s+(precisa|quero|registra)/i,
-    ];
-    if (rejectPatterns.some(p => p.test(normalized))) {
-      return 'reject';
-    }
+      // Update-specific confirmations
+      /^pode\s+(atualizar|corrigir|alterar|mudar)/i,
+      /^(atualiza|corrige|altera|muda)/i,
+      /^sim[,.]?\s*(atualiza|corrige)/i,
 
-    // Correction patterns (new value or explicit correction)
-    const correctionPatterns = [
-      /^(na verdade|errei|corrigi|é|era|são)/i,
-      /^\d+[.,]?\d*\s*(kg|ml|litros?|horas?|min)/i,
-    ];
-    if (correctionPatterns.some(p => p.test(normalized))) {
-      return 'correction';
-    }
+      // Delete-specific confirmations
+      /^pode\s+(deletar|remover|apagar|excluir)/i,
+      /^(deleta|remove|apaga|exclui|exclua)/i,
+      /^sim[,.]?\s*(deleta|remove|apaga|exclua)/i,
 
-    return 'unrelated';
+      // Implicit confirmations (user asking to do it)
+      /^(atualize|corrija|delete|remova|apague|exclua)/i,
+      /atualiz[ae]\s+(pra|para)\s+mim/i,
+      /corrig[ae]\s+(pra|para)\s+mim/i,
+    ];
+
+    return updateDeleteConfirmPatterns.some(p => p.test(normalized));
   }
 
   /**
    * Handle user response to a pending confirmation
    * Returns true if handled (no need for tool loop), false otherwise
+   *
+   * Uses LLM-based intent detection for natural language understanding.
+   * @see ADR-015 Low Friction Tracking Philosophy
    */
   private async handlePendingConfirmationFromMessage(
     userId: string,
@@ -483,8 +578,19 @@ export class ChatService {
       return false;
     }
 
-    const intent = this.detectUserIntent(userMessage);
-    this.logger.log(`Detected user intent: ${intent} for pending confirmation ${pending.confirmationId}`);
+    // Use LLM for intent detection instead of regex
+    const { intent, correctedValue, correctedUnit, confidence, errorMessage } =
+      await this.detectUserIntentViaLLM(userMessage, pending);
+
+    // Log for monitoring
+    this.logger.log('User intent detected via LLM', {
+      conversationId,
+      confirmationId: pending.confirmationId,
+      intent,
+      confidence,
+      correctedValue,
+      correctedUnit,
+    });
 
     switch (intent) {
       case 'confirm':
@@ -492,7 +598,7 @@ export class ChatService {
 
       case 'reject':
         await this.confirmationStateService.reject(conversationId, pending.confirmationId);
-        subject.next({ type: 'response', data: { content: 'Ok, cancelado.' } });
+        // Send content once, then signal done (no duplicate)
         subject.next({ data: { content: 'Ok, cancelado.', done: true } });
 
         // Save rejection message
@@ -507,33 +613,91 @@ export class ChatService {
         return true;
 
       case 'correction':
+        // Handle correction with new value
+        if (correctedValue !== undefined) {
+          const correctedToolCall: ToolCall = {
+            ...pending.toolCall,
+            arguments: {
+              ...pending.toolCall.arguments,
+              value: correctedValue,
+              ...(correctedUnit && { unit: correctedUnit }),
+            },
+          };
+
+          // Create a new stored confirmation with corrected values
+          // Must also update toolCalls array since that's what executeConfirmedToolFromMessage uses
+          const correctedConfirmation: StoredConfirmation = {
+            ...pending,
+            toolCall: correctedToolCall,
+            toolCalls: [correctedToolCall], // Update the toolCalls array with corrected value
+          };
+
+          return await this.executeConfirmedToolFromMessage(correctedConfirmation, subject);
+        }
+        // No value extracted, ask for clarification (send content once, no duplicate)
+        subject.next({ data: { content: 'Qual seria o valor correto?', done: true } });
+        subject.complete();
+        return true;
+
+      case 'error': {
+        // LLM failed to process - return error message but KEEP confirmation pending
+        // User can try again with same or different response (send content once, no duplicate)
+        const message = errorMessage ?? 'Desculpe, tive um problema ao processar. Pode tentar novamente?';
+        subject.next({ data: { content: message, done: true } });
+        subject.complete();
+        return true;
+      }
+
       case 'unrelated':
-        // Clear pending and let new tool loop handle
-        await this.confirmationStateService.reject(conversationId, pending.confirmationId);
-        this.logger.log(`Clearing pending confirmation due to ${intent} intent`);
+      default:
+        // Message is not about the confirmation
+        // Clear the pending confirmation and proceed with normal flow
+        await this.confirmationStateService.clearAll(conversationId);
         return false;
     }
   }
 
   /**
-   * Execute a confirmed tool from message detection and stream response
+   * Execute confirmed tools from message detection and stream response.
+   * Supports multiple parallel tool calls that were confirmed together.
    */
   private async executeConfirmedToolFromMessage(
     confirmation: StoredConfirmation,
     subject: Subject<MessageEvent>
   ): Promise<boolean> {
     try {
-      const { toolCall } = confirmation;
+      // Get all tool calls (toolCalls is always present in the updated interface)
+      const allToolCalls = confirmation.toolCalls;
 
       this.logger.log(
-        `Executing confirmed tool ${toolCall.name} from message for conversation ${confirmation.conversationId}`
+        `Executing ${String(allToolCalls.length)} confirmed tool(s) from message for conversation ${confirmation.conversationId}`
       );
 
-      // Execute the tool directly
-      const result = await this.combinedExecutor.execute(toolCall, {
-        userId: confirmation.userId,
-        conversationId: confirmation.conversationId,
-      });
+      // Execute ALL tool calls
+      const results: ToolExecutionResult[] = [];
+      let hasError = false;
+      let errorMessage = '';
+
+      for (const toolCall of allToolCalls) {
+        const result = await this.combinedExecutor.execute(toolCall, {
+          userId: confirmation.userId,
+          conversationId: confirmation.conversationId,
+        });
+
+        results.push(result);
+
+        // Emit tool result for each
+        subject.next({
+          type: 'tool_result',
+          data: { toolName: toolCall.name, result: result.content, success: result.success },
+        });
+
+        if (!result.success) {
+          hasError = true;
+          errorMessage = result.error ?? 'Erro desconhecido';
+          break; // Stop on first error
+        }
+      }
 
       // Remove confirmation from Redis
       await this.confirmationStateService.confirm(
@@ -541,21 +705,18 @@ export class ChatService {
         confirmation.confirmationId
       );
 
-      // Emit tool result
-      subject.next({
-        type: 'tool_result',
-        data: { toolName: toolCall.name, result: result.content, success: result.success },
-      });
-
       // Generate response message
       let responseMessage: string;
-      if (!result.success) {
-        responseMessage = `Ocorreu um erro ao registrar: ${result.error ?? 'Erro desconhecido'}`;
+      if (hasError) {
+        responseMessage = `Ocorreu um erro: ${errorMessage}`;
+      } else if (allToolCalls.length === 1 && allToolCalls[0]) {
+        responseMessage = this.generateToolSuccessMessage(allToolCalls[0]);
       } else {
-        responseMessage = this.generateToolSuccessMessage(toolCall);
+        // Multiple tools executed
+        responseMessage = this.generateMultiToolSuccessMessage(allToolCalls);
       }
 
-      subject.next({ type: 'response', data: { content: responseMessage } });
+      // Send content once (no duplicate)
       subject.next({ data: { content: responseMessage, done: true } });
 
       // Save assistant message
@@ -565,10 +726,11 @@ export class ChatService {
         content: responseMessage,
         metadata: {
           toolExecution: {
-            toolName: toolCall.name,
-            toolCallId: toolCall.id,
-            success: result.success,
-            error: result.error,
+            toolNames: allToolCalls.map(tc => tc.name),
+            toolCallIds: allToolCalls.map(tc => tc.id),
+            success: !hasError,
+            error: hasError ? errorMessage : undefined,
+            count: allToolCalls.length,
           },
         },
       });
@@ -577,10 +739,7 @@ export class ChatService {
       return true;
     } catch (error) {
       this.logger.error(`Error executing confirmed tool: ${String(error)}`);
-      subject.next({
-        type: 'error',
-        data: { message: 'Erro ao executar ação confirmada.' },
-      });
+      // Send error once (no duplicate)
       subject.next({ data: { content: 'Erro ao executar ação confirmada.', done: true, error: 'execution_error' } });
       subject.complete();
       return true;
@@ -591,23 +750,89 @@ export class ChatService {
    * Generate success message for confirmed tool execution
    */
   private generateToolSuccessMessage(toolCall: ToolCall): string {
+    const args = toolCall.arguments;
+    const typeLabels: Record<string, string> = {
+      weight: 'peso',
+      water: 'água',
+      sleep: 'sono',
+      exercise: 'exercício',
+      mood: 'humor',
+      energy: 'energia',
+    };
+
     if (toolCall.name === 'record_metric') {
-      const args = toolCall.arguments;
-      const typeLabels: Record<string, string> = {
-        weight: 'peso',
-        water: 'água',
-        sleep: 'sono',
-        exercise: 'exercício',
-        mood: 'humor',
-        energy: 'energia',
-      };
       const typeKey = typeof args.type === 'string' ? args.type : '';
       const type = typeLabels[typeKey] ?? typeKey;
-      const value = typeof args.value === 'number' || typeof args.value === 'string' ? args.value : '';
+      const value =
+        typeof args.value === 'number' || typeof args.value === 'string' ? args.value : '';
       const unit = typeof args.unit === 'string' ? ` ${args.unit}` : '';
       return `Pronto! Registrei seu ${type} de ${String(value)}${unit}.`;
     }
+
+    if (toolCall.name === 'update_metric') {
+      const value =
+        typeof args.value === 'number' || typeof args.value === 'string' ? args.value : '';
+      const unit = typeof args.unit === 'string' ? ` ${args.unit}` : '';
+      return `Pronto! Registro corrigido para ${String(value)}${unit}.`;
+    }
+
+    if (toolCall.name === 'delete_metric') {
+      return `Pronto! Registro removido.`;
+    }
+
     return 'Pronto! Ação executada com sucesso.';
+  }
+
+  /**
+   * Generate success message for multiple confirmed tool executions
+   */
+  private generateMultiToolSuccessMessage(toolCalls: ToolCall[]): string {
+    const toolNames = new Set(toolCalls.map(tc => tc.name));
+
+    // All delete_metric calls
+    if (toolNames.size === 1 && toolNames.has('delete_metric')) {
+      return `Pronto! ${String(toolCalls.length)} registros removidos.`;
+    }
+
+    // All record_metric calls
+    if (toolNames.size === 1 && toolNames.has('record_metric')) {
+      return `Pronto! ${String(toolCalls.length)} métricas registradas.`;
+    }
+
+    // Mixed or other tools
+    return `Pronto! ${String(toolCalls.length)} ações executadas com sucesso.`;
+  }
+
+  /**
+   * Format tool call details for context in continued tool loop
+   *
+   * Provides specific information about what was processed to help the LLM
+   * identify which items have been handled and which remain.
+   */
+  private formatToolCallDetails(toolCall: ToolCall): string {
+    const args = toolCall.arguments;
+
+    if (toolCall.name === 'delete_metric') {
+      const entryId = typeof args.entryId === 'string' ? args.entryId : 'unknown';
+      return `deleted entry ID ${entryId}`;
+    }
+
+    if (toolCall.name === 'update_metric') {
+      const entryId = typeof args.entryId === 'string' ? args.entryId : 'unknown';
+      const value = typeof args.value === 'number' ? args.value : 'unknown';
+      const unit = typeof args.unit === 'string' ? ` ${args.unit}` : '';
+      return `updated entry ID ${entryId} to ${String(value)}${unit}`;
+    }
+
+    if (toolCall.name === 'record_metric') {
+      const type = typeof args.type === 'string' ? args.type : 'metric';
+      const value = typeof args.value === 'number' ? args.value : 'unknown';
+      const unit = typeof args.unit === 'string' ? ` ${args.unit}` : '';
+      return `recorded ${type}: ${String(value)}${unit}`;
+    }
+
+    // Generic fallback
+    return JSON.stringify(args);
   }
 
   // ==========================================================================
@@ -618,40 +843,146 @@ export class ChatService {
    * Handle pending confirmation from tool loop
    *
    * Stores the confirmation state and emits a confirmation request via SSE.
+   * Supports multiple parallel tool calls that all need confirmation.
    */
   private async handlePendingConfirmation(
     userId: string,
     conversationId: string,
     pendingConfirmation: PendingConfirmation,
     llmContent: string,
+    userMessage: string,
     subject: Subject<MessageEvent>
   ): Promise<void> {
-    const { toolCall, toolDefinition, iteration } = pendingConfirmation;
+    // Get all tool calls that need confirmation
+    // toolCalls/toolDefinitions are always present in the updated interface
+    const allToolCalls = pendingConfirmation.toolCalls;
+    const allToolDefinitions = pendingConfirmation.toolDefinitions;
+    const { iteration } = pendingConfirmation;
 
     this.logger.log(
-      `Tool ${toolCall.name} requires confirmation for conversation ${conversationId}`
+      `${String(allToolCalls.length)} tool(s) require confirmation for conversation ${conversationId}: ${allToolCalls.map(tc => tc.name).join(', ')}`
     );
 
-    // Store confirmation state in Redis
+    // For update_metric and delete_metric, check if user message is already a confirmation
+    // This avoids double confirmation when AI already asked nicely
+    const allConfirmable = allToolCalls.every(tc =>
+      tc.name === 'update_metric' || tc.name === 'delete_metric'
+    );
+
+    if (allConfirmable && this.isUpdateDeleteConfirmation(userMessage)) {
+      this.logger.log(
+        `User message "${userMessage}" is already a confirmation for ${String(allToolCalls.length)} tools, executing directly`
+      );
+
+      // Execute ALL tool calls directly without asking again
+      const results: ToolExecutionResult[] = [];
+      for (const toolCall of allToolCalls) {
+        const result = await this.combinedExecutor.execute(toolCall, {
+          userId,
+          conversationId,
+        });
+        results.push(result);
+
+        if (!result.success) {
+          subject.next({
+            data: {
+              content: `Ocorreu um erro em ${toolCall.name}: ${result.error ?? 'Erro desconhecido'}`,
+              done: true,
+              error: result.error,
+            },
+          });
+
+          await this.messageRepository.create(userId, {
+            conversationId,
+            role: 'assistant',
+            content: `Ocorreu um erro: ${result.error ?? 'Erro desconhecido'}`,
+            metadata: {
+              toolExecution: {
+                toolName: toolCall.name,
+                success: false,
+                error: result.error,
+              },
+            },
+          });
+
+          subject.complete();
+          return;
+        }
+
+        // Emit progress for each completed operation
+        subject.next({
+          type: 'tool_result',
+          data: {
+            toolName: toolCall.name,
+            success: true,
+          },
+        });
+      }
+
+      this.logger.log(
+        `Auto-confirmed and executed ${String(allToolCalls.length)} tools successfully`
+      );
+
+      // Generate response directly - do NOT run tool loop again
+      // Running tool loop again causes LLM to try re-deleting already-deleted entries,
+      // which fails with "Registro não encontrado" (lines 1091-1120)
+      const responseMessage = this.generateMultiToolSuccessMessage(allToolCalls);
+
+      subject.next({ data: { content: responseMessage, done: true } });
+
+      await this.messageRepository.create(userId, {
+        conversationId,
+        role: 'assistant',
+        content: responseMessage,
+        metadata: {
+          toolExecution: {
+            toolNames: allToolCalls.map(tc => tc.name),
+            toolCallIds: allToolCalls.map(tc => tc.id),
+            success: true,
+            count: allToolCalls.length,
+          },
+        },
+      });
+
+      subject.complete();
+      return;
+    }
+
+    // Store confirmation state in Redis (with all tool calls)
+    // We know allToolCalls.length > 0 if we got here since pendingConfirmation exists
+    const firstToolCall = allToolCalls.at(0);
+    const firstToolDefinition = allToolDefinitions.at(0);
+    if (!firstToolCall || !firstToolDefinition) {
+      this.logger.error('No tool calls in pendingConfirmation - this should not happen');
+      return;
+    }
+
+    // Use LLM content as the confirmation message if available
+    // This prevents double confirmation: LLM asking naturally + system message
+    const confirmationMessage = llmContent || undefined;
+
     const storedConfirmation = await this.confirmationStateService.store(
       userId,
       conversationId,
-      toolCall,
-      toolDefinition,
-      iteration
+      firstToolCall,
+      firstToolDefinition,
+      iteration,
+      allToolCalls.length > 1 ? allToolCalls.slice(1) : undefined,
+      allToolDefinitions.length > 1 ? allToolDefinitions.slice(1) : undefined,
+      confirmationMessage // Pass LLM content so stored message matches what user sees
     );
 
-    // Build confirmation message with LLM content
-    const confirmationMessage = llmContent || storedConfirmation.message;
+    // Use the stored message (which is now either LLM content or generated)
+    const finalConfirmationMessage = storedConfirmation.message;
 
     // Emit confirmation request via SSE
     subject.next({
       type: 'confirmation_required',
       data: {
         confirmationId: storedConfirmation.confirmationId,
-        toolName: toolCall.name,
-        toolArgs: toolCall.arguments,
-        message: confirmationMessage,
+        toolName: firstToolCall.name,
+        toolArgs: firstToolCall.arguments,
+        message: finalConfirmationMessage,
         expiresAt: storedConfirmation.expiresAt,
       },
     });
@@ -660,21 +991,207 @@ export class ChatService {
     await this.messageRepository.create(userId, {
       conversationId,
       role: 'assistant',
-      content: confirmationMessage,
+      content: finalConfirmationMessage,
       metadata: {
         pendingConfirmation: {
           confirmationId: storedConfirmation.confirmationId,
-          toolName: toolCall.name,
-          toolArgs: toolCall.arguments,
+          toolName: firstToolCall.name,
+          toolArgs: firstToolCall.arguments,
         },
       },
     });
 
+    // Signal done WITHOUT repeating content (already sent in confirmation_required event)
+    // This prevents duplicate confirmation messages in the frontend
     subject.next({
-      data: { content: confirmationMessage, done: true, awaitingConfirmation: true },
+      data: { done: true, awaitingConfirmation: true },
     });
 
     subject.complete();
+  }
+
+  /**
+   * Continue the tool loop after auto-confirming an operation
+   *
+   * This is called when the user's message indicates multiple operations
+   * (e.g., "delete the first 2 and add 62.7kg"). After executing the first
+   * operation, we need to continue the tool loop so the LLM can make more
+   * tool calls for the remaining operations.
+   */
+  private async continueToolLoopAfterAutoConfirm(
+    userId: string,
+    conversationId: string,
+    executedToolCall: ToolCall,
+    toolResult: ToolExecutionResult,
+    subject: Subject<MessageEvent>
+  ): Promise<void> {
+    const conversation = await this.getConversation(userId, conversationId);
+
+    // Build system prompt
+    const systemPrompt = await this.contextBuilder.buildSystemPrompt(
+      userId,
+      conversation
+    );
+
+    // Get recent messages for context
+    const recentMessages = await this.messageRepository.getRecentMessages(
+      userId,
+      conversationId,
+      20
+    );
+
+    // Convert to LLM message format
+    const llmMessages: LLMMessage[] = recentMessages.map((msg) => ({
+      role: msg.role as 'user' | 'assistant' | 'system' | 'tool',
+      content: msg.content,
+    }));
+
+    // Add the tool result as a system message (NOT assistant, to avoid LLM echoing it)
+    // This provides context without being included in the LLM's response
+    llmMessages.push({
+      role: 'system',
+      content: `[INTERNAL CONTEXT - DO NOT INCLUDE IN RESPONSE]
+The following operation was just completed successfully:
+- Tool: ${executedToolCall.name}
+- Result: ${toolResult.content}
+
+If the user asked for MULTIPLE operations, make additional tool calls for remaining items.
+Otherwise, provide a brief, friendly confirmation message in Portuguese.
+DO NOT mention tool names, entry IDs, or technical details in your response.`,
+    });
+
+    const llmInfo = this.llm.getInfo();
+    this.logger.log(
+      `Continuing tool loop after auto-confirm for conversation ${conversationId}`
+    );
+
+    try {
+      // Create tool loop config
+      const toolLoopConfig: ToolLoopConfig = {
+        tools: this.availableTools,
+        executor: this.combinedExecutor,
+        context: { userId, conversationId },
+        systemPrompt,
+        maxIterations: 5,
+        onIteration: (iteration, response) => {
+          this.logger.debug(
+            `Continued tool loop iteration ${String(iteration)}: ${String(response.toolCalls?.length ?? 0)} tool calls`
+          );
+
+          if (response.toolCalls && response.toolCalls.length > 0) {
+            subject.next({
+              type: 'tool_calls',
+              data: {
+                iteration,
+                toolCalls: response.toolCalls.map((tc) => ({
+                  id: tc.id,
+                  name: tc.name,
+                  arguments: tc.arguments,
+                })),
+              },
+            });
+          }
+        },
+      };
+
+      // Run tool loop - may pause for confirmation again
+      const result = await runToolLoop(this.llm, llmMessages, toolLoopConfig);
+
+      // If another confirmation is needed, handle it (recursive)
+      if (result.pendingConfirmation) {
+        // For subsequent confirmations, we auto-confirm them too since user already said "yes"
+        const { toolCall } = result.pendingConfirmation;
+        this.logger.log(
+          `Auto-confirming subsequent tool ${toolCall.name} in continued loop`
+        );
+
+        const subsequentResult = await this.combinedExecutor.execute(toolCall, {
+          userId,
+          conversationId,
+        });
+
+        if (!subsequentResult.success) {
+          subject.next({
+            data: {
+              content: `Erro na operação ${toolCall.name}: ${subsequentResult.error ?? 'Erro desconhecido'}`,
+              done: true,
+              error: subsequentResult.error,
+            },
+          });
+
+          await this.messageRepository.create(userId, {
+            conversationId,
+            role: 'assistant',
+            content: `Erro na operação: ${subsequentResult.error ?? 'Erro desconhecido'}`,
+          });
+
+          subject.complete();
+          return;
+        }
+
+        // Recursively continue if there might be more operations
+        await this.continueToolLoopAfterAutoConfirm(
+          userId,
+          conversationId,
+          toolCall,
+          subsequentResult,
+          subject
+        );
+        return;
+      }
+
+      // Tool loop completed - emit final content
+      let fullContent = result.content;
+      this.logger.log(
+        `Continued tool loop completed with ${String(result.iterations)} iterations`
+      );
+
+      if (!fullContent || fullContent.trim().length === 0) {
+        fullContent = 'Pronto! Todas as operações foram executadas.';
+      }
+
+      subject.next({
+        data: { content: fullContent, done: true },
+      });
+
+      // Save assistant message
+      const metadata: Record<string, unknown> = {
+        provider: llmInfo.name,
+        model: llmInfo.model,
+        iterations: result.iterations,
+        continuedFromAutoConfirm: true,
+      };
+
+      if (result.toolCalls.length > 0) {
+        metadata.toolCalls = result.toolCalls.map((tc) => ({
+          id: tc.id,
+          name: tc.name,
+        }));
+      }
+
+      await this.messageRepository.create(userId, {
+        conversationId,
+        role: 'assistant',
+        content: fullContent,
+        metadata,
+      });
+
+      subject.complete();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Continued tool loop error: ${errorMessage}`);
+
+      subject.next({
+        data: {
+          content: 'Erro ao continuar operações. Por favor, tente novamente.',
+          done: true,
+          error: 'continuation_error',
+        },
+      });
+
+      subject.complete();
+      throw error;
+    }
   }
 
   /**
@@ -781,7 +1298,8 @@ export class ChatService {
   }
 
   /**
-   * Process a confirmed tool execution
+   * Process a confirmed tool execution.
+   * Supports multiple parallel tool calls that were confirmed together.
    */
   private async processConfirmedToolExecution(
     userId: string,
@@ -789,36 +1307,51 @@ export class ChatService {
     confirmation: StoredConfirmation,
     subject: Subject<MessageEvent>
   ): Promise<void> {
-    const { toolCall } = confirmation;
+    // Get all tool calls (toolCalls is always present in the updated interface)
+    const allToolCalls = confirmation.toolCalls;
 
     this.logger.log(
-      `Executing confirmed tool ${toolCall.name} for conversation ${conversationId}`
+      `Executing ${String(allToolCalls.length)} confirmed tool(s) for conversation ${conversationId}`
     );
 
-    // Execute the tool directly
-    const result = await this.combinedExecutor.execute(toolCall, {
-      userId,
-      conversationId,
-    });
+    // Execute ALL tool calls
+    const results: ToolExecutionResult[] = [];
+    let hasError = false;
+    let errorMessage = '';
 
-    if (!result.success) {
+    for (const toolCall of allToolCalls) {
+      const result = await this.combinedExecutor.execute(toolCall, {
+        userId,
+        conversationId,
+      });
+
+      results.push(result);
+
+      if (!result.success) {
+        hasError = true;
+        errorMessage = result.error ?? 'Erro desconhecido';
+        break; // Stop on first error
+      }
+    }
+
+    if (hasError) {
       subject.next({
         data: {
-          content: `Ocorreu um erro ao registrar: ${result.error ?? 'Erro desconhecido'}`,
+          content: `Ocorreu um erro: ${errorMessage}`,
           done: true,
-          error: result.error,
+          error: errorMessage,
         },
       });
 
       await this.messageRepository.create(userId, {
         conversationId,
         role: 'assistant',
-        content: `Ocorreu um erro ao registrar: ${result.error ?? 'Erro desconhecido'}`,
+        content: `Ocorreu um erro: ${errorMessage}`,
         metadata: {
           toolExecution: {
-            toolName: toolCall.name,
+            toolNames: allToolCalls.map(tc => tc.name),
             success: false,
-            error: result.error,
+            error: errorMessage,
           },
         },
       });
@@ -827,13 +1360,20 @@ export class ChatService {
       return;
     }
 
-    // Parse result content for a nice message
+    // Generate success message
     let successMessage: string;
-    try {
-      const resultData = JSON.parse(result.content) as { message?: string };
-      successMessage = resultData.message ?? 'Registrado com sucesso!';
-    } catch {
-      successMessage = 'Registrado com sucesso!';
+    const firstResult = results[0];
+    if (allToolCalls.length === 1 && firstResult) {
+      // Try to parse result for single tool
+      try {
+        const resultData = JSON.parse(firstResult.content) as { message?: string };
+        successMessage = resultData.message ?? 'Registrado com sucesso!';
+      } catch {
+        successMessage = 'Registrado com sucesso!';
+      }
+    } else {
+      // Multiple tools
+      successMessage = this.generateMultiToolSuccessMessage(allToolCalls);
     }
 
     // Emit success
@@ -842,8 +1382,9 @@ export class ChatService {
         content: successMessage,
         done: true,
         toolResult: {
-          toolName: toolCall.name,
+          toolNames: allToolCalls.map(tc => tc.name),
           success: true,
+          count: allToolCalls.length,
         },
       },
     });
@@ -855,10 +1396,10 @@ export class ChatService {
       content: successMessage,
       metadata: {
         toolExecution: {
-          toolName: toolCall.name,
-          toolCallId: toolCall.id,
+          toolNames: allToolCalls.map(tc => tc.name),
+          toolCallIds: allToolCalls.map(tc => tc.id),
           success: true,
-          result: result.content,
+          count: allToolCalls.length,
         },
       },
     });

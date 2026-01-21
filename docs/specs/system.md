@@ -350,6 +350,22 @@ enum TrackingType {
 | **mood** | value | `1-10` |
 | **energy** | value | `1-10` |
 
+#### Operações de Tracking
+
+| Operação | Endpoint | Tool | Confirmação |
+|----------|----------|------|-------------|
+| Criar | `POST /tracking` | `record_metric` | Sistema |
+| Atualizar | `PATCH /tracking/:id` | `update_metric` | Sistema |
+| Deletar | `DELETE /tracking/:id` | `delete_metric` | Sistema |
+| Listar/Histórico | `GET /tracking` | `get_tracking_history` | Não |
+
+> **Nota:** Todas as operações de escrita (`record_metric`, `update_metric`, `delete_metric`) usam confirmação via sistema (ADR-015). O sistema detecta a resposta do usuário (confirm/reject/correction) e executa ou cancela automaticamente.
+>
+> **Nota (2026-01-21):** A detecção de intent para confirmação agora usa LLM
+> com tool `respond_to_confirmation` e `toolChoice` forçado.
+> Isso permite reconhecer variações naturais em português ("beleza", "manda ver", etc.)
+> ao invés de depender de regex patterns limitados.
+
 #### Categorias de Despesa
 
 ```typescript

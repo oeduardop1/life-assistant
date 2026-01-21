@@ -23,6 +23,7 @@ import type {
   Message,
   ToolDefinition,
   ToolCall,
+  ToolChoice,
   FinishReason,
   TokenUsage,
 } from '../ports/llm.port.js';
@@ -317,7 +318,13 @@ export class ClaudeAdapter implements LLMPort {
     };
   }
 
-  private mapToolChoice(choice?: string): Anthropic.Beta.BetaToolChoice {
+  private mapToolChoice(choice?: ToolChoice): Anthropic.Beta.BetaToolChoice {
+    // Force specific tool
+    if (typeof choice === 'object') {
+      return { type: 'tool', name: choice.toolName };
+    }
+
+    // String modes
     switch (choice) {
       case 'required':
         return { type: 'any' };

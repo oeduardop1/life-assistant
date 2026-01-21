@@ -10,6 +10,8 @@ import {
 import {
   recordMetricParamsSchema,
   getTrackingHistoryParamsSchema,
+  updateMetricParamsSchema,
+  deleteMetricParamsSchema,
 } from '@life-assistant/ai';
 import { TrackingService } from './tracking.service';
 
@@ -43,6 +45,15 @@ export class TrackingToolExecutorService implements ToolExecutor {
 
         case 'get_tracking_history':
           return await this.executeGetTrackingHistory(toolCall, userId);
+
+        case 'update_metric':
+          return await this.executeUpdateMetric(toolCall, userId);
+
+        case 'delete_metric':
+          return await this.executeDeleteMetric(toolCall, userId);
+
+        // delete_metrics (batch) was removed - LLM hallucinates entry IDs
+        // Parallel delete_metric calls work correctly
 
         default:
           return createErrorResult(
@@ -193,11 +204,18 @@ export class TrackingToolExecutorService implements ToolExecutor {
     this.logger.debug(`get_tracking_history found ${String(result.entries.length)} entries`);
 
     // Format results for LLM
+    // CRITICAL: The 'id' field is the real UUID that MUST be used for update_metric/delete_metric
     const formattedEntries = result.entries.map((entry) => ({
+      id: entry.id, // UUID real - usar este valor EXATO como entryId em update_metric/delete_metric
       date: entry.entryDate,
       value: parseFloat(entry.value),
       unit: entry.unit,
     }));
+
+    // Log the actual IDs being returned so we can verify LLM uses them correctly
+    this.logger.debug(
+      `get_tracking_history entry IDs: ${formattedEntries.map((e) => `${e.id} (${String(e.value)} ${e.unit ?? ''})`).join(', ')}`
+    );
 
     // Trend direction
     let trend = 'stable';
@@ -207,6 +225,8 @@ export class TrackingToolExecutorService implements ToolExecutor {
     }
 
     return createSuccessResult(toolCall, {
+      _note:
+        'IMPORTANTE: Para update_metric ou delete_metric, use o campo "id" EXATO de cada entry como entryId. Nunca invente IDs.',
       type,
       period: {
         startDate: startDate.toISOString().split('T')[0],
@@ -227,4 +247,142 @@ export class TrackingToolExecutorService implements ToolExecutor {
       },
     });
   }
+
+  /**
+   * Execute update_metric tool
+   *
+   * Note: This tool has requiresConfirmation: true, meaning the tool loop
+   * should pause and ask for user confirmation before executing this.
+   */
+  private async executeUpdateMetric(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = updateMetricParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { entryId, value, unit, reason } = parseResult.data;
+
+    this.logger.debug(
+      `update_metric params: entryId=${entryId}, value=${String(value)}, reason=${reason ?? '(none)'}`
+    );
+
+    // Get existing entry to show old value in response
+    const existingEntry = await this.trackingService.getEntry(userId, entryId);
+    if (!existingEntry) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Registro não encontrado: ${entryId}`)
+      );
+    }
+
+    const oldValue = existingEntry.value;
+    const oldUnit = existingEntry.unit;
+
+    // Update the entry
+    const updatedEntry = await this.trackingService.updateEntry(userId, entryId, {
+      value,
+      unit,
+      metadata: reason ? { correctionReason: reason } : undefined,
+    });
+
+    if (!updatedEntry) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Falha ao atualizar registro: ${entryId}`)
+      );
+    }
+
+    this.logger.log(`update_metric updated entry ${entryId}: ${oldValue} → ${String(value)}`);
+
+    // Type labels for response
+    const typeLabels: Record<string, string> = {
+      weight: 'peso',
+      water: 'água',
+      sleep: 'sono',
+      exercise: 'exercício',
+      mood: 'humor',
+      energy: 'energia',
+    };
+    const typeLabel = typeLabels[existingEntry.type] ?? existingEntry.type;
+
+    return createSuccessResult(toolCall, {
+      success: true,
+      entryId,
+      message: `Corrigido: ${typeLabel} de ${oldValue} ${oldUnit ?? ''} para ${String(value)} ${unit ?? oldUnit ?? ''}`.trim(),
+      oldValue: parseFloat(oldValue),
+      newValue: value,
+    });
+  }
+
+  /**
+   * Execute delete_metric tool
+   *
+   * Note: This tool has requiresConfirmation: true, meaning the tool loop
+   * should pause and ask for user confirmation before executing this.
+   */
+  private async executeDeleteMetric(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = deleteMetricParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { entryId, reason } = parseResult.data;
+
+    this.logger.debug(`delete_metric params: entryId=${entryId}, reason=${reason ?? '(none)'}`);
+
+    // Get existing entry to show what was deleted
+    const existingEntry = await this.trackingService.getEntry(userId, entryId);
+    if (!existingEntry) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Registro não encontrado: ${entryId}`)
+      );
+    }
+
+    const deleted = await this.trackingService.deleteEntry(userId, entryId);
+
+    if (!deleted) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Falha ao deletar registro: ${entryId}`)
+      );
+    }
+
+    this.logger.log(`delete_metric deleted entry ${entryId}`);
+
+    // Type labels for response
+    const typeLabels: Record<string, string> = {
+      weight: 'peso',
+      water: 'água',
+      sleep: 'sono',
+      exercise: 'exercício',
+      mood: 'humor',
+      energy: 'energia',
+    };
+    const typeLabel = typeLabels[existingEntry.type] ?? existingEntry.type;
+
+    return createSuccessResult(toolCall, {
+      success: true,
+      entryId,
+      message: `Removido: ${typeLabel} de ${existingEntry.value} ${existingEntry.unit ?? ''} (${existingEntry.entryDate})`.trim(),
+      deletedValue: parseFloat(existingEntry.value),
+    });
+  }
+
+  // executeDeleteMetrics was removed - LLM hallucinates entry IDs
+  // Parallel delete_metric calls work correctly and are confirmed together
 }

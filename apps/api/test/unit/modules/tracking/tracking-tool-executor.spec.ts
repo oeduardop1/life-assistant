@@ -18,6 +18,13 @@ vi.mock('@life-assistant/ai', () => ({
   getTrackingHistoryParamsSchema: {
     safeParse: vi.fn((data) => ({ success: true, data: { days: 30, ...data } })),
   },
+  updateMetricParamsSchema: {
+    safeParse: vi.fn((data) => ({ success: true, data })),
+  },
+  deleteMetricParamsSchema: {
+    safeParse: vi.fn((data) => ({ success: true, data })),
+  },
+  // delete_metrics (batch) was removed - LLM hallucinates entry IDs
 }));
 
 import { TrackingToolExecutorService } from '../../../../src/modules/tracking/application/services/tracking-tool-executor.service.js';
@@ -26,6 +33,8 @@ import {
   createErrorResult,
   recordMetricParamsSchema,
   getTrackingHistoryParamsSchema,
+  updateMetricParamsSchema,
+  deleteMetricParamsSchema,
 } from '@life-assistant/ai';
 import type { ToolCall } from '@life-assistant/ai';
 import type { TrackingEntry, TrackingType, LifeArea } from '@life-assistant/database';
@@ -71,6 +80,9 @@ describe('TrackingToolExecutorService', () => {
     recordMetric: ReturnType<typeof vi.fn>;
     getHistory: ReturnType<typeof vi.fn>;
     getAggregations: ReturnType<typeof vi.fn>;
+    getEntry: ReturnType<typeof vi.fn>;
+    updateEntry: ReturnType<typeof vi.fn>;
+    deleteEntry: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -80,6 +92,9 @@ describe('TrackingToolExecutorService', () => {
       recordMetric: vi.fn(),
       getHistory: vi.fn(),
       getAggregations: vi.fn(),
+      getEntry: vi.fn(),
+      updateEntry: vi.fn(),
+      deleteEntry: vi.fn(),
     };
 
     trackingToolExecutor = new TrackingToolExecutorService(
@@ -543,6 +558,308 @@ describe('TrackingToolExecutorService', () => {
         );
       });
     });
+
+    describe('update_metric', () => {
+      it('should_update_existing_entry', async () => {
+        const existingEntry = createMockTrackingEntry({
+          id: 'entry-123',
+          type: 'weight' as TrackingType,
+          value: '61',
+          unit: 'kg',
+        });
+        const updatedEntry = createMockTrackingEntry({
+          id: 'entry-123',
+          type: 'weight' as TrackingType,
+          value: '61.7',
+          unit: 'kg',
+        });
+
+        mockTrackingService.getEntry.mockResolvedValue(existingEntry);
+        mockTrackingService.updateEntry.mockResolvedValue(updatedEntry);
+
+        const toolCall = createMockToolCall({
+          name: 'update_metric',
+          arguments: { entryId: 'entry-123', value: 61.7 },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(mockTrackingService.getEntry).toHaveBeenCalledWith('user-123', 'entry-123');
+        expect(mockTrackingService.updateEntry).toHaveBeenCalledWith(
+          'user-123',
+          'entry-123',
+          expect.objectContaining({ value: 61.7 })
+        );
+        expect(createSuccessResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.objectContaining({
+            success: true,
+            entryId: 'entry-123',
+            oldValue: 61,
+            newValue: 61.7,
+          })
+        );
+      });
+
+      it('should_include_unit_in_update_when_provided', async () => {
+        const existingEntry = createMockTrackingEntry({
+          id: 'entry-123',
+          type: 'water' as TrackingType,
+          value: '2000',
+          unit: 'ml',
+        });
+        const updatedEntry = createMockTrackingEntry({
+          id: 'entry-123',
+          type: 'water' as TrackingType,
+          value: '2500',
+          unit: 'ml',
+        });
+
+        mockTrackingService.getEntry.mockResolvedValue(existingEntry);
+        mockTrackingService.updateEntry.mockResolvedValue(updatedEntry);
+
+        const toolCall = createMockToolCall({
+          name: 'update_metric',
+          arguments: { entryId: 'entry-123', value: 2500, unit: 'ml' },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(mockTrackingService.updateEntry).toHaveBeenCalledWith(
+          'user-123',
+          'entry-123',
+          expect.objectContaining({ value: 2500, unit: 'ml' })
+        );
+      });
+
+      it('should_return_error_when_entry_not_found', async () => {
+        mockTrackingService.getEntry.mockResolvedValue(null);
+
+        const toolCall = createMockToolCall({
+          name: 'update_metric',
+          arguments: { entryId: 'invalid-id', value: 61.7 },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createErrorResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.any(Error)
+        );
+        expect(mockTrackingService.updateEntry).not.toHaveBeenCalled();
+      });
+
+      it('should_return_error_when_update_fails', async () => {
+        const existingEntry = createMockTrackingEntry({ id: 'entry-123' });
+        mockTrackingService.getEntry.mockResolvedValue(existingEntry);
+        mockTrackingService.updateEntry.mockResolvedValue(null);
+
+        const toolCall = createMockToolCall({
+          name: 'update_metric',
+          arguments: { entryId: 'entry-123', value: 61.7 },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createErrorResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.any(Error)
+        );
+      });
+
+      it('should_return_error_on_invalid_params', async () => {
+        vi.mocked(updateMetricParamsSchema.safeParse).mockReturnValueOnce({
+          success: false,
+          error: { message: 'Missing entryId' },
+        } as unknown as ReturnType<typeof updateMetricParamsSchema.safeParse>);
+
+        const toolCall = createMockToolCall({
+          name: 'update_metric',
+          arguments: {},
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createErrorResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.any(Error)
+        );
+      });
+
+      it('should_use_portuguese_type_labels_in_message', async () => {
+        const existingEntry = createMockTrackingEntry({
+          id: 'entry-123',
+          type: 'sleep' as TrackingType,
+          value: '5',
+          unit: 'hours',
+        });
+        const updatedEntry = createMockTrackingEntry({
+          ...existingEntry,
+          value: '6',
+        });
+
+        mockTrackingService.getEntry.mockResolvedValue(existingEntry);
+        mockTrackingService.updateEntry.mockResolvedValue(updatedEntry);
+
+        const toolCall = createMockToolCall({
+          name: 'update_metric',
+          arguments: { entryId: 'entry-123', value: 6 },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createSuccessResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.objectContaining({
+            message: expect.stringContaining('sono'), // Portuguese label
+          })
+        );
+      });
+    });
+
+    describe('delete_metric', () => {
+      it('should_delete_existing_entry', async () => {
+        const existingEntry = createMockTrackingEntry({
+          id: 'entry-123',
+          type: 'weight' as TrackingType,
+          value: '61',
+          unit: 'kg',
+          entryDate: '2024-01-15',
+        });
+
+        mockTrackingService.getEntry.mockResolvedValue(existingEntry);
+        mockTrackingService.deleteEntry.mockResolvedValue(true);
+
+        const toolCall = createMockToolCall({
+          name: 'delete_metric',
+          arguments: { entryId: 'entry-123' },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(mockTrackingService.getEntry).toHaveBeenCalledWith('user-123', 'entry-123');
+        expect(mockTrackingService.deleteEntry).toHaveBeenCalledWith('user-123', 'entry-123');
+        expect(createSuccessResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.objectContaining({
+            success: true,
+            entryId: 'entry-123',
+            deletedValue: 61,
+          })
+        );
+      });
+
+      it('should_return_error_when_entry_not_found', async () => {
+        mockTrackingService.getEntry.mockResolvedValue(null);
+
+        const toolCall = createMockToolCall({
+          name: 'delete_metric',
+          arguments: { entryId: 'invalid-id' },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createErrorResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.any(Error)
+        );
+        expect(mockTrackingService.deleteEntry).not.toHaveBeenCalled();
+      });
+
+      it('should_return_error_when_delete_fails', async () => {
+        const existingEntry = createMockTrackingEntry({ id: 'entry-123' });
+        mockTrackingService.getEntry.mockResolvedValue(existingEntry);
+        mockTrackingService.deleteEntry.mockResolvedValue(false);
+
+        const toolCall = createMockToolCall({
+          name: 'delete_metric',
+          arguments: { entryId: 'entry-123' },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createErrorResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.any(Error)
+        );
+      });
+
+      it('should_return_error_on_invalid_params', async () => {
+        vi.mocked(deleteMetricParamsSchema.safeParse).mockReturnValueOnce({
+          success: false,
+          error: { message: 'Missing entryId' },
+        } as unknown as ReturnType<typeof deleteMetricParamsSchema.safeParse>);
+
+        const toolCall = createMockToolCall({
+          name: 'delete_metric',
+          arguments: {},
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createErrorResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.any(Error)
+        );
+      });
+
+      it('should_use_portuguese_type_labels_in_message', async () => {
+        const existingEntry = createMockTrackingEntry({
+          id: 'entry-123',
+          type: 'exercise' as TrackingType,
+          value: '45',
+          unit: 'min',
+          entryDate: '2024-01-15',
+        });
+
+        mockTrackingService.getEntry.mockResolvedValue(existingEntry);
+        mockTrackingService.deleteEntry.mockResolvedValue(true);
+
+        const toolCall = createMockToolCall({
+          name: 'delete_metric',
+          arguments: { entryId: 'entry-123' },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createSuccessResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.objectContaining({
+            message: expect.stringContaining('exercício'), // Portuguese label
+          })
+        );
+      });
+
+      it('should_include_date_and_value_in_deletion_message', async () => {
+        const existingEntry = createMockTrackingEntry({
+          id: 'entry-123',
+          type: 'weight' as TrackingType,
+          value: '75.5',
+          unit: 'kg',
+          entryDate: '2024-01-15',
+        });
+
+        mockTrackingService.getEntry.mockResolvedValue(existingEntry);
+        mockTrackingService.deleteEntry.mockResolvedValue(true);
+
+        const toolCall = createMockToolCall({
+          name: 'delete_metric',
+          arguments: { entryId: 'entry-123' },
+        });
+
+        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
+
+        expect(createSuccessResult).toHaveBeenCalledWith(
+          toolCall,
+          expect.objectContaining({
+            message: expect.stringMatching(/75\.5.*kg.*2024-01-15/),
+          })
+        );
+      });
+    });
+
+    // delete_metrics (batch) tests removed - tool was removed due to LLM hallucinating entry IDs
+    // Parallel delete_metric calls work correctly and are confirmed together
 
     describe('unknown tool', () => {
       it('should_return_error_for_unknown_tool', async () => {

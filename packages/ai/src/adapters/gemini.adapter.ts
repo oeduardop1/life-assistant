@@ -22,6 +22,7 @@ import type {
   ProviderInfo,
   ToolDefinition,
   ToolCall,
+  ToolChoice,
   FinishReason,
   TokenUsage,
 } from '../ports/llm.port.js';
@@ -126,6 +127,8 @@ export class GeminiAdapter implements LLMPort {
           this.convertTool(tool),
         );
 
+        const toolChoiceConfig = this.mapToolChoice(params.toolChoice);
+
         const response = await this.client.models.generateContent({
           model: this.model,
           contents: this.buildContents(params),
@@ -136,7 +139,10 @@ export class GeminiAdapter implements LLMPort {
             tools: [{ functionDeclarations }],
             toolConfig: {
               functionCallingConfig: {
-                mode: this.mapToolChoice(params.toolChoice),
+                mode: toolChoiceConfig.mode,
+                ...(toolChoiceConfig.allowedFunctionNames && {
+                  allowedFunctionNames: toolChoiceConfig.allowedFunctionNames,
+                }),
               },
             },
           },
@@ -195,6 +201,8 @@ export class GeminiAdapter implements LLMPort {
         this.convertTool(tool),
       );
 
+      const toolChoiceConfig = this.mapToolChoice(params.toolChoice);
+
       const responseStream = await this.client.models.generateContentStream({
         model: this.model,
         contents: this.buildContents(params),
@@ -205,7 +213,10 @@ export class GeminiAdapter implements LLMPort {
           tools: [{ functionDeclarations }],
           toolConfig: {
             functionCallingConfig: {
-              mode: this.mapToolChoice(params.toolChoice),
+              mode: toolChoiceConfig.mode,
+              ...(toolChoiceConfig.allowedFunctionNames && {
+                allowedFunctionNames: toolChoiceConfig.allowedFunctionNames,
+              }),
             },
           },
         },
@@ -331,14 +342,26 @@ export class GeminiAdapter implements LLMPort {
     };
   }
 
-  private mapToolChoice(choice?: string): FunctionCallingConfigMode {
+  private mapToolChoice(choice?: ToolChoice): {
+    mode: FunctionCallingConfigMode;
+    allowedFunctionNames?: string[];
+  } {
+    // Force specific tool
+    if (typeof choice === 'object') {
+      return {
+        mode: FunctionCallingConfigMode.ANY,
+        allowedFunctionNames: [choice.toolName],
+      };
+    }
+
+    // String modes
     switch (choice) {
       case 'required':
-        return FunctionCallingConfigMode.ANY;
+        return { mode: FunctionCallingConfigMode.ANY };
       case 'none':
-        return FunctionCallingConfigMode.NONE;
+        return { mode: FunctionCallingConfigMode.NONE };
       default:
-        return FunctionCallingConfigMode.AUTO;
+        return { mode: FunctionCallingConfigMode.AUTO };
     }
   }
 

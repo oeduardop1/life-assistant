@@ -21,13 +21,18 @@ import { MaxIterationsExceededError, ToolNotFoundError } from '../errors/ai.erro
 
 /**
  * Pending confirmation state for tools that require user confirmation.
+ * Supports multiple tool calls when LLM makes parallel calls that all require confirmation.
  * @see ADR-015 for Low Friction Tracking Philosophy
  */
 export interface PendingConfirmation {
-  /** Tool call that needs confirmation */
+  /** Tool call that needs confirmation (kept for backwards compatibility) */
   toolCall: ToolCall;
   /** Tool definition (for access to metadata) */
   toolDefinition: ToolDefinition;
+  /** All tool calls that need confirmation (for parallel calls) */
+  toolCalls: ToolCall[];
+  /** All tool definitions for the calls that need confirmation */
+  toolDefinitions: ToolDefinition[];
   /** Current iteration number */
   iteration: number;
   /** Messages up to this point (for resuming) */
@@ -162,47 +167,80 @@ export async function runToolLoop(
       toolCalls: response.toolCalls,
     });
 
-    // Process each tool call
+    // First pass: identify which tool calls need confirmation
+    // This prevents losing parallel tool calls when some need confirmation (ADR-015)
+    const pendingConfirmationCalls: { toolCall: ToolCall; toolDefinition: ToolDefinition }[] = [];
+    const executableCalls: ToolCall[] = [];
+
+    // Parse skipConfirmationFor - can be single ID or comma-separated IDs
+    const skipConfirmationIds = config.skipConfirmationFor
+      ? new Set(config.skipConfirmationFor.split(',').map(id => id.trim()))
+      : new Set<string>();
+
     for (const toolCall of response.toolCalls) {
       const toolDefinition = toolDefinitionMap.get(toolCall.name);
-
-      // Check if tool requires confirmation (ADR-015)
-      // Skip confirmation check if this tool was already confirmed
-      const shouldSkipConfirmation = config.skipConfirmationFor === toolCall.id;
+      const shouldSkipConfirmation = skipConfirmationIds.has(toolCall.id);
 
       if (
         toolDefinition?.requiresConfirmation === true &&
         !shouldSkipConfirmation
       ) {
-        // Return pending confirmation - loop pauses here
-        // The caller is responsible for:
-        // 1. Storing this state
-        // 2. Asking user for confirmation
-        // 3. Resuming the loop with confirmed/rejected tool call
-        return {
-          content: response.content,
-          iterations: iteration,
-          toolCalls: allToolCalls,
-          toolResults: allToolResults,
-          messages,
-          pendingConfirmation: {
-            toolCall,
-            toolDefinition,
-            iteration,
-            messages: [...messages],
-            previousToolCalls: [...allToolCalls],
-            previousToolResults: [...allToolResults],
-          },
-        };
+        // Collect tools needing confirmation
+        pendingConfirmationCalls.push({ toolCall, toolDefinition });
+      } else {
+        // Tools that can be executed immediately
+        executableCalls.push(toolCall);
+      }
+    }
+
+    // If there are tools requiring confirmation, pause the loop
+    // Return ALL confirmation-required tools together, not just the first one
+    if (pendingConfirmationCalls.length > 0) {
+      // First, execute any tools that don't need confirmation
+      // This allows read-only tools (like get_tracking_history) to run
+      for (const toolCall of executableCalls) {
+        allToolCalls.push(toolCall);
+        const result = await executeToolCall(config.executor, toolCall, config.context);
+        allToolResults.push(result);
+        messages.push({
+          role: 'tool',
+          content: result.success ? result.content : `Error: ${result.error ?? 'Unknown error'}`,
+          toolCallId: toolCall.id,
+        });
       }
 
-      // Execute tool (either doesn't require confirmation or was confirmed)
-      allToolCalls.push(toolCall);
+      // Return ALL pending confirmations together
+      // The first toolCall/toolDefinition are kept for backwards compatibility
+      // We know pendingConfirmationCalls.length > 0, so first element exists
+      const firstPending = pendingConfirmationCalls.at(0);
+      if (!firstPending) {
+        // This should never happen since we check length > 0 above
+        throw new Error('No pending confirmations found - this is a bug');
+      }
+      return {
+        content: response.content,
+        iterations: iteration,
+        toolCalls: allToolCalls,
+        toolResults: allToolResults,
+        messages,
+        pendingConfirmation: {
+          toolCall: firstPending.toolCall,
+          toolDefinition: firstPending.toolDefinition,
+          toolCalls: pendingConfirmationCalls.map(p => p.toolCall),
+          toolDefinitions: pendingConfirmationCalls.map(p => p.toolDefinition),
+          iteration,
+          messages: [...messages],
+          previousToolCalls: [...allToolCalls],
+          previousToolResults: [...allToolResults],
+        },
+      };
+    }
 
+    // No confirmations needed - execute all tools
+    for (const toolCall of executableCalls) {
+      allToolCalls.push(toolCall);
       const result = await executeToolCall(config.executor, toolCall, config.context);
       allToolResults.push(result);
-
-      // Add tool result to messages
       messages.push({
         role: 'tool',
         content: result.success ? result.content : `Error: ${result.error ?? 'Unknown error'}`,

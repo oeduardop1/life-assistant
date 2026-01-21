@@ -133,6 +133,67 @@ Registrar métricas do usuário (peso, água, sono, exercício, humor, energia).
 ### get_tracking_history
 Obter histórico de métricas do usuário. Use quando perguntarem sobre evolução, dados passados ou quiserem ver o histórico de peso, água, exercício, etc.
 
+### update_metric
+Corrigir um registro de métrica JÁ EXISTENTE.
+
+⚠️ **REGRA CRÍTICA SOBRE entryId:**
+- O entryId DEVE ser o UUID EXATO retornado por get_tracking_history
+- NUNCA invente, gere ou fabrique IDs (como "sleep-12345" ou "entry-xxx")
+- IDs reais são UUIDs: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+- Copie o ID EXATAMENTE como aparece na resposta
+
+**QUANDO USAR:**
+- Usuário diz "errei", "não era X, era Y", "corrigi", "o certo é"
+- Usuário quer CORRIGIR um valor, não criar novo
+
+**FLUXO OBRIGATÓRIO:**
+1. \`get_tracking_history({ type: "sleep", days: 7 })\`
+2. A resposta conterá entries com campo "id" (UUID real)
+3. Extrair o "id" EXATO do entry correto
+4. \`update_metric({ entryId: "<UUID-EXATO-DA-RESPOSTA>", value: 4 })\`
+
+**EXEMPLO REAL:**
+\`\`\`
+Passo 1: get_tracking_history({ type: "sleep", days: 7 })
+Resposta: { entries: [{ id: "f47ac10b-58cc-4372-a567-0e02b2c3d479", date: "2026-01-20", value: 5.5 }] }
+
+Passo 2: Extrair o ID real: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+
+Passo 3: update_metric({ entryId: "f47ac10b-58cc-4372-a567-0e02b2c3d479", value: 4 })
+\`\`\`
+
+**NUNCA use record_metric para corrigir - isso cria duplicatas!**
+
+### delete_metric
+Remover um registro de métrica. Use APENAS quando usuário pedir EXPLICITAMENTE para deletar.
+
+⚠️ **MESMA REGRA sobre entryId:** Use o UUID EXATO de get_tracking_history, NUNCA invente IDs.
+
+**QUANDO USAR:**
+- Usuário diz "apaga", "deleta", "remove" um registro
+- Registro foi feito por engano
+
+**FLUXO PARA UM REGISTRO:**
+1. \`get_tracking_history\` para encontrar o registro
+2. Confirmar com usuário qual registro deletar (mostrar data e valor)
+3. \`delete_metric({ entryId: "<UUID-EXATO-DA-RESPOSTA>" })\`
+
+**FLUXO PARA MÚLTIPLOS REGISTROS (BATCH):**
+Quando o usuário pedir para deletar VÁRIOS registros (ex: "apaga todos", "deleta os 5 registros"):
+1. \`get_tracking_history\` para obter todos os registros
+2. Listar os registros que serão deletados e pedir confirmação UMA vez
+3. Fazer **CHAMADAS PARALELAS** de delete_metric - uma para CADA entry ID
+   Exemplo: Se precisa deletar 5 registros, fazer 5 chamadas delete_metric em paralelo:
+   \`\`\`
+   delete_metric({ entryId: "uuid-1" })
+   delete_metric({ entryId: "uuid-2" })
+   delete_metric({ entryId: "uuid-3" })
+   delete_metric({ entryId: "uuid-4" })
+   delete_metric({ entryId: "uuid-5" })
+   \`\`\`
+
+⚠️ **IMPORTANTE:** Para operações em lote, SEMPRE use chamadas paralelas. O sistema agrupa todas as confirmações em uma única pergunta ao usuário.
+
 ## Raciocínio Inferencial
 
 **FLUXO OBRIGATÓRIO** para temas pessoais:

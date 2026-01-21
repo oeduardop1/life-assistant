@@ -109,8 +109,16 @@ export interface ToolCall {
 
 /**
  * Tool choice mode.
+ * - 'auto': LLM decides when to use tools
+ * - 'required': LLM must use a tool
+ * - 'none': LLM cannot use tools
+ * - { type: 'tool', toolName: string }: Force LLM to use a specific tool
  */
-export type ToolChoice = 'auto' | 'required' | 'none';
+export type ToolChoice =
+  | 'auto'
+  | 'required'
+  | 'none'
+  | { type: 'tool'; toolName: string };
 
 /**
  * Parameters for a chat completion with tools.

@@ -5,6 +5,7 @@ import type { ToolCall, ToolDefinition } from '@life-assistant/ai';
 
 /**
  * Stored confirmation state in Redis
+ * Supports multiple parallel tool calls that need confirmation together.
  * @see ADR-015 for Low Friction Tracking Philosophy
  */
 export interface StoredConfirmation {
@@ -14,10 +15,14 @@ export interface StoredConfirmation {
   conversationId: string;
   /** User ID */
   userId: string;
-  /** Tool call that needs confirmation */
+  /** Tool call that needs confirmation (first one, for backwards compatibility) */
   toolCall: ToolCall;
+  /** All tool calls that need confirmation (for parallel calls) */
+  toolCalls: ToolCall[];
   /** Tool definition name (for reference) */
   toolName: string;
+  /** All tool names (for parallel calls) */
+  toolNames: string[];
   /** Human-readable message for user */
   message: string;
   /** Current iteration in tool loop */
@@ -105,11 +110,16 @@ export class ConfirmationStateService implements OnModuleDestroy {
   /**
    * Store a pending confirmation
    *
+   * Supports both single and multiple tool calls (for parallel execution).
+   *
    * @param userId - User ID
    * @param conversationId - Conversation ID
-   * @param toolCall - Tool call requiring confirmation
+   * @param toolCall - Tool call requiring confirmation (or first of multiple)
    * @param toolDefinition - Tool definition
    * @param iteration - Current tool loop iteration
+   * @param additionalToolCalls - Additional tool calls for parallel execution
+   * @param additionalToolDefinitions - Additional tool definitions
+   * @param customMessage - Optional custom message (e.g., from LLM) to use instead of generated one
    * @returns Stored confirmation with generated ID
    */
   async store(
@@ -117,21 +127,38 @@ export class ConfirmationStateService implements OnModuleDestroy {
     conversationId: string,
     toolCall: ToolCall,
     toolDefinition: ToolDefinition,
-    iteration: number
+    iteration: number,
+    additionalToolCalls?: ToolCall[],
+    additionalToolDefinitions?: ToolDefinition[],
+    customMessage?: string
   ): Promise<StoredConfirmation> {
     const confirmationId = this.generateConfirmationId();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + CONFIRMATION_TTL_SECONDS * 1000);
 
-    // Generate human-readable message based on tool
-    const message = this.generateConfirmationMessage(toolCall, toolDefinition);
+    // Combine all tool calls (first + additional)
+    const allToolCalls = additionalToolCalls
+      ? [toolCall, ...additionalToolCalls.filter(tc => tc.id !== toolCall.id)]
+      : [toolCall];
+    const allToolNames = allToolCalls.map(tc => tc.name);
+
+    // Use custom message (from LLM) if provided, otherwise generate system message
+    // This prevents double confirmation when LLM already asked naturally
+    const message = customMessage ?? this.generateConfirmationMessageForAll(
+      allToolCalls,
+      additionalToolDefinitions
+        ? [toolDefinition, ...additionalToolDefinitions.filter(td => td.name !== toolDefinition.name)]
+        : [toolDefinition]
+    );
 
     const confirmation: StoredConfirmation = {
       confirmationId,
       conversationId,
       userId,
       toolCall,
+      toolCalls: allToolCalls,
       toolName: toolCall.name,
+      toolNames: allToolNames,
       message,
       iteration,
       createdAt: now.toISOString(),
@@ -147,8 +174,8 @@ export class ConfirmationStateService implements OnModuleDestroy {
     );
 
     this.logger.log(
-      `Stored confirmation ${confirmationId} for tool ${toolCall.name} in conversation ${conversationId}`,
-      { confirmationId, toolName: toolCall.name, conversationId }
+      `Stored confirmation ${confirmationId} for ${String(allToolCalls.length)} tool(s): ${allToolNames.join(', ')} in conversation ${conversationId}`,
+      { confirmationId, toolNames: allToolNames, conversationId }
     );
 
     return confirmation;
@@ -301,7 +328,7 @@ export class ConfirmationStateService implements OnModuleDestroy {
   }
 
   /**
-   * Generate a human-readable confirmation message for a tool call
+   * Generate a human-readable confirmation message for a single tool call
    */
   private generateConfirmationMessage(
     toolCall: ToolCall,
@@ -351,8 +378,98 @@ export class ConfirmationStateService implements OnModuleDestroy {
         return `Salvar conhecimento: "${preview}"?`;
       }
 
+      case 'update_metric': {
+        const value = args.value as number;
+        const unit = args.unit as string | undefined;
+
+        const unitLabels: Record<string, string> = {
+          kg: 'kg',
+          ml: 'ml',
+          hours: 'horas',
+          min: 'minutos',
+          score: 'pontos',
+        };
+
+        const unitLabel = unit ? unitLabels[unit] ?? unit : '';
+
+        return `Corrigir para ${String(value)} ${unitLabel}?`.trim();
+      }
+
+      case 'delete_metric': {
+        return 'Remover este registro?';
+      }
+
+      case 'delete_metrics': {
+        const entryIds = args.entryIds as string[];
+        const count = entryIds.length;
+        return `Remover ${String(count)} registros?`;
+      }
+
       default:
         return `Executar ${toolCall.name}?`;
     }
+  }
+
+  /**
+   * Generate a human-readable confirmation message for multiple tool calls.
+   *
+   * When multiple parallel delete_metric calls are received, aggregates them
+   * into a single "Remover X registros?" message.
+   *
+   * @see ADR-015 Low Friction Tracking Philosophy
+   */
+  private generateConfirmationMessageForAll(
+    toolCalls: ToolCall[],
+    toolDefinitions: ToolDefinition[]
+  ): string {
+    // Single tool call - use the standard message generator
+    const firstToolCall = toolCalls.at(0);
+    const firstToolDef = toolDefinitions.at(0);
+    if (toolCalls.length === 1 && firstToolCall && firstToolDef) {
+      return this.generateConfirmationMessage(firstToolCall, firstToolDef);
+    }
+
+    // Multiple tool calls - check if they're all the same type
+    const toolNames = new Set(toolCalls.map(tc => tc.name));
+
+    // All delete_metric calls - aggregate into a count message
+    if (toolNames.size === 1 && toolNames.has('delete_metric')) {
+      return `Remover ${String(toolCalls.length)} registros?`;
+    }
+
+    // All record_metric calls - list them
+    if (toolNames.size === 1 && toolNames.has('record_metric')) {
+      const summaries = toolCalls.map(tc => {
+        const args = tc.arguments;
+        const type = args.type as string;
+        const value = args.value as number;
+        const unit = args.unit as string | undefined;
+
+        const typeLabels: Record<string, string> = {
+          weight: 'peso',
+          water: 'água',
+          sleep: 'sono',
+          exercise: 'exercício',
+          mood: 'humor',
+          energy: 'energia',
+        };
+
+        const typeLabel = typeLabels[type] ?? type;
+        return `${typeLabel}: ${String(value)}${unit ? ` ${unit}` : ''}`;
+      });
+
+      return `Registrar ${summaries.join(', ')}?`;
+    }
+
+    // Mixed tool calls - generic message
+    const toolNameLabels: Record<string, string> = {
+      delete_metric: 'deletar registro',
+      record_metric: 'registrar métrica',
+      update_metric: 'atualizar registro',
+      add_knowledge: 'salvar conhecimento',
+    };
+
+    const actions = toolCalls.map(tc => toolNameLabels[tc.name] ?? tc.name);
+    return `Executar ${String(toolCalls.length)} ações: ${actions.join(', ')}?`;
   }
 }

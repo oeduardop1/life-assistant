@@ -39,6 +39,7 @@ export type {
   Message,
   ToolDefinition,
   ToolCall,
+  ToolChoice,
   StreamChunk,
   ProviderInfo,
   FinishReason,
@@ -102,6 +103,13 @@ export {
   recordMetricTool,
   recordMetricParamsSchema,
   type RecordMetricParams,
+  updateMetricTool,
+  updateMetricParamsSchema,
+  type UpdateMetricParams,
+  deleteMetricTool,
+  deleteMetricParamsSchema,
+  type DeleteMetricParams,
+  // delete_metrics (batch) removed - LLM hallucinates entry IDs
   addKnowledgeTool,
   addKnowledgeParamsSchema,
   type AddKnowledgeParams,
@@ -116,6 +124,12 @@ export {
   analyzeContextResponseSchema,
   type AnalyzeContextParams,
   type AnalyzeContextResponse,
+  // Confirmation detection tool (used with forced toolChoice)
+  respondToConfirmationTool,
+  respondToConfirmationParamsSchema,
+  confirmationIntentSchema,
+  type RespondToConfirmationParams,
+  type ConfirmationIntent,
 } from './schemas/tools/index.js';
 
 // ============================================================================

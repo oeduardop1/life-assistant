@@ -10,6 +10,13 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-21 | M2.1 | Enhancement | Detecção de intent via LLM: nova tool `respond_to_confirmation` com `toolChoice` forçado. Substitui regex patterns por interpretação via LLM. Reconhece variações naturais ("beleza", "manda ver", "bora"). `ToolChoice` estendido para `{ type: 'tool', toolName }`. Adapters Gemini (`allowedFunctionNames`) e Claude (`{ type: 'tool', name }`) atualizados. SEM fallback para regex. |
+| 2026-01-21 | M2.1 | Refactor | Removido `delete_metrics` (batch) - LLM alucinava IDs. Agora usa chamadas paralelas de `delete_metric` com UUIDs reais. |
+| 2026-01-20 | M2.1 | Bug fix | Fix GAP 6 (v2): "exclua todos" não funcionava - sistema armazenava confirmação em vez de executar. Causa: "exclua" (imperativo de excluir) não estava nos patterns de `isUpdateDeleteConfirmation()`. Fix: Adicionado "exclua" em 3 regex patterns. Revertido código complexo em `continueToolLoopAfterAutoConfirm()` que quebrava com assistant message vazia. |
+| 2026-01-20 | M2.1 | UX | Fix GAP 5: Eliminada confirmação dupla para update_metric/delete_metric. Quando usuário já confirma na mensagem ("pode atualizar", "corrige pra mim"), sistema executa diretamente. IA pergunta de forma amigável, sistema detecta intent e executa. Docs: ai.md §9.3, §9.7. |
+| 2026-01-20 | M2.1 | Bug fix | Fix GAP 4: LLM estava alucinando IDs (ex: `sleep-12345`) em vez de usar UUIDs reais de `get_tracking_history`. Fix: tool descriptions enfatizam uso de IDs EXATOS, system prompt com exemplo real de fluxo, resposta do executor inclui `_note` de instrução. |
+| 2026-01-20 | M2.1 | Bug fix | Fix GAP 3: Tools `update_metric`/`delete_metric` não estavam registrados em `availableTools` e `toolToExecutorMap` do ChatService. Fix: padrões de detecção de intent ampliados para aceitar "sim, faça isso" e variantes. 6 novos testes para patterns. |
+| 2026-01-20 | M2.1 | Enhancement | Gap 2: Tools `update_metric` e `delete_metric` para correção/deleção de registros existentes. Fix `get_tracking_history` para retornar `id`. System prompt com instruções de datas relativas. 12 novos testes. Docs: ai.md §6.2, §9.1, §9.2, §9.7; system.md §3.3 |
 | 2026-01-20 | M2.1 | Bug fix | Fix confirmation loop (Gap 1): Sistema agora detecta intent do usuário ("sim"/"não"/correção) ANTES de iniciar tool loop. `requiresConfirmation: true` mantido. Intent detection via regex em `ChatService.detectUserIntent()`. Fix adicional: `find()` → `findLast()` para pegar mensagem mais recente. +197 linhas chat.service.ts, +250 linhas testes |
 | 2026-01-20 | M2.1 | Concluído | Testes completos (243 total): 42 unit backend, 9 integration, 22 component, 8 hooks, 162 E2E. Tasks expandidas de 10 para 25. Fixes E2E: sidebar toggle, mobile-chrome skips, memory search debounce |
 | 2026-01-19 | M3.8 | Criado | Decision Support Framework (ADR-016): persistência de decisões, tool `save_decision`, follow-up job, learning loop via Memory Consolidation. Tabelas já existem no banco (M0.4), milestone cria schema TypeScript e implementação completa |
@@ -44,4 +51,4 @@
 
 ---
 
-*Última atualização: 20 Janeiro 2026*
+*Última atualização: 21 Janeiro 2026*

@@ -129,6 +129,20 @@ _Testes E2E (6 tasks):_
 - Hooks: 11 hooks do useTracking testados
 - E2E: 6 fluxos completos (formulário manual, água, histórico, empty state, chat conversacional, filtros)
 - Fixes E2E: sidebar toggle CSS classes, mobile-chrome skips, memory search debounce
+- **Enhancement: Tools `update_metric` e `delete_metric`** (Gap 2)
+  - Novas tools para correção/deleção de métricas já registradas
+  - Fix `get_tracking_history` para retornar `id` de cada entry
+  - Instruções no system prompt sobre datas relativas (ontem, dia X)
+  - 12 novos testes unitários no tracking-tool-executor.spec.ts
+  - Docs atualizados: ai.md §6.2, §9.1, §9.2, §9.7; system.md §3.3
+- **Enhancement: Detecção de Intent via LLM** (Gap 7 - 2026-01-21)
+  - Nova tool `respond_to_confirmation` para detecção de intent
+  - `ToolChoice` estendido para suportar `{ type: 'tool', toolName: string }`
+  - Adapters Gemini e Claude atualizados para forçar tool específica
+  - Detecção via LLM substitui regex patterns limitados
+  - Reconhece variações naturais: "beleza", "manda ver", "tá certo", "bora"
+  - SEM fallback para regex - erro explícito se LLM falhar
+  - Docs atualizados: ai.md §2.3, §6.2, §9.3, §9.6; system.md §3.3
 
 ---
 
