@@ -26,11 +26,25 @@ export const consolidationResponseSchema = z.object({
       evidence: z.array(z.string()),
     })).optional(),
   }),
+  // ADR-017: Updated to 6 main areas + sub-areas
   new_knowledge_items: z.array(z.object({
     type: z.enum(['fact', 'preference', 'memory', 'insight', 'person']),
     area: z.enum([
-      'health', 'financial', 'relationships', 'career',
-      'personal_growth', 'leisure', 'spirituality', 'mental_health',
+      'health', 'finance', 'professional', 'learning', 'spiritual', 'relationships',
+    ]).optional(),
+    subArea: z.enum([
+      // health sub-areas
+      'physical', 'mental', 'leisure',
+      // finance sub-areas
+      'budget', 'savings', 'debts', 'investments',
+      // professional sub-areas
+      'career', 'business',
+      // learning sub-areas
+      'formal', 'informal',
+      // spiritual sub-areas
+      'practice', 'community',
+      // relationships sub-areas
+      'family', 'romantic', 'social',
     ]).optional(),
     content: z.string(),
     title: z.string().optional(),
@@ -167,7 +181,8 @@ ${formatKnowledgeItems(existingKnowledge)}
   "new_knowledge_items": [
     {
       "type": "fact|preference|insight|memory|person",
-      "area": "health|financial|relationships|career|personal_growth|leisure|spirituality|mental_health",
+      "area": "health|finance|professional|learning|spiritual|relationships",
+      "subArea": "physical|mental|leisure|budget|savings|debts|investments|career|business|formal|informal|practice|community|family|romantic|social",
       "content": "descrição do fato",
       "title": "título curto",
       "confidence": 0.9,

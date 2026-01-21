@@ -137,6 +137,7 @@ erDiagram
         uuid user_id FK
         enum type
         enum area
+        enum sub_area
         decimal value
         string unit
         jsonb metadata
@@ -188,6 +189,7 @@ erDiagram
         uuid user_id FK
         string type
         string area
+        string sub_area
         string title
         text content
         string source
@@ -305,16 +307,40 @@ CREATE TYPE user_status AS ENUM (
   'deleted'
 );
 
--- Áreas da vida
+-- Áreas da vida (6 áreas principais - ADR-017)
 CREATE TYPE life_area AS ENUM (
   'health',
-  'financial',
-  'relationships',
-  'career',
-  'personal_growth',
+  'finance',
+  'professional',
+  'learning',
+  'spiritual',
+  'relationships'
+);
+
+-- Sub-áreas da vida (ADR-017)
+CREATE TYPE sub_area AS ENUM (
+  -- health
+  'physical',
+  'mental',
   'leisure',
-  'spirituality',
-  'mental_health'
+  -- finance
+  'budget',
+  'savings',
+  'debts',
+  'investments',
+  -- professional
+  'career',
+  'business',
+  -- learning
+  'formal',
+  'informal',
+  -- spiritual
+  'practice',
+  'community',
+  -- relationships
+  'family',
+  'romantic',
+  'social'
 );
 
 -- Tipos de tracking
@@ -557,9 +583,25 @@ export const userStatusEnum = pgEnum('user_status', [
   'pending', 'active', 'suspended', 'canceled', 'deleted'
 ]);
 
+// ADR-017: 6 main areas
 export const lifeAreaEnum = pgEnum('life_area', [
-  'health', 'financial', 'relationships', 'career',
-  'personal_growth', 'leisure', 'spirituality', 'mental_health'
+  'health', 'finance', 'professional', 'learning', 'spiritual', 'relationships'
+]);
+
+// ADR-017: 17 sub-areas
+export const subAreaEnum = pgEnum('sub_area', [
+  // health
+  'physical', 'mental', 'leisure',
+  // finance
+  'budget', 'savings', 'debts', 'investments',
+  // professional
+  'career', 'business',
+  // learning
+  'formal', 'informal',
+  // spiritual
+  'practice', 'community',
+  // relationships
+  'family', 'romantic', 'social'
 ]);
 
 export const trackingTypeEnum = pgEnum('tracking_type', [
@@ -681,16 +723,14 @@ export const userPreferencesSchema = z.object({
   // Perspectiva cristã habilitada
   christianPerspective: z.boolean().default(false),
 
-  // Pesos das áreas da vida (0.0 a 1.0)
+  // Pesos das áreas da vida (0.0 a 1.0) - ADR-017: 6 áreas
   areaWeights: z.object({
     health: z.number().min(0).max(1).default(1.0),
-    financial: z.number().min(0).max(1).default(1.0),
+    finance: z.number().min(0).max(1).default(1.0),
+    professional: z.number().min(0).max(1).default(1.0),
+    learning: z.number().min(0).max(1).default(0.8),
+    spiritual: z.number().min(0).max(1).default(0.5),
     relationships: z.number().min(0).max(1).default(1.0),
-    career: z.number().min(0).max(1).default(1.0),
-    personal_growth: z.number().min(0).max(1).default(0.8),
-    leisure: z.number().min(0).max(1).default(0.8),
-    spirituality: z.number().min(0).max(1).default(0.5),
-    mental_health: z.number().min(0).max(1).default(1.0),
   }).default({}),
 
   // Configurações de notificação
@@ -784,18 +824,16 @@ export const users = pgTable('users', {
   locale: varchar('locale', { length: 10 }).notNull().default('pt-BR'),
   currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
   
-  // Preferences (JSON)
+  // Preferences (JSON) - ADR-017: 6 áreas
   preferences: jsonb('preferences').notNull().default({
     christianPerspective: false,
     areaWeights: {
       health: 1.0,
-      financial: 1.0,
+      finance: 1.0,
+      professional: 1.0,
+      learning: 0.8,
+      spiritual: 0.5,
       relationships: 1.0,
-      career: 1.0,
-      personal_growth: 0.8,
-      leisure: 0.8,
-      spirituality: 0.5,
-      mental_health: 1.0,
     },
     notifications: {
       pushEnabled: true,
@@ -981,7 +1019,7 @@ export const lifeBalanceHistory = pgTable('life_balance_history', {
   areaScores: jsonb('area_scores').notNull(),
   // {
   //   health: { score: 75, components: { weight: 80, exercise: 70, ... } },
-  //   financial: { score: 60, components: { budget: 50, savings: 70, ... } },
+  //   finance: { score: 60, components: { budget: 50, savings: 70, ... } },
   //   ...
   // }
   
@@ -1123,7 +1161,8 @@ export const knowledgeItems = pgTable('knowledge_items', {
 
   // Classification
   type: knowledgeItemTypeEnum('type').notNull(), // 'fact', 'preference', 'memory', 'insight', 'person'
-  area: lifeAreaEnum('area'), // 'health', 'financial', 'career', 'relationships', etc.
+  area: lifeAreaEnum('area'), // ADR-017: 'health', 'finance', 'professional', 'learning', 'spiritual', 'relationships'
+  subArea: subAreaEnum('sub_area'), // ADR-017: 'physical', 'mental', 'budget', 'career', etc.
 
   // Content
   title: varchar('title', { length: 255 }),
@@ -2183,7 +2222,7 @@ export const decisions = pgTable('decisions', {
   // Conteúdo
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
-  area: lifeArea('area').notNull(), // health, financial, relationships, etc.
+  area: lifeArea('area').notNull(), // ADR-017: health, finance, professional, learning, spiritual, relationships
 
   // Timeline
   deadline: timestamp('deadline', { withTimezone: true }),
@@ -2760,7 +2799,7 @@ async function seed() {
     {
       userId: user.id,
       type: 'mood',
-      area: 'mental_health',
+      area: 'health', // sub-area: mental
       value: '7',
       entryDate: today.toISOString().split('T')[0],
     },

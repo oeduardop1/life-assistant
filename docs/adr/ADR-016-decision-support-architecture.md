@@ -67,8 +67,7 @@ Nova tool para persistir decisões importantes:
   parameters: z.object({
     title: z.string().describe('Título breve da decisão'),
     description: z.string().optional().describe('Contexto detalhado'),
-    area: z.enum(['health', 'financial', 'relationships', 'career',
-                  'personal_growth', 'spirituality', 'leisure', 'mental_health']),
+    area: z.enum(['health', 'finance', 'professional', 'learning', 'spiritual', 'relationships']),
     options: z.array(z.object({
       title: z.string(),
       pros: z.array(z.string()).optional(),

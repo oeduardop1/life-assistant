@@ -5,6 +5,7 @@ import type {
   TrackingEntry,
   TrackingType,
   LifeArea,
+  SubArea,
 } from '@life-assistant/database';
 import type {
   TrackingEntryRepositoryPort,
@@ -13,6 +14,7 @@ import type {
 
 /**
  * Create a mock tracking entry for testing
+ * ADR-017: Added subArea support
  */
 function createMockTrackingEntry(
   overrides: Partial<TrackingEntry> = {}
@@ -22,6 +24,7 @@ function createMockTrackingEntry(
     userId: 'user-123',
     type: 'weight' as TrackingType,
     area: 'health' as LifeArea,
+    subArea: 'physical' as SubArea, // ADR-017: Default sub-area
     value: '75.5',
     unit: 'kg',
     metadata: {},
@@ -100,9 +103,11 @@ describe('TrackingService', () => {
         });
 
         expect(result).toEqual(mockEntry);
+        // ADR-017: Now includes subArea based on VALIDATION_RULES
         expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
           type: 'weight',
           area: 'health',
+          subArea: 'physical', // ADR-017: Default sub-area for weight
           value: '75',
           unit: 'kg',
           entryDate: '2024-01-15',
@@ -198,9 +203,11 @@ describe('TrackingService', () => {
         });
 
         expect(result).toEqual(mockEntry);
+        // ADR-017: Now includes subArea based on VALIDATION_RULES
         expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
           type: 'water',
           area: 'health',
+          subArea: 'physical', // ADR-017: Default sub-area for water
           value: '2000',
           unit: 'ml',
           entryDate: '2024-01-15',
@@ -250,9 +257,11 @@ describe('TrackingService', () => {
         });
 
         expect(result).toEqual(mockEntry);
+        // ADR-017: Now includes subArea based on VALIDATION_RULES
         expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
           type: 'sleep',
           area: 'health',
+          subArea: 'physical', // ADR-017: Default sub-area for sleep
           value: '7.5',
           unit: 'hours',
           entryDate: '2024-01-15',
@@ -302,9 +311,11 @@ describe('TrackingService', () => {
         });
 
         expect(result).toEqual(mockEntry);
+        // ADR-017: Now includes subArea based on VALIDATION_RULES
         expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
           type: 'exercise',
           area: 'health',
+          subArea: 'physical', // ADR-017: Default sub-area for exercise
           value: '45',
           unit: 'min',
           entryDate: '2024-01-15',
@@ -337,27 +348,31 @@ describe('TrackingService', () => {
       });
     });
 
+    // ADR-017: mood now uses 'health' area with 'mental' sub-area
     describe('mood validation', () => {
       it('should_create_mood_entry_when_valid', async () => {
         const mockEntry = createMockTrackingEntry({
           type: 'mood' as TrackingType,
           value: '7',
           unit: 'score',
-          area: 'mental_health' as LifeArea,
+          area: 'health' as LifeArea,
+          subArea: 'mental' as SubArea,
         });
         mockRepository.create.mockResolvedValue(mockEntry);
 
         const result = await service.recordMetric('user-123', {
           type: 'mood',
-          area: 'mental_health',
+          area: 'health',
           value: 7,
           entryDate: '2024-01-15',
         });
 
         expect(result).toEqual(mockEntry);
+        // ADR-017: Now includes subArea based on VALIDATION_RULES
         expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
           type: 'mood',
-          area: 'mental_health',
+          area: 'health',
+          subArea: 'mental', // ADR-017: Default sub-area for mood
           value: '7',
           unit: 'score',
           entryDate: '2024-01-15',
@@ -371,7 +386,7 @@ describe('TrackingService', () => {
         await expect(
           service.recordMetric('user-123', {
             type: 'mood',
-            area: 'mental_health',
+            area: 'health',
             value: 0, // Below 1 min
             entryDate: '2024-01-15',
           })
@@ -382,7 +397,7 @@ describe('TrackingService', () => {
         await expect(
           service.recordMetric('user-123', {
             type: 'mood',
-            area: 'mental_health',
+            area: 'health',
             value: 11, // Above 10 max
             entryDate: '2024-01-15',
           })
@@ -390,12 +405,14 @@ describe('TrackingService', () => {
       });
     });
 
+    // ADR-017: energy now uses 'health' area with 'mental' sub-area
     describe('energy validation', () => {
       it('should_create_energy_entry_when_valid', async () => {
         const mockEntry = createMockTrackingEntry({
           type: 'energy' as TrackingType,
           value: '8',
           unit: 'score',
+          subArea: 'mental' as SubArea,
         });
         mockRepository.create.mockResolvedValue(mockEntry);
 
@@ -407,9 +424,11 @@ describe('TrackingService', () => {
         });
 
         expect(result).toEqual(mockEntry);
+        // ADR-017: Now includes subArea based on VALIDATION_RULES
         expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
           type: 'energy',
           area: 'health',
+          subArea: 'mental', // ADR-017: Default sub-area for energy
           value: '8',
           unit: 'score',
           entryDate: '2024-01-15',
@@ -442,19 +461,21 @@ describe('TrackingService', () => {
       });
     });
 
+    // ADR-017: personal_growth replaced by 'learning' area
     describe('custom type', () => {
       it('should_create_custom_entry_without_validation_limits', async () => {
         const mockEntry = createMockTrackingEntry({
           type: 'custom' as TrackingType,
           value: '9999',
           unit: 'unit',
-          area: 'personal_growth' as LifeArea,
+          area: 'learning' as LifeArea,
+          subArea: 'informal' as SubArea,
         });
         mockRepository.create.mockResolvedValue(mockEntry);
 
         const result = await service.recordMetric('user-123', {
           type: 'custom',
-          area: 'personal_growth',
+          area: 'learning',
           value: 9999, // No max limit for custom
           entryDate: '2024-01-15',
         });

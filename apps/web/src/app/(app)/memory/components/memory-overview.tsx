@@ -1,6 +1,6 @@
 'use client';
 
-import { User, Briefcase, Users, Target, AlertCircle, Brain, Heart, Sparkles, Sun } from 'lucide-react';
+import { User, Briefcase, Users, Target, AlertCircle, Heart, Sun } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type MemoryOverview, type LifeArea, lifeAreaLabels } from '../types';
@@ -10,26 +10,28 @@ interface MemoryOverviewProps {
   isLoading?: boolean;
 }
 
+/**
+ * Area icons (ADR-017: 6 main areas)
+ */
 const areaIcons: Record<LifeArea, React.ReactNode> = {
   health: <Heart className="h-4 w-4" />,
-  financial: <span className="text-sm">$</span>,
+  finance: <span className="text-sm">$</span>,
+  professional: <Briefcase className="h-4 w-4" />,
+  learning: <Target className="h-4 w-4" />,
+  spiritual: <Sun className="h-4 w-4" />,
   relationships: <Users className="h-4 w-4" />,
-  career: <Briefcase className="h-4 w-4" />,
-  personal_growth: <Target className="h-4 w-4" />,
-  leisure: <Sparkles className="h-4 w-4" />,
-  spirituality: <Sun className="h-4 w-4" />,
-  mental_health: <Brain className="h-4 w-4" />,
 };
 
+/**
+ * Area colors (ADR-017: 6 main areas)
+ */
 const areaColors: Record<LifeArea, string> = {
   health: 'text-red-500',
-  financial: 'text-green-500',
+  finance: 'text-green-500',
+  professional: 'text-blue-500',
+  learning: 'text-purple-500',
+  spiritual: 'text-indigo-500',
   relationships: 'text-pink-500',
-  career: 'text-blue-500',
-  personal_growth: 'text-purple-500',
-  leisure: 'text-yellow-500',
-  spirituality: 'text-indigo-500',
-  mental_health: 'text-teal-500',
 };
 
 export function MemoryOverviewComponent({ data, isLoading }: MemoryOverviewProps) {

@@ -403,6 +403,7 @@ export class MemoryConsolidationProcessor extends WorkerHost {
     }
 
     // Create new knowledge items (contradiction detection is enabled by default)
+    // ADR-017: Updated to support 6 main areas + sub-areas
     for (const item of result.new_knowledge_items) {
       // Build params without undefined values (exactOptionalPropertyTypes)
       const params: Parameters<typeof this.knowledgeItemsService.add>[1] = {
@@ -412,6 +413,7 @@ export class MemoryConsolidationProcessor extends WorkerHost {
         source: item.source,
       };
       if (item.area !== undefined) params.area = item.area;
+      if (item.subArea !== undefined) params.subArea = item.subArea;
       if (item.title !== undefined) params.title = item.title;
       if (item.inferenceEvidence !== undefined) params.inferenceEvidence = item.inferenceEvidence;
 

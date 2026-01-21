@@ -228,18 +228,17 @@ async function ensureUserExists(user: TestUser, label: string): Promise<void> {
 
 /**
  * Default user preferences for testing
+ * ADR-017: 6 main areas
  */
 const DEFAULT_PREFERENCES = {
   christianPerspective: false,
   areaWeights: {
     health: 1,
-    financial: 1,
+    finance: 1,
+    professional: 1,
+    learning: 0.8,
+    spiritual: 0.5,
     relationships: 1,
-    career: 1,
-    personal_growth: 0.8,
-    leisure: 0.8,
-    spirituality: 0.5,
-    mental_health: 1,
   },
   notifications: {
     pushEnabled: true,

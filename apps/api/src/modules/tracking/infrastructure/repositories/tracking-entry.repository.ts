@@ -11,6 +11,7 @@ import type {
   NewTrackingEntry,
   TrackingType,
   LifeArea,
+  SubArea,
 } from '@life-assistant/database';
 
 /**
@@ -56,7 +57,7 @@ export class TrackingEntryRepository implements TrackingEntryRepositoryPort {
     userId: string,
     params: TrackingEntrySearchParams
   ): Promise<TrackingEntry[]> {
-    const { type, area, startDate, endDate, source, limit = 50, offset = 0 } = params;
+    const { type, area, subArea, startDate, endDate, source, limit = 50, offset = 0 } = params;
 
     return this.db.withUserId(userId, async (db) => {
       const conditions = [eq(this.db.schema.trackingEntries.userId, userId)];
@@ -67,6 +68,11 @@ export class TrackingEntryRepository implements TrackingEntryRepositoryPort {
 
       if (area) {
         conditions.push(eq(this.db.schema.trackingEntries.area, area as LifeArea));
+      }
+
+      // ADR-017: Sub-area filtering
+      if (subArea) {
+        conditions.push(eq(this.db.schema.trackingEntries.subArea, subArea as SubArea));
       }
 
       if (source) {

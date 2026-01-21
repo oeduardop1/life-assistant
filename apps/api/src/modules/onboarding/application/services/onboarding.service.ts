@@ -147,16 +147,14 @@ export class OnboardingService {
       throw new BadRequestException('User not found');
     }
 
-    // Build area weights object with proper type
+    // Build area weights object with proper type (ADR-017: 6 areas)
     const areaWeights: UserPreferences['areaWeights'] = {
       health: dto.areas.includes(LifeArea.HEALTH) ? 1.0 : 0.0,
-      financial: dto.areas.includes(LifeArea.FINANCIAL) ? 1.0 : 0.0,
+      finance: dto.areas.includes(LifeArea.FINANCE) ? 1.0 : 0.0,
+      professional: dto.areas.includes(LifeArea.PROFESSIONAL) ? 1.0 : 0.0,
+      learning: dto.areas.includes(LifeArea.LEARNING) ? 0.8 : 0.0,
+      spiritual: dto.areas.includes(LifeArea.SPIRITUAL) ? 0.5 : 0.0,
       relationships: dto.areas.includes(LifeArea.RELATIONSHIPS) ? 1.0 : 0.0,
-      career: dto.areas.includes(LifeArea.CAREER) ? 1.0 : 0.0,
-      personal_growth: dto.areas.includes(LifeArea.PERSONAL_GROWTH) ? 1.0 : 0.0,
-      leisure: dto.areas.includes(LifeArea.LEISURE) ? 1.0 : 0.0,
-      spirituality: dto.areas.includes(LifeArea.SPIRITUALITY) ? 1.0 : 0.0,
-      mental_health: dto.areas.includes(LifeArea.MENTAL_HEALTH) ? 1.0 : 0.0,
     };
 
     const currentPrefs = safeParseUserPreferences(user.preferences);

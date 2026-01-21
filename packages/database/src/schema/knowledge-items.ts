@@ -17,6 +17,7 @@ import {
   knowledgeItemTypeEnum,
   knowledgeItemSourceEnum,
   lifeAreaEnum,
+  subAreaEnum,
 } from './enums';
 
 /**
@@ -40,9 +41,10 @@ export const knowledgeItems = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
-    // Classification
+    // Classification (ADR-017)
     type: knowledgeItemTypeEnum('type').notNull(),
     area: lifeAreaEnum('area'),
+    subArea: subAreaEnum('sub_area'),
 
     // Content
     title: varchar('title', { length: 255 }),

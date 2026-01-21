@@ -26,11 +26,21 @@ O indivíduo que usa o sistema para gerenciar sua vida.
   - pesos das áreas da vida
 - **Estados:** `PENDING` → `ACTIVE` → `SUSPENDED` / `CANCELED` / `DELETED`
 
-### 1.2 Área da Vida (Life Area)
-Dimensão do Life Balance Score.
-- Saúde, Financeiro, Relacionamentos, Carreira, Crescimento Pessoal, Lazer, Espiritualidade, Saúde Mental
-- Cada área tem peso configurável (0.0 a 2.0)
+### 1.2 Área da Vida (Life Area) — ADR-017
+Dimensão do Life Balance Score. Estrutura hierárquica com 6 áreas principais e sub-áreas.
+
+| Área Principal | Sub-áreas | Descrição |
+|----------------|-----------|-----------|
+| **health** | physical, mental, leisure | Saúde física, mental e bem-estar |
+| **finance** | budget, savings, debts, investments | Finanças pessoais |
+| **professional** | career, business | Carreira e empreendedorismo |
+| **learning** | formal, informal | Aprendizado e crescimento |
+| **spiritual** | practice, community | Espiritualidade |
+| **relationships** | family, romantic, social | Relacionamentos |
+
+- Cada área principal tem peso configurável (0.0 a 2.0)
 - Peso 0.0 = área ignorada no cálculo
+- Cada área é calculada como média ponderada de suas sub-áreas
 
 ### 1.3 Life Balance Score
 Pontuação 0-100 que mede o equilíbrio geral da vida.
@@ -91,19 +101,40 @@ Registro de decisão importante para acompanhamento.
 | Moeda | `BRL` | ✅ Sim |
 | Perspectiva cristã | `false` | ✅ Sim |
 
-### 2.2 Life Balance Score
+### 2.2 Life Balance Score (ADR-017)
+
+**Pesos das 6 Áreas Principais:**
 
 | Configuração | Default | Configurável |
 |--------------|---------|--------------|
-| Peso Saúde | `1.0` | ✅ Sim (0.0-2.0) |
-| Peso Financeiro | `1.0` | ✅ Sim (0.0-2.0) |
-| Peso Relacionamentos | `1.0` | ✅ Sim (0.0-2.0) |
-| Peso Carreira | `1.0` | ✅ Sim (0.0-2.0) |
-| Peso Crescimento Pessoal | `0.8` | ✅ Sim (0.0-2.0) |
-| Peso Lazer | `0.8` | ✅ Sim (0.0-2.0) |
-| Peso Espiritualidade | `0.5` | ✅ Sim (0.0-2.0) |
-| Peso Saúde Mental | `1.0` | ✅ Sim (0.0-2.0) |
+| Peso Saúde (health) | `1.0` | ✅ Sim (0.0-2.0) |
+| Peso Finanças (finance) | `1.0` | ✅ Sim (0.0-2.0) |
+| Peso Profissional (professional) | `1.0` | ✅ Sim (0.0-2.0) |
+| Peso Aprendizado (learning) | `0.8` | ✅ Sim (0.0-2.0) |
+| Peso Espiritual (spiritual) | `0.5` | ✅ Sim (0.0-2.0) |
+| Peso Relacionamentos (relationships) | `1.0` | ✅ Sim (0.0-2.0) |
 | Frequência de cálculo | Diário (00:00 UTC) | ❌ Não |
+
+**Pesos das Sub-áreas (internos, não configuráveis pelo usuário):**
+
+| Área | Sub-área | Peso |
+|------|----------|------|
+| health | physical | 0.50 |
+| health | mental | 0.35 |
+| health | leisure | 0.15 |
+| finance | budget | 0.30 |
+| finance | savings | 0.25 |
+| finance | debts | 0.25 |
+| finance | investments | 0.20 |
+| professional | career | 0.60 |
+| professional | business | 0.40 |
+| learning | formal | 0.50 |
+| learning | informal | 0.50 |
+| spiritual | practice | 0.70 |
+| spiritual | community | 0.30 |
+| relationships | family | 0.40 |
+| relationships | romantic | 0.35 |
+| relationships | social | 0.25 |
 
 ### 2.3 Tracking (Opcional)
 
@@ -179,7 +210,7 @@ flowchart LR
 | Etapa | Campos | Obrigatório |
 |-------|--------|-------------|
 | 1. Perfil | Nome, Timezone | ✅ Sim |
-| 2. Áreas de foco | Selecionar 3-8 áreas | ✅ Sim |
+| 2. Áreas de foco | Selecionar 3-6 áreas (ADR-017) | ✅ Sim |
 | 3. Telegram | Conectar bot | ❌ Não |
 | 4. Tutorial | Tour interativo | ❌ Skip permitido |
 
@@ -447,95 +478,100 @@ density = dataPoints / days
 
 ---
 
-### 3.4 Life Balance Score
+### 3.4 Life Balance Score (ADR-017)
 
-**O que é:** Sistema de pontuação que mede o equilíbrio entre as áreas da vida.
+**O que é:** Sistema de pontuação que mede o equilíbrio entre as 6 áreas da vida, usando hierarquia de sub-áreas.
 
 > **Nota (ADR-015):** O cálculo se adapta aos dados disponíveis.
 > - Se há dados: calcula normalmente
-> - Se não há dados: área retorna **50 (neutro)** sem penalização
+> - Se não há dados: área/sub-área retorna **50 (neutro)** sem penalização
 > - O sistema NÃO "cobra" tracking não realizado
 
 #### Fórmula Geral
 
 ```
 Life Balance Score = Σ (Area Score × Area Weight) / Σ Area Weight
+
+Area Score = Σ (SubArea Score × SubArea Weight) / Σ SubArea Weight
 ```
 
-#### Cálculo por Área
+#### Cálculo por Área e Sub-área
 
 ##### Saúde (health)
 
-| Componente | Peso | Cálculo |
-|------------|------|---------|
-| Peso | 20% | Baseado no IMC (ver fórmula abaixo) |
-| Exercício | 30% | `(min_semana / meta_min) × 100`, max 100 |
-| Sono | 25% | Se registrado: `(horas_media / meta_horas) × 100`. Se não: **50** |
-| Água | 15% | Se registrado: `(ml_registrado / meta_ml) × 100`. Se não: **50** |
-| Alimentação | 10% | Se registrado: baseado em frequência. Se não: **50** |
+| Sub-área | Peso | Componentes |
+|----------|------|-------------|
+| **physical** | 50% | IMC, exercício, sono, água |
+| **mental** | 35% | humor, energia, stress |
+| **leisure** | 15% | hobbies, relaxamento |
 
-**Cálculo do componente Peso (IMC):**
+**Physical Score:**
+- IMC: Baseado no cálculo IMC (ver abaixo)
+- Exercício: `(min_semana / meta_min) × 100`, max 100
+- Sono: `(horas_media / meta_horas) × 100`, default 50
+- Água: `(ml_registrado / meta_ml) × 100`, default 50
+
+**Cálculo IMC:**
 ```
 IMC = peso(kg) / altura(m)²
-
 - IMC 18.5-24.9 (ideal): score = 100
 - IMC < 18.5 (abaixo): score = 100 - ((18.5 - IMC) × 10), mín 0
 - IMC 25-29.9 (sobrepeso): score = 100 - ((IMC - 24.9) × 8), mín 50
 - IMC ≥ 30 (obesidade): score = 50 - ((IMC - 30) × 5), mín 0
-
-Se altura não cadastrada: score = 50 (neutro, solicitar preenchimento)
+Se altura não cadastrada: score = 50 (neutro)
 ```
 
-**Cálculo do componente Alimentação:**
-```
-Se há registros de refeições nos últimos 7 dias:
-  score = (dias_com_registro / 7) × 100
+**Mental Score:**
+- Humor: Média dos últimos 7 dias
+- Energia: Média dos últimos 7 dias
+- Stress: Inverso do nível reportado
 
-Se não há registros:
-  score = 50 (neutro)
-```
+**Leisure Score:**
+- Baseado em registros de atividades de lazer/hobbies
 
-**Nota:** Não há diferenciação entre cardio/strength no cálculo de exercício - apenas o total de minutos é considerado.
+##### Finanças (finance)
 
-##### Financeiro (financial)
+| Sub-área | Peso | Cálculo |
+|----------|------|---------|
+| **budget** | 30% | `100 - (gastos_mes / budget_mes × 100)`, min 0 |
+| **savings** | 25% | `(poupança_mes / meta_poupança) × 100` |
+| **debts** | 25% | `100 - (dívida / renda_mes × 100)`, min 0 |
+| **investments** | 20% | Presença e crescimento de investimentos |
 
-| Componente | Peso | Cálculo |
-|------------|------|---------|
-| Budget | 40% | `100 - (gastos_mes / budget_mes × 100)`, min 0 |
-| Savings | 30% | `(poupança_mes / meta_poupança) × 100` |
-| Debt | 20% | `100 - (dívida / renda_mes × 100)`, min 0 |
-| Investments | 10% | Presença de investimentos regulares |
+##### Profissional (professional)
+
+| Sub-área | Peso | Cálculo |
+|----------|------|---------|
+| **career** | 60% | Satisfação + progresso em metas de carreira |
+| **business** | 40% | Progresso em empreendedorismo/projetos pessoais |
+
+##### Aprendizado (learning)
+
+| Sub-área | Peso | Cálculo |
+|----------|------|---------|
+| **formal** | 50% | Progresso em cursos, certificações |
+| **informal** | 50% | Livros lidos, vídeos, autodidatismo |
+
+##### Espiritual (spiritual)
+
+| Sub-área | Peso | Cálculo |
+|----------|------|---------|
+| **practice** | 70% | Frequência de devocionais, meditação, oração |
+| **community** | 30% | Participação em igreja/grupos espirituais |
 
 ##### Relacionamentos (relationships)
 
-| Componente | Peso | Cálculo |
-|------------|------|---------|
-| Interações | 50% | Frequência de contato com pessoas importantes |
-| Qualidade | 50% | Autoavaliação periódica |
+| Sub-área | Peso | Cálculo |
+|----------|------|---------|
+| **family** | 40% | Frequência de contato + qualidade |
+| **romantic** | 35% | Qualidade do relacionamento romântico |
+| **social** | 25% | Amigos + networking |
 
 **Comportamento quando não há pessoas cadastradas:**
 ```
 Se usuário não tem pessoas cadastradas no CRM:
-  score = 100 (assume relacionamentos saudáveis fora do sistema)
-
-Mensagem: "Cadastre pessoas importantes para acompanhar relacionamentos"
+  score = 50 (neutro, sem penalização)
 ```
-
-##### Carreira (career)
-
-| Componente | Peso | Cálculo |
-|------------|------|---------|
-| Satisfação | 50% | Autoavaliação periódica |
-| Progresso | 30% | Metas de carreira atingidas |
-| Work-life | 20% | Horas trabalhadas vs ideal |
-
-##### Saúde Mental (mental_health)
-
-| Componente | Peso | Cálculo |
-|------------|------|---------|
-| Humor | 40% | Média dos últimos 7 dias |
-| Energia | 30% | Média dos últimos 7 dias |
-| Stress | 30% | Inverso do nível reportado |
 
 #### Frequência de Atualização
 
@@ -592,9 +628,10 @@ interface KnowledgeItem {
   id: string;
   userId: string;
 
-  // Classificação
+  // Classificação (ADR-017)
   type: 'fact' | 'preference' | 'memory' | 'insight' | 'person';
-  area?: LifeArea;  // health, financial, career, etc.
+  area?: LifeArea;    // health, finance, professional, learning, spiritual, relationships
+  subArea?: SubArea;  // physical, mental, budget, career, etc.
 
   // Conteúdo
   title?: string;

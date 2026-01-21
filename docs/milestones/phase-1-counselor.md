@@ -293,7 +293,7 @@
   - [x] `GET /memory/export` - exportar todos os items (JSON)
 - [x] Renomear endpoint existente `/memory/knowledge` → `/memory/items`
 - [x] Implementar filtros:
-  - [x] Por área (health, financial, career, etc.)
+  - [x] Por área (health, finance, professional, learning, spiritual, relationships)
   - [x] Por tipo (fact, preference, insight, person, memory)
   - [x] Por confiança (high, medium, low)
   - [x] Por fonte (conversation, user_input, ai_inference)

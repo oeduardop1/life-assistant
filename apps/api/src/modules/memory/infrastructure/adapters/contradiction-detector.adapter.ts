@@ -419,17 +419,16 @@ export class ContradictionDetectorAdapter implements ContradictionDetectorPort {
 
   /**
    * Translate life area to Portuguese.
+   * ADR-017: 6 main areas
    */
   private translateArea(area: string): string {
     const translations: Record<string, string> = {
       health: 'Saúde',
-      financial: 'Financeiro',
+      finance: 'Finanças',
+      professional: 'Profissional',
+      learning: 'Aprendizado',
+      spiritual: 'Espiritual',
       relationships: 'Relacionamentos',
-      career: 'Carreira',
-      personal_growth: 'Crescimento Pessoal',
-      leisure: 'Lazer',
-      spirituality: 'Espiritualidade',
-      mental_health: 'Saúde Mental',
     };
     return translations[area] ?? area;
   }

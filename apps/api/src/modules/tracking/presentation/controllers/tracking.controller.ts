@@ -49,6 +49,7 @@ export class TrackingController {
     const entry = await this.trackingService.recordMetric(user.id, {
       type: dto.type,
       area: dto.area,
+      subArea: dto.subArea,
       value: dto.value,
       unit: dto.unit,
       entryDate: dto.entryDate,
@@ -73,6 +74,7 @@ export class TrackingController {
     const result = await this.trackingService.getHistory(user.id, {
       type: query.type as string | undefined,
       area: query.area as string | undefined,
+      subArea: query.subArea as string | undefined,
       startDate: query.startDate,
       endDate: query.endDate,
       limit: query.limit,

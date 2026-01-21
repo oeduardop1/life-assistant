@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { LifeArea } from '@life-assistant/shared';
+import { LifeArea, SubArea } from '@life-assistant/shared';
 import type { ToolDefinition } from '../../ports/llm.port.js';
 
 /**
@@ -23,11 +23,13 @@ export type KnowledgeType = z.infer<typeof knowledgeTypeSchema>;
 
 /**
  * Parameters for the search_knowledge tool.
+ * ADR-017: Added subArea for hierarchical filtering.
  */
 export const searchKnowledgeParamsSchema = z.object({
   query: z.string().optional().describe('Search query. If not provided, returns all recent items.'),
   type: knowledgeTypeSchema.optional().describe('Type of knowledge item to filter by'),
-  area: z.nativeEnum(LifeArea).optional().describe('Life area to filter by'),
+  area: z.nativeEnum(LifeArea).optional().describe('Life area: health, finance, professional, learning, spiritual, relationships'),
+  subArea: z.nativeEnum(SubArea).optional().describe('Sub-area for more specific filtering (e.g., physical, mental, budget, career)'),
   limit: z.number().min(1).max(20).default(10).describe('Maximum number of results to return'),
 });
 
@@ -49,9 +51,11 @@ export const searchKnowledgeTool: ToolDefinition<typeof searchKnowledgeParamsSch
     // Get all recent items (for "what do you know about me?" questions)
     { limit: 10 },
     // Search for specific topics
-    { query: 'weight goal', type: 'fact', area: LifeArea.HEALTH, limit: 5 },
+    { query: 'weight goal', type: 'fact', area: LifeArea.HEALTH, subArea: SubArea.PHYSICAL, limit: 5 },
     { query: 'food preferences', type: 'preference', limit: 5 },
     { query: 'Maria', type: 'person', limit: 1 },
-    { query: 'work habits', area: LifeArea.CAREER, limit: 3 },
+    { query: 'work habits', area: LifeArea.PROFESSIONAL, subArea: SubArea.CAREER, limit: 3 },
+    { query: 'mood patterns', area: LifeArea.HEALTH, subArea: SubArea.MENTAL, limit: 5 },
+    { query: 'budget status', area: LifeArea.FINANCE, subArea: SubArea.BUDGET, limit: 3 },
   ],
 };

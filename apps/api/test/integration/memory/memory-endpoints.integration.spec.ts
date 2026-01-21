@@ -66,7 +66,7 @@ const mockKnowledgeItems = [
     id: 'ki-1',
     userId: 'user-123',
     type: 'fact',
-    area: 'career',
+    area: 'professional',
     title: 'Work info',
     content: 'Works as a software developer',
     source: 'conversation',
@@ -115,13 +115,11 @@ const mockKnowledgeItems = [
 const mockStats = {
   byArea: {
     health: 1,
-    financial: 0,
+    finance: 0,
+    professional: 1,
+    learning: 0,
+    spiritual: 0,
     relationships: 1,
-    career: 1,
-    personal_growth: 0,
-    leisure: 0,
-    spirituality: 0,
-    mental_health: 0,
   },
   byType: {
     fact: 1,
@@ -493,7 +491,7 @@ describe('Memory Endpoints (Integration)', () => {
           expect.objectContaining({
             id: 'ki-1',
             type: 'fact',
-            area: 'career',
+            area: 'professional',
           }),
         ]),
         total: 3,
@@ -517,12 +515,12 @@ describe('Memory Endpoints (Integration)', () => {
       const token = await createToken({ sub: 'user-123' });
 
       const response = await request(app.getHttpServer())
-        .get('/api/memory/items?area=career')
+        .get('/api/memory/items?area=professional')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
       expect(response.body.items).toHaveLength(1);
-      expect(response.body.items[0].area).toBe('career');
+      expect(response.body.items[0].area).toBe('professional');
     });
 
     it('should_filter_by_source', async () => {
@@ -597,7 +595,7 @@ describe('Memory Endpoints (Integration)', () => {
         .send({
           type: 'fact',
           content: 'New fact about user',
-          area: 'career',
+          area: 'professional',
           title: 'Custom title',
           tags: ['test'],
         })
@@ -607,7 +605,7 @@ describe('Memory Endpoints (Integration)', () => {
         id: 'ki-new',
         type: 'fact',
         content: 'New fact about user',
-        area: 'career',
+        area: 'professional',
         title: 'Custom title',
         source: 'user_input',
         confidence: 1.0,
@@ -648,7 +646,7 @@ describe('Memory Endpoints (Integration)', () => {
       expect(response.body).toMatchObject({
         id: 'ki-1',
         type: 'fact',
-        area: 'career',
+        area: 'professional',
         content: 'Works as a software developer',
         sourceRef: 'conv-123',
       });

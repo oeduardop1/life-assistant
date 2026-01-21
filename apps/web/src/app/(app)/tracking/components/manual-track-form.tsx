@@ -108,15 +108,15 @@ export function ManualTrackForm({ open, onOpenChange, defaultType = 'weight' }: 
     }
 
     try {
-      // Map tracking type to life area
+      // Map tracking type to life area (ADR-017: 6 main areas)
       const areaMap: Record<TrackingType, LifeArea> = {
         weight: 'health',
         water: 'health',
         sleep: 'health',
         exercise: 'health',
-        mood: 'mental_health',
+        mood: 'health', // mental is now a sub-area of health
         energy: 'health',
-        custom: 'personal_growth',
+        custom: 'learning', // personal_growth renamed to learning
       };
 
       // Combine date and time into ISO 8601 if time is provided

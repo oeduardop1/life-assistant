@@ -30,7 +30,7 @@ export const lifeBalanceHistory = pgTable(
     // Area scores
     // {
     //   health: { score: 75, components: { weight: 80, exercise: 70, ... } },
-    //   financial: { score: 60, components: { budget: 50, savings: 70, ... } },
+    //   finance: { score: 60, components: { budget: 50, savings: 70, ... } },
     //   ...
     // }
     areaScores: jsonb('area_scores').notNull(),

@@ -51,13 +51,11 @@ function createDefaultPrefs() {
     },
     areaWeights: {
       health: 1.0,
-      financial: 1.0,
-      career: 1.0,
+      finance: 1.0,
+      professional: 1.0,
+      learning: 0.8,
+      spiritual: 0.5,
       relationships: 1.0,
-      spirituality: 0.5,
-      personal_growth: 0.8,
-      mental_health: 1.0,
-      leisure: 0.8,
     },
     notifications: {
       emailEnabled: true,
@@ -321,7 +319,8 @@ describe('OnboardingService', () => {
 
       vi.mocked(safeParseUserPreferences).mockReturnValue(mockPrefs);
 
-      const selectedAreas = [LifeArea.HEALTH, LifeArea.FINANCIAL, LifeArea.CAREER];
+      // ADR-017: Updated to 6 main areas (FINANCIAL → FINANCE, CAREER → PROFESSIONAL)
+      const selectedAreas = [LifeArea.HEALTH, LifeArea.FINANCE, LifeArea.PROFESSIONAL];
 
       const result = await onboardingService.saveAreasStep('user-123', {
         areas: selectedAreas,
@@ -331,12 +330,13 @@ describe('OnboardingService', () => {
       expect(result.nextStep).toBe('telegram');
       expect(savedPreferences).toBeDefined();
 
+      // ADR-017: Updated area names (financial → finance, career → professional, leisure removed as top-level area)
       const prefs = savedPreferences as { areaWeights: Record<string, number> };
       expect(prefs.areaWeights.health).toBe(1.0);
-      expect(prefs.areaWeights.financial).toBe(1.0);
-      expect(prefs.areaWeights.career).toBe(1.0);
+      expect(prefs.areaWeights.finance).toBe(1.0);
+      expect(prefs.areaWeights.professional).toBe(1.0);
       expect(prefs.areaWeights.relationships).toBe(0.0);
-      expect(prefs.areaWeights.leisure).toBe(0.0);
+      expect(prefs.areaWeights.spiritual).toBe(0.0); // ADR-017: leisure is now a sub-area, using spiritual instead
     });
   });
 

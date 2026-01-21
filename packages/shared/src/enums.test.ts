@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   UserStatus,
   LifeArea,
+  SubArea,
   TrackingType,
   ConversationType,
   VaultItemType,
@@ -9,6 +10,7 @@ import {
   ExpenseCategory,
   ALL_USER_STATUSES,
   ALL_LIFE_AREAS,
+  ALL_SUB_AREAS,
   ALL_TRACKING_TYPES,
   ALL_CONVERSATION_TYPES,
   ALL_VAULT_ITEM_TYPES,
@@ -31,19 +33,59 @@ describe('UserStatus', () => {
 });
 
 describe('LifeArea', () => {
-  it('should have 8 values', () => {
-    expect(Object.values(LifeArea)).toHaveLength(8);
+  // ADR-017: Changed from 8 to 6 main areas
+  it('should have 6 values', () => {
+    expect(Object.values(LifeArea)).toHaveLength(6);
   });
 
   it('should have correct values', () => {
     expect(LifeArea.HEALTH).toBe('health');
-    expect(LifeArea.FINANCIAL).toBe('financial');
-    expect(LifeArea.CAREER).toBe('career');
+    expect(LifeArea.FINANCE).toBe('finance');
+    expect(LifeArea.PROFESSIONAL).toBe('professional');
+    expect(LifeArea.LEARNING).toBe('learning');
+    expect(LifeArea.SPIRITUAL).toBe('spiritual');
     expect(LifeArea.RELATIONSHIPS).toBe('relationships');
-    expect(LifeArea.SPIRITUALITY).toBe('spirituality');
-    expect(LifeArea.PERSONAL_GROWTH).toBe('personal_growth');
-    expect(LifeArea.MENTAL_HEALTH).toBe('mental_health');
-    expect(LifeArea.LEISURE).toBe('leisure');
+  });
+});
+
+describe('SubArea', () => {
+  // ADR-017: 16 sub-areas (3+4+2+2+2+3)
+  it('should have 16 values', () => {
+    expect(Object.values(SubArea)).toHaveLength(16);
+  });
+
+  it('should have correct health sub-areas', () => {
+    expect(SubArea.PHYSICAL).toBe('physical');
+    expect(SubArea.MENTAL).toBe('mental');
+    expect(SubArea.LEISURE).toBe('leisure');
+  });
+
+  it('should have correct finance sub-areas', () => {
+    expect(SubArea.BUDGET).toBe('budget');
+    expect(SubArea.SAVINGS).toBe('savings');
+    expect(SubArea.DEBTS).toBe('debts');
+    expect(SubArea.INVESTMENTS).toBe('investments');
+  });
+
+  it('should have correct professional sub-areas', () => {
+    expect(SubArea.CAREER).toBe('career');
+    expect(SubArea.BUSINESS).toBe('business');
+  });
+
+  it('should have correct learning sub-areas', () => {
+    expect(SubArea.FORMAL).toBe('formal');
+    expect(SubArea.INFORMAL).toBe('informal');
+  });
+
+  it('should have correct spiritual sub-areas', () => {
+    expect(SubArea.PRACTICE).toBe('practice');
+    expect(SubArea.COMMUNITY).toBe('community');
+  });
+
+  it('should have correct relationships sub-areas', () => {
+    expect(SubArea.FAMILY).toBe('family');
+    expect(SubArea.ROMANTIC).toBe('romantic');
+    expect(SubArea.SOCIAL).toBe('social');
   });
 });
 
@@ -142,6 +184,10 @@ describe('ALL_* arrays', () => {
 
   it('ALL_LIFE_AREAS should match LifeArea values', () => {
     expect(ALL_LIFE_AREAS).toEqual(Object.values(LifeArea));
+  });
+
+  it('ALL_SUB_AREAS should match SubArea values', () => {
+    expect(ALL_SUB_AREAS).toEqual(Object.values(SubArea));
   });
 
   it('ALL_TRACKING_TYPES should match TrackingType values', () => {

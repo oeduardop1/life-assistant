@@ -6,10 +6,12 @@ import type {
 
 /**
  * Search parameters for tracking entries
+ * ADR-017: Added subArea for hierarchical filtering
  */
 export interface TrackingEntrySearchParams {
   type?: string;
   area?: string;
+  subArea?: string;
   startDate?: Date;
   endDate?: Date;
   source?: string;

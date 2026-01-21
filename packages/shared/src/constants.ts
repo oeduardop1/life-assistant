@@ -2,20 +2,46 @@
  * Constantes do sistema - docs/specs/system.md
  */
 
-import { LifeArea } from './enums';
+import { LifeArea, SubArea } from './enums';
 
 /**
- * Pesos default das áreas de vida - docs/specs/system.md §2.2
+ * Pesos default das 6 áreas de vida - docs/specs/system.md §2.2 (ADR-017)
  */
 export const DEFAULT_WEIGHTS: Record<LifeArea, number> = {
   [LifeArea.HEALTH]: 1.0,
-  [LifeArea.FINANCIAL]: 1.0,
-  [LifeArea.CAREER]: 1.0,
+  [LifeArea.FINANCE]: 1.0,
+  [LifeArea.PROFESSIONAL]: 1.0,
+  [LifeArea.LEARNING]: 0.8,
+  [LifeArea.SPIRITUAL]: 0.5,
   [LifeArea.RELATIONSHIPS]: 1.0,
-  [LifeArea.SPIRITUALITY]: 0.5,
-  [LifeArea.PERSONAL_GROWTH]: 0.8,
-  [LifeArea.MENTAL_HEALTH]: 1.0,
-  [LifeArea.LEISURE]: 0.8,
+};
+
+/**
+ * Pesos internos das sub-áreas (não configuráveis pelo usuário) - ADR-017
+ */
+export const SUB_AREA_WEIGHTS: Record<SubArea, number> = {
+  // health
+  [SubArea.PHYSICAL]: 0.50,
+  [SubArea.MENTAL]: 0.35,
+  [SubArea.LEISURE]: 0.15,
+  // finance
+  [SubArea.BUDGET]: 0.30,
+  [SubArea.SAVINGS]: 0.25,
+  [SubArea.DEBTS]: 0.25,
+  [SubArea.INVESTMENTS]: 0.20,
+  // professional
+  [SubArea.CAREER]: 0.60,
+  [SubArea.BUSINESS]: 0.40,
+  // learning
+  [SubArea.FORMAL]: 0.50,
+  [SubArea.INFORMAL]: 0.50,
+  // spiritual
+  [SubArea.PRACTICE]: 0.70,
+  [SubArea.COMMUNITY]: 0.30,
+  // relationships
+  [SubArea.FAMILY]: 0.40,
+  [SubArea.ROMANTIC]: 0.35,
+  [SubArea.SOCIAL]: 0.25,
 };
 
 /**

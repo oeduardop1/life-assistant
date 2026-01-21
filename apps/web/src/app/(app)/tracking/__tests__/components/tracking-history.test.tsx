@@ -22,6 +22,7 @@ const createMockEntry = (overrides: Partial<TrackingEntry> = {}): TrackingEntry 
   id: 'entry-1',
   type: 'weight',
   area: 'health',
+  subArea: null, // ADR-017: Added sub-area support
   value: '75.0',
   unit: 'kg',
   entryDate: '2024-01-15',

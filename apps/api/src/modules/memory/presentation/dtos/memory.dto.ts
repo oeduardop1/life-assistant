@@ -38,15 +38,14 @@ const KNOWLEDGE_ITEM_SOURCES = [
   'ai_inference',
 ] as const;
 
+// ADR-017: 6 main areas
 const LIFE_AREAS = [
   'health',
-  'financial',
+  'finance',
+  'professional',
+  'learning',
+  'spiritual',
   'relationships',
-  'career',
-  'personal_growth',
-  'leisure',
-  'spirituality',
-  'mental_health',
 ] as const;
 
 // =============================================================================
@@ -55,16 +54,14 @@ const LIFE_AREAS = [
 
 export class MemoryStatsDto {
   @ApiProperty({
-    description: 'Count of items by life area',
+    description: 'Count of items by life area (ADR-017: 6 main areas)',
     example: {
       health: 12,
-      financial: 8,
+      finance: 8,
+      professional: 10,
+      learning: 3,
+      spiritual: 1,
       relationships: 5,
-      career: 10,
-      personal_growth: 3,
-      leisure: 2,
-      spirituality: 1,
-      mental_health: 4,
     },
   })
   byArea!: Record<LifeArea, number>;

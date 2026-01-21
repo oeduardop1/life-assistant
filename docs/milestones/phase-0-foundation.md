@@ -61,7 +61,7 @@
 
 - [x] Configurar tsup para build do package
 - [x] Criar tipos base conforme `docs/specs/data-model.md`:
-  - [x] `LifeArea` enum (8 áreas)
+  - [x] `LifeArea` enum (6 áreas principais + SubArea per ADR-017)
   - [x] `TrackingType` enum
   - [x] `DecisionStatus` enum
   - [x] `UserStatus` enum
@@ -96,7 +96,7 @@
   - [x] Verificar valores de ExpenseCategory (13)
   - [x] Verificar arrays ALL_* para iteração
 - [x] Testes de constantes (`constants.test.ts`):
-  - [x] Verificar DEFAULT_WEIGHTS (8 áreas, valores 0.5-1.0)
+  - [x] Verificar DEFAULT_WEIGHTS (6 áreas principais per ADR-017, valores 0.5-1.0)
   - [x] Verificar TRACKING_VALIDATIONS (weight, water, sleep, mood, energy)
   - [x] Verificar RATE_LIMITS (free, pro, premium)
   - [x] Verificar STORAGE_LIMITS (free, pro, premium)
@@ -606,7 +606,7 @@
 - [x] Componentes:
   - [x] OnboardingStepper (indicador de progresso)
   - [x] ProfileForm (nome, timezone picker)
-  - [x] AreaSelector (cards das 8 áreas, min 3 selecionadas)
+  - [x] AreaSelector (cards das 6 áreas principais per ADR-017, min 3 selecionadas)
   - [x] TelegramConnect (QR code ou link, status de vinculação)
   - [x] TutorialCarousel (slides interativos)
   - [x] SkipButton (para etapas opcionais)

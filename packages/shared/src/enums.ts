@@ -11,17 +11,71 @@ export enum UserStatus {
   DELETED = 'deleted',
 }
 
-// LifeArea - 8 áreas de vida
+// LifeArea - 6 áreas de vida (ADR-017)
 export enum LifeArea {
   HEALTH = 'health',
-  FINANCIAL = 'financial',
-  CAREER = 'career',
+  FINANCE = 'finance',
+  PROFESSIONAL = 'professional',
+  LEARNING = 'learning',
+  SPIRITUAL = 'spiritual',
   RELATIONSHIPS = 'relationships',
-  SPIRITUALITY = 'spirituality',
-  PERSONAL_GROWTH = 'personal_growth',
-  MENTAL_HEALTH = 'mental_health',
-  LEISURE = 'leisure',
 }
+
+// SubArea - Sub-áreas hierárquicas (ADR-017)
+export enum SubArea {
+  // health
+  PHYSICAL = 'physical',
+  MENTAL = 'mental',
+  LEISURE = 'leisure',
+  // finance
+  BUDGET = 'budget',
+  SAVINGS = 'savings',
+  DEBTS = 'debts',
+  INVESTMENTS = 'investments',
+  // professional
+  CAREER = 'career',
+  BUSINESS = 'business',
+  // learning
+  FORMAL = 'formal',
+  INFORMAL = 'informal',
+  // spiritual
+  PRACTICE = 'practice',
+  COMMUNITY = 'community',
+  // relationships
+  FAMILY = 'family',
+  ROMANTIC = 'romantic',
+  SOCIAL = 'social',
+}
+
+// Mapping from SubArea to parent LifeArea
+export const SUB_AREA_TO_LIFE_AREA: Record<SubArea, LifeArea> = {
+  [SubArea.PHYSICAL]: LifeArea.HEALTH,
+  [SubArea.MENTAL]: LifeArea.HEALTH,
+  [SubArea.LEISURE]: LifeArea.HEALTH,
+  [SubArea.BUDGET]: LifeArea.FINANCE,
+  [SubArea.SAVINGS]: LifeArea.FINANCE,
+  [SubArea.DEBTS]: LifeArea.FINANCE,
+  [SubArea.INVESTMENTS]: LifeArea.FINANCE,
+  [SubArea.CAREER]: LifeArea.PROFESSIONAL,
+  [SubArea.BUSINESS]: LifeArea.PROFESSIONAL,
+  [SubArea.FORMAL]: LifeArea.LEARNING,
+  [SubArea.INFORMAL]: LifeArea.LEARNING,
+  [SubArea.PRACTICE]: LifeArea.SPIRITUAL,
+  [SubArea.COMMUNITY]: LifeArea.SPIRITUAL,
+  [SubArea.FAMILY]: LifeArea.RELATIONSHIPS,
+  [SubArea.ROMANTIC]: LifeArea.RELATIONSHIPS,
+  [SubArea.SOCIAL]: LifeArea.RELATIONSHIPS,
+};
+
+// Sub-areas grouped by parent area
+export const LIFE_AREA_SUB_AREAS: Record<LifeArea, SubArea[]> = {
+  [LifeArea.HEALTH]: [SubArea.PHYSICAL, SubArea.MENTAL, SubArea.LEISURE],
+  [LifeArea.FINANCE]: [SubArea.BUDGET, SubArea.SAVINGS, SubArea.DEBTS, SubArea.INVESTMENTS],
+  [LifeArea.PROFESSIONAL]: [SubArea.CAREER, SubArea.BUSINESS],
+  [LifeArea.LEARNING]: [SubArea.FORMAL, SubArea.INFORMAL],
+  [LifeArea.SPIRITUAL]: [SubArea.PRACTICE, SubArea.COMMUNITY],
+  [LifeArea.RELATIONSHIPS]: [SubArea.FAMILY, SubArea.ROMANTIC, SubArea.SOCIAL],
+};
 
 // TrackingType - Tipos de métricas rastreáveis
 // M2.1: weight, water, sleep, exercise, mood, energy, custom
@@ -88,6 +142,7 @@ export enum ExpenseCategory {
 // Arrays para iteração
 export const ALL_USER_STATUSES = Object.values(UserStatus);
 export const ALL_LIFE_AREAS = Object.values(LifeArea);
+export const ALL_SUB_AREAS = Object.values(SubArea);
 export const ALL_TRACKING_TYPES = Object.values(TrackingType);
 export const ALL_CONVERSATION_TYPES = Object.values(ConversationType);
 export const ALL_VAULT_ITEM_TYPES = Object.values(VaultItemType);

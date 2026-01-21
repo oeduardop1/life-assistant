@@ -15,7 +15,7 @@ import {
   jsonb,
   index,
 } from 'drizzle-orm/pg-core';
-import { goalStatusEnum, habitFrequencyEnum, lifeAreaEnum } from './enums';
+import { goalStatusEnum, habitFrequencyEnum, lifeAreaEnum, subAreaEnum } from './enums';
 import { users } from './users';
 
 export const goals = pgTable(
@@ -26,10 +26,11 @@ export const goals = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
-    // Basic info
+    // Basic info (ADR-017)
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
     area: lifeAreaEnum('area').notNull(),
+    subArea: subAreaEnum('sub_area'),
 
     // Target
     targetValue: decimal('target_value', { precision: 10, scale: 2 }).notNull(),
@@ -92,10 +93,11 @@ export const habits = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
-    // Basic info
+    // Basic info (ADR-017)
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
     area: lifeAreaEnum('area').notNull(),
+    subArea: subAreaEnum('sub_area'),
 
     // Frequency
     frequency: habitFrequencyEnum('frequency').notNull(),

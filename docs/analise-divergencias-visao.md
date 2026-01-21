@@ -1,5 +1,11 @@
 # Análise de Divergências: Visão "Hub da Vida + JARVIS-First"
 
+> **⚠️ DOCUMENTO PARCIALMENTE DESATUALIZADO**
+>
+> Este documento foi escrito antes do **ADR-017** que reestruturou as áreas de vida de 8 para 6.
+> Referências a "8 áreas", "personal_growth", "mental_health", "financial", "career" como áreas principais estão desatualizadas.
+> Ver `docs/adr/ADR-017-life-areas-restructuring.md` para a estrutura atual.
+
 > **Data:** 2026-01-19
 > **Propósito:** Análise de divergências entre a visão do produto e o estado atual das documentações
 > **Status:** Para revisão - arquivo temporário

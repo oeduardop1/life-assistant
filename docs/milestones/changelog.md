@@ -10,6 +10,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-21 | ADR-017 | Refactor | Reestruturação de Life Areas: 8 áreas flat → 6 áreas principais + 16 sub-áreas hierárquicas. health (physical/mental/leisure), finance (budget/savings/debts/investments), professional (career/business), learning (formal/informal), spiritual (practice/community), relationships (family/romantic/social). ~50 arquivos atualizados: enums, schemas, DTOs, services, repositories, frontend components, tests. Preparação para cálculo de Life Balance Score granular. |
 | 2026-01-21 | M2.1 | Enhancement | Detecção de intent via LLM: nova tool `respond_to_confirmation` com `toolChoice` forçado. Substitui regex patterns por interpretação via LLM. Reconhece variações naturais ("beleza", "manda ver", "bora"). `ToolChoice` estendido para `{ type: 'tool', toolName }`. Adapters Gemini (`allowedFunctionNames`) e Claude (`{ type: 'tool', name }`) atualizados. SEM fallback para regex. |
 | 2026-01-21 | M2.1 | Refactor | Removido `delete_metrics` (batch) - LLM alucinava IDs. Agora usa chamadas paralelas de `delete_metric` com UUIDs reais. |
 | 2026-01-20 | M2.1 | Bug fix | Fix GAP 6 (v2): "exclua todos" não funcionava - sistema armazenava confirmação em vez de executar. Causa: "exclua" (imperativo de excluir) não estava nos patterns de `isUpdateDeleteConfirmation()`. Fix: Adicionado "exclua" em 3 regex patterns. Revertido código complexo em `continueToolLoopAfterAutoConfirm()` que quebrava com assistant message vazia. |

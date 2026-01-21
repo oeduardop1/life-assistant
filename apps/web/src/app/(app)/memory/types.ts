@@ -11,15 +11,43 @@
 
 export type KnowledgeItemType = 'fact' | 'preference' | 'memory' | 'insight' | 'person';
 
+/**
+ * Life areas (ADR-017: 6 main areas)
+ */
 export type LifeArea =
   | 'health'
-  | 'financial'
-  | 'relationships'
-  | 'career'
-  | 'personal_growth'
+  | 'finance'
+  | 'professional'
+  | 'learning'
+  | 'spiritual'
+  | 'relationships';
+
+/**
+ * Sub-areas (ADR-017: 17 sub-areas grouped by parent area)
+ */
+export type SubArea =
+  // Health sub-areas
+  | 'physical'
+  | 'mental'
   | 'leisure'
-  | 'spirituality'
-  | 'mental_health';
+  // Finance sub-areas
+  | 'budget'
+  | 'savings'
+  | 'debts'
+  | 'investments'
+  // Professional sub-areas
+  | 'career'
+  | 'business'
+  // Learning sub-areas
+  | 'formal'
+  | 'informal'
+  // Spiritual sub-areas
+  | 'practice'
+  | 'community'
+  // Relationships sub-areas
+  | 'family'
+  | 'romantic'
+  | 'social';
 
 export type KnowledgeItemSource = 'conversation' | 'user_input' | 'ai_inference';
 
@@ -33,6 +61,7 @@ export interface KnowledgeItem {
   id: string;
   type: KnowledgeItemType;
   area: LifeArea | null;
+  subArea: SubArea | null; // ADR-017
   title: string | null;
   content: string;
   source: KnowledgeItemSource;
@@ -118,6 +147,7 @@ export interface ExportMemoryResponse {
 export interface ListItemsFilters {
   type?: KnowledgeItemType;
   area?: LifeArea;
+  subArea?: SubArea; // ADR-017
   source?: KnowledgeItemSource;
   confidenceMin?: number;
   confidenceMax?: number;
@@ -139,6 +169,7 @@ export interface CreateKnowledgeItemInput {
   type: KnowledgeItemType;
   content: string;
   area?: LifeArea;
+  subArea?: SubArea; // ADR-017
   title?: string;
   tags?: string[];
 }
@@ -176,16 +207,44 @@ export const knowledgeItemTypeLabels: Record<KnowledgeItemType, string> = {
 
 /**
  * Human-readable labels for life areas (PT-BR)
+ * ADR-017: 6 main areas
  */
 export const lifeAreaLabels: Record<LifeArea, string> = {
   health: 'Saúde',
-  financial: 'Financeiro',
+  finance: 'Finanças',
+  professional: 'Profissional',
+  learning: 'Aprendizado',
+  spiritual: 'Espiritual',
   relationships: 'Relacionamentos',
-  career: 'Carreira',
-  personal_growth: 'Crescimento Pessoal',
+};
+
+/**
+ * Human-readable labels for sub-areas (PT-BR)
+ * ADR-017: 17 sub-areas
+ */
+export const subAreaLabels: Record<SubArea, string> = {
+  // Health
+  physical: 'Física',
+  mental: 'Mental',
   leisure: 'Lazer',
-  spirituality: 'Espiritualidade',
-  mental_health: 'Saúde Mental',
+  // Finance
+  budget: 'Orçamento',
+  savings: 'Poupança',
+  debts: 'Dívidas',
+  investments: 'Investimentos',
+  // Professional
+  career: 'Carreira',
+  business: 'Negócios',
+  // Learning
+  formal: 'Formal',
+  informal: 'Informal',
+  // Spiritual
+  practice: 'Prática',
+  community: 'Comunidade',
+  // Relationships
+  family: 'Família',
+  romantic: 'Romântico',
+  social: 'Social',
 };
 
 /**

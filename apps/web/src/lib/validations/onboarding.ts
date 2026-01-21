@@ -29,14 +29,14 @@ export type ProfileStepData = z.infer<typeof profileStepSchema>;
 
 /**
  * Areas step validation schema
- * - Minimum 3 areas, maximum 8
+ * - Minimum 3 areas, maximum 6 (ADR-017)
  * - Must be valid LifeArea enum values
  */
 export const areasStepSchema = z.object({
   areas: z
     .array(z.nativeEnum(LifeArea))
     .min(3, 'Selecione pelo menos 3 áreas da vida')
-    .max(8, 'Você pode selecionar no máximo 8 áreas'),
+    .max(6, 'Você pode selecionar no máximo 6 áreas'),
 });
 
 export type AreasStepData = z.infer<typeof areasStepSchema>;

@@ -619,7 +619,7 @@ describe('Tracking API (Integration)', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({
           type: 'mood',
-          area: 'mental_health',
+          area: 'health',
           value: 8,
           entryDate: '2024-01-16',
           source: 'chat',

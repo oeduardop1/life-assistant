@@ -40,6 +40,7 @@ const createMockEntries = (type: string, values: { value: string; date: string }
     id: `entry-${i}`,
     type: type as TrackingEntry['type'],
     area: 'health',
+    subArea: null, // ADR-017: Added sub-area support
     value: v.value,
     unit: type === 'weight' ? 'kg' : type === 'water' ? 'ml' : 'min',
     entryDate: v.date,

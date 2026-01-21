@@ -8,17 +8,15 @@ export const userPreferencesSchema = z.object({
   // Christian perspective enabled
   christianPerspective: z.boolean().default(false),
 
-  // Life area weights (0.0 to 1.0)
+  // Life area weights (0.0 to 2.0) - 6 areas (ADR-017)
   areaWeights: z
     .object({
-      health: z.number().min(0).max(1).default(1.0),
-      financial: z.number().min(0).max(1).default(1.0),
-      relationships: z.number().min(0).max(1).default(1.0),
-      career: z.number().min(0).max(1).default(1.0),
-      personal_growth: z.number().min(0).max(1).default(0.8),
-      leisure: z.number().min(0).max(1).default(0.8),
-      spirituality: z.number().min(0).max(1).default(0.5),
-      mental_health: z.number().min(0).max(1).default(1.0),
+      health: z.number().min(0).max(2).default(1.0),
+      finance: z.number().min(0).max(2).default(1.0),
+      professional: z.number().min(0).max(2).default(1.0),
+      learning: z.number().min(0).max(2).default(0.8),
+      spiritual: z.number().min(0).max(2).default(0.5),
+      relationships: z.number().min(0).max(2).default(1.0),
     })
     .default({}),
 

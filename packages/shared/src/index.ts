@@ -9,6 +9,7 @@ export const VERSION = '0.1.0';
 export {
   UserStatus,
   LifeArea,
+  SubArea, // ADR-017: Added sub-areas
   TrackingType,
   ConversationType,
   VaultItemType,
@@ -16,6 +17,7 @@ export {
   ExpenseCategory,
   ALL_USER_STATUSES,
   ALL_LIFE_AREAS,
+  ALL_SUB_AREAS, // ADR-017: Added sub-areas
   ALL_TRACKING_TYPES,
   ALL_CONVERSATION_TYPES,
   ALL_VAULT_ITEM_TYPES,

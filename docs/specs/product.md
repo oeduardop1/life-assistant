@@ -157,18 +157,16 @@ IA: "Registrado! Você já treinou 3x essa semana"
 
 ## 3) Áreas da Vida
 
-O sistema organiza a vida do usuário em **8 áreas principais** (alinhadas com data-model.md):
+O sistema organiza a vida do usuário em **6 áreas principais** com sub-áreas (conforme ADR-017):
 
-| Área | Código | Ícone | Descrição | Métricas (quando registradas) |
+| Área | Código | Ícone | Sub-áreas | Métricas (quando registradas) |
 |------|--------|-------|-----------|-------------------------------|
-| **Saúde** | `health` | 💪 | Física, sono, alimentação, exercício | Peso, treinos, sono, exames |
-| **Financeiro** | `financial` | 💰 | Renda, gastos, investimentos, patrimônio | Orçamento mensal (M2.6), patrimônio |
-| **Profissional** | `career` | 🏢 | Carreira, negócio, projetos | Faturamento, clientes, metas |
-| **Relacionamentos** | `relationships` | 👥 | Família, amigos, networking | Tempo de qualidade (auto-reportado) |
-| **Espiritual** | `spirituality` | ⛪ | Devocional, igreja, crescimento na fé | Leitura bíblica, reflexões |
-| **Crescimento Pessoal** | `personal_growth` | 📚 | Aprendizado, cursos, livros | Livros lidos, horas de estudo |
-| **Saúde Mental** | `mental_health` | 🧠 | Humor, estresse, ansiedade, terapia | Humor, estresse (quando reportado) |
-| **Lazer** | `leisure` | 🎮 | Hobbies, férias, diversão, equilíbrio | Horas de lazer, satisfação |
+| **Saúde** | `health` | 💪 | physical, mental, leisure | Peso, treinos, sono, humor, lazer |
+| **Finanças** | `finance` | 💰 | budget, savings, debts, investments | Orçamento, patrimônio, investimentos |
+| **Profissional** | `professional` | 🏢 | career, business | Faturamento, clientes, metas |
+| **Aprendizado** | `learning` | 📚 | formal, informal | Livros lidos, horas de estudo, cursos |
+| **Espiritual** | `spiritual` | ⛪ | practice, community | Leitura bíblica, reflexões, comunidade |
+| **Relacionamentos** | `relationships` | 👥 | family, romantic, social | Tempo de qualidade (auto-reportado) |
 
 > **Nota (ADR-015):** Nenhuma métrica é obrigatória. O sistema funciona sem tracking ativo.
 > Quando o usuário menciona métricas em conversa, a IA oferece registrar com confirmação.

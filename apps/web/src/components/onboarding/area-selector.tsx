@@ -7,9 +7,7 @@ import {
   Briefcase,
   Users,
   Sparkles,
-  TrendingUp,
-  Brain,
-  Gamepad2,
+  BookOpen,
   Check,
 } from 'lucide-react';
 import { LifeArea } from '@life-assistant/shared';
@@ -19,6 +17,7 @@ import type { AreasStepData } from '@/lib/validations/onboarding';
 
 /**
  * Area configuration with icons and labels
+ * ADR-017: 6 main areas (health, finance, professional, learning, spiritual, relationships)
  */
 const AREA_CONFIG: Record<
   LifeArea,
@@ -27,48 +26,38 @@ const AREA_CONFIG: Record<
   [LifeArea.HEALTH]: {
     icon: Heart,
     label: 'Saúde',
-    description: 'Exercícios, alimentação, sono',
+    description: 'Física, mental, lazer e bem-estar',
   },
-  [LifeArea.FINANCIAL]: {
+  [LifeArea.FINANCE]: {
     icon: DollarSign,
     label: 'Finanças',
-    description: 'Orçamento, investimentos, metas',
+    description: 'Orçamento, poupança, dívidas, investimentos',
   },
-  [LifeArea.CAREER]: {
+  [LifeArea.PROFESSIONAL]: {
     icon: Briefcase,
-    label: 'Carreira',
-    description: 'Trabalho, objetivos profissionais',
+    label: 'Profissional',
+    description: 'Carreira, negócios, projetos',
+  },
+  [LifeArea.LEARNING]: {
+    icon: BookOpen,
+    label: 'Aprendizado',
+    description: 'Cursos, leitura, autodidatismo',
+  },
+  [LifeArea.SPIRITUAL]: {
+    icon: Sparkles,
+    label: 'Espiritual',
+    description: 'Devocionais, meditação, comunidade',
   },
   [LifeArea.RELATIONSHIPS]: {
     icon: Users,
     label: 'Relacionamentos',
-    description: 'Família, amigos, parceiros',
-  },
-  [LifeArea.SPIRITUALITY]: {
-    icon: Sparkles,
-    label: 'Espiritualidade',
-    description: 'Fé, meditação, propósito',
-  },
-  [LifeArea.PERSONAL_GROWTH]: {
-    icon: TrendingUp,
-    label: 'Crescimento Pessoal',
-    description: 'Aprendizado, habilidades',
-  },
-  [LifeArea.MENTAL_HEALTH]: {
-    icon: Brain,
-    label: 'Saúde Mental',
-    description: 'Emoções, bem-estar psicológico',
-  },
-  [LifeArea.LEISURE]: {
-    icon: Gamepad2,
-    label: 'Lazer',
-    description: 'Hobbies, entretenimento',
+    description: 'Família, romântico, social',
   },
 };
 
 const ALL_AREAS = Object.values(LifeArea);
 const MIN_AREAS = 3;
-const MAX_AREAS = 8;
+const MAX_AREAS = 6;
 
 interface AreaSelectorProps {
   defaultValues?: LifeArea[];

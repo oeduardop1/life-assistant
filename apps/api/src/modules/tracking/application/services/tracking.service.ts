@@ -3,6 +3,7 @@ import type {
   TrackingEntry,
   TrackingType,
   LifeArea,
+  SubArea,
 } from '@life-assistant/database';
 import {
   TrackingEntryRepositoryPort,
@@ -14,10 +15,12 @@ import {
 /**
  * Parameters for recording a metric (from chat or form)
  * @see ADR-015 for Low Friction Tracking Philosophy
+ * @see ADR-017 for Life Areas restructuring (6 areas + sub-areas)
  */
 export interface RecordMetricParams {
   type: string; // TrackingType as string for flexibility
   area: string; // LifeArea as string for flexibility
+  subArea?: string | undefined; // SubArea as string for flexibility (ADR-017)
   value: number;
   unit?: string | undefined;
   entryDate: string;
@@ -46,6 +49,7 @@ export interface TrackingStats {
 /**
  * Validation rules by tracking type
  * @see docs/specs/system.md §3.3
+ * @see ADR-017 for Life Areas restructuring (6 areas + sub-areas)
  */
 const VALIDATION_RULES: Record<
   string,
@@ -54,15 +58,16 @@ const VALIDATION_RULES: Record<
     maxValue?: number;
     defaultUnit: string;
     defaultArea: LifeArea;
+    defaultSubArea?: string;
   }
 > = {
-  weight: { minValue: 0.1, maxValue: 500, defaultUnit: 'kg', defaultArea: 'health' },
-  water: { minValue: 1, maxValue: 10000, defaultUnit: 'ml', defaultArea: 'health' },
-  sleep: { minValue: 0.1, maxValue: 24, defaultUnit: 'hours', defaultArea: 'health' },
-  exercise: { minValue: 1, maxValue: 1440, defaultUnit: 'min', defaultArea: 'health' },
-  mood: { minValue: 1, maxValue: 10, defaultUnit: 'score', defaultArea: 'mental_health' },
-  energy: { minValue: 1, maxValue: 10, defaultUnit: 'score', defaultArea: 'health' },
-  custom: { defaultUnit: 'unit', defaultArea: 'personal_growth' },
+  weight: { minValue: 0.1, maxValue: 500, defaultUnit: 'kg', defaultArea: 'health', defaultSubArea: 'physical' },
+  water: { minValue: 1, maxValue: 10000, defaultUnit: 'ml', defaultArea: 'health', defaultSubArea: 'physical' },
+  sleep: { minValue: 0.1, maxValue: 24, defaultUnit: 'hours', defaultArea: 'health', defaultSubArea: 'physical' },
+  exercise: { minValue: 1, maxValue: 1440, defaultUnit: 'min', defaultArea: 'health', defaultSubArea: 'physical' },
+  mood: { minValue: 1, maxValue: 10, defaultUnit: 'score', defaultArea: 'health', defaultSubArea: 'mental' },
+  energy: { minValue: 1, maxValue: 10, defaultUnit: 'score', defaultArea: 'health', defaultSubArea: 'mental' },
+  custom: { defaultUnit: 'unit', defaultArea: 'learning', defaultSubArea: 'informal' },
 };
 
 /**
@@ -97,20 +102,22 @@ export class TrackingService {
     // Validate value according to type-specific rules
     this.validateValue(type, value);
 
-    // Get defaults for this type
-    const defaultRules = { defaultUnit: 'unit', defaultArea: 'personal_growth' as LifeArea };
+    // Get defaults for this type (ADR-017: includes defaultSubArea)
+    const defaultRules = { defaultUnit: 'unit', defaultArea: 'learning' as LifeArea, defaultSubArea: 'informal' as SubArea };
     const rules = VALIDATION_RULES[type] ?? defaultRules;
     const unit = params.unit ?? rules.defaultUnit;
     const area = params.area as LifeArea;
+    const subArea = (params.subArea ?? rules.defaultSubArea) as SubArea | undefined;
 
     this.logger.log(
       `Recording metric for user ${userId}: ${type} = ${String(value)} ${unit}`,
-      { source, entryDate }
+      { source, entryDate, subArea }
     );
 
     return this.trackingRepository.create(userId, {
       type: type as TrackingType,
       area,
+      subArea,
       value: value.toString(),
       unit,
       entryDate,
@@ -122,23 +129,26 @@ export class TrackingService {
 
   /**
    * Get tracking history with filters
+   * ADR-017: Added subArea filtering
    */
   async getHistory(
     userId: string,
     params: {
       type?: string | undefined;
       area?: string | undefined;
+      subArea?: string | undefined;
       startDate?: string | undefined;
       endDate?: string | undefined;
       limit?: number | undefined;
       offset?: number | undefined;
     }
   ): Promise<PaginatedTrackingEntries> {
-    const { type, area, startDate, endDate, limit = 50, offset = 0 } = params;
+    const { type, area, subArea, startDate, endDate, limit = 50, offset = 0 } = params;
 
     const searchParams: TrackingEntrySearchParams = { limit, offset };
     if (type) searchParams.type = type;
     if (area) searchParams.area = area;
+    if (subArea) searchParams.subArea = subArea;
     if (startDate) searchParams.startDate = new Date(startDate);
     if (endDate) searchParams.endDate = new Date(endDate);
 
@@ -148,6 +158,7 @@ export class TrackingService {
     const countParams: TrackingEntrySearchParams = { limit: 10000 };
     if (type) countParams.type = type;
     if (area) countParams.area = area;
+    if (subArea) countParams.subArea = subArea;
     if (startDate) countParams.startDate = new Date(startDate);
     if (endDate) countParams.endDate = new Date(endDate);
 

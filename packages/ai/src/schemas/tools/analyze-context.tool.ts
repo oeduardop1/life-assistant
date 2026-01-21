@@ -79,33 +79,36 @@ export const analyzeContextTool: ToolDefinition<typeof analyzeContextParamsSchem
   requiresConfirmation: false,
   inputExamples: [
     // User mentions ending a relationship - check for contradictions
+    // ADR-017: MENTAL_HEALTH is now a sub-area of HEALTH
     {
       currentTopic: 'ending relationship or breakup',
-      relatedAreas: [LifeArea.RELATIONSHIPS, LifeArea.MENTAL_HEALTH],
+      relatedAreas: [LifeArea.RELATIONSHIPS, LifeArea.HEALTH],
       lookForContradictions: true,
     },
     // User mentions sleep problems - might connect to stress/finances
+    // ADR-017: FINANCIAL renamed to FINANCE
     {
       currentTopic: 'sleeping problems or insomnia',
-      relatedAreas: [LifeArea.HEALTH, LifeArea.MENTAL_HEALTH, LifeArea.FINANCIAL],
+      relatedAreas: [LifeArea.HEALTH, LifeArea.FINANCE],
       lookForContradictions: true,
     },
     // User mentions upcoming meeting - check for anxiety patterns
+    // ADR-017: CAREER renamed to PROFESSIONAL
     {
       currentTopic: 'important meeting or presentation',
-      relatedAreas: [LifeArea.CAREER, LifeArea.MENTAL_HEALTH],
+      relatedAreas: [LifeArea.PROFESSIONAL, LifeArea.HEALTH],
       lookForContradictions: false,
     },
     // User mentions quitting job
     {
       currentTopic: 'quitting job or career change',
-      relatedAreas: [LifeArea.CAREER, LifeArea.FINANCIAL, LifeArea.MENTAL_HEALTH],
+      relatedAreas: [LifeArea.PROFESSIONAL, LifeArea.FINANCE, LifeArea.HEALTH],
       lookForContradictions: true,
     },
     // User mentions debt or financial worry
     {
       currentTopic: 'debt or financial stress',
-      relatedAreas: [LifeArea.FINANCIAL, LifeArea.MENTAL_HEALTH, LifeArea.HEALTH],
+      relatedAreas: [LifeArea.FINANCE, LifeArea.HEALTH],
       lookForContradictions: true,
     },
   ],

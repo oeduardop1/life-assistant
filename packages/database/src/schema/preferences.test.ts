@@ -22,11 +22,12 @@ describe('preferences', () => {
     });
 
     it('should parse valid preferences', () => {
+      // ADR-017: Updated to 6 main areas
       const input = {
         christianPerspective: true,
         areaWeights: {
           health: 0.9,
-          financial: 0.8,
+          finance: 0.8,
         },
         notifications: {
           pushEnabled: false,
@@ -39,17 +40,18 @@ describe('preferences', () => {
       const result = userPreferencesSchema.parse(input);
       expect(result.christianPerspective).toBe(true);
       expect(result.areaWeights.health).toBe(0.9);
-      expect(result.areaWeights.financial).toBe(0.8);
-      expect(result.areaWeights.career).toBe(1.0); // default
+      expect(result.areaWeights.finance).toBe(0.8);
+      expect(result.areaWeights.professional).toBe(1.0); // default
       expect(result.notifications.pushEnabled).toBe(false);
       expect(result.notifications.morningSummaryTime).toBe('08:30');
       expect(result.tracking.waterGoal).toBe(3000);
     });
 
+    // ADR-017: areaWeights max changed from 1 to 2 (WEIGHT_CONFIG.MAX)
     it('should reject invalid areaWeights values', () => {
       expect(() =>
         userPreferencesSchema.parse({
-          areaWeights: { health: 1.5 }, // > 1
+          areaWeights: { health: 2.5 }, // > 2
         })
       ).toThrow();
 
@@ -90,16 +92,15 @@ describe('preferences', () => {
   });
 
   describe('defaultUserPreferences', () => {
+    // ADR-017: Updated to 6 main areas
     it('should have correct default values', () => {
       expect(defaultUserPreferences.christianPerspective).toBe(false);
       expect(defaultUserPreferences.areaWeights.health).toBe(1.0);
-      expect(defaultUserPreferences.areaWeights.financial).toBe(1.0);
+      expect(defaultUserPreferences.areaWeights.finance).toBe(1.0);
+      expect(defaultUserPreferences.areaWeights.professional).toBe(1.0);
+      expect(defaultUserPreferences.areaWeights.learning).toBe(0.8);
+      expect(defaultUserPreferences.areaWeights.spiritual).toBe(0.5);
       expect(defaultUserPreferences.areaWeights.relationships).toBe(1.0);
-      expect(defaultUserPreferences.areaWeights.career).toBe(1.0);
-      expect(defaultUserPreferences.areaWeights.personal_growth).toBe(0.8);
-      expect(defaultUserPreferences.areaWeights.leisure).toBe(0.8);
-      expect(defaultUserPreferences.areaWeights.spirituality).toBe(0.5);
-      expect(defaultUserPreferences.areaWeights.mental_health).toBe(1.0);
     });
 
     it('should have correct notification defaults', () => {

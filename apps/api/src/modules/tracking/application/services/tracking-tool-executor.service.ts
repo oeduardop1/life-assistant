@@ -95,21 +95,21 @@ export class TrackingToolExecutorService implements ToolExecutor {
       `record_metric params: type=${type}, value=${String(value)}, unit=${unit ?? '(default)'}, date=${date}`
     );
 
-    // Map tracking type to life area
+    // Map tracking type to life area (ADR-017: 6 main areas)
     const areaMap: Record<string, string> = {
       weight: 'health',
       water: 'health',
       sleep: 'health',
       exercise: 'health',
-      mood: 'mental_health',
+      mood: 'health', // mental is now a sub-area of health
       energy: 'health',
-      expense: 'financial',
-      income: 'financial',
-      investment: 'financial',
-      custom: 'personal_growth',
+      expense: 'finance',
+      income: 'finance',
+      investment: 'finance',
+      custom: 'learning', // personal_growth renamed to learning
     };
 
-    const area = areaMap[type] ?? 'personal_growth';
+    const area = areaMap[type] ?? 'learning';
 
     // Build metadata
     const metadata: Record<string, unknown> = {};

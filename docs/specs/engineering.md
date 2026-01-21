@@ -846,7 +846,7 @@ logger.info({
 
 ```
 [MemoryToolExecutorService] Executing tool search_knowledge for user abc-123
-[MemoryToolExecutorService] search_knowledge params: query="meu salário", type=fact, area=financial, limit=10
+[MemoryToolExecutorService] search_knowledge params: query="meu salário", type=fact, area=finance, limit=10
 [MemoryToolExecutorService] search_knowledge found 3 items
 [ChatService] Tool loop iteration 1: 2 tool calls
 [ChatService] Tool loop completed with 2 iterations, content length: 450

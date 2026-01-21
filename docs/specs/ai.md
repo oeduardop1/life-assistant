@@ -342,8 +342,9 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **record_metric**: Registrar métricas (peso, gastos, humor, etc.)
 - **search_knowledge**: Buscar fatos sobre o usuário. SEMPRE use quando perguntarem sobre o usuário ou quando precisar de contexto adicional
 - **add_knowledge**: Registrar novo fato aprendido sobre o usuário
-  - **SEMPRE inclua o campo `area`** com uma das opções: health, mental_health, relationships, career, financial, personal_growth, social, family, hobbies, spirituality
-  - Exemplo: `add_knowledge({ type: "fact", content: "é solteiro", area: "relationships", confidence: 0.95 })`
+  - **SEMPRE inclua o campo `area`** com uma das opções: health, finance, professional, learning, spiritual, relationships
+  - Opcionalmente, inclua `subArea` para maior especificidade (ex: physical, mental, leisure, budget, career, formal, etc.)
+  - Exemplo: `add_knowledge({ type: "fact", content: "é solteiro", area: "relationships", subArea: "romantic", confidence: 0.95 })`
   - ✅ Usar para: fatos permanentes, preferências declaradas, mudanças de status, informações que o usuário pediu para lembrar
   - ❌ NÃO usar para: opiniões momentâneas, estados temporários, especulações não confirmadas
 - **analyze_context**: Analisar contexto para encontrar conexões, padrões e contradições.
@@ -354,7 +355,7 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
     - Finanças (dívidas, gastos, investimentos, preocupações)
     - Emoções (stress, ansiedade, tristeza, felicidade)
     - Decisões importantes
-  - Como usar: `analyze_context({ currentTopic: "o assunto", relatedAreas: ["relationships", "mental_health"], lookForContradictions: true })`
+  - Como usar: `analyze_context({ currentTopic: "o assunto", relatedAreas: ["relationships", "health"], lookForContradictions: true })`
 - **create_reminder**: Criar lembrete
 - **get_tracking_history**: Obter histórico de métricas
 - **get_trends**: Analisar tendências e correlações entre métricas. Use quando perguntarem sobre evolução, padrões ou relações entre métricas (ex: "como está meu peso?", "sono afeta meu humor?")
@@ -596,7 +597,7 @@ export const tools: ToolDefinition[] = [
     parameters: z.object({
       query: z.string().describe('O que buscar'),
       type: z.enum(['fact', 'preference', 'memory', 'insight', 'person']).optional(),
-      area: z.enum(['health', 'financial', 'relationships', 'career', 'spirituality', 'leisure', 'personal_growth', 'mental_health']).optional(),
+      area: z.enum(['health', 'finance', 'professional', 'learning', 'spiritual', 'relationships']).optional(),
       limit: z.number().max(10).default(5),
     }),
     requiresConfirmation: false,
@@ -660,17 +661,17 @@ export const tools: ToolDefinition[] = [
     description: 'Analisa contexto para encontrar conexões, padrões e contradições. Use antes de responder sobre assuntos pessoais importantes (decisões, conselhos, problemas). Retorna fatos relacionados, padrões aprendidos, conexões potenciais e contradições detectadas.',
     parameters: z.object({
       currentTopic: z.string().describe('O assunto principal que o usuário está discutindo'),
-      relatedAreas: z.array(z.enum(['health', 'financial', 'relationships', 'career', 'spirituality', 'leisure', 'personal_growth', 'mental_health'])).min(1).max(4).describe('Áreas da vida que podem estar relacionadas'),
+      relatedAreas: z.array(z.enum(['health', 'finance', 'professional', 'learning', 'spiritual', 'relationships'])).min(1).max(4).describe('Áreas da vida que podem estar relacionadas'),
       lookForContradictions: z.boolean().default(true).describe('Se deve verificar contradições com conhecimento existente'),
     }),
     requiresConfirmation: false,
     inputExamples: [
-      // Problemas de sono - pode conectar com stress/finanças
-      { currentTopic: "sleeping problems", relatedAreas: ["health", "mental_health", "financial"], lookForContradictions: true },
+      // Problemas de sono - pode conectar com stress/finanças (ADR-017: 6 áreas)
+      { currentTopic: "sleeping problems", relatedAreas: ["health", "finance"], lookForContradictions: true },
       // Decisão de relacionamento
-      { currentTopic: "relationship decision", relatedAreas: ["relationships", "mental_health"], lookForContradictions: true },
+      { currentTopic: "relationship decision", relatedAreas: ["relationships", "health"], lookForContradictions: true },
       // Mudança de carreira
-      { currentTopic: "career change consideration", relatedAreas: ["career", "financial", "personal_growth"], lookForContradictions: false },
+      { currentTopic: "career change consideration", relatedAreas: ["professional", "finance", "learning"], lookForContradictions: false },
     ],
   },
   {
@@ -845,14 +846,14 @@ export const tools: ToolDefinition[] = [
     parameters: z.object({
       type: z.enum(['fact', 'preference', 'memory', 'insight', 'person']),
       content: z.string().describe('O fato a ser registrado'),
-      area: z.enum(['health', 'financial', 'relationships', 'career', 'spirituality', 'leisure', 'personal_growth', 'mental_health']).optional(),
+      area: z.enum(['health', 'finance', 'professional', 'learning', 'spiritual', 'relationships']).optional(),
       confidence: z.number().min(0).max(1).default(0.9),
     }),
     requiresConfirmation: false,
     inputExamples: [
-      { type: "fact", content: "Trabalha como desenvolvedor", area: "career", confidence: 1.0 },
+      { type: "fact", content: "Trabalha como desenvolvedor", area: "professional", confidence: 1.0 },
       { type: "preference", content: "Prefere acordar cedo", area: "health", confidence: 0.9 },
-      { type: "insight", content: "Gasta mais quando estressado", area: "financial", confidence: 0.7 },
+      { type: "insight", content: "Gasta mais quando estressado", area: "finance", confidence: 0.7 },
     ],
   },
   {
@@ -910,7 +911,7 @@ export const tools: ToolDefinition[] = [
     parameters: z.object({
       title: z.string().describe('Título breve da decisão'),
       description: z.string().optional().describe('Contexto detalhado da situação'),
-      area: z.enum(['health', 'financial', 'relationships', 'career', 'spirituality', 'leisure', 'personal_growth', 'mental_health']).describe('Área da vida relacionada'),
+      area: z.enum(['health', 'finance', 'professional', 'learning', 'spiritual', 'relationships']).describe('Área da vida relacionada'),
       options: z.array(z.object({
         title: z.string(),
         pros: z.array(z.string()).optional(),
@@ -925,7 +926,7 @@ export const tools: ToolDefinition[] = [
       // Decisão de carreira
       {
         title: "Aceitar proposta de emprego na TechCorp",
-        area: "career",
+        area: "professional",
         options: [
           { title: "Aceitar", pros: ["salário 30% maior", "desafio técnico"], cons: ["mudança de cidade"] },
           { title: "Recusar", pros: ["estabilidade atual"], cons: ["oportunidade perdida"] },
@@ -937,7 +938,7 @@ export const tools: ToolDefinition[] = [
       // Decisão financeira ainda em análise
       {
         title: "Comprar ou alugar apartamento",
-        area: "financial",
+        area: "finance",
         description: "Considerando opções para moradia própria vs aluguel",
         options: [
           { title: "Comprar financiado", pros: ["patrimônio"], cons: ["dívida longa"] },
@@ -1124,7 +1125,7 @@ Analise as conversas recentes e extraia informações para atualizar a memória 
   "new_knowledge_items": [
     {
       "type": "fact|preference|insight|person",
-      "area": "health|financial|career|...",
+      "area": "health|finance|professional|learning|spiritual|relationships",
       "content": "descrição do fato",
       "confidence": 0.9,
       "source": "conversation",
@@ -1142,7 +1143,7 @@ Analise as conversas recentes e extraia informações para atualizar a memória 
     {
       "pattern": "descrição do padrão de decisão observado",
       "frequency": 3,
-      "area": "health|financial|career|...",
+      "area": "health|finance|professional|learning|spiritual|relationships",
       "suggestion": "sugestão para melhorar decisões futuras",
       "evidence": ["decisão 1", "decisão 2", "decisão 3"]
     }

@@ -90,9 +90,17 @@ Buscar fatos sobre o usuário. SEMPRE use quando perguntarem sobre o usuário.
 
 ### add_knowledge
 Registrar novo fato aprendido. **SEMPRE inclua o campo \`area\`** com uma das opções:
-- health, mental_health, relationships, career, financial, personal_growth, social, family, hobbies, spirituality
+- health, finance, professional, learning, spiritual, relationships
 
-Exemplo: \`add_knowledge({ type: "fact", content: "é solteiro", area: "relationships", confidence: 0.95 })\`
+Opcionalmente, inclua \`subArea\` para maior especificidade:
+- health: physical, mental, leisure
+- finance: budget, savings, debts, investments
+- professional: career, business
+- learning: formal, informal
+- spiritual: practice, community
+- relationships: family, romantic, social
+
+Exemplo: \`add_knowledge({ type: "fact", content: "é solteiro", area: "relationships", subArea: "romantic", confidence: 0.95 })\`
 
 **Quando usar add_knowledge:**
 - ✅ Novo fato pessoal permanente (nome do pet, cidade onde mora, profissão)
@@ -111,7 +119,7 @@ Exemplo: \`add_knowledge({ type: "fact", content: "é solteiro", area: "relation
 - Emoções (stress, ansiedade, tristeza, felicidade)
 - Decisões importantes
 
-**Como usar**: \`analyze_context({ currentTopic: "o assunto", relatedAreas: ["relationships", "mental_health"], lookForContradictions: true })\`
+**Como usar**: \`analyze_context({ currentTopic: "o assunto", relatedAreas: ["relationships", "health"], lookForContradictions: true })\`
 
 ### record_metric
 Registrar métricas do usuário (peso, água, sono, exercício, humor, energia).

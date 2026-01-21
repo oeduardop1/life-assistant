@@ -44,7 +44,7 @@ const mockKnowledgeItems = [
     id: 'ki-1',
     userId: 'user-123',
     type: 'fact',
-    area: 'career',
+    area: 'professional',
     title: 'Work info',
     content: 'Works as a software developer',
     source: 'conversation',
@@ -74,7 +74,7 @@ const mockKnowledgeItems = [
     id: 'ki-3',
     userId: 'user-123',
     type: 'insight',
-    area: 'mental_health',
+    area: 'health',
     title: 'Stress pattern',
     content: 'Gets stressed before deadlines',
     source: 'ai_inference',
@@ -171,7 +171,7 @@ describe('Memory Tool Executor (Integration)', () => {
           expect.objectContaining({
             id: 'ki-1',
             type: 'fact',
-            area: 'career',
+            area: 'professional',
           }),
         ]),
       });
@@ -279,7 +279,7 @@ describe('Memory Tool Executor (Integration)', () => {
         id: 'ki-new',
         userId: 'user-123',
         type: 'fact',
-        area: 'career',
+        area: 'professional',
         title: 'New fact',
         content: 'Just got promoted',
         source: 'conversation',
@@ -295,7 +295,7 @@ describe('Memory Tool Executor (Integration)', () => {
         arguments: {
           type: 'fact',
           content: 'Just got promoted',
-          area: 'career',
+          area: 'professional',
           confidence: 0.9,
         },
       };
@@ -412,7 +412,7 @@ describe('Memory Tool Executor (Integration)', () => {
           if (area === 'relationships') {
             return Promise.resolve([mockKnowledgeItems[1]]);
           }
-          if (area === 'mental_health') {
+          if (area === 'health') {
             return Promise.resolve([mockKnowledgeItems[2]]);
           }
           return Promise.resolve([]);
@@ -425,7 +425,7 @@ describe('Memory Tool Executor (Integration)', () => {
         name: 'analyze_context',
         arguments: {
           currentTopic: 'ending relationship',
-          relatedAreas: [LifeArea.RELATIONSHIPS, LifeArea.MENTAL_HEALTH],
+          relatedAreas: [LifeArea.RELATIONSHIPS, LifeArea.HEALTH],
           lookForContradictions: true,
         },
       };
@@ -439,7 +439,7 @@ describe('Memory Tool Executor (Integration)', () => {
       expect(result.result).toMatchObject({
         relatedFacts: expect.arrayContaining([
           expect.objectContaining({ area: 'relationships' }),
-          expect.objectContaining({ area: 'mental_health' }),
+          expect.objectContaining({ area: 'health' }),
         ]),
       });
     });
@@ -453,7 +453,7 @@ describe('Memory Tool Executor (Integration)', () => {
         name: 'analyze_context',
         arguments: {
           currentTopic: 'important meeting tomorrow',
-          relatedAreas: [LifeArea.CAREER],
+          relatedAreas: [LifeArea.PROFESSIONAL],
           lookForContradictions: false,
         },
       };

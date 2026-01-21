@@ -4,15 +4,18 @@ import type {
   KnowledgeItemType,
   KnowledgeItemSource,
   LifeArea,
+  SubArea,
 } from '@life-assistant/database';
 
 /**
  * Search parameters for knowledge items
+ * ADR-017: Added subArea filter for 6 main areas + sub-areas
  */
 export interface KnowledgeItemSearchParams {
   query?: string;
   type?: KnowledgeItemType;
   area?: LifeArea;
+  subArea?: SubArea; // ADR-017: Sub-area filter
   source?: KnowledgeItemSource;
   confidenceMin?: number;
   confidenceMax?: number;

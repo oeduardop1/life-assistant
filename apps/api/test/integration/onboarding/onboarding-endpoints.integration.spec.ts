@@ -51,7 +51,7 @@ class ProfileStepDto {
 class AreasStepDto {
   @IsArray()
   @ArrayMinSize(3, { message: 'Selecione pelo menos 3 areas da vida' })
-  @ArrayMaxSize(8, { message: 'Voce pode selecionar no maximo 8 areas' })
+  @ArrayMaxSize(6, { message: 'Voce pode selecionar no maximo 6 areas' })
   @IsEnum(LifeArea, { each: true })
   areas!: LifeArea[];
 }
@@ -338,7 +338,7 @@ describe('Onboarding Endpoints (Integration)', () => {
   // =========================================================================
   describe('PATCH /api/onboarding/step/areas', () => {
     const validAreasData = {
-      areas: [LifeArea.HEALTH, LifeArea.FINANCIAL, LifeArea.CAREER],
+      areas: [LifeArea.HEALTH, LifeArea.FINANCE, LifeArea.PROFESSIONAL],
     };
 
     it('should_save_areas_data', async () => {
@@ -375,7 +375,7 @@ describe('Onboarding Endpoints (Integration)', () => {
       const response = await request(app.getHttpServer())
         .patch('/api/onboarding/step/areas')
         .set('Authorization', `Bearer ${token}`)
-        .send({ areas: [LifeArea.HEALTH, LifeArea.FINANCIAL] })
+        .send({ areas: [LifeArea.HEALTH, LifeArea.FINANCE] })
         .expect(400);
 
       expect(response.body.statusCode).toBe(400);
@@ -383,14 +383,14 @@ describe('Onboarding Endpoints (Integration)', () => {
 
     // Note: DTO validation tests are handled at service layer in integration tests
     // due to Vitest decorator metadata compatibility issues.
-    it('should_reject_more_than_8_areas', async () => {
+    it('should_reject_more_than_6_areas', async () => {
       const token = await createToken({ sub: 'user-123' });
       mockOnboardingService.saveAreasStep.mockRejectedValue(
-        new BadRequestException('Voce pode selecionar no maximo 8 areas'),
+        new BadRequestException('Voce pode selecionar no maximo 6 areas'),
       );
       const allAreas = Object.values(LifeArea);
-      // Add more than 8 areas (even though there are only 8 in enum, this tests the logic)
-      const tooManyAreas = [...allAreas, ...allAreas.slice(0, 3)]; // 11 areas
+      // Add more than 6 areas (even though there are only 6 in enum, this tests the logic)
+      const tooManyAreas = [...allAreas, ...allAreas.slice(0, 1)]; // 7 areas
 
       const response = await request(app.getHttpServer())
         .patch('/api/onboarding/step/areas')

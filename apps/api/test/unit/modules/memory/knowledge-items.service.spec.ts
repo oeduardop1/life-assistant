@@ -13,7 +13,7 @@ function createMockKnowledgeItem(
     id: 'item-123',
     userId: 'user-123',
     type: 'fact',
-    area: 'personal_growth',
+    area: 'learning',
     title: 'Test fact',
     content: 'This is test content',
     confidence: 0.9,
@@ -164,7 +164,7 @@ describe('KnowledgeItemsService', () => {
     it('should_create_item_with_all_params', async () => {
       const mockItem = createMockKnowledgeItem({
         type: 'fact',
-        area: 'career',
+        area: 'professional',
         title: 'Custom title',
         content: 'Test content',
       });
@@ -173,7 +173,7 @@ describe('KnowledgeItemsService', () => {
       const result = await knowledgeItemsService.add('user-123', {
         type: 'fact',
         content: 'Test content',
-        area: 'career',
+        area: 'professional',
         title: 'Custom title',
         confidence: 0.85,
         source: 'conversation',
@@ -184,7 +184,7 @@ describe('KnowledgeItemsService', () => {
       expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
         type: 'fact',
         content: 'Test content',
-        area: 'career',
+        area: 'professional',
         title: 'Custom title',
         confidence: 0.85,
         source: 'conversation',
@@ -702,13 +702,11 @@ describe('KnowledgeItemsService', () => {
     it('should_return_stats_with_counts_by_area_and_type', async () => {
       mockRepository.countByArea.mockResolvedValue({
         health: 5,
-        financial: 3,
+        finance: 3,
+        professional: 8,
+        learning: 4,
+        spiritual: 0,
         relationships: 2,
-        career: 8,
-        personal_growth: 4,
-        leisure: 1,
-        spirituality: 0,
-        mental_health: 2,
       });
       mockRepository.countByType.mockResolvedValue({
         fact: 10,
@@ -723,13 +721,11 @@ describe('KnowledgeItemsService', () => {
       expect(result).toEqual({
         byArea: {
           health: 5,
-          financial: 3,
+          finance: 3,
+          professional: 8,
+          learning: 4,
+          spiritual: 0,
           relationships: 2,
-          career: 8,
-          personal_growth: 4,
-          leisure: 1,
-          spirituality: 0,
-          mental_health: 2,
         },
         byType: {
           fact: 10,
@@ -745,13 +741,11 @@ describe('KnowledgeItemsService', () => {
     it('should_return_zero_counts_for_empty_user', async () => {
       mockRepository.countByArea.mockResolvedValue({
         health: 0,
-        financial: 0,
+        finance: 0,
+        professional: 0,
+        learning: 0,
+        spiritual: 0,
         relationships: 0,
-        career: 0,
-        personal_growth: 0,
-        leisure: 0,
-        spirituality: 0,
-        mental_health: 0,
       });
       mockRepository.countByType.mockResolvedValue({
         fact: 0,

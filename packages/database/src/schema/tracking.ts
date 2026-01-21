@@ -11,7 +11,7 @@ import {
   jsonb,
   index,
 } from 'drizzle-orm/pg-core';
-import { trackingTypeEnum, lifeAreaEnum } from './enums';
+import { trackingTypeEnum, lifeAreaEnum, subAreaEnum } from './enums';
 import { users } from './users';
 
 export const trackingEntries = pgTable(
@@ -22,9 +22,10 @@ export const trackingEntries = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
-    // Type & Area
+    // Type & Area (ADR-017)
     type: trackingTypeEnum('type').notNull(),
     area: lifeAreaEnum('area').notNull(),
+    subArea: subAreaEnum('sub_area'),
 
     // Value
     value: decimal('value', { precision: 10, scale: 2 }).notNull(),

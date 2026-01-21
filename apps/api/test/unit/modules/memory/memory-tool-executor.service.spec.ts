@@ -58,7 +58,7 @@ function createMockKnowledgeItem(
     id: 'item-123',
     userId: 'user-123',
     type: 'fact',
-    area: 'personal_growth',
+    area: 'learning',
     title: 'Test fact',
     content: 'This is test content',
     confidence: 0.9,
@@ -327,7 +327,7 @@ describe('MemoryToolExecutorService', () => {
           createMockKnowledgeItem({
             id: 'item-1',
             content: 'User has debt',
-            area: 'financial',
+            area: 'finance',
             confidence: 0.9,
           }),
           createMockKnowledgeItem({
@@ -338,7 +338,7 @@ describe('MemoryToolExecutorService', () => {
           }),
         ];
         mockKnowledgeItemsService.findByArea
-          .mockResolvedValueOnce([mockItems[0]]) // financial
+          .mockResolvedValueOnce([mockItems[0]]) // finance
           .mockResolvedValueOnce([mockItems[1]]); // health
 
         mockUserMemoryService.getOrCreate.mockResolvedValue({
@@ -349,7 +349,7 @@ describe('MemoryToolExecutorService', () => {
           name: 'analyze_context',
           arguments: {
             currentTopic: 'sleeping problems',
-            relatedAreas: ['financial', 'health'],
+            relatedAreas: ['finance', 'health'],
             lookForContradictions: true,
           },
         });
@@ -357,7 +357,7 @@ describe('MemoryToolExecutorService', () => {
         await memoryToolExecutor.execute(toolCall, { userId: 'user-123' });
 
         expect(mockKnowledgeItemsService.findByArea).toHaveBeenCalledTimes(2);
-        expect(mockKnowledgeItemsService.findByArea).toHaveBeenCalledWith('user-123', 'financial', 10);
+        expect(mockKnowledgeItemsService.findByArea).toHaveBeenCalledWith('user-123', 'finance', 10);
         expect(mockKnowledgeItemsService.findByArea).toHaveBeenCalledWith('user-123', 'health', 10);
         expect(createSuccessResult).toHaveBeenCalledWith(
           toolCall,
@@ -383,7 +383,7 @@ describe('MemoryToolExecutorService', () => {
           name: 'analyze_context',
           arguments: {
             currentTopic: 'tomorrow meeting',
-            relatedAreas: ['career'],
+            relatedAreas: ['professional'],
             lookForContradictions: false,
           },
         });
@@ -423,7 +423,7 @@ describe('MemoryToolExecutorService', () => {
           name: 'analyze_context',
           arguments: {
             currentTopic: 'life stress',
-            relatedAreas: ['mental_health', 'career'],
+            relatedAreas: ['health', 'professional'],
             lookForContradictions: false,
           },
         });
@@ -449,7 +449,7 @@ describe('MemoryToolExecutorService', () => {
           name: 'analyze_context',
           arguments: {
             currentTopic: 'feeling stressed about tomorrow',
-            relatedAreas: ['mental_health'],
+            relatedAreas: ['health'],
             lookForContradictions: true,
           },
         });
@@ -476,7 +476,7 @@ describe('MemoryToolExecutorService', () => {
           name: 'analyze_context',
           arguments: {
             currentTopic: 'test topic',
-            relatedAreas: ['personal_growth'],
+            relatedAreas: ['learning'],
             lookForContradictions: true,
           },
         });
@@ -501,7 +501,7 @@ describe('MemoryToolExecutorService', () => {
           name: 'analyze_context',
           arguments: {
             currentTopic: 'test topic',
-            relatedAreas: ['personal_growth'],
+            relatedAreas: ['learning'],
             lookForContradictions: false,
           },
         });

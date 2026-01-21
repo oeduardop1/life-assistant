@@ -4,6 +4,7 @@ import type {
   KnowledgeItemType,
   KnowledgeItemSource,
   LifeArea,
+  SubArea,
 } from '@life-assistant/database';
 import {
   KnowledgeItemRepositoryPort,
@@ -14,11 +15,13 @@ import { ContradictionResolutionService, type ContradictionResolutionInfo } from
 
 /**
  * Parameters for adding a knowledge item
+ * ADR-017: Added subArea support for 6 main areas + sub-areas
  */
 export interface AddKnowledgeParams {
   type: KnowledgeItemType;
   content: string;
   area?: LifeArea;
+  subArea?: SubArea; // ADR-017: Sub-area for more granular categorization
   title?: string;
   confidence?: number;
   source: KnowledgeItemSource;
@@ -156,10 +159,12 @@ export class KnowledgeItemsService {
    * @returns The created item and any superseded item info
    */
   async add(userId: string, params: AddKnowledgeParams): Promise<AddKnowledgeResult> {
+    // ADR-017: Added subArea extraction
     const {
       type,
       content,
       area,
+      subArea,
       title,
       confidence = 0.9,
       source,
@@ -196,11 +201,12 @@ export class KnowledgeItemsService {
       `Adding knowledge item for user ${userId}: ${type} - ${generatedTitle}`
     );
 
-    // Create the new item
+    // Create the new item (ADR-017: Added subArea)
     const item = await this.knowledgeItemRepository.create(userId, {
       type,
       content,
       area,
+      subArea,
       title: generatedTitle,
       confidence: Math.max(0, Math.min(1, confidence)), // Clamp to 0-1
       source,

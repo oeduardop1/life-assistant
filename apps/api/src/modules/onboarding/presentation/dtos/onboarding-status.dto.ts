@@ -22,9 +22,10 @@ export class OnboardingDataDto {
   })
   timezone?: string;
 
+  // ADR-017: Updated to 6 main areas
   @ApiPropertyOptional({
     description: 'Selected life areas',
-    example: [LifeArea.HEALTH, LifeArea.FINANCIAL, LifeArea.CAREER],
+    example: [LifeArea.HEALTH, LifeArea.FINANCE, LifeArea.PROFESSIONAL],
     isArray: true,
     enum: LifeArea,
   })

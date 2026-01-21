@@ -12,16 +12,14 @@ import type {
   LifeArea,
 } from '@life-assistant/database';
 
-// Life area values for iteration
+// Life area values for iteration (ADR-017: 6 areas)
 const LIFE_AREAS: LifeArea[] = [
   'health',
-  'financial',
+  'finance',
+  'professional',
+  'learning',
+  'spiritual',
   'relationships',
-  'career',
-  'personal_growth',
-  'leisure',
-  'spirituality',
-  'mental_health',
 ];
 
 // Knowledge item type values for iteration

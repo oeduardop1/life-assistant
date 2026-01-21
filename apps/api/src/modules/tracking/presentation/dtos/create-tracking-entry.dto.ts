@@ -28,17 +28,43 @@ export enum TrackingTypeM21 {
 }
 
 /**
- * Life areas enum
+ * Life areas enum (ADR-017: 6 main areas)
  */
 export enum LifeAreaDto {
   HEALTH = 'health',
-  FINANCIAL = 'financial',
+  FINANCE = 'finance',
+  PROFESSIONAL = 'professional',
+  LEARNING = 'learning',
+  SPIRITUAL = 'spiritual',
   RELATIONSHIPS = 'relationships',
-  CAREER = 'career',
-  PERSONAL_GROWTH = 'personal_growth',
+}
+
+/**
+ * Sub-areas enum (ADR-017: 17 sub-areas grouped by parent area)
+ */
+export enum SubAreaDto {
+  // Health sub-areas
+  PHYSICAL = 'physical',
+  MENTAL = 'mental',
   LEISURE = 'leisure',
-  SPIRITUALITY = 'spirituality',
-  MENTAL_HEALTH = 'mental_health',
+  // Finance sub-areas
+  BUDGET = 'budget',
+  SAVINGS = 'savings',
+  DEBTS = 'debts',
+  INVESTMENTS = 'investments',
+  // Professional sub-areas
+  CAREER = 'career',
+  BUSINESS = 'business',
+  // Learning sub-areas
+  FORMAL = 'formal',
+  INFORMAL = 'informal',
+  // Spiritual sub-areas
+  PRACTICE = 'practice',
+  COMMUNITY = 'community',
+  // Relationships sub-areas
+  FAMILY = 'family',
+  ROMANTIC = 'romantic',
+  SOCIAL = 'social',
 }
 
 /**
@@ -153,13 +179,22 @@ export class CreateTrackingEntryDto {
   type: TrackingTypeM21;
 
   @ApiProperty({
-    description: 'Life area associated with this entry',
+    description: 'Life area associated with this entry (ADR-017: 6 areas)',
     enum: LifeAreaDto,
     example: LifeAreaDto.HEALTH,
   })
   @IsEnum(LifeAreaDto)
   @IsNotEmpty()
   area: LifeAreaDto;
+
+  @ApiPropertyOptional({
+    description: 'Sub-area for more granular categorization (ADR-017)',
+    enum: SubAreaDto,
+    example: SubAreaDto.PHYSICAL,
+  })
+  @IsOptional()
+  @IsEnum(SubAreaDto)
+  subArea?: SubAreaDto;
 
   @ApiProperty({
     description: 'Value of the metric',
@@ -265,12 +300,20 @@ export class GetTrackingEntriesQueryDto {
   type?: TrackingTypeM21;
 
   @ApiPropertyOptional({
-    description: 'Filter by life area',
+    description: 'Filter by life area (ADR-017: 6 areas)',
     enum: LifeAreaDto,
   })
   @IsOptional()
   @IsEnum(LifeAreaDto)
   area?: LifeAreaDto;
+
+  @ApiPropertyOptional({
+    description: 'Filter by sub-area (ADR-017)',
+    enum: SubAreaDto,
+  })
+  @IsOptional()
+  @IsEnum(SubAreaDto)
+  subArea?: SubAreaDto;
 
   @ApiPropertyOptional({
     description: 'Start date for filtering (YYYY-MM-DD)',

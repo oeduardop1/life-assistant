@@ -6,6 +6,7 @@ import {
   userStatusEnum,
   userPlanEnum,
   lifeAreaEnum,
+  subAreaEnum,
   trackingTypeEnum,
   exerciseIntensityEnum,
   exerciseTypeEnum,
@@ -27,6 +28,7 @@ import {
   type UserStatus,
   type UserPlan,
   type LifeArea,
+  type SubArea,
   type TrackingType,
   type ExerciseIntensity,
   type ExerciseType,
@@ -88,26 +90,68 @@ describe('enums', () => {
       expect(lifeAreaEnum.enumName).toBe('life_area');
     });
 
-    it('should have exactly 8 life areas', () => {
-      expect(lifeAreaEnum.enumValues).toHaveLength(8);
+    // ADR-017: Changed from 8 to 6 main areas
+    it('should have exactly 6 life areas', () => {
+      expect(lifeAreaEnum.enumValues).toHaveLength(6);
     });
 
     it('should have all expected values', () => {
       expect(lifeAreaEnum.enumValues).toEqual([
         'health',
-        'financial',
+        'finance',
+        'professional',
+        'learning',
+        'spiritual',
         'relationships',
-        'career',
-        'personal_growth',
-        'leisure',
-        'spirituality',
-        'mental_health',
       ]);
     });
 
     it('should export correct TypeScript type', () => {
       const area: LifeArea = 'health';
       expect(lifeAreaEnum.enumValues).toContain(area);
+    });
+  });
+
+  describe('subAreaEnum', () => {
+    it('should have correct enum name', () => {
+      expect(subAreaEnum.enumName).toBe('sub_area');
+    });
+
+    // ADR-017: 16 sub-areas (3+4+2+2+2+3)
+    it('should have exactly 16 sub-areas', () => {
+      expect(subAreaEnum.enumValues).toHaveLength(16);
+    });
+
+    it('should have all expected values', () => {
+      expect(subAreaEnum.enumValues).toEqual([
+        // Health sub-areas
+        'physical',
+        'mental',
+        'leisure',
+        // Finance sub-areas
+        'budget',
+        'savings',
+        'debts',
+        'investments',
+        // Professional sub-areas
+        'career',
+        'business',
+        // Learning sub-areas
+        'formal',
+        'informal',
+        // Spiritual sub-areas
+        'practice',
+        'community',
+        // Relationships sub-areas
+        'family',
+        'romantic',
+        'social',
+      ]);
+    });
+
+    it('should export correct TypeScript type', () => {
+      const subArea: SubArea = 'physical';
+      expect(subAreaEnum.enumValues).toContain(subArea);
     });
   });
 
@@ -477,11 +521,13 @@ describe('enums', () => {
   });
 
   describe('total enum count', () => {
-    it('should have exactly 20 enums defined', () => {
+    // ADR-017: Added subAreaEnum
+    it('should have exactly 21 enums defined', () => {
       const allEnums = [
         userStatusEnum,
         userPlanEnum,
         lifeAreaEnum,
+        subAreaEnum,
         trackingTypeEnum,
         exerciseIntensityEnum,
         exerciseTypeEnum,
@@ -500,7 +546,7 @@ describe('enums', () => {
         exportStatusEnum,
         exportTypeEnum,
       ];
-      expect(allEnums).toHaveLength(20);
+      expect(allEnums).toHaveLength(21);
     });
   });
 });

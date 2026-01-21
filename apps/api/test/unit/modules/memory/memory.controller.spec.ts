@@ -15,7 +15,7 @@ function createMockKnowledgeItem(
     id: 'item-123',
     userId: 'user-123',
     type: 'fact',
-    area: 'personal_growth',
+    area: 'learning',
     title: 'Test fact',
     content: 'This is test content',
     confidence: 0.9,
@@ -107,13 +107,11 @@ describe('MemoryController', () => {
       const mockStats = {
         byArea: {
           health: 5,
-          financial: 3,
+          finance: 3,
+          professional: 8,
+          learning: 4,
+          spiritual: 0,
           relationships: 2,
-          career: 8,
-          personal_growth: 4,
-          leisure: 1,
-          spirituality: 0,
-          mental_health: 2,
         },
         byType: {
           fact: 10,

@@ -18,18 +18,45 @@ export const userStatusEnum = pgEnum('user_status', [
 export const userPlanEnum = pgEnum('user_plan', ['free', 'pro', 'premium']);
 
 // ============================================================================
-// Life Areas (8 areas)
+// Life Areas (6 areas - ADR-017)
 // ============================================================================
 
 export const lifeAreaEnum = pgEnum('life_area', [
   'health',
-  'financial',
+  'finance',
+  'professional',
+  'learning',
+  'spiritual',
   'relationships',
-  'career',
-  'personal_growth',
+]);
+
+// ============================================================================
+// Sub Areas (ADR-017)
+// ============================================================================
+
+export const subAreaEnum = pgEnum('sub_area', [
+  // health
+  'physical',
+  'mental',
   'leisure',
-  'spirituality',
-  'mental_health',
+  // finance
+  'budget',
+  'savings',
+  'debts',
+  'investments',
+  // professional
+  'career',
+  'business',
+  // learning
+  'formal',
+  'informal',
+  // spiritual
+  'practice',
+  'community',
+  // relationships
+  'family',
+  'romantic',
+  'social',
 ]);
 
 // ============================================================================
@@ -247,6 +274,7 @@ export const exportTypeEnum = pgEnum('export_type', [
 export type UserStatus = (typeof userStatusEnum.enumValues)[number];
 export type UserPlan = (typeof userPlanEnum.enumValues)[number];
 export type LifeArea = (typeof lifeAreaEnum.enumValues)[number];
+export type SubArea = (typeof subAreaEnum.enumValues)[number];
 export type TrackingType = (typeof trackingTypeEnum.enumValues)[number];
 export type ExerciseIntensity = (typeof exerciseIntensityEnum.enumValues)[number];
 export type ExerciseType = (typeof exerciseTypeEnum.enumValues)[number];

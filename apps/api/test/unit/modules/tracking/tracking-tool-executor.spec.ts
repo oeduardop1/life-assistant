@@ -121,7 +121,7 @@ describe('TrackingToolExecutorService', () => {
           expect.objectContaining({ area: 'health' })
         );
 
-        // Test mood -> mental_health
+        // Test mood -> health (mental is now a sub-area of health)
         vi.clearAllMocks();
         mockTrackingService.recordMetric.mockResolvedValue(mockEntry);
         toolCall = createMockToolCall({
@@ -131,10 +131,10 @@ describe('TrackingToolExecutorService', () => {
         await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
         expect(mockTrackingService.recordMetric).toHaveBeenCalledWith(
           'user-123',
-          expect.objectContaining({ area: 'mental_health' })
+          expect.objectContaining({ area: 'health' })
         );
 
-        // Test expense -> financial
+        // Test expense -> finance
         vi.clearAllMocks();
         mockTrackingService.recordMetric.mockResolvedValue(mockEntry);
         toolCall = createMockToolCall({
@@ -144,7 +144,7 @@ describe('TrackingToolExecutorService', () => {
         await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
         expect(mockTrackingService.recordMetric).toHaveBeenCalledWith(
           'user-123',
-          expect.objectContaining({ area: 'financial' })
+          expect.objectContaining({ area: 'finance' })
         );
       });
 

@@ -60,7 +60,7 @@ const mockConsolidationResponse: ConsolidationResponse = {
     },
     {
       type: 'fact',
-      area: 'career',
+      area: 'professional',
       content: 'Trabalha como desenvolvedor de software',
       title: 'Ocupação',
       confidence: 0.95,

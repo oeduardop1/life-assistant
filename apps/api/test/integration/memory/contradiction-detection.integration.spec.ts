@@ -229,7 +229,7 @@ describe('Contradiction Detection Integration', () => {
         .send({
           type: 'fact',
           content: 'Tem uma dívida de 1 milhão',
-          area: 'financial',
+          area: 'finance',
         })
         .expect(201);
 
@@ -243,7 +243,7 @@ describe('Contradiction Detection Integration', () => {
         .send({
           type: 'fact',
           content: 'Quitou a dívida de 1 milhão',
-          area: 'financial',
+          area: 'finance',
         })
         .expect(201);
 
@@ -275,7 +275,7 @@ describe('Contradiction Detection Integration', () => {
         .send({
           type: 'fact',
           content: 'Começou o curso de Python',
-          area: 'personal_growth',
+          area: 'learning',
         })
         .expect(201);
 
@@ -285,7 +285,7 @@ describe('Contradiction Detection Integration', () => {
         .send({
           type: 'fact',
           content: 'Terminou o curso de Python',
-          area: 'personal_growth',
+          area: 'learning',
         })
         .expect(201);
 
