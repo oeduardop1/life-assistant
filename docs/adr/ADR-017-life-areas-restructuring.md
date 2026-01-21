@@ -20,7 +20,7 @@ Esta estrutura apresentava problemas:
 3. **Cálculos imprecisos**: Não era possível identificar qual aspecto de uma área estava em déficit
 4. **Nomenclatura confusa**: `career` vs `professional` (inclui empreendedorismo)
 
-Durante análise para implementação do Life Balance Score (M2.2), identificou-se a necessidade de maior granularidade para:
+Durante análise para implementação do Life Balance Score (M2.5), identificou-se a necessidade de maior granularidade para:
 - Calcular scores mais precisos por sub-área
 - Permitir análise detalhada ("sua saúde física está ótima, mas saúde mental precisa atenção")
 - Organizar conhecimento e tracking de forma mais intuitiva
@@ -208,5 +208,5 @@ export enum SubArea {
 
 - ADR-015: Tracking de Baixo Atrito (filosofia de dados ausentes)
 - ADR-012: Tool Use + Memory Consolidation (arquitetura de memória)
-- M2.2: Life Balance Score implementation
+- M2.5: Life Balance Score implementation
 - docs/specs/system.md §3.4: Cálculo do Life Balance Score

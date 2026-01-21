@@ -1,7 +1,7 @@
 # Fase 2: Tracker (v2.x)
 
-> **Objetivo:** Implementar sistema de tracking de métricas, Life Balance Score, dashboard, relatórios e planejamento financeiro.
-> **Referências:** `docs/specs/product.md` §2.3, §6.7, §6.8, §6.14, §6.15, §6.17, `docs/specs/system.md` §3.3, §3.4, §3.9, §3.10
+> **Objetivo:** Implementar sistema de tracking de métricas, módulos de dados (Finance, Hábitos, CRM), Life Balance Score, dashboard e relatórios.
+> **Referências:** `docs/specs/product.md` §2.3, §6.7, §6.8, §6.14, §6.15, §6.17, `docs/specs/system.md` §3.3, §3.4, §3.7, §3.9, §3.10
 
 ---
 
@@ -30,7 +30,7 @@
   - [x] mood (1-10)
   - [x] energy (1-10)
   - [x] custom
-  - ~~expense/income~~ → Usar M2.6 Finance
+  - ~~expense/income~~ → Usar M2.2 Finance
 - [x] Implementar validações conforme `docs/specs/system.md` §3.3
 - [x] Implementar agregações (média, soma, variação)
 - [x] Integrar com Tool Use (captura conversacional):
@@ -146,11 +146,280 @@ _Testes E2E (6 tasks):_
 
 ---
 
-## M2.2 — Life Balance Score + Trends Analysis 🔴
+## M2.2 — Módulo: Finance 🔴
+
+**Objetivo:** Implementar planejamento financeiro mensal de alto nível (controle pessoal, não micro-tracking de gastos).
+
+**Filosofia:** Baixo atrito. Usuário cadastra orçamento no início do mês e marca contas como pagas ao longo do mês.
+
+**Referências:** `docs/specs/system.md` §3.3 (Tracking), `docs/specs/data-model.md` §4.13 (Budgets)
+
+> **Nota:** Este módulo alimenta a área "finance" do Life Balance Score (M2.5).
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `finance`:
+  - [ ] `FinanceController` - CRUD de todas as entidades
+  - [ ] `IncomeService` - gerenciar rendas
+  - [ ] `BillService` - gerenciar contas fixas
+  - [ ] `ExpenseService` - gerenciar despesas variáveis
+  - [ ] `DebtService` - gerenciar dívidas com parcelas
+  - [ ] `InvestmentService` - gerenciar investimentos
+  - [ ] `FinanceSummaryUseCase` - calcular KPIs do dashboard
+- [ ] Criar tabelas (migrations):
+  - [ ] `incomes` - fontes de renda (nome, previsto, real, recorrente)
+  - [ ] `bills` - contas fixas (nome, valor, vencimento, status, categoria, recorrente)
+  - [ ] `variable_expenses` - despesas variáveis (nome, previsto, real, recorrente, mês/ano)
+  - [ ] `debts` - dívidas (nome, total, parcelas, valor_parcela, parcela_atual, vencimento)
+  - [ ] `investments` - investimentos (nome, meta, atual, aporte_mensal, prazo)
+- [ ] Implementar recorrências automáticas:
+  - [ ] Job mensal para gerar registros de contas fixas recorrentes
+  - [ ] Job mensal para gerar registros de despesas variáveis recorrentes
+  - [ ] Status inicial: `pending` (a ser marcado como `paid`)
+- [ ] Implementar cálculos de KPIs:
+  - [ ] Renda do mês (soma das rendas reais)
+  - [ ] Total orçado (soma de todos os blocos)
+  - [ ] Total gasto (fixas pagas + variáveis reais + parcelas)
+  - [ ] Saldo (renda - gasto)
+  - [ ] Total investido (soma dos investimentos atuais)
+- [ ] Implementar tool `get_finance_summary` para IA:
+  - [ ] Retorna KPIs, contas pendentes, parcelas próximas
+  - [ ] Permite IA responder "como estão minhas finanças?"
+- [ ] Implementar notificações:
+  - [ ] Início do mês: "Configure seu orçamento de [mês]"
+  - [ ] Conta próxima do vencimento (3 dias antes)
+  - [ ] Assinatura renovando (3 dias antes)
+  - [ ] Parcela de dívida vencendo (3 dias antes)
+  - [ ] Fim do mês: Resumo financeiro
+
+**Frontend:**
+- [ ] Criar página `/finance` (dashboard):
+  - [ ] KPIs em cards (Renda, Orçado, Gasto, Saldo, Investido)
+  - [ ] Gráfico: Orçamento x Real (barras por categoria)
+  - [ ] Gráfico: Distribuição de gastos (pizza)
+  - [ ] Gráfico: Evolução mensal (últimos 6-12 meses)
+  - [ ] Lista de contas pendentes
+  - [ ] Lista de parcelas próximas
+- [ ] Criar página `/finance/income`:
+  - [ ] Lista de fontes de renda
+  - [ ] Criar/editar renda
+  - [ ] Marcar como recorrente
+  - [ ] Previsto vs Real
+- [ ] Criar página `/finance/bills`:
+  - [ ] Lista de contas fixas do mês
+  - [ ] Checkbox para marcar como pago
+  - [ ] Filtros: pendentes, pagas, todas
+  - [ ] Criar/editar conta fixa
+  - [ ] Categorias: moradia, serviços, assinatura, outros
+- [ ] Criar página `/finance/expenses`:
+  - [ ] Seção: Variáveis Recorrentes (aparecem todo mês)
+    - [ ] Defaults: Alimentação/Mercado, Transporte/Gasolina, Lazer/Entretenimento
+    - [ ] Previsto vs Real
+  - [ ] Seção: Variáveis Pontuais (só este mês)
+    - [ ] Criar despesa pontual
+  - [ ] Total de variáveis do mês
+- [ ] Criar página `/finance/debts`:
+  - [ ] Lista de dívidas ativas
+  - [ ] Criar/editar dívida
+  - [ ] Visualizar parcelas (X/Y)
+  - [ ] Marcar parcela como paga
+  - [ ] Progresso da dívida (%)
+- [ ] Criar página `/finance/investments`:
+  - [ ] Lista de investimentos
+  - [ ] Criar/editar investimento (nome livre)
+  - [ ] Campos: nome, meta (opcional), valor atual, aporte mensal, prazo (opcional)
+  - [ ] Progresso da meta (%)
+  - [ ] Total investido
+- [ ] Componentes:
+  - [ ] FinanceKPICard (valor + label + ícone)
+  - [ ] BudgetVsRealChart (barras comparativas)
+  - [ ] ExpenseDistributionChart (pizza)
+  - [ ] MonthlyEvolutionChart (linha)
+  - [ ] BillRow (com checkbox de pago)
+  - [ ] DebtCard (com progresso de parcelas)
+  - [ ] InvestmentCard (com progresso de meta)
+  - [ ] MonthSelector (navegação entre meses)
+  - [ ] RecurrenceToggle (marcar como recorrente)
+
+**Testes:**
+- [ ] Testes unitários:
+  - [ ] Cálculo de KPIs
+  - [ ] Geração de recorrências
+  - [ ] Validações de dívida (parcelas)
+  - [ ] Cálculo de progresso de investimento
+- [ ] Testes de integração:
+  - [ ] CRUD de todas as entidades
+  - [ ] Job de recorrência mensal
+  - [ ] Notificações de vencimento
+  - [ ] Tool `get_finance_summary`
+- [ ] Teste E2E: criar conta fixa → marcar como paga → verificar no dashboard
+- [ ] Teste E2E: criar dívida com parcelas → pagar parcela → verificar progresso
+- [ ] Teste E2E: navegar entre meses
+
+**Definition of Done:**
+- [ ] Dashboard Finance exibe KPIs e gráficos
+- [ ] CRUD de rendas funciona
+- [ ] CRUD de contas fixas funciona (com checkbox pago)
+- [ ] CRUD de despesas variáveis funciona (recorrentes + pontuais)
+- [ ] CRUD de dívidas funciona (com controle de parcelas)
+- [ ] CRUD de investimentos funciona (com progresso de meta)
+- [ ] Recorrências automáticas funcionam (job mensal)
+- [ ] Notificações de vencimento enviadas
+- [ ] IA responde sobre finanças via tool
+- [ ] Navegação entre meses funciona
+- [ ] Testes passam
+
+---
+
+## M2.3 — Metas e Hábitos 🔴
+
+**Objetivo:** Implementar sistema de metas e tracking de hábitos.
+
+**Referências:** `docs/specs/system.md` §3.9, `docs/specs/product.md` §6.15
+
+> **Nota:** Este módulo alimenta as áreas "learning" e "spiritual" do Life Balance Score (M2.5).
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `goals`:
+  - [ ] CRUD de metas (título, área, valor alvo, prazo, milestones)
+  - [ ] Calcular progresso
+  - [ ] Notificar em risco/concluída
+- [ ] Criar módulo `habits`:
+  - [ ] CRUD de hábitos (título, frequência, reminder)
+  - [ ] Registrar completion
+  - [ ] Calcular streak
+  - [ ] Implementar grace period (1 dia não quebra streak)
+  - [ ] Implementar freeze (max 3/mês)
+  - [ ] Lembretes em horário configurado
+
+**Frontend:**
+- [ ] Criar página `/goals`:
+  - [ ] Lista de metas com progresso
+  - [ ] Criar/editar meta
+  - [ ] Visualizar milestones
+- [ ] Criar página `/habits`:
+  - [ ] Lista de hábitos com streaks
+  - [ ] Check-in diário
+  - [ ] Calendário de completions
+  - [ ] Freeze button
+- [ ] Componentes:
+  - [ ] GoalProgress (barra de progresso com percentual)
+  - [ ] GoalCard (resumo da meta)
+  - [ ] GoalForm (criar/editar meta)
+  - [ ] MilestoneList (sub-metas)
+  - [ ] HabitCard (com streak e botão de check-in)
+  - [ ] HabitCalendar (visualização mensal de completions)
+  - [ ] StreakBadge (número + fogo emoji)
+  - [ ] FreezeButton (com contador de freezes restantes)
+  - [ ] HabitForm (criar/editar hábito)
+
+**Testes:**
+- [ ] Testes unitários:
+  - [ ] Cálculo de progresso de meta
+  - [ ] Cálculo de streak (considerando grace period)
+  - [ ] Lógica de freeze (max 3/mês)
+  - [ ] Validação de frequência de hábito
+- [ ] Testes de integração:
+  - [ ] CRUD de metas via API
+  - [ ] CRUD de hábitos via API
+  - [ ] Check-in de hábito
+  - [ ] Notificação de meta em risco
+- [ ] Teste E2E: criar meta → atualizar progresso → completar
+- [ ] Teste E2E: criar hábito → check-in diário → verificar streak
+- [ ] Teste E2E: usar freeze e verificar contador
+
+**Definition of Done:**
+- [ ] CRUD de metas funciona
+- [ ] Progresso calculado automaticamente
+- [ ] Hábitos com streak funcionam
+- [ ] Grace period funciona
+- [ ] Freeze funciona (max 3/mês)
+- [ ] Lembretes enviados
+- [ ] Testes passam
+
+---
+
+## M2.4 — Pessoas (CRM Pessoal) 🔴
+
+**Objetivo:** Implementar gerenciamento de relacionamentos pessoais.
+
+**Referências:** `docs/specs/system.md` §3.7, `docs/specs/product.md` §6.6
+
+> **Nota:** Este módulo alimenta a área "relationships" do Life Balance Score (M2.5).
+
+**Tasks:**
+
+**Backend:**
+- [ ] Criar módulo `people`:
+  - [ ] CRUD de pessoas
+  - [ ] Registrar interações
+  - [ ] Lembretes de aniversário
+  - [ ] Lembretes de tempo sem contato
+  - [ ] Sugestão de presentes (via IA)
+- [ ] Vincular pessoas a notas
+
+**Frontend:**
+- [ ] Criar página `/people`:
+  - [ ] Lista de pessoas com busca/filtros (por grupo, última interação)
+  - [ ] Criar/editar pessoa
+  - [ ] Visualizar pessoa com histórico completo
+- [ ] Criar página `/people/[id]`:
+  - [ ] Informações da pessoa
+  - [ ] Timeline de interações
+  - [ ] Notas vinculadas
+  - [ ] Histórico de presentes
+- [ ] Componentes:
+  - [ ] PersonCard (avatar, nome, relacionamento, última interação)
+  - [ ] PersonForm (criar/editar pessoa)
+  - [ ] InteractionTimeline (lista cronológica)
+  - [ ] InteractionForm (registrar nova interação)
+  - [ ] BirthdayReminder (card de aniversários próximos)
+  - [ ] GiftSuggestions (sugestões da IA)
+  - [ ] GiftHistory (presentes dados/recebidos)
+  - [ ] PersonGroups (tags: família, trabalho, amigos, etc.)
+  - [ ] ContactSuggestion (alerta de tempo sem contato)
+
+**Testes:**
+- [ ] Testes de integração:
+  - [ ] CRUD de pessoas via API
+  - [ ] Registro de interações
+  - [ ] Lembretes de aniversário (job)
+  - [ ] Lembretes de tempo sem contato (job)
+  - [ ] Vínculo com notas
+- [ ] Testes unitários:
+  - [ ] Cálculo de tempo sem contato
+  - [ ] Validação de dados da pessoa
+- [ ] Teste E2E: criar pessoa → registrar interação → ver na timeline
+- [ ] Teste E2E: verificar lembrete de aniversário próximo
+
+**Definition of Done:**
+- [ ] CRUD funciona
+- [ ] Interações registradas
+- [ ] Lembretes de aniversário funcionam
+- [ ] Lembretes de contato funcionam
+- [ ] Vínculo com notas funciona
+- [ ] Testes passam
+
+---
+
+## M2.5 — Life Balance Score + Trends Analysis 🔴
 
 **Objetivo:** Implementar cálculo do Life Balance Score e análise de tendências/correlações entre métricas.
 
 **Referências:** `docs/specs/system.md` §3.4, `docs/specs/ai.md` §6.2
+
+**Pré-requisitos:** M2.1 (Tracking), M2.2 (Finance), M2.3 (Hábitos), M2.4 (CRM)
+
+> **Nota:** Life Balance Score calcula scores para 6 áreas. Fontes de dados:
+> - **health** (physical, mental, leisure): M2.1 Tracking
+> - **finance** (budget, savings, debts, investments): M2.2 Finance
+> - **learning** (formal, informal): M2.3 Hábitos
+> - **spiritual** (practice, community): M2.3 Hábitos
+> - **relationships** (family, romantic, social): M2.4 CRM Pessoas
+> - **professional** (career, business): Retorna 50 (neutro) - ver TBD-207
 
 **Tasks:**
 
@@ -325,11 +594,13 @@ _Testes E2E (6 tasks):_
 
 ---
 
-## M2.3 — Dashboard Principal 🔴
+## M2.6 — Dashboard Principal 🔴
 
 **Objetivo:** Implementar dashboard com visão geral da vida do usuário.
 
 **Referências:** `docs/specs/product.md` §6.14
+
+**Pré-requisitos:** M2.5 (Life Balance Score)
 
 **Tasks:**
 
@@ -375,79 +646,13 @@ _Testes E2E (6 tasks):_
 
 ---
 
-## M2.4 — Metas e Hábitos 🔴
-
-**Objetivo:** Implementar sistema de metas e tracking de hábitos.
-
-**Referências:** `docs/specs/system.md` §3.9, `docs/specs/product.md` §6.15
-
-**Tasks:**
-
-**Backend:**
-- [ ] Criar módulo `goals`:
-  - [ ] CRUD de metas (título, área, valor alvo, prazo, milestones)
-  - [ ] Calcular progresso
-  - [ ] Notificar em risco/concluída
-- [ ] Criar módulo `habits`:
-  - [ ] CRUD de hábitos (título, frequência, reminder)
-  - [ ] Registrar completion
-  - [ ] Calcular streak
-  - [ ] Implementar grace period (1 dia não quebra streak)
-  - [ ] Implementar freeze (max 3/mês)
-  - [ ] Lembretes em horário configurado
-
-**Frontend:**
-- [ ] Criar página `/goals`:
-  - [ ] Lista de metas com progresso
-  - [ ] Criar/editar meta
-  - [ ] Visualizar milestones
-- [ ] Criar página `/habits`:
-  - [ ] Lista de hábitos com streaks
-  - [ ] Check-in diário
-  - [ ] Calendário de completions
-  - [ ] Freeze button
-- [ ] Componentes:
-  - [ ] GoalProgress (barra de progresso com percentual)
-  - [ ] GoalCard (resumo da meta)
-  - [ ] GoalForm (criar/editar meta)
-  - [ ] MilestoneList (sub-metas)
-  - [ ] HabitCard (com streak e botão de check-in)
-  - [ ] HabitCalendar (visualização mensal de completions)
-  - [ ] StreakBadge (número + fogo emoji)
-  - [ ] FreezeButton (com contador de freezes restantes)
-  - [ ] HabitForm (criar/editar hábito)
-
-**Testes:**
-- [ ] Testes unitários:
-  - [ ] Cálculo de progresso de meta
-  - [ ] Cálculo de streak (considerando grace period)
-  - [ ] Lógica de freeze (max 3/mês)
-  - [ ] Validação de frequência de hábito
-- [ ] Testes de integração:
-  - [ ] CRUD de metas via API
-  - [ ] CRUD de hábitos via API
-  - [ ] Check-in de hábito
-  - [ ] Notificação de meta em risco
-- [ ] Teste E2E: criar meta → atualizar progresso → completar
-- [ ] Teste E2E: criar hábito → check-in diário → verificar streak
-- [ ] Teste E2E: usar freeze e verificar contador
-
-**Definition of Done:**
-- [ ] CRUD de metas funciona
-- [ ] Progresso calculado automaticamente
-- [ ] Hábitos com streak funcionam
-- [ ] Grace period funciona
-- [ ] Freeze funciona (max 3/mês)
-- [ ] Lembretes enviados
-- [ ] Testes passam
-
----
-
-## M2.5 — Relatórios 🔴
+## M2.7 — Relatórios 🔴
 
 **Objetivo:** Implementar geração de relatórios periódicos.
 
 **Referências:** `docs/specs/system.md` §3.10, `docs/specs/ai.md` §7.1, §7.2
+
+**Pré-requisitos:** M2.5 (Life Balance Score), M2.6 (Dashboard)
 
 **Tasks:**
 
@@ -498,128 +703,4 @@ _Testes E2E (6 tasks):_
 - [ ] Monthly report gerado no primeiro dia do mês
 - [ ] Relatórios podem ser visualizados e exportados
 - [ ] Horários configuráveis
-- [ ] Testes passam
-
----
-
-## M2.6 — Módulo: Finance 🔴
-
-**Objetivo:** Implementar planejamento financeiro mensal de alto nível (controle pessoal, não micro-tracking de gastos).
-
-**Filosofia:** Baixo atrito. Usuário cadastra orçamento no início do mês e marca contas como pagas ao longo do mês.
-
-**Referências:** `docs/specs/system.md` §3.3 (Tracking), `docs/specs/data-model.md` §4.13 (Budgets)
-
-**Tasks:**
-
-**Backend:**
-- [ ] Criar módulo `finance`:
-  - [ ] `FinanceController` - CRUD de todas as entidades
-  - [ ] `IncomeService` - gerenciar rendas
-  - [ ] `BillService` - gerenciar contas fixas
-  - [ ] `ExpenseService` - gerenciar despesas variáveis
-  - [ ] `DebtService` - gerenciar dívidas com parcelas
-  - [ ] `InvestmentService` - gerenciar investimentos
-  - [ ] `FinanceSummaryUseCase` - calcular KPIs do dashboard
-- [ ] Criar tabelas (migrations):
-  - [ ] `incomes` - fontes de renda (nome, previsto, real, recorrente)
-  - [ ] `bills` - contas fixas (nome, valor, vencimento, status, categoria, recorrente)
-  - [ ] `variable_expenses` - despesas variáveis (nome, previsto, real, recorrente, mês/ano)
-  - [ ] `debts` - dívidas (nome, total, parcelas, valor_parcela, parcela_atual, vencimento)
-  - [ ] `investments` - investimentos (nome, meta, atual, aporte_mensal, prazo)
-- [ ] Implementar recorrências automáticas:
-  - [ ] Job mensal para gerar registros de contas fixas recorrentes
-  - [ ] Job mensal para gerar registros de despesas variáveis recorrentes
-  - [ ] Status inicial: `pending` (a ser marcado como `paid`)
-- [ ] Implementar cálculos de KPIs:
-  - [ ] Renda do mês (soma das rendas reais)
-  - [ ] Total orçado (soma de todos os blocos)
-  - [ ] Total gasto (fixas pagas + variáveis reais + parcelas)
-  - [ ] Saldo (renda - gasto)
-  - [ ] Total investido (soma dos investimentos atuais)
-- [ ] Implementar tool `get_finance_summary` para IA:
-  - [ ] Retorna KPIs, contas pendentes, parcelas próximas
-  - [ ] Permite IA responder "como estão minhas finanças?"
-- [ ] Implementar notificações:
-  - [ ] Início do mês: "Configure seu orçamento de [mês]"
-  - [ ] Conta próxima do vencimento (3 dias antes)
-  - [ ] Assinatura renovando (3 dias antes)
-  - [ ] Parcela de dívida vencendo (3 dias antes)
-  - [ ] Fim do mês: Resumo financeiro
-
-**Frontend:**
-- [ ] Criar página `/finance` (dashboard):
-  - [ ] KPIs em cards (Renda, Orçado, Gasto, Saldo, Investido)
-  - [ ] Gráfico: Orçamento x Real (barras por categoria)
-  - [ ] Gráfico: Distribuição de gastos (pizza)
-  - [ ] Gráfico: Evolução mensal (últimos 6-12 meses)
-  - [ ] Lista de contas pendentes
-  - [ ] Lista de parcelas próximas
-- [ ] Criar página `/finance/income`:
-  - [ ] Lista de fontes de renda
-  - [ ] Criar/editar renda
-  - [ ] Marcar como recorrente
-  - [ ] Previsto vs Real
-- [ ] Criar página `/finance/bills`:
-  - [ ] Lista de contas fixas do mês
-  - [ ] Checkbox para marcar como pago
-  - [ ] Filtros: pendentes, pagas, todas
-  - [ ] Criar/editar conta fixa
-  - [ ] Categorias: moradia, serviços, assinatura, outros
-- [ ] Criar página `/finance/expenses`:
-  - [ ] Seção: Variáveis Recorrentes (aparecem todo mês)
-    - [ ] Defaults: Alimentação/Mercado, Transporte/Gasolina, Lazer/Entretenimento
-    - [ ] Previsto vs Real
-  - [ ] Seção: Variáveis Pontuais (só este mês)
-    - [ ] Criar despesa pontual
-  - [ ] Total de variáveis do mês
-- [ ] Criar página `/finance/debts`:
-  - [ ] Lista de dívidas ativas
-  - [ ] Criar/editar dívida
-  - [ ] Visualizar parcelas (X/Y)
-  - [ ] Marcar parcela como paga
-  - [ ] Progresso da dívida (%)
-- [ ] Criar página `/finance/investments`:
-  - [ ] Lista de investimentos
-  - [ ] Criar/editar investimento (nome livre)
-  - [ ] Campos: nome, meta (opcional), valor atual, aporte mensal, prazo (opcional)
-  - [ ] Progresso da meta (%)
-  - [ ] Total investido
-- [ ] Componentes:
-  - [ ] FinanceKPICard (valor + label + ícone)
-  - [ ] BudgetVsRealChart (barras comparativas)
-  - [ ] ExpenseDistributionChart (pizza)
-  - [ ] MonthlyEvolutionChart (linha)
-  - [ ] BillRow (com checkbox de pago)
-  - [ ] DebtCard (com progresso de parcelas)
-  - [ ] InvestmentCard (com progresso de meta)
-  - [ ] MonthSelector (navegação entre meses)
-  - [ ] RecurrenceToggle (marcar como recorrente)
-
-**Testes:**
-- [ ] Testes unitários:
-  - [ ] Cálculo de KPIs
-  - [ ] Geração de recorrências
-  - [ ] Validações de dívida (parcelas)
-  - [ ] Cálculo de progresso de investimento
-- [ ] Testes de integração:
-  - [ ] CRUD de todas as entidades
-  - [ ] Job de recorrência mensal
-  - [ ] Notificações de vencimento
-  - [ ] Tool `get_finance_summary`
-- [ ] Teste E2E: criar conta fixa → marcar como paga → verificar no dashboard
-- [ ] Teste E2E: criar dívida com parcelas → pagar parcela → verificar progresso
-- [ ] Teste E2E: navegar entre meses
-
-**Definition of Done:**
-- [ ] Dashboard Finance exibe KPIs e gráficos
-- [ ] CRUD de rendas funciona
-- [ ] CRUD de contas fixas funciona (com checkbox pago)
-- [ ] CRUD de despesas variáveis funciona (recorrentes + pontuais)
-- [ ] CRUD de dívidas funciona (com controle de parcelas)
-- [ ] CRUD de investimentos funciona (com progresso de meta)
-- [ ] Recorrências automáticas funcionam (job mensal)
-- [ ] Notificações de vencimento enviadas
-- [ ] IA responde sobre finanças via tool
-- [ ] Navegação entre meses funciona
 - [ ] Testes passam

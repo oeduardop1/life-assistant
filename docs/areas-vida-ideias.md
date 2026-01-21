@@ -5,6 +5,9 @@
 >
 > **NOTA:** Este arquivo contém apenas ideias e sugestões geradas durante análise.
 > Nada aqui é definitivo — será avaliado posteriormente para decidir o que faz sentido implementar ou melhorar.
+>
+> **⚠️ NUMERAÇÃO DESATUALIZADA:** Os milestones foram reordenados em 21/01/2026.
+> Ver `docs/milestones/phase-2-tracker.md` para numeração atual (M2.2=Finance, M2.4=CRM, etc).
 
 ---
 

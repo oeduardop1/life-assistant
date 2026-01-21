@@ -252,7 +252,7 @@ O usuário pode ajustar a importância de cada área para seu contexto. Os pesos
 | **Memória** | O que a IA sabe sobre você (fatos, preferências, insights) |
 | **Áreas** | Dashboard detalhado por área da vida |
 | **Tracking** | Registro manual e visualização de métricas |
-| **Decisões** | Histórico de decisões importantes com follow-up e aprendizados (M3.8) |
+| **Decisões** | Histórico de decisões importantes com follow-up e aprendizados (M1.11 + M3.7) |
 | **Pessoas** | CRM pessoal (contatos, relacionamentos) |
 | **Vault** | Informações pessoais seguras |
 | **Relatórios** | Semanais, mensais, trimestrais, anuais |
@@ -491,7 +491,7 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 - Gatilhos identificados pela IA via conversas
 - Registro de sessões de terapia
 
-### 6.7 Módulo: Financeiro (M2.6)
+### 6.7 Módulo: Financeiro (M2.2)
 
 > **Filosofia:** Planejamento financeiro mensal com baixo atrito. Usuário define orçamento no início do mês e marca contas como pagas ao longo do período. Não é micro-tracking de gastos diários.
 
@@ -550,7 +550,7 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 - Dia 1 do mês: "Configure seu orçamento de [mês]"
 - Último dia: "Resumo de [mês]: Gastou R$ X de R$ Y"
 
-**Funcionalidades Futuras (não implementadas em M2.6):**
+**Funcionalidades Futuras (não implementadas em M2.2):**
 - Patrimônio líquido (ativos - passivos)
 - Integração bancária (Open Finance)
 - Carteira de investimentos com rentabilidade
@@ -606,7 +606,7 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 | Versículos importantes | Salvos com contexto |
 | Frequência na igreja | Registro quando mencionado |
 | Participação em grupos | Célula, ministério, etc. |
-| Dízimos e ofertas | Via M2.6 Finance |
+| Dízimos e ofertas | Via M2.2 Finance |
 | Reflexões espirituais | Notas de quiet time (armazenadas na Memória) |
 | Orações | Pedidos e respostas |
 | Jejum | Registro de períodos (quando mencionado) |
@@ -733,8 +733,8 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 
 ### 6.18 Módulo: Decisões (ADR-016)
 
-> **Milestone:** M3.8 Decision Support Framework
-> **Dependências:** M1.3 (Knowledge Items), M1.7 (Perspectiva Cristã), M3.5 (Alertas)
+> **Milestone:** M1.11 Decision Support Core + M3.7 Decision Follow-up
+> **Dependências:** M1.3 (Knowledge Items), M1.7 (Perspectiva Cristã), M3.4 (Notificações)
 
 | Feature | Descrição |
 |---------|-----------|
@@ -785,7 +785,7 @@ draft → analyzing → ready → decided → [postponed|canceled] → reviewed
 
 ### 7.2 Jornada: Dia Típico
 
-> **Nota (ADR-015):** Esta jornada reflete a filosofia de baixo atrito. Tracking via conversa sempre pede confirmação. Finanças são gerenciadas via M2.6 (planejamento mensal), não micro-tracking de gastos.
+> **Nota (ADR-015):** Esta jornada reflete a filosofia de baixo atrito. Tracking via conversa sempre pede confirmação. Finanças são gerenciadas via M2.2 (planejamento mensal), não micro-tracking de gastos.
 
 ```
 MANHÃ (Telegram/WhatsApp)
@@ -811,7 +811,7 @@ DURANTE O DIA (Telegram)
 
 12:00 - "O almoço estava ótimo hoje, fui naquele restaurante novo"
         → IA registra na Memória (contexto), NÃO como tracking financeiro
-        → Finanças são gerenciadas via M2.6 (planejamento mensal)
+        → Finanças são gerenciadas via M2.2 (planejamento mensal)
 
 14:00 - "Marca revisão do carro pra próxima segunda 9h"
         → "Agendado: Revisão do carro - Segunda, 13/01 às 9h"
@@ -977,7 +977,7 @@ SCORE GERAL: 7.4/10 (↑ +0.3 vs semana anterior)
 
 POR ÁREA:
 💪 Saúde:        7.8 ↑  Treinou 4x (registrado via conversa)
-💰 Financeiro:   7.0 ↓  Orçamento 85% utilizado (M2.6)
+💰 Financeiro:   7.0 ↓  Orçamento 85% utilizado (M2.2)
 🏢 Profissional: 8.2 ↑  Mencionou reunião produtiva
 👨‍👩‍👧 Familiar:     --  --  Sem métricas registradas
 ⛪ Espiritual:   8.0 ↑  3 devocionais registrados
@@ -1176,4 +1176,4 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 ---
 
 *Última atualização: 19 Janeiro 2026*
-*Revisão: Documentado Sistema de Decisões como M3.8 Decision Support Framework (ADR-016). Tabelas existentes no banco serão ativadas com schema TypeScript, tools, e frontend.*
+*Revisão: Documentado Sistema de Decisões como M1.11 Decision Support Core + M3.7 Decision Follow-up (ADR-016). Tabelas existentes no banco serão ativadas com schema TypeScript, tools, e frontend.*

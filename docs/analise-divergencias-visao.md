@@ -5,6 +5,9 @@
 > Este documento foi escrito antes do **ADR-017** que reestruturou as áreas de vida de 8 para 6.
 > Referências a "8 áreas", "personal_growth", "mental_health", "financial", "career" como áreas principais estão desatualizadas.
 > Ver `docs/adr/ADR-017-life-areas-restructuring.md` para a estrutura atual.
+>
+> **⚠️ NUMERAÇÃO DE MILESTONES DESATUALIZADA:** Os milestones foram reordenados em 21/01/2026.
+> Ver `docs/milestones/` para numeração atual (M2.2=Finance, M2.4=CRM, M2.5=Life Balance, M3.4=Notificações, etc).
 
 > **Data:** 2026-01-19
 > **Propósito:** Análise de divergências entre a visão do produto e o estado atual das documentações

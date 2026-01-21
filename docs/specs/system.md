@@ -146,7 +146,7 @@ Registro de decisão importante para acompanhamento.
 | Água | Não definida | ✅ Sim | ❌ Não |
 | Sono | Não definida | ✅ Sim | ❌ Não |
 | Exercício | Não definido | ✅ Sim | ❌ Não |
-| Budget mensal | Não definido (via M2.6) | ✅ Sim | ❌ Não |
+| Budget mensal | Não definido (via M2.2) | ✅ Sim | ❌ Não |
 
 ### 2.4 Notificações
 
@@ -1075,7 +1075,7 @@ Que tal uma caminhada de 20min?
 
 ---
 
-### 3.11 Módulo Finance (M2.6)
+### 3.11 Módulo Finance (M2.2)
 
 **O que é:** Planejamento financeiro mensal de alto nível — controle pessoal, não micro-tracking de gastos.
 
@@ -1239,7 +1239,7 @@ Que tal uma caminhada de 20min?
 
 ### 3.12 Decisões (ADR-016)
 
-> **Milestone:** M3.8 Decision Support Framework
+> **Milestone:** M1.11 Decision Support Core + M3.7 Decision Follow-up
 
 #### Entidades
 
@@ -1298,7 +1298,7 @@ reviewed    → Follow-up concluído com avaliação
 | **Soft delete** | Decisões são soft-deleted (mantidas para learning) |
 | **Decisões triviais** | IA não deve oferecer salvar decisões do dia-a-dia |
 
-#### Critérios de Aceite (M3.8)
+#### Critérios de Aceite (M1.11 + M3.7)
 
 - [ ] Tool `save_decision` implementada com confirmação
 - [ ] CRUD de decisões via API e frontend
@@ -1759,7 +1759,7 @@ Comportamento similar ao Telegram.
 - [ ] Quiet hours
 - [ ] Preferências
 
-### 8.11 Finance (M2.6)
+### 8.11 Finance (M2.2)
 
 - [ ] CRUD de Rendas (incomes)
 - [ ] CRUD de Contas Fixas (bills)
@@ -1800,4 +1800,4 @@ Comportamento similar ao Telegram.
 ---
 
 *Última atualização: 19 Janeiro 2026*
-*Revisão: Adicionado Módulo Finance (M2.6) - seção 3.11 com regras de negócio para rendas, contas fixas, despesas variáveis, dívidas e investimentos*
+*Revisão: Adicionado Módulo Finance (M2.2) - seção 3.11 com regras de negócio para rendas, contas fixas, despesas variáveis, dívidas e investimentos*

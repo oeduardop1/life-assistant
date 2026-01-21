@@ -513,7 +513,7 @@ CREATE TYPE consolidation_status AS ENUM (
 );
 
 -- ============================================
--- FINANCE MODULE (M2.6)
+-- FINANCE MODULE (M2.2)
 -- ============================================
 
 -- Status de conta fixa
@@ -681,7 +681,7 @@ export const consolidationStatusEnum = pgEnum('consolidation_status', [
 ]);
 
 // ============================================
-// FINANCE MODULE (M2.6)
+// FINANCE MODULE (M2.2)
 // ============================================
 
 export const billStatusEnum = pgEnum('bill_status', [
@@ -1757,7 +1757,7 @@ export type Budget = typeof budgets.$inferSelect;
 export type NewBudget = typeof budgets.$inferInsert;
 ```
 
-### 4.14 Finance Module (M2.6)
+### 4.14 Finance Module (M2.2)
 
 > **Módulo Finance:** Planejamento financeiro mensal de alto nível.
 > Filosofia: baixo atrito — usuário cadastra orçamento no início do mês e marca contas como pagas ao longo do mês.
@@ -2190,11 +2190,11 @@ export type NewAuditLog = typeof auditLogs.$inferInsert;
 
 ### 4.18 Decisions (ADR-016)
 
-> **Nota:** Tabelas já existem no banco (M0.4) mas schema TypeScript será criado em M3.8.
+> **Nota:** Tabelas já existem no banco (M0.4) mas schema TypeScript será criado em M1.11.
 > Ver ADR-016 para arquitetura completa de suporte a decisões.
 
 ```typescript
-// packages/database/src/schema/decisions.ts (M3.8)
+// packages/database/src/schema/decisions.ts (M1.11)
 
 import { pgTable, uuid, varchar, text, timestamp, jsonb, index, integer, pgEnum, decimal } from 'drizzle-orm/pg-core';
 import { users } from './users';
@@ -2452,7 +2452,7 @@ ALTER TABLE habit_freezes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE knowledge_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memory_consolidations ENABLE ROW LEVEL SECURITY;
--- Finance Module (M2.6)
+-- Finance Module (M2.2)
 ALTER TABLE incomes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE variable_expenses ENABLE ROW LEVEL SECURITY;
@@ -2549,7 +2549,7 @@ CREATE POLICY "Users can only access own knowledge_items" ON knowledge_items
 CREATE POLICY "Users can only access own memory_consolidations" ON memory_consolidations
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
--- Finance Module (M2.6)
+-- Finance Module (M2.2)
 CREATE POLICY "Users can only access own incomes" ON incomes
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
@@ -2632,7 +2632,7 @@ CREATE TRIGGER update_knowledge_items_updated_at
   BEFORE UPDATE ON knowledge_items
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- Finance Module (M2.6)
+-- Finance Module (M2.2)
 CREATE TRIGGER update_incomes_updated_at
   BEFORE UPDATE ON incomes
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -2899,7 +2899,7 @@ seed().catch(console.error);
 | `user_memories` | Contexto compacto do usuário (~500-800 tokens) | ✅ |
 | `knowledge_items` | Fatos, preferências, insights do usuário | ✅ |
 | `memory_consolidations` | Log de consolidações de memória | ✅ |
-| **Finance Module (M2.6)** | | |
+| **Finance Module (M2.2)** | | |
 | `incomes` | Rendas mensais (salário, freelance, passiva) | ✅ |
 | `bills` | Contas fixas com vencimento (aluguel, luz, assinaturas) | ✅ |
 | `variable_expenses` | Despesas variáveis planejadas (alimentação, lazer) | ✅ |
@@ -2940,7 +2940,7 @@ packages/database/
 │   │   ├── habit-freezes.ts  # Congelamento de streaks
 │   │   ├── memory.ts         # user_memories, knowledge_items, memory_consolidations (ADR-012)
 │   │   ├── audit.ts
-│   │   └── finance/          # Finance Module (M2.6)
+│   │   └── finance/          # Finance Module (M2.2)
 │   │       ├── index.ts      # Export all finance tables
 │   │       ├── incomes.ts
 │   │       ├── bills.ts
@@ -2993,4 +2993,4 @@ pnpm drizzle-kit studio
 ---
 
 *Última atualização: 19 Janeiro 2026*
-*Revisão: Adicionado Finance Module (M2.6) com 5 novas tabelas (incomes, bills, variable_expenses, debts, investments) e 6 novos enums. Total: 31 tabelas.*
+*Revisão: Adicionado Finance Module (M2.2) com 5 novas tabelas (incomes, bills, variable_expenses, debts, investments) e 6 novos enums. Total: 31 tabelas.*

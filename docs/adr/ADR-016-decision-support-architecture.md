@@ -49,7 +49,7 @@ Estas tabelas foram criadas durante M0.4 (Database Foundation) mas o código de 
 
 ## Decision
 
-Ativar e implementar o **Sistema de Suporte a Decisões** completo como M3.8, utilizando as tabelas existentes e adicionando:
+Ativar e implementar o **Sistema de Suporte a Decisões** como M1.11 (core) + M3.7 (follow-up), utilizando as tabelas existentes e adicionando:
 
 ### 1. Tool `save_decision`
 
@@ -177,17 +177,18 @@ Quando identificar que o usuário tomou uma decisão importante:
 
 ## Implementation Notes
 
-### Milestone M3.8 — Decision Support Framework
+### Milestone M1.11 — Decision Support Core + M3.7 — Decision Follow-up
 
 | Sub-milestone | Escopo | Estimativa |
 |---------------|--------|------------|
-| M3.8.1 | Histórico de Decisões (schema, services, tool) | 20-30h |
-| M3.8.2 | Modelagem de Cenários | 30-40h |
-| M3.8.3 | Learning Loop (memory consolidation) | 35-45h |
-| M3.8.4 | Follow-ups Pós-Decisão (job, notifications) | 25-35h |
-| M3.8.5 | Detecção Proativa (identificar decisões em conversa) | 10-15h |
+| M1.11.1 | Histórico de Decisões (schema, services, tool) | 20-30h |
+| M1.11.2 | Modelagem de Cenários | 30-40h |
+| M1.11.3 | Learning Loop (memory consolidation) | 35-45h |
+| M3.7 | Follow-ups Pós-Decisão (job, notifications) | 25-35h |
+| M1.11.4 | Detecção Proativa (identificar decisões em conversa) | 10-15h |
 
-**Início sugerido**: M3.8.1 (Histórico de Decisões) — base para todos os outros.
+**Início sugerido**: M1.11.1 (Histórico de Decisões) — base para todos os outros.
+**Nota**: M3.7 depende de M3.4 (Notificações Proativas).
 
 ### Documentos Atualizados
 

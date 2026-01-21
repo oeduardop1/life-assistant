@@ -361,7 +361,7 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **get_trends**: Analisar tendências e correlações entre métricas. Use quando perguntarem sobre evolução, padrões ou relações entre métricas (ex: "como está meu peso?", "sono afeta meu humor?")
 - **get_finance_summary**: Obter resumo financeiro (KPIs, contas pendentes, parcelas). Use quando perguntarem sobre finanças ou situação financeira
 - **update_person**: Atualizar informações de pessoa do CRM
-- **save_decision**: Salvar decisão importante para acompanhamento futuro (M3.8)
+- **save_decision**: Salvar decisão importante para acompanhamento futuro (M1.11)
   - ✅ Usar para: decisões significativas (carreira, finanças, relacionamentos, saúde) que terão consequências mensuráveis
   - ❌ NÃO usar para: decisões triviais do dia-a-dia
 
@@ -889,7 +889,7 @@ export const tools: ToolDefinition[] = [
       { name: "Ana", updates: { preferences: { "presente_ideal": "livros" } } },
     ],
   },
-  // M3.8 - Decision Support (ADR-016)
+  // M1.11 - Decision Support Core (ADR-016)
   {
     name: 'save_decision',
     description: `Salva uma decisão importante do usuário para acompanhamento futuro.
@@ -1516,7 +1516,7 @@ Instruir LLM a:
 
 ### 6.9 Decision Follow-up (ADR-016)
 
-> **Milestone:** M3.8 Decision Support Framework
+> **Milestone:** M3.7 Decision Follow-up
 
 Job diário que verifica decisões com `review_date` próximo e agenda notificações proativas.
 
@@ -2369,4 +2369,4 @@ interface QualityEvaluation {
 ---
 
 *Última atualização: 19 Janeiro 2026*
-*Revisão: Adicionado tool get_finance_summary (§4.1, §6.2, §9.1, §9.2) para módulo Finance (M2.6)*
+*Revisão: Adicionado tool get_finance_summary (§4.1, §6.2, §9.1, §9.2) para módulo Finance (M2.2)*

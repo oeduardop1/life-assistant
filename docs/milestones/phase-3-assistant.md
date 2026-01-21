@@ -185,68 +185,7 @@
 
 ---
 
-## M3.4 — Pessoas (CRM Pessoal) 🔴
-
-**Objetivo:** Implementar gerenciamento de relacionamentos pessoais.
-
-**Referências:** `docs/specs/system.md` §3.7, `docs/specs/product.md` §6.6
-
-**Tasks:**
-
-**Backend:**
-- [ ] Criar módulo `people`:
-  - [ ] CRUD de pessoas
-  - [ ] Registrar interações
-  - [ ] Lembretes de aniversário
-  - [ ] Lembretes de tempo sem contato
-  - [ ] Sugestão de presentes (via IA)
-- [ ] Vincular pessoas a notas
-
-**Frontend:**
-- [ ] Criar página `/people`:
-  - [ ] Lista de pessoas com busca/filtros (por grupo, última interação)
-  - [ ] Criar/editar pessoa
-  - [ ] Visualizar pessoa com histórico completo
-- [ ] Criar página `/people/[id]`:
-  - [ ] Informações da pessoa
-  - [ ] Timeline de interações
-  - [ ] Notas vinculadas
-  - [ ] Histórico de presentes
-- [ ] Componentes:
-  - [ ] PersonCard (avatar, nome, relacionamento, última interação)
-  - [ ] PersonForm (criar/editar pessoa)
-  - [ ] InteractionTimeline (lista cronológica)
-  - [ ] InteractionForm (registrar nova interação)
-  - [ ] BirthdayReminder (card de aniversários próximos)
-  - [ ] GiftSuggestions (sugestões da IA)
-  - [ ] GiftHistory (presentes dados/recebidos)
-  - [ ] PersonGroups (tags: família, trabalho, amigos, etc.)
-  - [ ] ContactSuggestion (alerta de tempo sem contato)
-
-**Testes:**
-- [ ] Testes de integração:
-  - [ ] CRUD de pessoas via API
-  - [ ] Registro de interações
-  - [ ] Lembretes de aniversário (job)
-  - [ ] Lembretes de tempo sem contato (job)
-  - [ ] Vínculo com notas
-- [ ] Testes unitários:
-  - [ ] Cálculo de tempo sem contato
-  - [ ] Validação de dados da pessoa
-- [ ] Teste E2E: criar pessoa → registrar interação → ver na timeline
-- [ ] Teste E2E: verificar lembrete de aniversário próximo
-
-**Definition of Done:**
-- [ ] CRUD funciona
-- [ ] Interações registradas
-- [ ] Lembretes de aniversário funcionam
-- [ ] Lembretes de contato funcionam
-- [ ] Vínculo com notas funciona
-- [ ] Testes passam
-
----
-
-## M3.5 — Notificações Proativas 🔴
+## M3.4 — Notificações Proativas 🔴
 
 **Objetivo:** Implementar sistema de notificações e check-ins proativos.
 
@@ -347,7 +286,7 @@
 
 ---
 
-## M3.6 — Stripe (Pagamentos) 🔴
+## M3.5 — Stripe (Pagamentos) 🔴
 
 **Objetivo:** Implementar sistema de assinaturas e pagamentos.
 
@@ -404,7 +343,7 @@
 
 ---
 
-## M3.7 — Storage (Cloudflare R2) 🔴
+## M3.6 — Storage (Cloudflare R2) 🔴
 
 **Objetivo:** Implementar upload e armazenamento de arquivos.
 
@@ -461,120 +400,54 @@
 
 ---
 
-## M3.8 — Decision Support Framework 🔴
+## M3.7 — Decision Follow-up 🔴
 
-**Objetivo:** Implementar sistema completo de suporte a decisões com persistência, follow-up e learning loop.
+**Objetivo:** Implementar job de follow-up para decisões, estendendo M1.11 (Decision Support Core).
 
-**Referências:** `docs/adr/ADR-016-decision-support-architecture.md`, `docs/specs/product.md` §6.18, `docs/specs/system.md` §3.12, `docs/specs/ai.md` §6.9
+**Referências:** `docs/adr/ADR-016-decision-support-architecture.md`, `docs/specs/system.md` §3.12
 
-**Pré-requisitos:** M1.3 (Knowledge Items), M1.7 (Perspectiva Cristã), M3.5 (Notificações Proativas)
+**Pré-requisitos:** M1.11 (Decision Support Core), M3.4 (Notificações Proativas)
 
-> **Nota:** Tabelas `decisions`, `decision_options`, `decision_criteria`, `decision_scores` já existem no banco (M0.4).
-> Este milestone cria o schema TypeScript e implementa a lógica completa.
+> **Nota:** O core do Decision Support (schema, CRUD, tool, UI) é implementado em M1.11.
+> Este milestone adiciona apenas o follow-up job e notificações proativas de revisão.
 
 **Tasks:**
 
-**Database Schema:**
-- [ ] Criar `packages/database/src/schema/decisions.ts`:
-  - [ ] Schema para `decisions` com relações
-  - [ ] Schema para `decision_options`
-  - [ ] Schema para `decision_criteria`
-  - [ ] Schema para `decision_scores`
-  - [ ] Enum `decision_status`
-  - [ ] Types inferidos (Decision, NewDecision, etc.)
-- [ ] Exportar schemas em `packages/database/src/schema/index.ts`
-
-**Backend Services:**
-- [ ] Criar `DecisionRepository`:
-  - [ ] `create(data)` - criar decisão
-  - [ ] `findById(id)` - buscar por ID
-  - [ ] `findByUser(userId, filters)` - listar do usuário
-  - [ ] `findDueForReview(userId)` - buscar pendentes de follow-up
-  - [ ] `update(id, data)` - atualizar
-  - [ ] `softDelete(id)` - soft delete
-- [ ] Criar `DecisionService`:
-  - [ ] `createFromChat(userId, data)` - criar via tool
-  - [ ] `addOption(decisionId, option)` - adicionar opção
-  - [ ] `addCriterion(decisionId, criterion)` - adicionar critério
-  - [ ] `setScore(optionId, criterionId, score)` - pontuar
-  - [ ] `submitReview(id, review)` - registrar follow-up
-  - [ ] `getContext(userId, area)` - buscar decisões similares
-- [ ] Criar `DecisionController`:
-  - [ ] `GET /decisions` - listar
-  - [ ] `GET /decisions/:id` - detalhes
-  - [ ] `POST /decisions` - criar
-  - [ ] `PATCH /decisions/:id` - atualizar
-  - [ ] `POST /decisions/:id/options` - adicionar opção
-  - [ ] `POST /decisions/:id/review` - registrar follow-up
-  - [ ] `DELETE /decisions/:id` - soft delete
-
-**Tool Implementation:**
-- [ ] Criar `SaveDecisionTool`:
-  - [ ] Schema Zod conforme `ai.md` §6.2
-  - [ ] Validação de área
-  - [ ] Criação de decisão + opções
-  - [ ] Cálculo de `review_date`
-  - [ ] Confirmação obrigatória (`requiresConfirmation: true`)
-- [ ] Registrar tool no `ToolExecutorService`
-- [ ] Adicionar tool ao system prompt (§4.1)
-
-**Decision Follow-up Job:**
+**Backend:**
+- [ ] Adicionar método `findDueForReview(userId)` ao `DecisionRepository`:
+  - [ ] Buscar decisões com `review_date <= hoje` e `status = 'decided'`
+- [ ] Adicionar método `submitReview(id, review)` ao `DecisionService`:
+  - [ ] Registrar avaliação (1-5) + notas
+  - [ ] Atualizar status para 'reviewed'
 - [ ] Criar `DecisionFollowupProcessor`:
   - [ ] Fila `decision-followup` no BullMQ
   - [ ] Cron job às 3:30 AM (após Memory Consolidation)
-  - [ ] Buscar decisões com `review_date <= hoje` e `status = 'decided'`
+  - [ ] Buscar decisões pendentes de review
   - [ ] Criar notificação proativa para próxima conversa
   - [ ] Idempotência (não duplicar notificações)
-- [ ] Integrar com `NotificationService`
-
-**Memory Consolidation:**
-- [ ] Atualizar prompt de consolidação (§6.5.2):
-  - [ ] Adicionar campo `decision_patterns` no output
-  - [ ] Instruções para extrair padrões de decisões
-- [ ] Implementar persistência de `decision_patterns` em `knowledge_items`
+- [ ] Integrar com `NotificationService` (M3.4)
+- [ ] Adicionar endpoint `POST /decisions/:id/review` ao `DecisionController`
 
 **Frontend:**
-- [ ] Criar página `/decisions`:
-  - [ ] Lista de decisões com filtros (área, status, período)
-  - [ ] Cards com título, área, status, data
-  - [ ] Navegação para detalhes
-- [ ] Criar página `/decisions/[id]`:
-  - [ ] Detalhes da decisão
-  - [ ] Opções com prós/contras
-  - [ ] Critérios e scores (se houver)
-  - [ ] Timeline (criação → decisão → review)
-  - [ ] Formulário de follow-up (se pendente)
-- [ ] Componentes:
-  - [ ] DecisionCard (card resumido)
-  - [ ] DecisionTimeline (histórico visual)
-  - [ ] OptionCard (opção com prós/contras)
+- [ ] Adicionar à página `/decisions/[id]`:
+  - [ ] Formulário de follow-up (quando pendente)
   - [ ] ReviewForm (avaliação 1-5 + notas)
-  - [ ] DecisionFilters (área, status, período)
-- [ ] Integrar no menu lateral
+  - [ ] Timeline atualizada (criação → decisão → review)
 
 **Testes:**
 - [ ] Testes unitários:
-  - [ ] DecisionRepository (CRUD completo)
-  - [ ] DecisionService (lógica de negócio)
-  - [ ] SaveDecisionTool (validação, criação)
   - [ ] DecisionFollowupProcessor (job logic)
+  - [ ] findDueForReview filtra corretamente
+  - [ ] submitReview atualiza status
 - [ ] Testes de integração:
-  - [ ] API endpoints completa
-  - [ ] Tool execution via chat
-  - [ ] Job de follow-up
-  - [ ] Memory Consolidation com decision_patterns
+  - [ ] Job de follow-up executa e cria notificação
+  - [ ] API endpoint /decisions/:id/review funciona
 - [ ] Teste E2E:
-  - [ ] Criar decisão via chat → ver em /decisions
   - [ ] Follow-up notification → registrar review
 
 **Definition of Done:**
-- [ ] Schema TypeScript criado para todas as tabelas
-- [ ] Tool `save_decision` funciona com confirmação
-- [ ] CRUD de decisões via API
-- [ ] Job de follow-up executa diariamente
-- [ ] Notificação proativa aparece na conversa
-- [ ] Memory Consolidation extrai `decision_patterns`
-- [ ] Modo Conselheira consulta decisões similares
-- [ ] Dashboard /decisions lista decisões com filtros
-- [ ] Avaliação pós-decisão (1-5) registrada
+- [ ] Job de follow-up executa diariamente às 3:30 AM
+- [ ] Decisões pendentes de review geram notificação proativa
+- [ ] Avaliação pós-decisão (1-5) pode ser registrada
+- [ ] Timeline da decisão mostra review
 - [ ] Testes passam

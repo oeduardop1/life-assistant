@@ -41,15 +41,15 @@ const readTools = [
   { name: 'search_knowledge', description: 'Busca fatos, preferências, insights' }, // ✅ M1.3
   { name: 'analyze_context', description: 'Analisa contexto para conexões e contradições' }, // ✅ M1.7
   { name: 'get_tracking_history', description: 'Obtém histórico de métricas' }, // 🔜 M2.1
-  { name: 'get_person', description: 'Obtém informações de pessoa do CRM' }, // 🔜 M2.6
+  { name: 'get_person', description: 'Obtém informações de pessoa do CRM' }, // 🔜 M2.4
 ];
 
 // WRITE tools (requerem confirmação, exceto add_knowledge):
 const writeTools = [
   { name: 'add_knowledge', description: 'Adiciona fato aprendido' }, // ✅ M1.3
   { name: 'record_metric', description: 'Registra métrica (peso, gasto, etc.)' }, // 🔜 M2.1
-  { name: 'create_reminder', description: 'Cria lembrete' }, // 🔜 M2.5
-  { name: 'update_person', description: 'Atualiza pessoa no CRM' }, // 🔜 M2.6
+  { name: 'create_reminder', description: 'Cria lembrete' }, // 🔜 M3.4
+  { name: 'update_person', description: 'Atualiza pessoa no CRM' }, // 🔜 M2.4
 ];
 ```
 

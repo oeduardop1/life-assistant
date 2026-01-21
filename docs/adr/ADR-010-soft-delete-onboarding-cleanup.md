@@ -83,8 +83,8 @@ DELETE FROM users WHERE ...;
 
 ## Trabalho Futuro
 
-- [ ] Implementar job de purge físico para registros com `deletedAt > 90 dias` (M3.5 ou posterior)
-- [ ] Considerar notificação por email antes do cleanup (já planejado para M3.5)
+- [ ] Implementar job de purge físico para registros com `deletedAt > 90 dias` (M3.4 ou posterior)
+- [ ] Considerar notificação por email antes do cleanup (já planejado para M3.4)
 
 ## Referências
 

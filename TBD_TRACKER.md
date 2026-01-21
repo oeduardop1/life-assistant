@@ -70,16 +70,16 @@ _Pendente_
 
 | Status | Quantidade |
 |--------|------------|
-| 🔴 Pendente | 5 |
+| 🔴 Pendente | 6 |
 | 🟡 Em discussão | 0 |
 | 🟢 Resolvido | 5 |
-| **Total** | **10** |
+| **Total** | **11** |
 
 | Prioridade | Quantidade |
 |------------|------------|
 | 🔴 Bloqueante | 0 |
 | 🟡 Alta | 0 |
-| 🟢 Baixa | 10 |
+| 🟢 Baixa | 11 |
 
 ---
 
@@ -271,7 +271,56 @@ Exemplo: regras de negócio, limites, comportamentos de UX, etc.
 
 ## 🔵 Decisões Técnicas
 
-_Nenhum item pendente no momento._
+### [TBD-207] Fonte de Dados para Área "Professional" no Life Balance Score
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🔴 Pendente |
+| **Prioridade** | 🟢 Baixa |
+| **Categoria** | Técnico/Negócio |
+| **Origem** | Análise de dependências M2.5 Life Balance Score |
+| **Data** | 2026-01-21 |
+
+**Contexto:**
+O Life Balance Score (M2.5) calcula scores para 6 áreas hierárquicas (ADR-017). Cinco áreas têm fontes de dados definidas:
+- **health** (physical, mental, leisure): M2.1 Tracking
+- **finance** (budget, savings, debts, investments): M2.2 Finance
+- **learning** (formal, informal): M2.3 Hábitos
+- **spiritual** (practice, community): M2.3 Hábitos
+- **relationships** (family, romantic, social): M2.4 CRM Pessoas
+
+Porém, a área **professional** (career, business) não tem fonte de dados definida nos milestones.
+
+**Pergunta/Decisão necessária:**
+Como calcular o score da área "professional"?
+
+**Opções consideradas:**
+1. **Tracking type "career"** — Criar novo tipo de tracking para satisfação/progresso profissional
+   - Prós: Alinhado com filosofia de baixo atrito (conversa natural)
+   - Contras: Mais um tracking type a implementar, pode ser subjetivo
+2. **Metas de carreira** — Usar M2.3 Metas com área "professional"
+   - Prós: Reutiliza infraestrutura existente
+   - Contras: Metas são diferentes de satisfação diária
+3. **Integração externa** — LinkedIn, calendário de trabalho, etc.
+   - Prós: Dados objetivos
+   - Contras: Complexidade de integração, privacidade
+4. **Conversa periódica** — Check-in mensal via IA sobre carreira
+   - Prós: Baixo atrito, rico em contexto
+   - Contras: Frequência baixa, dados qualitativos
+5. **Retornar 50 (neutro)** — Comportamento padrão do ADR-015 para áreas sem dados
+   - Prós: Simples, não penaliza usuário
+   - Contras: Score incompleto
+
+**Recomendação da IA:**
+Começar com opção 5 (retornar 50) como comportamento default. Adicionar tracking type "career" no futuro se houver demanda. A filosofia de baixo atrito (ADR-015) já prevê que áreas sem dados retornam 50.
+
+**Decisão:**
+_Pendente — Comportamento atual: retorna 50 (neutro) conforme ADR-015_
+
+**Implementação:**
+_Pendente — Definir após validação do Life Balance Score com as 5 áreas que têm dados_
+
+---
 
 <!--
 Adicionar aqui itens técnicos que precisam de input humano.
@@ -590,5 +639,5 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 
 ---
 
-*Última atualização: 19 Janeiro 2026*
-*Revisão: Resolvido TBD-206 com decisão de ativar tabelas de decisões existentes como M3.8 (ADR-016)*
+*Última atualização: 21 Janeiro 2026*
+*Revisão: Adicionado TBD-207 para fonte de dados da área "professional" no Life Balance Score*

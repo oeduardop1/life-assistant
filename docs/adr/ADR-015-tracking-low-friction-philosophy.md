@@ -15,7 +15,7 @@ O Life Assistant foi originalmente projetado com **micro-tracking diário** de m
 1. **Alto atrito**: Usuário precisa lembrar de registrar métricas diariamente
 2. **Abandono**: Micro-tracking leva a fadiga e abandono do sistema
 3. **Conflito com proposta**: A proposta de valor é "você só conversa, a IA organiza"
-4. **Inconsistência**: M2.6 Finance já adota modelo de planejamento mensal (baixo atrito)
+4. **Inconsistência**: M2.2 Finance já adota modelo de planejamento mensal (baixo atrito)
 
 Durante análise da documentação, identificamos inconsistências:
 
@@ -26,12 +26,12 @@ Durante análise da documentação, identificamos inconsistências:
 | **ai.md** | Tool `record_metric` não menciona captura conversacional |
 | **phase-2-tracker.md** | M2.1 define 10 tipos de tracking como obrigatórios |
 
-Em contraste, o **M2.6 Finance** foi projetado com filosofia explícita de baixo atrito:
+Em contraste, o **M2.2 Finance** foi projetado com filosofia explícita de baixo atrito:
 > "Planejamento financeiro mensal. Usuário cadastra orçamento no início do mês e marca contas como pagas ao longo do mês. NÃO é micro-tracking de gastos diários."
 
 ## Decision
 
-Adotar **Modelo Híbrido Orientado a Conversa** para todo o sistema de tracking, unificando a filosofia com M2.6 Finance.
+Adotar **Modelo Híbrido Orientado a Conversa** para todo o sistema de tracking, unificando a filosofia com M2.2 Finance.
 
 ### Princípios Fundamentais
 
@@ -89,7 +89,7 @@ O dashboard `/tracking` continua existindo, mas como **opção secundária**:
 ### Positivos
 
 - **Alinhamento**: Toda a documentação segue mesma filosofia de baixo atrito
-- **Consistência**: M2.1 Tracking agora funciona como M2.6 Finance
+- **Consistência**: M2.1 Tracking agora funciona como M2.2 Finance
 - **Menor abandono**: Sem fadiga de micro-tracking diário
 - **Proposta de valor**: Reforça "você só conversa, a IA organiza"
 - **Flexibilidade**: Usuários power podem usar dashboard; casuais só conversam
@@ -157,15 +157,15 @@ O dashboard `/tracking` continua existindo, mas como **opção secundária**:
 | Aspecto | Antes | Depois |
 |---------|-------|--------|
 | **Título** | "Tracking de Métricas" | "Tracking de Métricas (Baixo Atrito)" |
-| **Tipos** | 10 tipos (incluindo expense) | 7 tipos (expense via M2.6) |
+| **Tipos** | 10 tipos (incluindo expense) | 7 tipos (expense via M2.2) |
 | **Fluxo** | Tracking via chat | Captura conversacional com confirmação |
 | **Frontend** | QuickTrackForm destaque | Dashboard opcional |
-| **get_trends** | Incluído em M2.1 | Movido para M2.2 (junto com Life Balance Score) |
+| **get_trends** | Incluído em M2.1 | Movido para M2.5 (junto com Life Balance Score) |
 | **DoD** | Assume tracking ativo | "Sistema funciona sem tracking" |
 
 ## References
 
 - TBD-205: Decisão sobre modelo de tracking
 - ADR-012: Tool Use + Memory Consolidation (base técnica)
-- M2.6 Finance: Modelo de referência para baixo atrito
+- M2.2 Finance: Modelo de referência para baixo atrito
 - product.md §1.3: Proposta de valor "você só conversa"

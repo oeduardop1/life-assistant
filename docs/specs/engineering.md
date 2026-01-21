@@ -1013,9 +1013,9 @@ export class ChatThrottlerGuard extends ThrottlerBehindProxyGuard {
 | `proactive-checkin` | Check-ins proativos | Baixa |
 | `notifications` | Envio de notificações | Alta |
 | `cleanup-onboarding` | Limpeza de onboardings abandonados (30d) | Baixa |
-| `finance-recurrence` | Gerar registros de rendas/contas/despesas recorrentes (M2.6) | Baixa |
-| `finance-reminders` | Enviar lembretes de vencimento de contas e parcelas (M2.6) | Alta |
-| `finance-overdue-check` | Atualizar status de contas vencidas (M2.6) | Média |
+| `finance-recurrence` | Gerar registros de rendas/contas/despesas recorrentes (M2.2) | Baixa |
+| `finance-reminders` | Enviar lembretes de vencimento de contas e parcelas (M2.2) | Alta |
+| `finance-overdue-check` | Atualizar status de contas vencidas (M2.2) | Média |
 
 ### 7.2 Idempotência (Obrigatório)
 
@@ -1182,7 +1182,7 @@ Para verificar resultado da consolidação:
 2. Consultar tabela `knowledge_items` para ver fatos extraídos
 3. Consultar tabela `user_memories` para ver campos atualizados
 
-### 7.5 Jobs do Módulo Finance (M2.6)
+### 7.5 Jobs do Módulo Finance (M2.2)
 
 #### finance-recurrence
 
