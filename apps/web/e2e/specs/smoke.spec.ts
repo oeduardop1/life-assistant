@@ -45,7 +45,7 @@ test.describe('Smoke Tests', () => {
   });
 
   // Skip mobile-chrome: sidebar behavior is different on mobile (auto-closes on navigation)
-  test('should_toggle_sidebar_successfully', async ({ loginPage, page, browserName }, testInfo) => {
+  test('should_toggle_sidebar_successfully', async ({ loginPage, page }, testInfo) => {
     // Skip on mobile viewports - sidebar auto-closes on mobile and has different toggle behavior
     if (testInfo.project.name === 'mobile-chrome') {
       test.skip();

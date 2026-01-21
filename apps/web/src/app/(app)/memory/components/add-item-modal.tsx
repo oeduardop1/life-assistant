@@ -49,6 +49,8 @@ export function AddItemModal({
   onSave,
   isSaving,
 }: AddItemModalProps) {
+  'use no memo'; // Opt out of React Compiler - watch() from react-hook-form is incompatible
+
   const {
     register,
     handleSubmit,
@@ -66,6 +68,7 @@ export function AddItemModal({
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- Component already opted out via 'use no memo'
   const typeValue = watch('type');
   const areaValue = watch('area');
 
