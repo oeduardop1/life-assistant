@@ -287,3 +287,166 @@ export function isOverdue(dueDate: string): boolean {
 export function getBalanceColor(balance: number): 'green' | 'red' {
   return balance >= 0 ? 'green' : 'red';
 }
+
+// =============================================================================
+// Income Types
+// =============================================================================
+
+/**
+ * Income type categories (matches backend income_type enum)
+ */
+export type IncomeType =
+  | 'salary'
+  | 'freelance'
+  | 'bonus'
+  | 'passive'
+  | 'investment'
+  | 'gift'
+  | 'other';
+
+/**
+ * Income frequency options (matches backend income_frequency enum)
+ */
+export type IncomeFrequency =
+  | 'monthly'
+  | 'biweekly'
+  | 'weekly'
+  | 'annual'
+  | 'irregular';
+
+/**
+ * Income entity returned from API
+ */
+export interface Income {
+  id: string;
+  userId: string;
+  name: string;
+  type: IncomeType;
+  frequency: IncomeFrequency;
+  expectedAmount: number;
+  actualAmount: number | null;
+  isRecurring: boolean;
+  monthYear: string;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Create income payload
+ */
+export interface CreateIncomeInput {
+  name: string;
+  type: IncomeType;
+  frequency: IncomeFrequency;
+  expectedAmount: number;
+  actualAmount?: number;
+  isRecurring?: boolean;
+  monthYear: string;
+  currency?: string;
+}
+
+/**
+ * Update income payload
+ */
+export interface UpdateIncomeInput {
+  name?: string;
+  type?: IncomeType;
+  frequency?: IncomeFrequency;
+  expectedAmount?: number;
+  actualAmount?: number | null;
+  isRecurring?: boolean;
+  monthYear?: string;
+  currency?: string;
+}
+
+/**
+ * Income query parameters
+ */
+export interface IncomeQueryParams {
+  monthYear?: string;
+  type?: IncomeType;
+  isRecurring?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * API response for single income
+ */
+export interface IncomeResponse {
+  income: Income;
+}
+
+/**
+ * API response for income list
+ */
+export interface IncomesListResponse {
+  incomes: Income[];
+  total: number;
+}
+
+// =============================================================================
+// Income Constants
+// =============================================================================
+
+/**
+ * Income type labels (Portuguese)
+ */
+export const incomeTypeLabels: Record<IncomeType, string> = {
+  salary: 'Salário',
+  freelance: 'Freelance',
+  bonus: 'Bônus',
+  passive: 'Renda Passiva',
+  investment: 'Investimento',
+  gift: 'Presente',
+  other: 'Outro',
+};
+
+/**
+ * Income frequency labels (Portuguese)
+ */
+export const incomeFrequencyLabels: Record<IncomeFrequency, string> = {
+  monthly: 'Mensal',
+  biweekly: 'Quinzenal',
+  weekly: 'Semanal',
+  annual: 'Anual',
+  irregular: 'Irregular',
+};
+
+/**
+ * Income type colors for badges/icons
+ */
+export const incomeTypeColors: Record<IncomeType, string> = {
+  salary: 'green',
+  freelance: 'blue',
+  bonus: 'purple',
+  passive: 'orange',
+  investment: 'yellow',
+  gift: 'pink',
+  other: 'gray',
+};
+
+/**
+ * Income type options for select dropdown
+ */
+export const incomeTypeOptions: { value: IncomeType; label: string }[] = [
+  { value: 'salary', label: 'Salário' },
+  { value: 'freelance', label: 'Freelance' },
+  { value: 'bonus', label: 'Bônus' },
+  { value: 'passive', label: 'Renda Passiva' },
+  { value: 'investment', label: 'Investimento' },
+  { value: 'gift', label: 'Presente' },
+  { value: 'other', label: 'Outro' },
+];
+
+/**
+ * Income frequency options for select dropdown
+ */
+export const incomeFrequencyOptions: { value: IncomeFrequency; label: string }[] = [
+  { value: 'monthly', label: 'Mensal' },
+  { value: 'biweekly', label: 'Quinzenal' },
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'annual', label: 'Anual' },
+  { value: 'irregular', label: 'Irregular' },
+];

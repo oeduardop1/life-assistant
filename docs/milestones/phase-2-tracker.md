@@ -321,19 +321,19 @@ _Página Dashboard `/finance` (Visão Geral):_
   - [x] Parcelas próximas (próximas 5)
 - [x] Estados: Loading (Skeleton), Empty (EmptyState), Error (AlertCircle + retry)
 
-_Página Rendas `/finance/income`:_
-- [ ] Criar página `/finance/income/page.tsx`
-- [ ] Header: Título + Botão "Nova Renda"
-- [ ] Lista de Rendas (IncomeCard ou Table):
-  - [ ] Nome + categoria + badge recorrente
-  - [ ] Previsto vs Real (com indicador de variação)
-  - [ ] Ações: Editar, Excluir
-- [ ] Totais: Soma previsto, soma real, variação
-- [ ] Modal CreateIncomeModal:
-  - [ ] Nome (text), Categoria (select), Valor previsto (number), Valor real (number, opcional), Recorrente (switch)
-- [ ] Modal EditIncomeModal (preenchido com dados existentes)
-- [ ] Dialog ConfirmDelete
-- [ ] Estados: Loading, Empty, Error
+_Página Rendas `/finance/incomes`:_
+- [x] Criar página `/finance/incomes/page.tsx`
+- [x] Header: Título + Botão "Nova Renda"
+- [x] Lista de Rendas (IncomeCard ou Table):
+  - [x] Nome + categoria + badge recorrente
+  - [x] Previsto vs Real (com indicador de variação)
+  - [x] Ações: Editar, Excluir
+- [x] Totais: Soma previsto, soma real, variação
+- [x] Modal CreateIncomeModal:
+  - [x] Nome (text), Categoria (select), Valor previsto (number), Valor real (number, opcional), Recorrente (switch)
+- [x] Modal EditIncomeModal (preenchido com dados existentes)
+- [x] Dialog ConfirmDelete
+- [x] Estados: Loading, Empty, Error
 
 _Página Contas Fixas `/finance/bills`:_
 - [ ] Criar página `/finance/bills/page.tsx`
@@ -420,7 +420,7 @@ _Componentes Reutilizáveis (`components/finance/`):_
 - [ ] `MonthlyEvolutionChart.tsx` - LineChart de evolução (Recharts)
 
 _Hooks de Dados (`hooks/finance/`):_
-- [ ] `useIncomes.ts` - CRUD de rendas
+- [x] `useIncomes.ts` - CRUD de rendas
 - [ ] `useBills.ts` - CRUD de contas fixas
 - [ ] `useExpenses.ts` - CRUD de despesas variáveis
 - [ ] `useDebts.ts` - CRUD de dívidas + payInstallment
@@ -515,7 +515,7 @@ _Testes de Componente Frontend:_
 - [ ] Component: MonthlyEvolutionChart (dados, loading, empty)
 
 _Testes de Hooks Frontend:_
-- [ ] Hook: useIncomes (fetch, create, update, delete)
+- [x] Hook: useIncomes (fetch, create, update, delete)
 - [ ] Hook: useBills (fetch, create, update, delete, markPaid)
 - [ ] Hook: useExpenses (fetch, create, update, delete)
 - [ ] Hook: useDebts (fetch, create, update, delete, payInstallment, negotiate)
@@ -632,7 +632,16 @@ _Testes:_
 - Context: FinanceContext para gerenciar estado do mês entre componentes
 - Types: types.ts com interfaces + helpers (formatCurrency, formatMonthDisplay, isOverdue, etc.)
 - Testes: 6 component tests, 2 hook tests, 1 types test, 11 E2E tests (Page Object pattern)
-- Pendente: Jobs, Notificações, Sub-páginas (Rendas, Contas, Despesas, Dívidas, Investimentos)
+- Pendente: Jobs, Notificações, Sub-páginas (Contas, Despesas, Dívidas, Investimentos)
+
+**Notas (2026-01-22 - Página Rendas):**
+- Página `/finance/incomes` implementada: Header, IncomeList, IncomeSummary, CreateIncomeModal, EditIncomeModal, DeleteIncomeDialog
+- 7 componentes criados: income-card, income-list, income-summary, income-form, create-income-modal, edit-income-modal, delete-income-dialog
+- Hook useIncomes.ts: useIncomes, useIncome, useCreateIncome, useUpdateIncome, useDeleteIncome, calculateIncomeTotals, calculateVariance
+- Testes: 8 arquivos de teste (1 hook test + 7 component tests) com 43 tests
+- E2E: finance.page.ts Page Object atualizado + finance-incomes.spec.ts com 8 specs
+- ResizeObserver mock adicionado ao test/setup.tsx para suporte a Radix UI
+- Fix: react-hook-form usa validação nativa (não zodResolver) devido a incompatibilidade com Zod v4
 
 ---
 

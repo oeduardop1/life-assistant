@@ -13,6 +13,13 @@ if (!Element.prototype.releasePointerCapture) {
   Element.prototype.releasePointerCapture = () => {};
 }
 
+// Mock ResizeObserver (needed for Radix UI components)
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
