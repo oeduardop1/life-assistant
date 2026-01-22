@@ -441,19 +441,44 @@ _Página Dívidas `/finance/debts`:_
 - [x] Estados: Loading, Empty, Error
 
 _Página Investimentos `/finance/investments`:_
-- [ ] Criar página `/finance/investments/page.tsx`
-- [ ] Header: Título + Total Investido + Botão "Novo Investimento"
-- [ ] Lista de Investimentos (InvestmentCard):
-  - [ ] Nome + tipo (badge)
-  - [ ] Valor atual
-  - [ ] Meta + prazo (se definidos)
-  - [ ] Barra de progresso (atual/meta %)
-  - [ ] Aporte mensal planejado
-  - [ ] Ações: Editar, Atualizar valor, Excluir
-- [ ] Modal CreateInvestmentModal:
-  - [ ] Nome (text), Tipo (select), Valor atual (number), Meta (number, opcional), Prazo (date, opcional), Aporte mensal (number, opcional)
-- [ ] Modal UpdateValueModal (atualizar valor atual)
-- [ ] Estados: Loading, Empty, Error
+- [x] Criar página `/finance/investments/page.tsx`
+- [x] Header: Título + Total Investido + Botão "Novo Investimento"
+- [x] KPI Cards de Investimentos (InvestmentSummary):
+  - [x] Total Investido
+  - [x] Total das Metas
+  - [x] Aporte Mensal Total
+  - [x] Progresso Médio
+- [x] Lista de Investimentos (InvestmentList + InvestmentCard):
+  - [x] Nome + tipo (badge)
+  - [x] Valor atual
+  - [x] Meta + prazo (se definidos)
+  - [x] Barra de progresso (atual/meta %) - InvestmentProgressBar
+  - [x] Aporte mensal planejado
+  - [x] Ações: Editar, Atualizar valor, Excluir
+- [x] InvestmentForm (formulário reutilizável create/edit):
+  - [x] Nome (text), Tipo (select), Valor atual (number), Meta (number, opcional), Prazo (date, opcional), Aporte mensal (number, opcional)
+- [x] Modal CreateInvestmentModal
+- [x] Modal EditInvestmentModal
+- [x] Modal UpdateValueModal (atualizar valor atual)
+- [x] Dialog DeleteInvestmentDialog (confirmação de exclusão)
+- [x] Estados: Loading, Empty, Error
+- [x] Hook `useInvestments.ts`:
+  - [x] `useInvestments()` - query listar com filtros
+  - [x] `useInvestment(id)` - query individual
+  - [x] `useCreateInvestment()` - mutation criar
+  - [x] `useUpdateInvestment()` - mutation atualizar
+  - [x] `useDeleteInvestment()` - mutation excluir
+  - [x] `useUpdateInvestmentValue()` - mutation atualizar valor
+  - [x] `calculateInvestmentTotals()` - helper function
+- [x] Types em `types.ts`:
+  - [x] InvestmentType type
+  - [x] Investment interface
+  - [x] CreateInvestmentInput, UpdateInvestmentInput, UpdateInvestmentValueInput
+  - [x] InvestmentQueryParams, InvestmentResponse, InvestmentsListResponse
+  - [x] InvestmentProgress, InvestmentTotals interfaces
+  - [x] investmentTypeLabels, investmentTypeColors, investmentTypeOptions
+  - [x] calculateInvestmentProgress, calculateInvestmentTotals, formatInvestmentDeadline helpers
+- [x] Barrel export `components/investment/index.ts`
 
 _Componentes Reutilizáveis (`components/finance/`):_
 - [x] `FinanceKPICard.tsx` - Props: title, value, icon, color, trend?, variation?
@@ -463,7 +488,7 @@ _Componentes Reutilizáveis (`components/finance/`):_
 - [x] `DebtCard.tsx` - Diferencia negociada vs pendente, progresso visual para negociadas
 - [x] `DebtProgressBar.tsx` - Barra visual de progresso
 - [x] `DebtStats.tsx` - Grid: parcelas pagas, restantes, %, valor pago, valor restante
-- [ ] `InvestmentCard.tsx` - Nome, tipo, valor, progresso de meta
+- [x] `InvestmentCard.tsx` - Nome, tipo, valor, progresso de meta
 - [x] `ProgressBar.tsx` - Componente genérico de barra de progresso (progress.tsx)
 - [x] `BudgetVsRealChart.tsx` - BarChart comparativo (Recharts)
 - [x] `ExpenseDistributionChart.tsx` - PieChart por categoria (Recharts)
@@ -474,7 +499,7 @@ _Hooks de Dados (`hooks/finance/`):_
 - [x] `useBills.ts` - CRUD de contas fixas
 - [x] `useExpenses.ts` - CRUD de despesas variáveis
 - [x] `useDebts.ts` - CRUD de dívidas + payInstallment
-- [ ] `useInvestments.ts` - CRUD de investimentos
+- [x] `useInvestments.ts` - CRUD de investimentos
 - [x] `useFinanceSummary.ts` - KPIs do dashboard (use-finance.ts)
 - [x] `useMonthNavigation.ts` - Estado do mês selecionado
 
@@ -564,7 +589,15 @@ _Testes de Componente Frontend:_
 - [x] Component: DebtCard (negociada vs pendente, progresso)
 - [x] Component: DebtProgressBar (renderização, estados)
 - [x] Component: DebtStats (grid de estatísticas)
-- [ ] Component: InvestmentCard (valor, meta, progresso)
+- [x] Component: InvestmentCard (valor, meta, progresso)
+- [x] Component: InvestmentList (listagem, skeleton)
+- [x] Component: InvestmentSummary (grid de KPIs)
+- [x] Component: InvestmentForm (validação, submit)
+- [x] Component: InvestmentProgressBar (barra de progresso)
+- [x] Component: CreateInvestmentModal (criação)
+- [x] Component: EditInvestmentModal (edição)
+- [x] Component: UpdateValueModal (atualizar valor)
+- [x] Component: DeleteInvestmentDialog (confirmação)
 - [ ] Component: ProgressBar (genérico, variações)
 - [ ] Component: BudgetVsRealChart (dados, loading, empty)
 - [ ] Component: ExpenseDistributionChart (dados, loading, empty)
@@ -575,7 +608,7 @@ _Testes de Hooks Frontend:_
 - [x] Hook: useBills (fetch, create, update, delete, markPaid)
 - [ ] Hook: useExpenses (fetch, create, update, delete)
 - [x] Hook: useDebts (fetch, create, update, delete, payInstallment, negotiate)
-- [ ] Hook: useInvestments (fetch, create, update, delete, updateValue)
+- [x] Hook: useInvestments (fetch, create, update, delete, updateValue)
 - [x] Hook: useFinanceSummary (fetch, cálculos) - use-finance.test.tsx
 - [x] Hook: useMonthNavigation (estado, prev, next)
 
@@ -588,7 +621,7 @@ _Testes E2E:_
 - [x] E2E: criar dívida → pagar parcelas → verificar progresso → quitar (finance-debts.spec.ts full workflow)
 - [x] E2E: navegar entre meses com MonthSelector (finance.spec.ts)
 - [x] E2E: criar renda → verificar no dashboard (finance-incomes.spec.ts)
-- [ ] E2E: criar investimento → atualizar valor → verificar progresso
+- [x] E2E: criar investimento → atualizar valor → verificar progresso
 - [x] E2E: estados empty e loading funcionam em todas as páginas (coberto por specs de cada página)
 
 **Definition of Done:**
@@ -605,7 +638,7 @@ _Funcionalidades CRUD:_
 - [x] CRUD de contas fixas funciona (com checkbox pago)
 - [x] CRUD de despesas variáveis funciona (recorrentes + pontuais)
 - [x] CRUD de dívidas funciona (com controle de parcelas)
-- [ ] CRUD de investimentos funciona (com progresso de meta)
+- [x] CRUD de investimentos funciona (com progresso de meta)
 
 _Endpoints de Ação:_
 - [x] `mark-paid` / `mark-unpaid` funcionam para bills

@@ -134,6 +134,35 @@ export class FinancePage {
   readonly payInstallmentConfirm: Locator;
   readonly payInstallmentCancel: Locator;
 
+  // Investments page
+  readonly investmentsPage: Locator;
+  readonly investmentsEmptyState: Locator;
+  readonly investmentsErrorState: Locator;
+  readonly addInvestmentButton: Locator;
+  readonly investmentSummary: Locator;
+  readonly investmentList: Locator;
+
+  // Investment modals
+  readonly createInvestmentModal: Locator;
+  readonly editInvestmentModal: Locator;
+  readonly deleteInvestmentDialog: Locator;
+  readonly updateValueModal: Locator;
+
+  // Investment form fields
+  readonly investmentFormName: Locator;
+  readonly investmentFormType: Locator;
+  readonly investmentFormCurrentAmount: Locator;
+  readonly investmentFormGoalAmount: Locator;
+  readonly investmentFormMonthlyContribution: Locator;
+  readonly investmentFormDeadline: Locator;
+  readonly investmentFormSubmit: Locator;
+  readonly investmentFormCancel: Locator;
+
+  // Update value modal fields
+  readonly updateValueInput: Locator;
+  readonly updateValueSubmit: Locator;
+  readonly updateValueCancel: Locator;
+
   constructor(page: Page) {
     this.page = page;
 
@@ -260,6 +289,35 @@ export class FinancePage {
     // Pay installment dialog
     this.payInstallmentConfirm = page.getByTestId('pay-installment-confirm');
     this.payInstallmentCancel = page.getByTestId('pay-installment-cancel');
+
+    // Investments page
+    this.investmentsPage = page.getByTestId('investments-page');
+    this.investmentsEmptyState = page.getByTestId('investments-empty-state');
+    this.investmentsErrorState = page.getByTestId('investments-error-state');
+    this.addInvestmentButton = page.getByTestId('add-investment-button');
+    this.investmentSummary = page.getByTestId('investment-summary');
+    this.investmentList = page.getByTestId('investment-list');
+
+    // Investment modals
+    this.createInvestmentModal = page.getByTestId('create-investment-modal');
+    this.editInvestmentModal = page.getByTestId('edit-investment-modal');
+    this.deleteInvestmentDialog = page.getByTestId('delete-investment-dialog');
+    this.updateValueModal = page.getByTestId('update-value-modal');
+
+    // Investment form fields
+    this.investmentFormName = page.getByTestId('investment-form-name');
+    this.investmentFormType = page.getByTestId('investment-form-type');
+    this.investmentFormCurrentAmount = page.getByTestId('investment-form-current-amount');
+    this.investmentFormGoalAmount = page.getByTestId('investment-form-goal-amount');
+    this.investmentFormMonthlyContribution = page.getByTestId('investment-form-monthly-contribution');
+    this.investmentFormDeadline = page.getByTestId('investment-form-deadline');
+    this.investmentFormSubmit = page.getByTestId('investment-form-submit');
+    this.investmentFormCancel = page.getByTestId('investment-form-cancel');
+
+    // Update value modal fields
+    this.updateValueInput = page.getByTestId('update-value-input');
+    this.updateValueSubmit = page.getByTestId('update-value-submit');
+    this.updateValueCancel = page.getByTestId('update-value-cancel');
   }
 
   /**
@@ -1033,5 +1091,239 @@ export class FinancePage {
   async getDebtInstallmentsProgress(debtName: string) {
     const card = this.getDebtCard(debtName);
     return card.getByTestId('debt-progress-installments').textContent();
+  }
+
+  // =========================================================================
+  // Investment Page Methods
+  // =========================================================================
+
+  /**
+   * Navigate to investments page
+   */
+  async gotoInvestments() {
+    await this.page.goto('/finance/investments');
+  }
+
+  /**
+   * Wait for investments page to load
+   */
+  async waitForInvestmentsPageLoad() {
+    await this.page.waitForLoadState('networkidle');
+    await Promise.race([
+      this.investmentsPage.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.investmentsEmptyState.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.investmentsErrorState.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+    ]);
+  }
+
+  /**
+   * Check if investments page is visible
+   */
+  async isInvestmentsPageVisible() {
+    return this.investmentsPage.isVisible();
+  }
+
+  /**
+   * Check if investments empty state is visible
+   */
+  async isInvestmentsEmptyStateVisible() {
+    return this.investmentsEmptyState.isVisible();
+  }
+
+  /**
+   * Open create investment modal
+   */
+  async openCreateInvestmentModal() {
+    await this.addInvestmentButton.click();
+    await this.createInvestmentModal.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Fill investment form
+   */
+  async fillInvestmentForm(data: {
+    name: string;
+    type?: string;
+    currentAmount: string;
+    goalAmount?: string;
+    monthlyContribution?: string;
+    deadline?: string;
+  }) {
+    await this.investmentFormName.fill(data.name);
+
+    if (data.type) {
+      await this.investmentFormType.click();
+      await this.page.getByRole('option', { name: data.type }).click();
+    }
+
+    await this.investmentFormCurrentAmount.fill(data.currentAmount);
+
+    if (data.goalAmount) {
+      await this.investmentFormGoalAmount.fill(data.goalAmount);
+    }
+
+    if (data.monthlyContribution) {
+      await this.investmentFormMonthlyContribution.fill(data.monthlyContribution);
+    }
+
+    if (data.deadline) {
+      await this.investmentFormDeadline.fill(data.deadline);
+    }
+  }
+
+  /**
+   * Submit investment form
+   */
+  async submitInvestmentForm() {
+    await this.investmentFormSubmit.click();
+  }
+
+  /**
+   * Cancel investment form
+   */
+  async cancelInvestmentForm() {
+    await this.investmentFormCancel.click();
+  }
+
+  /**
+   * Create investment via modal
+   */
+  async createInvestment(data: {
+    name: string;
+    type?: string;
+    currentAmount: string;
+    goalAmount?: string;
+    monthlyContribution?: string;
+    deadline?: string;
+  }) {
+    await this.openCreateInvestmentModal();
+    await this.fillInvestmentForm(data);
+    await this.submitInvestmentForm();
+  }
+
+  /**
+   * Get investment card by name
+   */
+  getInvestmentCard(name: string) {
+    return this.page.locator('[data-testid="investment-card"]', { hasText: name });
+  }
+
+  /**
+   * Open edit modal for investment
+   */
+  async openEditInvestmentModal(investmentName: string) {
+    const card = this.getInvestmentCard(investmentName);
+    await card.getByTestId('investment-actions-trigger').click();
+    await card.getByTestId('investment-edit-action').click();
+    await this.editInvestmentModal.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Open delete dialog for investment
+   */
+  async openDeleteInvestmentDialog(investmentName: string) {
+    const card = this.getInvestmentCard(investmentName);
+    await card.getByTestId('investment-actions-trigger').click();
+    await card.getByTestId('investment-delete-action').click();
+    await this.deleteInvestmentDialog.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Open update value modal for investment
+   */
+  async openUpdateValueModal(investmentName: string) {
+    const card = this.getInvestmentCard(investmentName);
+    await card.getByTestId('investment-actions-trigger').click();
+    await card.getByTestId('investment-update-value-action').click();
+    await this.updateValueModal.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Fill update value form
+   */
+  async fillUpdateValueForm(newValue: string) {
+    await this.updateValueInput.clear();
+    await this.updateValueInput.fill(newValue);
+  }
+
+  /**
+   * Submit update value form
+   */
+  async submitUpdateValueForm() {
+    await this.updateValueSubmit.click();
+  }
+
+  /**
+   * Cancel update value form
+   */
+  async cancelUpdateValueForm() {
+    await this.updateValueCancel.click();
+  }
+
+  /**
+   * Update investment value via modal
+   */
+  async updateInvestmentValue(investmentName: string, newValue: string) {
+    await this.openUpdateValueModal(investmentName);
+    await this.fillUpdateValueForm(newValue);
+    await this.submitUpdateValueForm();
+  }
+
+  /**
+   * Confirm delete investment
+   */
+  async confirmDeleteInvestment() {
+    await this.page.getByTestId('delete-investment-confirm').click();
+  }
+
+  /**
+   * Cancel delete investment
+   */
+  async cancelDeleteInvestment() {
+    await this.page.getByTestId('delete-investment-cancel').click();
+  }
+
+  /**
+   * Get investment summary total invested value
+   */
+  async getInvestmentSummaryTotalInvested() {
+    return this.page.getByTestId('investment-summary-total-invested').textContent();
+  }
+
+  /**
+   * Get investment summary total goal value
+   */
+  async getInvestmentSummaryTotalGoal() {
+    return this.page.getByTestId('investment-summary-total-goal').textContent();
+  }
+
+  /**
+   * Get investment summary monthly contribution value
+   */
+  async getInvestmentSummaryMonthlyContribution() {
+    return this.page.getByTestId('investment-summary-monthly-contribution').textContent();
+  }
+
+  /**
+   * Get investment summary average progress value
+   */
+  async getInvestmentSummaryAverageProgress() {
+    return this.page.getByTestId('investment-summary-average-progress').textContent();
+  }
+
+  /**
+   * Get progress percentage for an investment
+   */
+  async getInvestmentProgressPercent(investmentName: string) {
+    const card = this.getInvestmentCard(investmentName);
+    return card.getByTestId('investment-progress-percent').textContent();
+  }
+
+  /**
+   * Get current amount text for an investment
+   */
+  async getInvestmentCurrentAmount(investmentName: string) {
+    const card = this.getInvestmentCard(investmentName);
+    return card.getByTestId('investment-current-amount').textContent();
   }
 }

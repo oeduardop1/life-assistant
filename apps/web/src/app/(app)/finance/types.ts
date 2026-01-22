@@ -1055,3 +1055,260 @@ export function isDebtInstallmentOverdue(debt: Debt): boolean {
   const dueDate = getDebtDueDateForCurrentMonth(debt.dueDay);
   return isOverdue(dueDate);
 }
+
+// =============================================================================
+// Investment Types
+// =============================================================================
+
+/**
+ * Investment type options (matches backend investment_type enum)
+ */
+export type InvestmentType =
+  | 'emergency_fund'
+  | 'retirement'
+  | 'short_term'
+  | 'long_term'
+  | 'education'
+  | 'custom';
+
+/**
+ * Investment entity returned from API
+ */
+export interface Investment {
+  id: string;
+  userId: string;
+  name: string;
+  type: InvestmentType;
+  goalAmount: string | null;
+  currentAmount: string;
+  monthlyContribution: string | null;
+  deadline: string | null;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Create investment payload
+ */
+export interface CreateInvestmentInput {
+  name: string;
+  type: InvestmentType;
+  currentAmount?: number;
+  goalAmount?: number;
+  monthlyContribution?: number;
+  deadline?: string;
+  currency?: string;
+}
+
+/**
+ * Update investment payload
+ */
+export interface UpdateInvestmentInput {
+  name?: string;
+  type?: InvestmentType;
+  currentAmount?: number;
+  goalAmount?: number;
+  monthlyContribution?: number;
+  deadline?: string;
+  currency?: string;
+}
+
+/**
+ * Update investment value payload
+ */
+export interface UpdateInvestmentValueInput {
+  currentAmount: number;
+}
+
+/**
+ * Investment query parameters
+ */
+export interface InvestmentQueryParams {
+  type?: InvestmentType;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * API response for single investment
+ */
+export interface InvestmentResponse {
+  investment: Investment;
+}
+
+/**
+ * API response for investment list
+ */
+export interface InvestmentsListResponse {
+  investments: Investment[];
+  total: number;
+}
+
+/**
+ * Investment progress information
+ */
+export interface InvestmentProgress {
+  currentAmount: number;
+  goalAmount: number | null;
+  progressPercent: number;
+  remainingAmount: number | null;
+  monthsToGoal: number | null;
+}
+
+/**
+ * Investment totals for summary
+ */
+export interface InvestmentTotals {
+  totalInvestments: number;
+  totalCurrentAmount: number;
+  totalGoalAmount: number;
+  totalMonthlyContribution: number;
+  averageProgress: number;
+}
+
+// =============================================================================
+// Investment Constants
+// =============================================================================
+
+/**
+ * Investment type labels (Portuguese)
+ */
+export const investmentTypeLabels: Record<InvestmentType, string> = {
+  emergency_fund: 'Reserva de Emergência',
+  retirement: 'Aposentadoria',
+  short_term: 'Curto Prazo',
+  long_term: 'Longo Prazo',
+  education: 'Educação',
+  custom: 'Personalizado',
+};
+
+/**
+ * Investment type colors for badges/icons
+ */
+export const investmentTypeColors: Record<InvestmentType, string> = {
+  emergency_fund: 'green',
+  retirement: 'purple',
+  short_term: 'blue',
+  long_term: 'orange',
+  education: 'indigo',
+  custom: 'gray',
+};
+
+/**
+ * Investment type options for select dropdown
+ */
+export const investmentTypeOptions: { value: InvestmentType; label: string }[] = [
+  { value: 'emergency_fund', label: 'Reserva de Emergência' },
+  { value: 'retirement', label: 'Aposentadoria' },
+  { value: 'short_term', label: 'Curto Prazo' },
+  { value: 'long_term', label: 'Longo Prazo' },
+  { value: 'education', label: 'Educação' },
+  { value: 'custom', label: 'Personalizado' },
+];
+
+// =============================================================================
+// Investment Helper Functions
+// =============================================================================
+
+/**
+ * Calculate investment progress
+ * @param investment - The investment entity
+ * @returns InvestmentProgress with progress info
+ */
+export function calculateInvestmentProgress(investment: Investment): InvestmentProgress {
+  const currentAmount = parseFloat(investment.currentAmount) || 0;
+  const goalAmount = investment.goalAmount ? parseFloat(investment.goalAmount) : null;
+  const monthlyContribution = investment.monthlyContribution
+    ? parseFloat(investment.monthlyContribution)
+    : null;
+
+  let progressPercent = 0;
+  let remainingAmount: number | null = null;
+  let monthsToGoal: number | null = null;
+
+  if (goalAmount && goalAmount > 0) {
+    progressPercent = Math.min((currentAmount / goalAmount) * 100, 100);
+    remainingAmount = Math.max(goalAmount - currentAmount, 0);
+
+    if (monthlyContribution && monthlyContribution > 0 && remainingAmount > 0) {
+      monthsToGoal = Math.ceil(remainingAmount / monthlyContribution);
+    }
+  }
+
+  return {
+    currentAmount,
+    goalAmount,
+    progressPercent,
+    remainingAmount,
+    monthsToGoal,
+  };
+}
+
+/**
+ * Calculate investment totals from a list
+ * @param investments - Array of investment entities
+ * @returns InvestmentTotals summary
+ */
+export function calculateInvestmentTotals(investments: Investment[]): InvestmentTotals {
+  let totalCurrentAmount = 0;
+  let totalGoalAmount = 0;
+  let totalMonthlyContribution = 0;
+  let totalProgress = 0;
+  let investmentsWithGoals = 0;
+
+  for (const investment of investments) {
+    const current = parseFloat(investment.currentAmount) || 0;
+    const goal = investment.goalAmount ? parseFloat(investment.goalAmount) : 0;
+    const contribution = investment.monthlyContribution
+      ? parseFloat(investment.monthlyContribution)
+      : 0;
+
+    totalCurrentAmount += current;
+    totalGoalAmount += goal;
+    totalMonthlyContribution += contribution;
+
+    if (goal > 0) {
+      totalProgress += (current / goal) * 100;
+      investmentsWithGoals++;
+    }
+  }
+
+  const averageProgress = investmentsWithGoals > 0
+    ? totalProgress / investmentsWithGoals
+    : 0;
+
+  return {
+    totalInvestments: investments.length,
+    totalCurrentAmount,
+    totalGoalAmount,
+    totalMonthlyContribution,
+    averageProgress,
+  };
+}
+
+/**
+ * Format investment deadline for display
+ * @param deadline - Date string in YYYY-MM-DD format
+ * @returns Formatted date (e.g., "Jan 2027")
+ */
+export function formatInvestmentDeadline(deadline: string | null): string {
+  if (!deadline) return '';
+  const [year, month] = deadline.split('-').map(Number);
+  const months = [
+    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+  ];
+  return `${months[month - 1]} ${year}`;
+}
+
+/**
+ * Check if investment deadline has passed
+ * @param deadline - Date string in YYYY-MM-DD format
+ * @returns true if deadline is in the past
+ */
+export function isInvestmentOverdue(deadline: string | null): boolean {
+  if (!deadline) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return deadline < today;
+}

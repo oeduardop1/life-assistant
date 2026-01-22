@@ -10,7 +10,7 @@ import type { DebtProgress } from '../../../types';
 const mockProgress: DebtProgress = {
   paidInstallments: 12,
   remainingInstallments: 36,
-  progressPercentage: 25,
+  progressPercent: 25,
   paidAmount: 6000,
   remainingAmount: 18000,
 };
