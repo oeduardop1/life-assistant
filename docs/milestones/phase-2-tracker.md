@@ -380,18 +380,38 @@ _Hook useBills (`hooks/use-bills.ts`):_
 - [x] `calculateBillTotals()` - helper function
 
 _Página Despesas Variáveis `/finance/expenses`:_
-- [ ] Criar página `/finance/expenses/page.tsx`
-- [ ] Seção: Variáveis Recorrentes:
-  - [ ] Cards para cada categoria (Alimentação, Transporte, Lazer, etc.)
-  - [ ] Previsto vs Real com barra de progresso
-  - [ ] Botão editar (atualizar valor real)
-- [ ] Seção: Variáveis Pontuais:
-  - [ ] Lista de despesas pontuais do mês
-  - [ ] Botão "Nova Despesa Pontual"
-- [ ] Totais: Soma previsto, soma real, variação
-- [ ] Modal CreateExpenseModal:
-  - [ ] Nome (text), Categoria (select), Valor previsto (number), Valor real (number), Recorrente (switch)
-- [ ] Estados: Loading, Empty, Error
+- [x] Criar página `/finance/expenses/page.tsx`
+- [x] Seção: Variáveis Recorrentes:
+  - [x] Cards para cada categoria (Alimentação, Transporte, Lazer, etc.)
+  - [x] Previsto vs Real com barra de progresso
+  - [x] Botão editar (atualizar valor real)
+- [x] Seção: Variáveis Pontuais:
+  - [x] Lista de despesas pontuais do mês
+  - [x] Botão "Nova Despesa Pontual"
+- [x] Totais: Soma previsto, soma real, variação
+- [x] Modal CreateExpenseModal:
+  - [x] Nome (text), Categoria (select), Valor previsto (number), Valor real (number), Recorrente (switch)
+- [x] Estados: Loading, Empty, Error
+- [x] Modal EditExpenseModal:
+  - [x] Preenche form com dados existentes
+  - [x] Campos editáveis (mesmo do create)
+- [x] Dialog DeleteExpenseDialog:
+  - [x] Confirmação antes de excluir
+  - [x] Mostra nome da despesa
+- [x] Hook `useExpenses.ts`:
+  - [x] `useExpenses()` - query listar com filtros
+  - [x] `useExpense(id)` - query individual
+  - [x] `useCreateExpense()` - mutation criar
+  - [x] `useUpdateExpense()` - mutation atualizar
+  - [x] `useDeleteExpense()` - mutation excluir
+  - [x] `calculateExpenseTotals()` - helper function
+- [x] Types em `types.ts`:
+  - [x] ExpenseCategory type
+  - [x] Expense interface
+  - [x] CreateExpenseInput, UpdateExpenseInput
+  - [x] ExpenseQueryParams, ExpenseResponse, ExpensesListResponse
+  - [x] expenseCategoryLabels, expenseCategoryColors, expenseCategoryOptions
+- [x] Barrel export `components/expense/index.ts`
 
 _Página Dívidas `/finance/debts`:_
 - [ ] Criar página `/finance/debts/page.tsx`

@@ -647,3 +647,166 @@ export function isBillOverdue(bill: Bill): boolean {
   const dueDate = getDueDateForMonth(bill.monthYear, bill.dueDay);
   return isOverdue(dueDate);
 }
+
+// =============================================================================
+// Expense Types (Variable Expenses)
+// =============================================================================
+
+/**
+ * Expense category options (matches backend expense_category enum)
+ */
+export type ExpenseCategory =
+  | 'food'
+  | 'transport'
+  | 'housing'
+  | 'health'
+  | 'education'
+  | 'entertainment'
+  | 'shopping'
+  | 'bills'
+  | 'subscriptions'
+  | 'travel'
+  | 'gifts'
+  | 'investments'
+  | 'other';
+
+/**
+ * Variable Expense entity returned from API
+ */
+export interface Expense {
+  id: string;
+  userId: string;
+  name: string;
+  category: ExpenseCategory;
+  expectedAmount: number;
+  actualAmount: number;
+  isRecurring: boolean;
+  monthYear: string;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Create expense payload
+ */
+export interface CreateExpenseInput {
+  name: string;
+  category: ExpenseCategory;
+  expectedAmount: number;
+  actualAmount?: number;
+  isRecurring?: boolean;
+  monthYear: string;
+  currency?: string;
+}
+
+/**
+ * Update expense payload
+ */
+export interface UpdateExpenseInput {
+  name?: string;
+  category?: ExpenseCategory;
+  expectedAmount?: number;
+  actualAmount?: number;
+  isRecurring?: boolean;
+}
+
+/**
+ * Expense query parameters
+ */
+export interface ExpenseQueryParams {
+  monthYear?: string;
+  category?: ExpenseCategory;
+  isRecurring?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * API response for single expense
+ */
+export interface ExpenseResponse {
+  expense: Expense;
+}
+
+/**
+ * API response for expense list
+ */
+export interface ExpensesListResponse {
+  expenses: Expense[];
+  total: number;
+}
+
+/**
+ * Expense totals for summary
+ */
+export interface ExpenseTotals {
+  totalExpected: number;
+  totalActual: number;
+  variance: number;
+  variancePercent: number;
+  count: number;
+  recurringCount: number;
+  oneTimeCount: number;
+}
+
+// =============================================================================
+// Expense Constants
+// =============================================================================
+
+/**
+ * Expense category labels (Portuguese)
+ */
+export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
+  food: 'Alimentação',
+  transport: 'Transporte',
+  housing: 'Moradia',
+  health: 'Saúde',
+  education: 'Educação',
+  entertainment: 'Lazer',
+  shopping: 'Compras',
+  bills: 'Contas',
+  subscriptions: 'Assinaturas',
+  travel: 'Viagem',
+  gifts: 'Presentes',
+  investments: 'Investimentos',
+  other: 'Outro',
+};
+
+/**
+ * Expense category colors for badges/icons
+ */
+export const expenseCategoryColors: Record<ExpenseCategory, string> = {
+  food: 'orange',
+  transport: 'blue',
+  housing: 'purple',
+  health: 'red',
+  education: 'indigo',
+  entertainment: 'pink',
+  shopping: 'yellow',
+  bills: 'gray',
+  subscriptions: 'cyan',
+  travel: 'green',
+  gifts: 'rose',
+  investments: 'emerald',
+  other: 'slate',
+};
+
+/**
+ * Expense category options for select dropdown
+ */
+export const expenseCategoryOptions: { value: ExpenseCategory; label: string }[] = [
+  { value: 'food', label: 'Alimentação' },
+  { value: 'transport', label: 'Transporte' },
+  { value: 'housing', label: 'Moradia' },
+  { value: 'health', label: 'Saúde' },
+  { value: 'education', label: 'Educação' },
+  { value: 'entertainment', label: 'Lazer' },
+  { value: 'shopping', label: 'Compras' },
+  { value: 'bills', label: 'Contas' },
+  { value: 'subscriptions', label: 'Assinaturas' },
+  { value: 'travel', label: 'Viagem' },
+  { value: 'gifts', label: 'Presentes' },
+  { value: 'investments', label: 'Investimentos' },
+  { value: 'other', label: 'Outro' },
+];
