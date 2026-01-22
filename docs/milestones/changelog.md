@@ -10,6 +10,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-22 | M2.2 | Frontend | Navegação, Layout e Dashboard Finance: sidebar item, layout.tsx (MonthSelector + FinanceNavTabs), page.tsx com 8 KPI cards + 3 gráficos (BudgetVsReal, ExpenseDistribution, MonthlyEvolution) + listas resumidas + estados. Types, hooks (useMonthNavigation, useFinanceSummary), FinanceContext. 6 component tests, 2 hook tests, 1 types test, 11 E2E tests. |
 | 2026-01-21 | M2.2 | Tools para IA | 5 finance tools implementadas: get_finance_summary, get_pending_bills, mark_bill_paid (confirmação), create_expense (confirmação), get_debt_progress. FinanceToolExecutorService com mapeamento de categorias PT→EN. 5 tool definitions no @life-assistant/ai. Integração com ChatService. Unit tests + integration tests (32 arquivos, 504 tests passando). |
 | 2026-01-21 | M2.2 | Backend | Módulo Finance backend: 7 enums PostgreSQL, 5 tabelas (incomes, bills, variable_expenses, debts, investments), 29 arquivos de código (6 controllers, 6 services, 5 repositories, 5 ports, 6 DTOs, 1 module), 31 endpoints REST (25 CRUD + 5 ações especiais + 1 resumo), cálculos de KPIs em FinanceSummaryService, validações com class-validator, filtros e paginação. Pendente: Jobs, Tools IA, Notificações, Frontend, Testes. |
 | 2026-01-21 | ADR-017 | Refactor | Reestruturação de Life Areas: 8 áreas flat → 6 áreas principais + 16 sub-áreas hierárquicas. health (physical/mental/leisure), finance (budget/savings/debts/investments), professional (career/business), learning (formal/informal), spiritual (practice/community), relationships (family/romantic/social). ~50 arquivos atualizados: enums, schemas, DTOs, services, repositories, frontend components, tests. Preparação para cálculo de Life Balance Score granular. |
@@ -54,4 +55,4 @@
 
 ---
 
-*Última atualização: 21 Janeiro 2026*
+*Última atualização: 22 Janeiro 2026*

@@ -294,32 +294,32 @@ _Notificações:_
 **Frontend:**
 
 _Navegação e Layout:_
-- [ ] Adicionar item "Finanças" no sidebar principal (`components/layouts/sidebar.tsx`):
-  - [ ] href: `/finance`, icon: `Wallet` (Lucide)
-- [ ] Criar layout compartilhado `/finance/layout.tsx`:
-  - [ ] Header com título "Finanças" + MonthSelector (à direita)
-  - [ ] Tabs horizontais abaixo do header (Visão Geral, Rendas, Contas, Despesas, Dívidas, Investimentos)
-  - [ ] Tab ativa destacada (baseado em pathname)
+- [x] Adicionar item "Finanças" no sidebar principal (`components/layouts/sidebar.tsx`):
+  - [x] href: `/finance`, icon: `Wallet` (Lucide)
+- [x] Criar layout compartilhado `/finance/layout.tsx`:
+  - [x] Header com título "Finanças" + MonthSelector (à direita)
+  - [x] Tabs horizontais abaixo do header (Visão Geral, Rendas, Contas, Despesas, Dívidas, Investimentos)
+  - [x] Tab ativa destacada (baseado em pathname)
 
 _Página Dashboard `/finance` (Visão Geral):_
-- [ ] Criar página `/finance/page.tsx`
-- [ ] KPI Cards Grid (8 cards):
-  - [ ] Renda do Mês (TrendingUp, green)
-  - [ ] Total Orçado (Target, blue)
-  - [ ] Total Gasto (ShoppingCart, orange)
-  - [ ] Saldo (Wallet, green/red baseado em positivo/negativo)
-  - [ ] Total Investido (PiggyBank, purple)
-  - [ ] Total de Dívidas (CreditCard, red)
-  - [ ] Parcela Mensal Total (Calendar, yellow)
-  - [ ] Total Já Pago (CheckCircle, green)
-- [ ] Gráficos (Recharts):
-  - [ ] Orçado vs Real (BarChart lado a lado por categoria)
-  - [ ] Distribuição de Gastos (PieChart por categoria)
-  - [ ] Evolução Mensal (LineChart últimos 6 meses)
-- [ ] Listas Resumidas:
-  - [ ] Contas pendentes (próximas 5)
-  - [ ] Parcelas próximas (próximas 5)
-- [ ] Estados: Loading (Skeleton), Empty (EmptyState), Error (AlertCircle + retry)
+- [x] Criar página `/finance/page.tsx`
+- [x] KPI Cards Grid (8 cards):
+  - [x] Renda do Mês (TrendingUp, green)
+  - [x] Total Orçado (Target, blue)
+  - [x] Total Gasto (ShoppingCart, orange)
+  - [x] Saldo (Wallet, green/red baseado em positivo/negativo)
+  - [x] Total Investido (PiggyBank, purple)
+  - [x] Total de Dívidas (CreditCard, red)
+  - [x] Parcela Mensal Total (Calendar, yellow)
+  - [x] Total Já Pago (CheckCircle, green)
+- [x] Gráficos (Recharts):
+  - [x] Orçado vs Real (BarChart lado a lado por categoria)
+  - [x] Distribuição de Gastos (PieChart por categoria)
+  - [x] Evolução Mensal (LineChart últimos 6 meses)
+- [x] Listas Resumidas:
+  - [x] Contas pendentes (próximas 5)
+  - [x] Parcelas próximas (próximas 5)
+- [x] Estados: Loading (Skeleton), Empty (EmptyState), Error (AlertCircle + retry)
 
 _Página Rendas `/finance/income`:_
 - [ ] Criar página `/finance/income/page.tsx`
@@ -620,7 +620,19 @@ _Testes:_
 - Tools para IA implementados: 5 tools (get_finance_summary, get_pending_bills, mark_bill_paid, create_expense, get_debt_progress)
 - FinanceToolExecutorService integrado ao ChatService com mapeamento de categorias PT→EN
 - Testes unitários e de integração para todas as tools (32 arquivos, 504 tests passando)
-- Pendente: Jobs, Notificações, Frontend
+- Pendente: Jobs, Notificações
+
+**Notas (2026-01-22):**
+- Frontend implementado: Navegação, Layout e Dashboard `/finance`
+- Sidebar: item "Finanças" com ícone Wallet adicionado
+- Layout compartilhado: MonthSelector + FinanceNavTabs (6 tabs)
+- Dashboard page.tsx: 8 KPI cards, 3 gráficos Recharts, listas resumidas, estados (loading/empty/error)
+- Componentes: 6 criados (MonthSelector, FinanceNavTabs, FinanceKPICard, BudgetVsRealChart, ExpenseDistributionChart, MonthlyEvolutionChart)
+- Hooks: useMonthNavigation, useFinanceSummary/useHasFinanceData/extractKPIs (Query Key Factory pattern)
+- Context: FinanceContext para gerenciar estado do mês entre componentes
+- Types: types.ts com interfaces + helpers (formatCurrency, formatMonthDisplay, isOverdue, etc.)
+- Testes: 6 component tests, 2 hook tests, 1 types test, 11 E2E tests (Page Object pattern)
+- Pendente: Jobs, Notificações, Sub-páginas (Rendas, Contas, Despesas, Dívidas, Investimentos)
 
 ---
 

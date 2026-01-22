@@ -7,3 +7,4 @@ export { OnboardingPage } from './onboarding.page';
 export { ChatPage } from './chat.page';
 export { MemoryPage } from './memory.page';
 export { TrackingPage } from './tracking.page';
+export { FinancePage } from './finance.page';
