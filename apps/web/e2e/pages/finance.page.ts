@@ -62,6 +62,33 @@ export class FinancePage {
   readonly incomeFormSubmit: Locator;
   readonly incomeFormCancel: Locator;
 
+  // Bills page
+  readonly billsPage: Locator;
+  readonly billsEmptyState: Locator;
+  readonly billsEmptyFiltered: Locator;
+  readonly billsErrorState: Locator;
+  readonly addBillButton: Locator;
+  readonly billSummary: Locator;
+  readonly billList: Locator;
+  readonly billStatusFilter: Locator;
+  readonly billFilterAll: Locator;
+  readonly billFilterPending: Locator;
+  readonly billFilterPaid: Locator;
+
+  // Bill modals
+  readonly createBillModal: Locator;
+  readonly editBillModal: Locator;
+  readonly deleteBillDialog: Locator;
+
+  // Bill form fields
+  readonly billFormName: Locator;
+  readonly billFormCategory: Locator;
+  readonly billFormAmount: Locator;
+  readonly billFormDueDay: Locator;
+  readonly billFormIsRecurring: Locator;
+  readonly billFormSubmit: Locator;
+  readonly billFormCancel: Locator;
+
   constructor(page: Page) {
     this.page = page;
 
@@ -116,6 +143,33 @@ export class FinancePage {
     this.incomeFormIsRecurring = page.getByTestId('income-form-is-recurring');
     this.incomeFormSubmit = page.getByTestId('income-form-submit');
     this.incomeFormCancel = page.getByTestId('income-form-cancel');
+
+    // Bills page
+    this.billsPage = page.getByTestId('bills-page');
+    this.billsEmptyState = page.getByTestId('bills-empty-state');
+    this.billsEmptyFiltered = page.getByTestId('bills-empty-filtered');
+    this.billsErrorState = page.getByTestId('bills-error-state');
+    this.addBillButton = page.getByTestId('add-bill-button');
+    this.billSummary = page.getByTestId('bill-summary');
+    this.billList = page.getByTestId('bill-list');
+    this.billStatusFilter = page.getByTestId('bill-status-filter');
+    this.billFilterAll = page.getByTestId('bill-filter-all');
+    this.billFilterPending = page.getByTestId('bill-filter-pending');
+    this.billFilterPaid = page.getByTestId('bill-filter-paid');
+
+    // Bill modals
+    this.createBillModal = page.getByTestId('create-bill-modal');
+    this.editBillModal = page.getByTestId('edit-bill-modal');
+    this.deleteBillDialog = page.getByTestId('delete-bill-dialog');
+
+    // Bill form fields
+    this.billFormName = page.getByTestId('bill-form-name');
+    this.billFormCategory = page.getByTestId('bill-form-category');
+    this.billFormAmount = page.getByTestId('bill-form-amount');
+    this.billFormDueDay = page.getByTestId('bill-form-due-day');
+    this.billFormIsRecurring = page.getByTestId('bill-form-is-recurring');
+    this.billFormSubmit = page.getByTestId('bill-form-submit');
+    this.billFormCancel = page.getByTestId('bill-form-cancel');
   }
 
   /**
@@ -358,5 +412,194 @@ export class FinancePage {
    */
   async getSummaryActual() {
     return this.page.getByTestId('income-summary-actual').textContent();
+  }
+
+  // =========================================================================
+  // Bill Page Methods
+  // =========================================================================
+
+  /**
+   * Navigate to bills page
+   */
+  async gotoBills() {
+    await this.page.goto('/finance/bills');
+  }
+
+  /**
+   * Wait for bills page to load
+   */
+  async waitForBillsPageLoad() {
+    await this.page.waitForLoadState('networkidle');
+    await Promise.race([
+      this.billsPage.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.billsEmptyState.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.billsEmptyFiltered.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.billsErrorState.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+    ]);
+  }
+
+  /**
+   * Check if bills page is visible
+   */
+  async isBillsPageVisible() {
+    return this.billsPage.isVisible();
+  }
+
+  /**
+   * Check if bills empty state is visible
+   */
+  async isBillsEmptyStateVisible() {
+    return this.billsEmptyState.isVisible();
+  }
+
+  /**
+   * Open create bill modal
+   */
+  async openCreateBillModal() {
+    await this.addBillButton.click();
+    await this.createBillModal.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Fill bill form
+   */
+  async fillBillForm(data: {
+    name: string;
+    category?: string;
+    amount: string;
+    dueDay?: string;
+  }) {
+    await this.billFormName.fill(data.name);
+
+    if (data.category) {
+      await this.billFormCategory.click();
+      await this.page.getByRole('option', { name: data.category }).click();
+    }
+
+    await this.billFormAmount.fill(data.amount);
+
+    if (data.dueDay) {
+      await this.billFormDueDay.clear();
+      await this.billFormDueDay.fill(data.dueDay);
+    }
+  }
+
+  /**
+   * Submit bill form
+   */
+  async submitBillForm() {
+    await this.billFormSubmit.click();
+  }
+
+  /**
+   * Cancel bill form
+   */
+  async cancelBillForm() {
+    await this.billFormCancel.click();
+  }
+
+  /**
+   * Create bill via modal
+   */
+  async createBill(data: {
+    name: string;
+    category?: string;
+    amount: string;
+    dueDay?: string;
+  }) {
+    await this.openCreateBillModal();
+    await this.fillBillForm(data);
+    await this.submitBillForm();
+  }
+
+  /**
+   * Get bill card by name
+   */
+  getBillCard(name: string) {
+    return this.page.locator('[data-testid="bill-card"]', { hasText: name });
+  }
+
+  /**
+   * Open edit modal for bill
+   */
+  async openEditBillModal(billName: string) {
+    const card = this.getBillCard(billName);
+    await card.getByTestId('bill-actions-trigger').click();
+    await card.getByTestId('bill-edit-action').click();
+    await this.editBillModal.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Open delete dialog for bill
+   */
+  async openDeleteBillDialog(billName: string) {
+    const card = this.getBillCard(billName);
+    await card.getByTestId('bill-actions-trigger').click();
+    await card.getByTestId('bill-delete-action').click();
+    await this.deleteBillDialog.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Toggle bill paid status via checkbox
+   */
+  async toggleBillPaidCheckbox(billName: string) {
+    const card = this.getBillCard(billName);
+    await card.getByTestId('bill-paid-checkbox').click();
+  }
+
+  /**
+   * Toggle bill paid status via dropdown menu
+   */
+  async toggleBillPaidMenu(billName: string) {
+    const card = this.getBillCard(billName);
+    await card.getByTestId('bill-actions-trigger').click();
+    await card.getByTestId('bill-toggle-paid-action').click();
+  }
+
+  /**
+   * Confirm delete bill
+   */
+  async confirmDeleteBill() {
+    await this.page.getByTestId('delete-bill-confirm').click();
+  }
+
+  /**
+   * Cancel delete bill
+   */
+  async cancelDeleteBill() {
+    await this.page.getByTestId('delete-bill-cancel').click();
+  }
+
+  /**
+   * Filter bills by status
+   */
+  async filterBillsByStatus(status: 'all' | 'pending' | 'paid') {
+    const filters = {
+      all: this.billFilterAll,
+      pending: this.billFilterPending,
+      paid: this.billFilterPaid,
+    };
+    await filters[status].click();
+  }
+
+  /**
+   * Get bill summary total value
+   */
+  async getBillSummaryTotal() {
+    return this.page.getByTestId('bill-summary-total').textContent();
+  }
+
+  /**
+   * Get bill summary paid value
+   */
+  async getBillSummaryPaid() {
+    return this.page.getByTestId('bill-summary-paid').textContent();
+  }
+
+  /**
+   * Get bill summary pending value
+   */
+  async getBillSummaryPending() {
+    return this.page.getByTestId('bill-summary-pending').textContent();
   }
 }

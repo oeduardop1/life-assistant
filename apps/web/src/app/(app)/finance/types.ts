@@ -450,3 +450,200 @@ export const incomeFrequencyOptions: { value: IncomeFrequency; label: string }[]
   { value: 'annual', label: 'Anual' },
   { value: 'irregular', label: 'Irregular' },
 ];
+
+// =============================================================================
+// Bill Types
+// =============================================================================
+
+/**
+ * Bill category options (matches backend bill_category enum)
+ */
+export type BillCategory =
+  | 'housing'
+  | 'utilities'
+  | 'subscription'
+  | 'insurance'
+  | 'other';
+
+/**
+ * Bill status options (matches backend bill_status enum)
+ */
+export type BillStatus =
+  | 'pending'
+  | 'paid'
+  | 'overdue'
+  | 'canceled';
+
+/**
+ * Bill entity returned from API
+ */
+export interface Bill {
+  id: string;
+  userId: string;
+  name: string;
+  category: BillCategory;
+  amount: number;
+  dueDay: number;
+  status: BillStatus;
+  paidAt: string | null;
+  isRecurring: boolean;
+  monthYear: string;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Create bill payload
+ */
+export interface CreateBillInput {
+  name: string;
+  category: BillCategory;
+  amount: number;
+  dueDay: number;
+  isRecurring?: boolean;
+  monthYear: string;
+  currency?: string;
+}
+
+/**
+ * Update bill payload
+ */
+export interface UpdateBillInput {
+  name?: string;
+  category?: BillCategory;
+  amount?: number;
+  dueDay?: number;
+  status?: BillStatus;
+  isRecurring?: boolean;
+  monthYear?: string;
+  currency?: string;
+}
+
+/**
+ * Bill query parameters
+ */
+export interface BillQueryParams {
+  monthYear?: string;
+  category?: BillCategory;
+  status?: BillStatus;
+  isRecurring?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * API response for single bill
+ */
+export interface BillResponse {
+  bill: Bill;
+}
+
+/**
+ * API response for bill list
+ */
+export interface BillsListResponse {
+  bills: Bill[];
+  total: number;
+}
+
+/**
+ * Bill totals for summary
+ */
+export interface BillTotals {
+  total: number;
+  paid: number;
+  pending: number;
+  overdue: number;
+  count: number;
+  paidCount: number;
+  pendingCount: number;
+  overdueCount: number;
+}
+
+// =============================================================================
+// Bill Constants
+// =============================================================================
+
+/**
+ * Bill category labels (Portuguese)
+ */
+export const billCategoryLabels: Record<BillCategory, string> = {
+  housing: 'Moradia',
+  utilities: 'Utilidades',
+  subscription: 'Assinatura',
+  insurance: 'Seguro',
+  other: 'Outro',
+};
+
+/**
+ * Bill status labels (Portuguese)
+ */
+export const billStatusLabels: Record<BillStatus, string> = {
+  pending: 'Pendente',
+  paid: 'Pago',
+  overdue: 'Vencido',
+  canceled: 'Cancelado',
+};
+
+/**
+ * Bill category colors for badges/icons
+ */
+export const billCategoryColors: Record<BillCategory, string> = {
+  housing: 'blue',
+  utilities: 'yellow',
+  subscription: 'purple',
+  insurance: 'green',
+  other: 'gray',
+};
+
+/**
+ * Bill status colors for badges
+ */
+export const billStatusColors: Record<BillStatus, string> = {
+  pending: 'orange',
+  paid: 'green',
+  overdue: 'red',
+  canceled: 'gray',
+};
+
+/**
+ * Bill category options for select dropdown
+ */
+export const billCategoryOptions: { value: BillCategory; label: string }[] = [
+  { value: 'housing', label: 'Moradia' },
+  { value: 'utilities', label: 'Utilidades' },
+  { value: 'subscription', label: 'Assinatura' },
+  { value: 'insurance', label: 'Seguro' },
+  { value: 'other', label: 'Outro' },
+];
+
+/**
+ * Bill status filter options for UI
+ */
+export type BillStatusFilter = 'all' | 'pending' | 'paid';
+
+/**
+ * Get due date string for a bill given monthYear and dueDay
+ * @param monthYear - Month in YYYY-MM format
+ * @param dueDay - Day of month (1-31)
+ * @returns Date string in YYYY-MM-DD format
+ */
+export function getDueDateForMonth(monthYear: string, dueDay: number): string {
+  const [year, month] = monthYear.split('-').map(Number);
+  // Handle months with fewer days (e.g., February)
+  const lastDayOfMonth = new Date(year, month, 0).getDate();
+  const actualDay = Math.min(dueDay, lastDayOfMonth);
+  return `${monthYear}-${String(actualDay).padStart(2, '0')}`;
+}
+
+/**
+ * Check if a bill is overdue based on dueDay and monthYear
+ */
+export function isBillOverdue(bill: Bill): boolean {
+  if (bill.status === 'paid' || bill.status === 'canceled') {
+    return false;
+  }
+  const dueDate = getDueDateForMonth(bill.monthYear, bill.dueDay);
+  return isOverdue(dueDate);
+}

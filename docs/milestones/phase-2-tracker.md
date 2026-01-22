@@ -336,18 +336,48 @@ _Página Rendas `/finance/incomes`:_
 - [x] Estados: Loading, Empty, Error
 
 _Página Contas Fixas `/finance/bills`:_
-- [ ] Criar página `/finance/bills/page.tsx`
-- [ ] Header: Título + Filtros (Todas, Pendentes, Pagas) + Botão "Nova Conta"
-- [ ] Lista de Contas (BillRow):
-  - [ ] Checkbox de pago (com toast de confirmação)
-  - [ ] Nome + categoria + valor + vencimento
-  - [ ] Badge de status (pendente/pago/vencido)
-  - [ ] Badge recorrente
-  - [ ] Ações: Editar, Excluir
-- [ ] Totais: Soma total, soma pagas, soma pendentes
-- [ ] Modal CreateBillModal:
-  - [ ] Nome (text), Categoria (select), Valor (number), Dia de vencimento (1-31), Recorrente (switch)
-- [ ] Estados: Loading, Empty, Error
+- [x] Criar página `/finance/bills/page.tsx`
+- [x] Header: Título + Filtros (Todas, Pendentes, Pagas) + Botão "Nova Conta"
+- [x] Lista de Contas (BillCard):
+  - [x] Checkbox de pago (com toast de confirmação)
+  - [x] Nome + categoria + valor + vencimento
+  - [x] Badge de status (pendente/pago/vencido)
+  - [x] Badge recorrente
+  - [x] Ações: Editar, Excluir
+- [x] Totais: Soma total, soma pagas, soma pendentes (BillSummary)
+- [x] Modal CreateBillModal:
+  - [x] Nome (text), Categoria (select), Valor (number), Dia de vencimento (1-31), Recorrente (switch)
+- [x] Modal EditBillModal (preenchido com dados existentes)
+- [x] Dialog DeleteBillDialog (confirmação de exclusão)
+- [x] Estados: Loading, Empty, Error
+
+_Componentes Bills (`components/bill/`):_
+- [x] `bill-form.tsx` - Formulário reutilizado (Create/Edit)
+- [x] `bill-card.tsx` - Card individual com checkbox, badges e ações
+- [x] `bill-list.tsx` - Lista com skeleton loading
+- [x] `bill-summary.tsx` - Grid de totais (3 colunas: total, pagas, pendentes)
+- [x] `create-bill-modal.tsx` - Modal de criação
+- [x] `edit-bill-modal.tsx` - Modal de edição
+- [x] `delete-bill-dialog.tsx` - Dialog de confirmação de exclusão
+- [x] `index.ts` - Barrel export
+
+_Types Bills (`types.ts`):_
+- [x] Adicionar `BillCategory` type (housing, utilities, subscription, insurance, other)
+- [x] Adicionar `BillStatus` type (pending, paid, overdue, canceled)
+- [x] Adicionar `Bill` interface
+- [x] Adicionar `CreateBillInput`, `UpdateBillInput` interfaces
+- [x] Adicionar `BillQueryParams`, `BillResponse`, `BillsListResponse` interfaces
+- [x] Adicionar constants: `billCategoryLabels`, `billStatusLabels`, `billCategoryColors`, `billStatusColors`, `billCategoryOptions`
+
+_Hook useBills (`hooks/use-bills.ts`):_
+- [x] `useBills()` - listar contas com filtros
+- [x] `useBill()` - buscar conta individual
+- [x] `useCreateBill()` - mutation criar
+- [x] `useUpdateBill()` - mutation atualizar
+- [x] `useDeleteBill()` - mutation excluir
+- [x] `useMarkBillPaid()` - mutation marcar como paga
+- [x] `useMarkBillUnpaid()` - mutation desmarcar pagamento
+- [x] `calculateBillTotals()` - helper function
 
 _Página Despesas Variáveis `/finance/expenses`:_
 - [ ] Criar página `/finance/expenses/page.tsx`
@@ -504,7 +534,13 @@ _Testes de Componente Frontend:_
 - [ ] Component: FinanceKPICard (valor, label, ícone, cor, trend)
 - [ ] Component: MonthSelector (navegação, callbacks)
 - [ ] Component: FinanceNavTabs (tabs ativas, navegação)
-- [ ] Component: BillRow (checkbox, status badge, ações)
+- [x] Component: BillCard (checkbox, status badge, ações)
+- [x] Component: BillList (listagem, skeleton)
+- [x] Component: BillSummary (grid de totais)
+- [x] Component: BillForm (validação, submit)
+- [x] Component: CreateBillModal (criação)
+- [x] Component: EditBillModal (edição)
+- [x] Component: DeleteBillDialog (confirmação)
 - [ ] Component: DebtCard (negociada vs pendente, progresso)
 - [ ] Component: DebtProgressBar (renderização, estados)
 - [ ] Component: DebtStats (grid de estatísticas)
@@ -516,7 +552,7 @@ _Testes de Componente Frontend:_
 
 _Testes de Hooks Frontend:_
 - [x] Hook: useIncomes (fetch, create, update, delete)
-- [ ] Hook: useBills (fetch, create, update, delete, markPaid)
+- [x] Hook: useBills (fetch, create, update, delete, markPaid)
 - [ ] Hook: useExpenses (fetch, create, update, delete)
 - [ ] Hook: useDebts (fetch, create, update, delete, payInstallment, negotiate)
 - [ ] Hook: useInvestments (fetch, create, update, delete, updateValue)
@@ -642,6 +678,16 @@ _Testes:_
 - E2E: finance.page.ts Page Object atualizado + finance-incomes.spec.ts com 8 specs
 - ResizeObserver mock adicionado ao test/setup.tsx para suporte a Radix UI
 - Fix: react-hook-form usa validação nativa (não zodResolver) devido a incompatibilidade com Zod v4
+
+**Notas (2026-01-22 - Página Contas Fixas):**
+- Página `/finance/bills` implementada: Header com filtros (Todas/Pendentes/Pagas), BillList, BillSummary, CreateBillModal, EditBillModal, DeleteBillDialog
+- 8 componentes criados: bill-card, bill-list, bill-summary, bill-form, create-bill-modal, edit-bill-modal, delete-bill-dialog, index.ts
+- Hook use-bills.ts: useBills, useBill, useCreateBill, useUpdateBill, useDeleteBill, useMarkBillPaid, useMarkBillUnpaid, calculateBillTotals
+- Types adicionados: BillCategory, BillStatus, Bill, CreateBillInput, UpdateBillInput, BillQueryParams, constants (labels, colors, options)
+- UI Components: checkbox.tsx e tabs.tsx criados (@radix-ui/react-checkbox, @radix-ui/react-tabs)
+- Testes: 8 arquivos de teste (1 hook test + 7 component tests), 256 testes totais passando
+- E2E: finance-bills.spec.ts criado (infraestrutura E2E pendente de fix - RLS permissions no global setup)
+- Testado manualmente: CRUD completo, checkbox pago/não pago, filtros, estados (loading/empty/error)
 
 ---
 
