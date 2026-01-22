@@ -12,6 +12,7 @@ import {
 import { ConfigModule } from '../../config/config.module';
 import { MemoryModule } from '../memory/memory.module';
 import { TrackingModule } from '../tracking/tracking.module';
+import { FinanceModule } from '../finance/finance.module';
 
 /**
  * ChatModule - AI Chat functionality with SSE streaming
@@ -26,7 +27,7 @@ import { TrackingModule } from '../tracking/tracking.module';
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Module({
-  imports: [ConfigModule, MemoryModule, TrackingModule],
+  imports: [ConfigModule, MemoryModule, TrackingModule, FinanceModule],
   controllers: [ChatController],
   providers: [
     // Application Services

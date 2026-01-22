@@ -262,25 +262,25 @@ _Filtros e Paginação:_
   - [x] Retornar metadata: `{ data: [], total: number, limit: number, offset: number }`
 
 _Tools para IA:_
-- [ ] Implementar tool `get_finance_summary`:
-  - [ ] Retorna todos os KPIs do mês atual
-  - [ ] Retorna lista de contas pendentes (próximas 5)
-  - [ ] Retorna lista de parcelas próximas (próximas 5)
-  - [ ] Permite IA responder "como estão minhas finanças?"
-- [ ] Implementar tool `get_pending_bills`:
-  - [ ] Retorna contas pendentes do mês com detalhes
-  - [ ] Permite IA responder "quais contas tenho que pagar?"
-- [ ] Implementar tool `mark_bill_paid`:
-  - [ ] Marca conta como paga via conversa
-  - [ ] `requiresConfirmation: true`
-  - [ ] Permite IA executar "marque a conta de luz como paga"
-- [ ] Implementar tool `create_expense`:
-  - [ ] Cria despesa pontual via conversa
-  - [ ] `requiresConfirmation: true`
-  - [ ] Permite IA executar "gastei 50 reais no mercado"
-- [ ] Implementar tool `get_debt_progress`:
-  - [ ] Retorna progresso detalhado de uma ou todas as dívidas
-  - [ ] Permite IA responder "como está minha dívida do carro?"
+- [x] Implementar tool `get_finance_summary`:
+  - [x] Retorna todos os KPIs do mês atual
+  - [x] Retorna lista de contas pendentes (próximas 5)
+  - [x] Retorna lista de parcelas próximas (próximas 5)
+  - [x] Permite IA responder "como estão minhas finanças?"
+- [x] Implementar tool `get_pending_bills`:
+  - [x] Retorna contas pendentes do mês com detalhes
+  - [x] Permite IA responder "quais contas tenho que pagar?"
+- [x] Implementar tool `mark_bill_paid`:
+  - [x] Marca conta como paga via conversa
+  - [x] `requiresConfirmation: true`
+  - [x] Permite IA executar "marque a conta de luz como paga"
+- [x] Implementar tool `create_expense`:
+  - [x] Cria despesa pontual via conversa
+  - [x] `requiresConfirmation: true`
+  - [x] Permite IA executar "gastei 50 reais no mercado"
+- [x] Implementar tool `get_debt_progress`:
+  - [x] Retorna progresso detalhado de uma ou todas as dívidas
+  - [x] Permite IA responder "como está minha dívida do carro?"
 
 _Notificações:_
 - [ ] Implementar notificações financeiras:
@@ -460,11 +460,11 @@ _Testes Unitários Backend - Jobs:_
 - [ ] Job de vencimento: não altera bills já pagas
 
 _Testes Unitários Backend - Tools:_
-- [ ] Tool get_finance_summary: retorna KPIs corretos
-- [ ] Tool get_pending_bills: retorna apenas pendentes do mês
-- [ ] Tool mark_bill_paid: marca corretamente com confirmação
-- [ ] Tool create_expense: cria despesa pontual com confirmação
-- [ ] Tool get_debt_progress: retorna progresso detalhado
+- [x] Tool get_finance_summary: retorna KPIs corretos
+- [x] Tool get_pending_bills: retorna apenas pendentes do mês
+- [x] Tool mark_bill_paid: marca corretamente com confirmação
+- [x] Tool create_expense: cria despesa pontual com confirmação
+- [x] Tool get_debt_progress: retorna progresso detalhado
 
 _Testes de Integração - Endpoints:_
 - [ ] CRUD de todas as entidades (incomes, bills, expenses, debts, investments)
@@ -488,10 +488,11 @@ _Testes de Integração - Jobs:_
 - [ ] Notificações de vencimento são criadas
 
 _Testes de Integração - Tools:_
-- [ ] Tool get_finance_summary via ToolExecutorService
-- [ ] Tool get_pending_bills via ToolExecutorService
-- [ ] Tool mark_bill_paid com fluxo de confirmação
-- [ ] Tool create_expense com fluxo de confirmação
+- [x] Tool get_finance_summary via ToolExecutorService
+- [x] Tool get_pending_bills via ToolExecutorService
+- [x] Tool mark_bill_paid com fluxo de confirmação
+- [x] Tool create_expense com fluxo de confirmação
+- [x] Tool get_debt_progress via ToolExecutorService
 
 _Testes de Integração - Regras de Negócio:_
 - [ ] Criar dívida não negociada → verificar que NÃO entra no total orçado
@@ -568,11 +569,11 @@ _Filtros e Paginação:_
 - [ ] Paginação com limit/offset funciona
 
 _Tools para IA:_
-- [ ] `get_finance_summary` retorna KPIs e pendências
-- [ ] `get_pending_bills` retorna contas a pagar
-- [ ] `mark_bill_paid` marca conta via conversa (com confirmação)
-- [ ] `create_expense` cria despesa via conversa (com confirmação)
-- [ ] `get_debt_progress` retorna progresso das dívidas
+- [x] `get_finance_summary` retorna KPIs e pendências
+- [x] `get_pending_bills` retorna contas a pagar
+- [x] `mark_bill_paid` marca conta via conversa (com confirmação)
+- [x] `create_expense` cria despesa via conversa (com confirmação)
+- [x] `get_debt_progress` retorna progresso das dívidas
 
 _Dívidas não negociadas:_
 - [ ] Podem ser criadas (apenas valor total, sem parcelas)
@@ -616,7 +617,10 @@ _Testes:_
 - 31 endpoints implementados: 25 CRUD + 5 ações especiais + 1 resumo
 - Cálculos de KPIs implementados em FinanceSummaryService e repositories
 - Validações implementadas com class-validator (padrão aceito pelo projeto conforme engineering.md)
-- Pendente: Jobs, Tools para IA, Notificações, Frontend, Testes
+- Tools para IA implementados: 5 tools (get_finance_summary, get_pending_bills, mark_bill_paid, create_expense, get_debt_progress)
+- FinanceToolExecutorService integrado ao ChatService com mapeamento de categorias PT→EN
+- Testes unitários e de integração para todas as tools (32 arquivos, 504 tests passando)
+- Pendente: Jobs, Notificações, Frontend
 
 ---
 

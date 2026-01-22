@@ -58,6 +58,37 @@ vi.mock('@life-assistant/ai', () => ({
     parameters: {},
     requiresConfirmation: false,
   },
+  // Finance tools (M2.2)
+  getFinanceSummaryTool: {
+    name: 'get_finance_summary',
+    description: 'Get finance summary with KPIs',
+    parameters: {},
+    requiresConfirmation: false,
+  },
+  getPendingBillsTool: {
+    name: 'get_pending_bills',
+    description: 'Get pending bills',
+    parameters: {},
+    requiresConfirmation: false,
+  },
+  markBillPaidTool: {
+    name: 'mark_bill_paid',
+    description: 'Mark a bill as paid',
+    parameters: {},
+    requiresConfirmation: true,
+  },
+  createExpenseTool: {
+    name: 'create_expense',
+    description: 'Create a new expense',
+    parameters: {},
+    requiresConfirmation: true,
+  },
+  getDebtProgressTool: {
+    name: 'get_debt_progress',
+    description: 'Get debt progress',
+    parameters: {},
+    requiresConfirmation: false,
+  },
 }));
 
 import { ChatService } from '../../../../src/modules/chat/application/services/chat.service.js';

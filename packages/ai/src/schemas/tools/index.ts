@@ -71,6 +71,32 @@ export {
   type AnalyzeContextResponse,
 } from './analyze-context.tool.js';
 
+// Finance tools (M2.2)
+export {
+  getFinanceSummaryTool,
+  getFinanceSummaryParamsSchema,
+  financePeriodSchema,
+  type GetFinanceSummaryParams,
+  type FinancePeriod,
+  getPendingBillsTool,
+  getPendingBillsParamsSchema,
+  type GetPendingBillsParams,
+  markBillPaidTool,
+  markBillPaidParamsSchema,
+  type MarkBillPaidParams,
+  createExpenseTool,
+  createExpenseParamsSchema,
+  expenseCategorySchema,
+  type CreateExpenseParams,
+  type ExpenseCategory,
+  getDebtProgressTool,
+  getDebtProgressParamsSchema,
+  type GetDebtProgressParams,
+  financeTools,
+  financeReadTools,
+  financeWriteTools,
+} from './finance/index.js';
+
 // Confirmation detection tool (not in allTools - used with forced toolChoice)
 export {
   respondToConfirmationTool,
@@ -91,27 +117,45 @@ import { addKnowledgeTool } from './add-knowledge.tool.js';
 import { createReminderTool } from './create-reminder.tool.js';
 import { updatePersonTool } from './update-person.tool.js';
 import { analyzeContextTool } from './analyze-context.tool.js';
+// Finance tools (M2.2)
+import {
+  getFinanceSummaryTool,
+  getPendingBillsTool,
+  markBillPaidTool,
+  createExpenseTool,
+  getDebtProgressTool,
+} from './finance/index.js';
 import type { ToolDefinition } from '../../ports/llm.port.js';
 
 /**
  * All available tools.
- * READ tools: search_knowledge, get_tracking_history, get_person, analyze_context
- * WRITE tools: record_metric, update_metric, delete_metric, add_knowledge, create_reminder, update_person
+ * READ tools: search_knowledge, get_tracking_history, get_person, analyze_context, get_finance_summary, get_pending_bills, get_debt_progress
+ * WRITE tools: record_metric, update_metric, delete_metric, add_knowledge, create_reminder, update_person, mark_bill_paid, create_expense
  *
  * Note: delete_metrics (batch) was removed - LLM hallucinates entry IDs.
  * Parallel delete_metric calls work correctly and are confirmed together.
  */
 export const allTools: ToolDefinition[] = [
+  // Memory tools
   searchKnowledgeTool,
-  getTrackingHistoryTool,
-  getPersonTool,
+  addKnowledgeTool,
   analyzeContextTool,
+  // Person tools
+  getPersonTool,
+  updatePersonTool,
+  // Tracking tools (M2.1)
   recordMetricTool,
+  getTrackingHistoryTool,
   updateMetricTool,
   deleteMetricTool,
-  addKnowledgeTool,
+  // Reminder tools
   createReminderTool,
-  updatePersonTool,
+  // Finance tools (M2.2)
+  getFinanceSummaryTool,
+  getPendingBillsTool,
+  markBillPaidTool,
+  createExpenseTool,
+  getDebtProgressTool,
 ];
 
 /**
@@ -122,6 +166,10 @@ export const readTools: ToolDefinition[] = [
   getTrackingHistoryTool,
   getPersonTool,
   analyzeContextTool,
+  // Finance READ tools (M2.2)
+  getFinanceSummaryTool,
+  getPendingBillsTool,
+  getDebtProgressTool,
 ];
 
 /**
@@ -134,4 +182,7 @@ export const writeTools: ToolDefinition[] = [
   addKnowledgeTool,
   createReminderTool,
   updatePersonTool,
+  // Finance WRITE tools (M2.2)
+  markBillPaidTool,
+  createExpenseTool,
 ];

@@ -11,6 +11,12 @@ import {
   updateMetricTool,
   deleteMetricTool,
   respondToConfirmationTool,
+  // Finance tools (M2.2)
+  getFinanceSummaryTool,
+  getPendingBillsTool,
+  markBillPaidTool,
+  createExpenseTool,
+  getDebtProgressTool,
   type LLMPort,
   type Message as LLMMessage,
   type ToolLoopConfig,
@@ -30,6 +36,7 @@ import { ConversationRepository } from '../../infrastructure/repositories/conver
 import { MessageRepository } from '../../infrastructure/repositories/message.repository';
 import { MemoryToolExecutorService } from '../../../memory/application/services/memory-tool-executor.service';
 import { TrackingToolExecutorService } from '../../../tracking/application/services/tracking-tool-executor.service';
+import { FinanceToolExecutorService } from '../../../finance/application/services/finance-tool-executor.service';
 import type { CreateConversationDto } from '../../presentation/dtos/create-conversation.dto';
 import type { SendMessageDto } from '../../presentation/dtos/send-message.dto';
 
@@ -85,12 +92,18 @@ export class ChatService {
     getTrackingHistoryTool,
     updateMetricTool,
     deleteMetricTool,
+    // Finance tools (M2.2)
+    getFinanceSummaryTool,
+    getPendingBillsTool,
+    markBillPaidTool,
+    createExpenseTool,
+    getDebtProgressTool,
   ];
 
   /**
    * Tool name to executor mapping
    */
-  private readonly toolToExecutorMap: Record<string, 'memory' | 'tracking'> = {
+  private readonly toolToExecutorMap: Record<string, 'memory' | 'tracking' | 'finance'> = {
     search_knowledge: 'memory',
     add_knowledge: 'memory',
     analyze_context: 'memory',
@@ -98,6 +111,12 @@ export class ChatService {
     get_tracking_history: 'tracking',
     update_metric: 'tracking',
     delete_metric: 'tracking',
+    // Finance tools (M2.2)
+    get_finance_summary: 'finance',
+    get_pending_bills: 'finance',
+    mark_bill_paid: 'finance',
+    create_expense: 'finance',
+    get_debt_progress: 'finance',
   };
 
   /**
@@ -111,7 +130,8 @@ export class ChatService {
     private readonly conversationRepository: ConversationRepository,
     private readonly messageRepository: MessageRepository,
     private readonly memoryToolExecutor: MemoryToolExecutorService,
-    private readonly trackingToolExecutor: TrackingToolExecutorService
+    private readonly trackingToolExecutor: TrackingToolExecutorService,
+    private readonly financeToolExecutor: FinanceToolExecutorService
   ) {
     this.llm = createLLMFromEnv();
 
@@ -125,6 +145,8 @@ export class ChatService {
             return this.memoryToolExecutor.execute(toolCall, context);
           case 'tracking':
             return this.trackingToolExecutor.execute(toolCall, context);
+          case 'finance':
+            return this.financeToolExecutor.execute(toolCall, context);
           default:
             return createErrorResult(toolCall, new Error(`Unknown tool: ${toolCall.name}`));
         }
