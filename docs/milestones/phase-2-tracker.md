@@ -570,10 +570,10 @@ _Testes de Integração - Tools:_
 - [x] Tool get_debt_progress via ToolExecutorService
 
 _Testes de Integração - Regras de Negócio:_
-- [ ] Criar dívida não negociada → verificar que NÃO entra no total orçado
-- [ ] Pagar parcela → verificar atualização de KPIs
-- [ ] Pagar última parcela → verificar status = 'paid_off'
-- [ ] Negociar dívida → verificar que ENTRA no total orçado
+- [x] Criar dívida não negociada → verificar que NÃO entra no total orçado
+- [x] Pagar parcela → verificar atualização de KPIs
+- [x] Pagar última parcela → verificar status = 'paid_off'
+- [x] Negociar dívida → verificar que ENTRA no total orçado
 
 _Testes de Componente Frontend:_
 - [ ] Component: FinanceKPICard (valor, label, ícone, cor, trend)
