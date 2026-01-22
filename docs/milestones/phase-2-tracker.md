@@ -506,11 +506,11 @@ _Hooks de Dados (`hooks/finance/`):_
 **Testes:**
 
 _Testes Unitários Backend - Cálculos:_
-- [ ] Cálculo de KPIs principais (renda, orçado, gasto, saldo, investido)
-- [ ] Cálculo de KPIs de dívidas (total, parcela mensal, pago, restante)
-- [ ] Cálculo de progresso por dívida (parcelas pagas, restantes, %, valores)
-- [ ] Cálculo de progresso de investimento (currentAmount / goalAmount)
-- [ ] Exclusão de dívidas não negociadas do Total Orçado
+- [x] Cálculo de KPIs principais (renda, orçado, gasto, saldo, investido)
+- [x] Cálculo de KPIs de dívidas (total, parcela mensal, pago, restante)
+- [x] Cálculo de progresso por dívida (parcelas pagas, restantes, %, valores)
+- [x] Cálculo de progresso de investimento (currentAmount / goalAmount)
+- [x] Exclusão de dívidas não negociadas do Total Orçado
 
 _Testes Unitários Backend - Validações:_
 - [ ] Validação Income: expectedAmount > 0, monthYear formato YYYY-MM
