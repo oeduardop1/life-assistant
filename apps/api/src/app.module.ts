@@ -14,6 +14,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { MemoryModule } from './modules/memory/memory.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { AdminModule } from './modules/admin/admin.module';
 
 // Jobs
@@ -68,6 +69,7 @@ import { AllExceptionsFilter } from './common/filters/index';
     ChatModule,
     MemoryModule,
     TrackingModule,
+    FinanceModule,
 
     // Background jobs
     JobsModule,

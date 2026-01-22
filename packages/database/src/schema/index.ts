@@ -22,6 +22,13 @@ export * from './integrations';
 export * from './calendar';
 export * from './budgets';
 export * from './subscriptions';
+
+// Finance Module (M2.2)
+export * from './incomes';
+export * from './bills';
+export * from './variable-expenses';
+export * from './debts';
+export * from './investments';
 export * from './exports';
 export * from './habit-freezes';
 export * from './audit';

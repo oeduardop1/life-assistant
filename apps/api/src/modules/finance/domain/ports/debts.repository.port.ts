@@ -1,0 +1,45 @@
+// apps/api/src/modules/finance/domain/ports/debts.repository.port.ts
+
+import type { Debt, NewDebt } from '@life-assistant/database';
+
+export interface DebtSearchParams {
+  status?: string | undefined;
+  isNegotiated?: boolean | undefined;
+  limit?: number | undefined;
+  offset?: number | undefined;
+}
+
+export interface DebtSummary {
+  totalDebts: number;
+  totalAmount: number;
+  totalPaid: number;
+  totalRemaining: number;
+  negotiatedCount: number;
+  monthlyInstallmentSum: number;
+}
+
+export interface DebtsRepositoryPort {
+  create(userId: string, data: Omit<NewDebt, 'userId'>): Promise<Debt>;
+  findByUserId(userId: string, params: DebtSearchParams): Promise<Debt[]>;
+  findById(userId: string, id: string): Promise<Debt | null>;
+  update(
+    userId: string,
+    id: string,
+    data: Partial<Omit<NewDebt, 'userId'>>
+  ): Promise<Debt | null>;
+  delete(userId: string, id: string): Promise<boolean>;
+  countByUserId(userId: string, params: DebtSearchParams): Promise<number>;
+  payInstallment(userId: string, id: string): Promise<Debt | null>;
+  negotiate(
+    userId: string,
+    id: string,
+    data: {
+      totalInstallments: number;
+      installmentAmount: number;
+      dueDay: number;
+    }
+  ): Promise<Debt | null>;
+  getSummary(userId: string): Promise<DebtSummary>;
+}
+
+export const DEBTS_REPOSITORY = Symbol('DEBTS_REPOSITORY');

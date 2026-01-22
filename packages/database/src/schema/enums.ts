@@ -194,6 +194,39 @@ export const notificationStatusEnum = pgEnum('notification_status', [
 // Finance
 // ============================================================================
 
+export const incomeTypeEnum = pgEnum('income_type', [
+  'salary',
+  'freelance',
+  'bonus',
+  'passive',
+  'investment',
+  'gift',
+  'other',
+]);
+
+export const incomeFrequencyEnum = pgEnum('income_frequency', [
+  'monthly',
+  'biweekly',
+  'weekly',
+  'annual',
+  'irregular',
+]);
+
+export const billCategoryEnum = pgEnum('bill_category', [
+  'housing',
+  'utilities',
+  'subscription',
+  'insurance',
+  'other',
+]);
+
+export const billStatusEnum = pgEnum('bill_status', [
+  'pending',
+  'paid',
+  'overdue',
+  'canceled',
+]);
+
 export const expenseCategoryEnum = pgEnum('expense_category', [
   'food',
   'transport',
@@ -208,6 +241,22 @@ export const expenseCategoryEnum = pgEnum('expense_category', [
   'gifts',
   'investments',
   'other',
+]);
+
+export const debtStatusEnum = pgEnum('debt_status', [
+  'active',
+  'paid_off',
+  'settled',
+  'defaulted',
+]);
+
+export const investmentTypeEnum = pgEnum('investment_type', [
+  'emergency_fund',
+  'retirement',
+  'short_term',
+  'long_term',
+  'education',
+  'custom',
 ]);
 
 // ============================================================================
@@ -288,7 +337,13 @@ export type GoalStatus = (typeof goalStatusEnum.enumValues)[number];
 export type HabitFrequency = (typeof habitFrequencyEnum.enumValues)[number];
 export type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
 export type NotificationStatus = (typeof notificationStatusEnum.enumValues)[number];
+export type IncomeType = (typeof incomeTypeEnum.enumValues)[number];
+export type IncomeFrequency = (typeof incomeFrequencyEnum.enumValues)[number];
+export type BillCategory = (typeof billCategoryEnum.enumValues)[number];
+export type BillStatus = (typeof billStatusEnum.enumValues)[number];
 export type ExpenseCategory = (typeof expenseCategoryEnum.enumValues)[number];
+export type DebtStatus = (typeof debtStatusEnum.enumValues)[number];
+export type InvestmentType = (typeof investmentTypeEnum.enumValues)[number];
 export type SubscriptionStatus = (typeof subscriptionStatusEnum.enumValues)[number];
 export type ExportStatus = (typeof exportStatusEnum.enumValues)[number];
 export type ExportType = (typeof exportTypeEnum.enumValues)[number];

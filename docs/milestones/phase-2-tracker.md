@@ -146,7 +146,7 @@ _Testes E2E (6 tasks):_
 
 ---
 
-## M2.2 — Módulo: Finance 🔴
+## M2.2 — Módulo: Finance 🟡
 
 **Objetivo:** Implementar planejamento financeiro mensal de alto nível (controle pessoal, não micro-tracking de gastos).
 
@@ -161,39 +161,53 @@ _Testes E2E (6 tasks):_
 **Backend:**
 
 _Módulo e Estrutura:_
-- [ ] Criar módulo `finance`:
-  - [ ] `FinanceController` - CRUD de todas as entidades
-  - [ ] `IncomeService` - gerenciar rendas
-  - [ ] `BillService` - gerenciar contas fixas
-  - [ ] `ExpenseService` - gerenciar despesas variáveis
-  - [ ] `DebtService` - gerenciar dívidas com parcelas
-  - [ ] `InvestmentService` - gerenciar investimentos
-  - [ ] `FinanceSummaryUseCase` - calcular KPIs do dashboard
+- [x] Criar enums PostgreSQL:
+  - [x] `income_type` (salary, freelance, bonus, passive, investment, gift, other)
+  - [x] `income_frequency` (monthly, biweekly, weekly, annual, irregular)
+  - [x] `bill_category` (housing, utilities, subscription, insurance, other)
+  - [x] `bill_status` (pending, paid, overdue, canceled)
+  - [x] `debt_status` (active, paid_off, settled, defaulted)
+  - [x] `investment_type` (emergency_fund, retirement, short_term, long_term, education, custom)
+- [x] Criar módulo `finance`:
+  - [x] `FinanceController` - CRUD de todas as entidades
+  - [x] `IncomeService` - gerenciar rendas
+  - [x] `BillService` - gerenciar contas fixas
+  - [x] `ExpenseService` - gerenciar despesas variáveis
+  - [x] `DebtService` - gerenciar dívidas com parcelas
+  - [x] `InvestmentService` - gerenciar investimentos
+  - [x] `FinanceSummaryUseCase` - calcular KPIs do dashboard
+- [x] Criar repositories (Clean Architecture):
+  - [x] `IncomesRepository` + port interface
+  - [x] `BillsRepository` + port interface
+  - [x] `VariableExpensesRepository` + port interface
+  - [x] `DebtsRepository` + port interface
+  - [x] `InvestmentsRepository` + port interface
+- [x] Criar DTOs de query (filtros e paginação)
 
 _Tabelas (Migrations):_
-- [ ] Criar tabelas:
-  - [ ] `incomes` - fontes de renda (nome, tipo, frequência, previsto, real, recorrente, monthYear)
-  - [ ] `bills` - contas fixas (nome, categoria, valor, vencimento, status, paidAt, recorrente, monthYear)
-  - [ ] `variable_expenses` - despesas variáveis (nome, categoria, previsto, real, recorrente, monthYear)
-  - [ ] `debts` - dívidas (nome, credor, total, isNegotiated, parcelas, valor_parcela, parcela_atual, vencimento, status, notes)
-  - [ ] `investments` - investimentos (nome, tipo, meta, atual, aporte_mensal, prazo)
+- [x] Criar tabelas:
+  - [x] `incomes` - fontes de renda (nome, tipo, frequência, previsto, real, recorrente, monthYear)
+  - [x] `bills` - contas fixas (nome, categoria, valor, vencimento, status, paidAt, recorrente, monthYear)
+  - [x] `variable_expenses` - despesas variáveis (nome, categoria, previsto, real, recorrente, monthYear)
+  - [x] `debts` - dívidas (nome, credor, total, isNegotiated, parcelas, valor_parcela, parcela_atual, vencimento, status, notes)
+  - [x] `investments` - investimentos (nome, tipo, meta, atual, aporte_mensal, prazo)
 
 _Endpoints REST:_
-- [ ] Implementar CRUD completo para cada entidade:
-  - [ ] `POST /finance/incomes` - criar renda
-  - [ ] `GET /finance/incomes` - listar rendas (com filtros)
-  - [ ] `GET /finance/incomes/:id` - obter renda
-  - [ ] `PATCH /finance/incomes/:id` - atualizar renda
-  - [ ] `DELETE /finance/incomes/:id` - excluir renda
-  - [ ] (idem para bills, expenses, debts, investments)
-- [ ] Implementar endpoints de ação específicos:
-  - [ ] `PATCH /finance/bills/:id/mark-paid` - marcar conta como paga (status='paid', paidAt=now())
-  - [ ] `PATCH /finance/bills/:id/mark-unpaid` - desmarcar conta (status='pending', paidAt=null)
-  - [ ] `PATCH /finance/debts/:id/pay-installment` - pagar parcela (currentInstallment++, auto-quitação)
-  - [ ] `PATCH /finance/debts/:id/negotiate` - negociar dívida (preencher parcelas, isNegotiated=true)
-  - [ ] `PATCH /finance/investments/:id/update-value` - atualizar valor atual do investimento
-- [ ] Implementar endpoint de resumo:
-  - [ ] `GET /finance/summary` - retorna todos os KPIs do mês selecionado
+- [x] Implementar CRUD completo para cada entidade:
+  - [x] `POST /finance/incomes` - criar renda
+  - [x] `GET /finance/incomes` - listar rendas (com filtros)
+  - [x] `GET /finance/incomes/:id` - obter renda
+  - [x] `PATCH /finance/incomes/:id` - atualizar renda
+  - [x] `DELETE /finance/incomes/:id` - excluir renda
+  - [x] (idem para bills, expenses, debts, investments)
+- [x] Implementar endpoints de ação específicos:
+  - [x] `PATCH /finance/bills/:id/mark-paid` - marcar conta como paga (status='paid', paidAt=now())
+  - [x] `PATCH /finance/bills/:id/mark-unpaid` - desmarcar conta (status='pending', paidAt=null)
+  - [x] `PATCH /finance/debts/:id/pay-installment` - pagar parcela (currentInstallment++, auto-quitação)
+  - [x] `PATCH /finance/debts/:id/negotiate` - negociar dívida (preencher parcelas, isNegotiated=true)
+  - [x] `PATCH /finance/investments/:id/update-value` - atualizar valor atual do investimento
+- [x] Implementar endpoint de resumo:
+  - [x] `GET /finance/summary` - retorna todos os KPIs do mês selecionado
 
 _Jobs e Recorrências:_
 - [ ] Implementar job mensal de recorrências (dia 1, 00:05 UTC):
@@ -204,48 +218,48 @@ _Jobs e Recorrências:_
   - [ ] Atualizar bills para `status='overdue'` se dueDay < hoje e status='pending'
 
 _Cálculos e KPIs:_
-- [ ] Implementar cálculos de KPIs principais:
-  - [ ] Renda do mês: `SUM(incomes.actualAmount)`
-  - [ ] Total orçado: `SUM(bills.amount) + SUM(expenses.expectedAmount) + SUM(debts.installmentAmount WHERE isNegotiated=true AND status='active')`
-  - [ ] Total gasto: `SUM(bills WHERE paid) + SUM(expenses.actualAmount) + SUM(parcelas pagas no mês)`
-  - [ ] Saldo: `Renda - Gasto`
-  - [ ] Total investido: `SUM(investments.currentAmount)`
-- [ ] Implementar cálculos de KPIs de dívidas:
-  - [ ] Total de dívidas: `SUM(debts.totalAmount)` (todas)
-  - [ ] Parcela mensal total: `SUM(debts.installmentAmount WHERE isNegotiated=true AND status='active')`
-  - [ ] Total já pago: `SUM((currentInstallment - 1) × installmentAmount)` para dívidas negociadas
-  - [ ] Total restante: `Total de dívidas - Total já pago`
-- [ ] Implementar cálculos por dívida individual:
-  - [ ] Parcelas pagas: `currentInstallment - 1`
-  - [ ] Parcelas restantes: `totalInstallments - (currentInstallment - 1)`
-  - [ ] Progresso (%): `((currentInstallment - 1) / totalInstallments) × 100`
-  - [ ] Valor pago: `(currentInstallment - 1) × installmentAmount`
-  - [ ] Valor restante: `totalAmount - valorPago`
-- [ ] Implementar cálculo de progresso de investimento:
-  - [ ] Progresso (%): `(currentAmount / goalAmount) × 100` (se goalAmount definido)
+- [x] Implementar cálculos de KPIs principais:
+  - [x] Renda do mês: `SUM(incomes.actualAmount)`
+  - [x] Total orçado: `SUM(bills.amount) + SUM(expenses.expectedAmount) + SUM(debts.installmentAmount WHERE isNegotiated=true AND status='active')`
+  - [x] Total gasto: `SUM(bills WHERE paid) + SUM(expenses.actualAmount) + SUM(parcelas pagas no mês)`
+  - [x] Saldo: `Renda - Gasto`
+  - [x] Total investido: `SUM(investments.currentAmount)`
+- [x] Implementar cálculos de KPIs de dívidas:
+  - [x] Total de dívidas: `SUM(debts.totalAmount)` (todas)
+  - [x] Parcela mensal total: `SUM(debts.installmentAmount WHERE isNegotiated=true AND status='active')`
+  - [x] Total já pago: `SUM((currentInstallment - 1) × installmentAmount)` para dívidas negociadas
+  - [x] Total restante: `Total de dívidas - Total já pago`
+- [x] Implementar cálculos por dívida individual:
+  - [x] Parcelas pagas: `currentInstallment - 1`
+  - [x] Parcelas restantes: `totalInstallments - (currentInstallment - 1)`
+  - [x] Progresso (%): `((currentInstallment - 1) / totalInstallments) × 100`
+  - [x] Valor pago: `(currentInstallment - 1) × installmentAmount`
+  - [x] Valor restante: `totalAmount - valorPago`
+- [x] Implementar cálculo de progresso de investimento:
+  - [x] Progresso (%): `(currentAmount / goalAmount) × 100` (se goalAmount definido)
 
-_Validações (Zod):_
-- [ ] Implementar schemas de validação para cada entidade:
-  - [ ] Income: expectedAmount > 0, monthYear formato YYYY-MM
-  - [ ] Bill: amount > 0, dueDay 1-31, monthYear formato YYYY-MM
-  - [ ] Expense: expectedAmount > 0, actualAmount >= 0, monthYear formato YYYY-MM
-  - [ ] Investment: currentAmount >= 0, goalAmount > 0 (se definido), monthlyContribution >= 0
-- [ ] Implementar validação condicional para dívidas:
-  - [ ] totalAmount > 0 (sempre)
-  - [ ] Se `isNegotiated=true`: totalInstallments > 0, installmentAmount > 0, dueDay 1-31, currentInstallment 1-totalInstallments
-  - [ ] Se `isNegotiated=false`: campos de parcelas ignorados/opcionais
+_Validações (class-validator):_
+- [x] Implementar schemas de validação para cada entidade:
+  - [x] Income: expectedAmount > 0, monthYear formato YYYY-MM
+  - [x] Bill: amount > 0, dueDay 1-31, monthYear formato YYYY-MM
+  - [x] Expense: expectedAmount > 0, actualAmount >= 0, monthYear formato YYYY-MM
+  - [x] Investment: currentAmount >= 0, goalAmount > 0 (se definido), monthlyContribution >= 0
+- [x] Implementar validação condicional para dívidas:
+  - [x] totalAmount > 0 (sempre)
+  - [x] Se `isNegotiated=true`: totalInstallments > 0, installmentAmount > 0, dueDay 1-31, currentInstallment 1-totalInstallments
+  - [x] Se `isNegotiated=false`: campos de parcelas ignorados/opcionais
 
 _Filtros e Paginação:_
-- [ ] Implementar query params para filtros:
-  - [ ] `monthYear` - filtrar por mês (obrigatório para bills, expenses, incomes)
-  - [ ] `status` - filtrar por status (pending, paid, overdue para bills; active, paid_off para debts)
-  - [ ] `category` - filtrar por categoria
-  - [ ] `isRecurring` - filtrar recorrentes/pontuais
-  - [ ] `isNegotiated` - filtrar dívidas negociadas/pendentes
-- [ ] Implementar paginação:
-  - [ ] `limit` - quantidade de registros (default 50, max 100)
-  - [ ] `offset` - pular registros
-  - [ ] Retornar metadata: `{ data: [], total: number, limit: number, offset: number }`
+- [x] Implementar query params para filtros:
+  - [x] `monthYear` - filtrar por mês (obrigatório para bills, expenses, incomes)
+  - [x] `status` - filtrar por status (pending, paid, overdue para bills; active, paid_off para debts)
+  - [x] `category` - filtrar por categoria
+  - [x] `isRecurring` - filtrar recorrentes/pontuais
+  - [x] `isNegotiated` - filtrar dívidas negociadas/pendentes
+- [x] Implementar paginação:
+  - [x] `limit` - quantidade de registros (default 50, max 100)
+  - [x] `offset` - pular registros
+  - [x] Retornar metadata: `{ data: [], total: number, limit: number, offset: number }`
 
 _Tools para IA:_
 - [ ] Implementar tool `get_finance_summary`:
@@ -593,6 +607,16 @@ _Testes:_
 - [ ] Testes de componentes frontend passam
 - [ ] Testes de hooks frontend passam
 - [ ] Testes E2E passam
+
+**Notas (2026-01-21):**
+- Backend implementado: módulo, estrutura, tabelas, endpoints REST, cálculos e KPIs, validações, filtros e paginação
+- 7 enums PostgreSQL criados (6 planejados + expense_category extra)
+- 5 tabelas criadas e aplicadas ao banco de dados
+- 29 arquivos de código: 6 controllers, 6 services, 5 repositories, 5 ports, 6 DTOs, 1 module
+- 31 endpoints implementados: 25 CRUD + 5 ações especiais + 1 resumo
+- Cálculos de KPIs implementados em FinanceSummaryService e repositories
+- Validações implementadas com class-validator (padrão aceito pelo projeto conforme engineering.md)
+- Pendente: Jobs, Tools para IA, Notificações, Frontend, Testes
 
 ---
 
