@@ -240,13 +240,13 @@ ${BOLD}TROUBLESHOOTING${NC}
     If startup fails:
       ${CYAN}1.${NC} Run with --clean flag: ${GREEN}pnpm infra:up --clean${NC}
       ${CYAN}2.${NC} Check ports: ${GREEN}lsof -i :54321 -i :54322 -i :54323${NC}
-      ${CYAN}3.${NC} Full reset: ${GREEN}pnpm infra:down -rf && pnpm infra:up${NC}
+      ${CYAN}3.${NC} Full reset: ${GREEN}pnpm infra:down -r -f && pnpm infra:up${NC}
       ${CYAN}4.${NC} Check Docker: ${GREEN}docker ps -a | grep -E 'supabase|life-assistant'${NC}
 
 ${BOLD}SEE ALSO${NC}
     pnpm infra:down          Stop services
     pnpm infra:down --help   Show stop options
-    pnpm infra:down -rf      Stop and delete all data (no confirmation)
+    pnpm infra:down -r -f    Stop and delete all data (no confirmation)
 
 EOF
 }
@@ -587,7 +587,7 @@ show_supabase_troubleshooting() {
     echo -e "     pnpm infra:up --clean"
     echo ""
     echo -e "  ${CYAN}3. Full reset:${NC}"
-    echo -e "     pnpm infra:down -rf && pnpm infra:up"
+    echo -e "     pnpm infra:down -r -f && pnpm infra:up"
     echo ""
     echo -e "  ${CYAN}4. Check Docker logs:${NC}"
     echo -e "     docker logs supabase_db_life-assistant"
@@ -717,7 +717,7 @@ show_failure_summary() {
     echo ""
     echo -e "  ${CYAN}Quick fixes:${NC}"
     echo -e "    ${GREEN}pnpm infra:up --clean${NC}     Clean up and retry"
-    echo -e "    ${GREEN}pnpm infra:down -rf${NC}       Full reset"
+    echo -e "    ${GREEN}pnpm infra:down -r -f${NC}     Full reset"
     echo ""
     echo -e "  ${CYAN}For more details:${NC}"
     echo -e "    ${GREEN}pnpm infra:up -v${NC}          Run with verbose output"
