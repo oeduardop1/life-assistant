@@ -550,12 +550,12 @@ _Testes de Integração - Endpoints:_
 - [ ] Endpoint summary: retorna todos os KPIs
 
 _Testes de Integração - Filtros e Paginação:_
-- [ ] Filtro por monthYear funciona
-- [ ] Filtro por status funciona (pending, paid, overdue)
-- [ ] Filtro por category funciona
-- [ ] Filtro por isNegotiated funciona
-- [ ] Paginação com limit e offset funciona
-- [ ] Retorna metadata correta (total, limit, offset)
+- [x] Filtro por monthYear funciona
+- [x] Filtro por status funciona (pending, paid, overdue)
+- [x] Filtro por category funciona
+- [x] Filtro por isNegotiated funciona
+- [x] Paginação com limit e offset funciona
+- [x] Retorna metadata correta (total, limit, offset)
 
 _Testes de Integração - Jobs:_
 - [ ] Job de recorrência mensal executa corretamente
