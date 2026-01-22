@@ -89,6 +89,51 @@ export class FinancePage {
   readonly billFormSubmit: Locator;
   readonly billFormCancel: Locator;
 
+  // Debts page
+  readonly debtsPage: Locator;
+  readonly debtsEmptyState: Locator;
+  readonly debtsEmptyFiltered: Locator;
+  readonly debtsErrorState: Locator;
+  readonly addDebtButton: Locator;
+  readonly debtSummary: Locator;
+  readonly debtList: Locator;
+  readonly debtStatusFilter: Locator;
+  readonly debtFilterAll: Locator;
+  readonly debtFilterActive: Locator;
+  readonly debtFilterPaidOff: Locator;
+  readonly negotiatedDebtsSection: Locator;
+  readonly pendingDebtsSection: Locator;
+
+  // Debt modals
+  readonly createDebtModal: Locator;
+  readonly editDebtModal: Locator;
+  readonly deleteDebtDialog: Locator;
+  readonly negotiateDebtModal: Locator;
+  readonly payInstallmentDialog: Locator;
+
+  // Debt form fields
+  readonly debtFormName: Locator;
+  readonly debtFormCreditor: Locator;
+  readonly debtFormTotalAmount: Locator;
+  readonly debtFormIsNegotiated: Locator;
+  readonly debtFormTotalInstallments: Locator;
+  readonly debtFormInstallmentAmount: Locator;
+  readonly debtFormDueDay: Locator;
+  readonly debtFormNotes: Locator;
+  readonly debtFormSubmit: Locator;
+  readonly debtFormCancel: Locator;
+
+  // Negotiate form fields
+  readonly negotiateFormTotalInstallments: Locator;
+  readonly negotiateFormInstallmentAmount: Locator;
+  readonly negotiateFormDueDay: Locator;
+  readonly negotiateFormSubmit: Locator;
+  readonly negotiateFormCancel: Locator;
+
+  // Pay installment dialog
+  readonly payInstallmentConfirm: Locator;
+  readonly payInstallmentCancel: Locator;
+
   constructor(page: Page) {
     this.page = page;
 
@@ -170,6 +215,51 @@ export class FinancePage {
     this.billFormIsRecurring = page.getByTestId('bill-form-is-recurring');
     this.billFormSubmit = page.getByTestId('bill-form-submit');
     this.billFormCancel = page.getByTestId('bill-form-cancel');
+
+    // Debts page
+    this.debtsPage = page.getByTestId('debts-page');
+    this.debtsEmptyState = page.getByTestId('debts-empty-state');
+    this.debtsEmptyFiltered = page.getByTestId('debts-empty-filtered');
+    this.debtsErrorState = page.getByTestId('debts-error-state');
+    this.addDebtButton = page.getByTestId('add-debt-button');
+    this.debtSummary = page.getByTestId('debt-summary');
+    this.debtList = page.getByTestId('debt-list');
+    this.debtStatusFilter = page.getByTestId('debt-status-filter');
+    this.debtFilterAll = page.getByTestId('debt-filter-all');
+    this.debtFilterActive = page.getByTestId('debt-filter-active');
+    this.debtFilterPaidOff = page.getByTestId('debt-filter-paid-off');
+    this.negotiatedDebtsSection = page.getByTestId('negotiated-debts-section');
+    this.pendingDebtsSection = page.getByTestId('pending-debts-section');
+
+    // Debt modals
+    this.createDebtModal = page.getByTestId('create-debt-modal');
+    this.editDebtModal = page.getByTestId('edit-debt-modal');
+    this.deleteDebtDialog = page.getByTestId('delete-debt-dialog');
+    this.negotiateDebtModal = page.getByTestId('negotiate-debt-modal');
+    this.payInstallmentDialog = page.getByTestId('pay-installment-dialog');
+
+    // Debt form fields
+    this.debtFormName = page.getByTestId('debt-form-name');
+    this.debtFormCreditor = page.getByTestId('debt-form-creditor');
+    this.debtFormTotalAmount = page.getByTestId('debt-form-total-amount');
+    this.debtFormIsNegotiated = page.getByTestId('debt-form-is-negotiated');
+    this.debtFormTotalInstallments = page.getByTestId('debt-form-total-installments');
+    this.debtFormInstallmentAmount = page.getByTestId('debt-form-installment-amount');
+    this.debtFormDueDay = page.getByTestId('debt-form-due-day');
+    this.debtFormNotes = page.getByTestId('debt-form-notes');
+    this.debtFormSubmit = page.getByTestId('debt-form-submit');
+    this.debtFormCancel = page.getByTestId('debt-form-cancel');
+
+    // Negotiate form fields
+    this.negotiateFormTotalInstallments = page.getByTestId('negotiate-form-total-installments');
+    this.negotiateFormInstallmentAmount = page.getByTestId('negotiate-form-installment-amount');
+    this.negotiateFormDueDay = page.getByTestId('negotiate-form-due-day');
+    this.negotiateFormSubmit = page.getByTestId('negotiate-form-submit');
+    this.negotiateFormCancel = page.getByTestId('negotiate-form-cancel');
+
+    // Pay installment dialog
+    this.payInstallmentConfirm = page.getByTestId('pay-installment-confirm');
+    this.payInstallmentCancel = page.getByTestId('pay-installment-cancel');
   }
 
   /**
@@ -601,5 +691,347 @@ export class FinancePage {
    */
   async getBillSummaryPending() {
     return this.page.getByTestId('bill-summary-pending').textContent();
+  }
+
+  // =========================================================================
+  // Debt Page Methods
+  // =========================================================================
+
+  /**
+   * Navigate to debts page
+   */
+  async gotoDebts() {
+    await this.page.goto('/finance/debts');
+  }
+
+  /**
+   * Wait for debts page to load
+   */
+  async waitForDebtsPageLoad() {
+    await this.page.waitForLoadState('networkidle');
+    await Promise.race([
+      this.debtsPage.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.debtsEmptyState.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.debtsEmptyFiltered.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.debtsErrorState.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+    ]);
+  }
+
+  /**
+   * Check if debts page is visible
+   */
+  async isDebtsPageVisible() {
+    return this.debtsPage.isVisible();
+  }
+
+  /**
+   * Check if debts empty state is visible
+   */
+  async isDebtsEmptyStateVisible() {
+    return this.debtsEmptyState.isVisible();
+  }
+
+  /**
+   * Open create debt modal
+   */
+  async openCreateDebtModal() {
+    await this.addDebtButton.click();
+    await this.createDebtModal.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Fill debt form for negotiated debt
+   */
+  async fillDebtFormNegotiated(data: {
+    name: string;
+    creditor?: string;
+    totalAmount: string;
+    totalInstallments: string;
+    installmentAmount: string;
+    dueDay?: string;
+    notes?: string;
+  }) {
+    await this.debtFormName.fill(data.name);
+
+    if (data.creditor) {
+      await this.debtFormCreditor.fill(data.creditor);
+    }
+
+    await this.debtFormTotalAmount.fill(data.totalAmount);
+
+    // Toggle isNegotiated to true if not already
+    const isChecked = await this.debtFormIsNegotiated.isChecked();
+    if (!isChecked) {
+      await this.debtFormIsNegotiated.click();
+    }
+
+    await this.debtFormTotalInstallments.fill(data.totalInstallments);
+    await this.debtFormInstallmentAmount.fill(data.installmentAmount);
+
+    if (data.dueDay) {
+      await this.debtFormDueDay.fill(data.dueDay);
+    }
+
+    if (data.notes) {
+      await this.debtFormNotes.fill(data.notes);
+    }
+  }
+
+  /**
+   * Fill debt form for pending debt (not negotiated)
+   */
+  async fillDebtFormPending(data: {
+    name: string;
+    creditor?: string;
+    totalAmount: string;
+    notes?: string;
+  }) {
+    await this.debtFormName.fill(data.name);
+
+    if (data.creditor) {
+      await this.debtFormCreditor.fill(data.creditor);
+    }
+
+    await this.debtFormTotalAmount.fill(data.totalAmount);
+
+    // Ensure isNegotiated is false
+    const isChecked = await this.debtFormIsNegotiated.isChecked();
+    if (isChecked) {
+      await this.debtFormIsNegotiated.click();
+    }
+
+    if (data.notes) {
+      await this.debtFormNotes.fill(data.notes);
+    }
+  }
+
+  /**
+   * Submit debt form
+   */
+  async submitDebtForm() {
+    await this.debtFormSubmit.click();
+  }
+
+  /**
+   * Cancel debt form
+   */
+  async cancelDebtForm() {
+    await this.debtFormCancel.click();
+  }
+
+  /**
+   * Create negotiated debt via modal
+   */
+  async createNegotiatedDebt(data: {
+    name: string;
+    creditor?: string;
+    totalAmount: string;
+    totalInstallments: string;
+    installmentAmount: string;
+    dueDay?: string;
+    notes?: string;
+  }) {
+    await this.openCreateDebtModal();
+    await this.fillDebtFormNegotiated(data);
+    await this.submitDebtForm();
+  }
+
+  /**
+   * Create pending debt via modal
+   */
+  async createPendingDebt(data: {
+    name: string;
+    creditor?: string;
+    totalAmount: string;
+    notes?: string;
+  }) {
+    await this.openCreateDebtModal();
+    await this.fillDebtFormPending(data);
+    await this.submitDebtForm();
+  }
+
+  /**
+   * Get debt card by name
+   */
+  getDebtCard(name: string) {
+    return this.page.locator('[data-testid="debt-card"]', { hasText: name });
+  }
+
+  /**
+   * Open edit modal for debt
+   */
+  async openEditDebtModal(debtName: string) {
+    const card = this.getDebtCard(debtName);
+    await card.getByTestId('debt-actions-trigger').click();
+    await card.getByTestId('debt-edit-action').click();
+    await this.editDebtModal.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Open delete dialog for debt
+   */
+  async openDeleteDebtDialog(debtName: string) {
+    const card = this.getDebtCard(debtName);
+    await card.getByTestId('debt-actions-trigger').click();
+    await card.getByTestId('debt-delete-action').click();
+    await this.deleteDebtDialog.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Open negotiate modal for debt
+   */
+  async openNegotiateDebtModal(debtName: string) {
+    const card = this.getDebtCard(debtName);
+    await card.getByTestId('debt-actions-trigger').click();
+    await card.getByTestId('debt-negotiate-action').click();
+    await this.negotiateDebtModal.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Open pay installment dialog for debt
+   */
+  async openPayInstallmentDialog(debtName: string) {
+    const card = this.getDebtCard(debtName);
+    await card.getByTestId('debt-actions-trigger').click();
+    await card.getByTestId('debt-pay-installment-action').click();
+    await this.payInstallmentDialog.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Fill negotiate form
+   */
+  async fillNegotiateForm(data: {
+    totalInstallments: string;
+    installmentAmount: string;
+    dueDay?: string;
+  }) {
+    await this.negotiateFormTotalInstallments.clear();
+    await this.negotiateFormTotalInstallments.fill(data.totalInstallments);
+    await this.negotiateFormInstallmentAmount.clear();
+    await this.negotiateFormInstallmentAmount.fill(data.installmentAmount);
+
+    if (data.dueDay) {
+      await this.negotiateFormDueDay.clear();
+      await this.negotiateFormDueDay.fill(data.dueDay);
+    }
+  }
+
+  /**
+   * Submit negotiate form
+   */
+  async submitNegotiateForm() {
+    await this.negotiateFormSubmit.click();
+  }
+
+  /**
+   * Cancel negotiate form
+   */
+  async cancelNegotiateForm() {
+    await this.negotiateFormCancel.click();
+  }
+
+  /**
+   * Negotiate a pending debt
+   */
+  async negotiateDebt(debtName: string, data: {
+    totalInstallments: string;
+    installmentAmount: string;
+    dueDay?: string;
+  }) {
+    await this.openNegotiateDebtModal(debtName);
+    await this.fillNegotiateForm(data);
+    await this.submitNegotiateForm();
+  }
+
+  /**
+   * Confirm pay installment
+   */
+  async confirmPayInstallment() {
+    await this.payInstallmentConfirm.click();
+  }
+
+  /**
+   * Cancel pay installment
+   */
+  async cancelPayInstallment() {
+    await this.payInstallmentCancel.click();
+  }
+
+  /**
+   * Pay installment for a debt
+   */
+  async payDebtInstallment(debtName: string) {
+    await this.openPayInstallmentDialog(debtName);
+    await this.confirmPayInstallment();
+  }
+
+  /**
+   * Confirm delete debt
+   */
+  async confirmDeleteDebt() {
+    await this.page.getByTestId('delete-debt-confirm').click();
+  }
+
+  /**
+   * Cancel delete debt
+   */
+  async cancelDeleteDebt() {
+    await this.page.getByTestId('delete-debt-cancel').click();
+  }
+
+  /**
+   * Filter debts by status
+   */
+  async filterDebtsByStatus(status: 'all' | 'active' | 'paid_off') {
+    const filters = {
+      all: this.debtFilterAll,
+      active: this.debtFilterActive,
+      paid_off: this.debtFilterPaidOff,
+    };
+    await filters[status].click();
+  }
+
+  /**
+   * Get debt summary total value
+   */
+  async getDebtSummaryTotal() {
+    return this.page.getByTestId('debt-summary-total').textContent();
+  }
+
+  /**
+   * Get debt summary monthly value
+   */
+  async getDebtSummaryMonthly() {
+    return this.page.getByTestId('debt-summary-monthly').textContent();
+  }
+
+  /**
+   * Get debt summary paid value
+   */
+  async getDebtSummaryPaid() {
+    return this.page.getByTestId('debt-summary-paid').textContent();
+  }
+
+  /**
+   * Get debt summary remaining value
+   */
+  async getDebtSummaryRemaining() {
+    return this.page.getByTestId('debt-summary-remaining').textContent();
+  }
+
+  /**
+   * Get progress percentage for a debt
+   */
+  async getDebtProgressPercent(debtName: string) {
+    const card = this.getDebtCard(debtName);
+    return card.getByTestId('debt-progress-percent').textContent();
+  }
+
+  /**
+   * Get installments progress text for a debt
+   */
+  async getDebtInstallmentsProgress(debtName: string) {
+    const card = this.getDebtCard(debtName);
+    return card.getByTestId('debt-progress-installments').textContent();
   }
 }

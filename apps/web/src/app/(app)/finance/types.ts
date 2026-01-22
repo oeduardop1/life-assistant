@@ -810,3 +810,248 @@ export const expenseCategoryOptions: { value: ExpenseCategory; label: string }[]
   { value: 'investments', label: 'Investimentos' },
   { value: 'other', label: 'Outro' },
 ];
+
+// =============================================================================
+// Debt Types
+// =============================================================================
+
+/**
+ * Debt status options (matches backend debt_status enum)
+ */
+export type DebtStatus = 'active' | 'paid_off' | 'settled' | 'defaulted';
+
+/**
+ * Debt entity returned from API
+ */
+export interface Debt {
+  id: string;
+  userId: string;
+  name: string;
+  creditor: string | null;
+  totalAmount: number;
+  isNegotiated: boolean;
+  totalInstallments: number | null;
+  installmentAmount: number | null;
+  currentInstallment: number;
+  dueDay: number | null;
+  status: DebtStatus;
+  notes: string | null;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Create debt payload
+ */
+export interface CreateDebtInput {
+  name: string;
+  creditor?: string;
+  totalAmount: number;
+  isNegotiated?: boolean;
+  totalInstallments?: number;
+  installmentAmount?: number;
+  dueDay?: number;
+  notes?: string;
+  currency?: string;
+}
+
+/**
+ * Update debt payload
+ */
+export interface UpdateDebtInput {
+  name?: string;
+  creditor?: string;
+  totalAmount?: number;
+  status?: DebtStatus;
+  notes?: string;
+  currency?: string;
+}
+
+/**
+ * Negotiate debt payload (for non-negotiated debts)
+ */
+export interface NegotiateDebtInput {
+  totalInstallments: number;
+  installmentAmount: number;
+  dueDay: number;
+}
+
+/**
+ * Debt query parameters
+ */
+export interface DebtQueryParams {
+  status?: DebtStatus;
+  isNegotiated?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * API response for single debt
+ */
+export interface DebtResponse {
+  debt: Debt;
+}
+
+/**
+ * API response for debt list
+ */
+export interface DebtsListResponse {
+  debts: Debt[];
+  total: number;
+}
+
+/**
+ * Debt totals for summary
+ */
+export interface DebtTotals {
+  totalDebts: number;
+  totalAmount: number;
+  totalPaid: number;
+  totalRemaining: number;
+  monthlyInstallmentSum: number;
+  negotiatedCount: number;
+  pendingNegotiationCount: number;
+}
+
+/**
+ * Debt progress information
+ */
+export interface DebtProgress {
+  paidInstallments: number;
+  remainingInstallments: number;
+  progressPercent: number;
+  paidAmount: number;
+  remainingAmount: number;
+}
+
+// =============================================================================
+// Debt Constants
+// =============================================================================
+
+/**
+ * Debt status labels (Portuguese)
+ */
+export const debtStatusLabels: Record<DebtStatus, string> = {
+  active: 'Ativo',
+  paid_off: 'Quitado',
+  settled: 'Acordado',
+  defaulted: 'Inadimplente',
+};
+
+/**
+ * Debt status colors for badges
+ */
+export const debtStatusColors: Record<DebtStatus, string> = {
+  active: 'blue',
+  paid_off: 'green',
+  settled: 'purple',
+  defaulted: 'red',
+};
+
+/**
+ * Debt status options for select dropdown
+ */
+export const debtStatusOptions: { value: DebtStatus; label: string }[] = [
+  { value: 'active', label: 'Ativo' },
+  { value: 'paid_off', label: 'Quitado' },
+  { value: 'settled', label: 'Acordado' },
+  { value: 'defaulted', label: 'Inadimplente' },
+];
+
+// =============================================================================
+// Debt Helper Functions
+// =============================================================================
+
+/**
+ * Calculate debt progress for negotiated debts
+ * @param debt - The debt entity
+ * @returns DebtProgress with installment and amount info
+ */
+export function calculateDebtProgress(debt: Debt): DebtProgress {
+  if (!debt.isNegotiated || !debt.totalInstallments || !debt.installmentAmount) {
+    return {
+      paidInstallments: 0,
+      remainingInstallments: 0,
+      progressPercent: 0,
+      paidAmount: 0,
+      remainingAmount: debt.totalAmount,
+    };
+  }
+
+  const paidInstallments = debt.currentInstallment - 1;
+  const remainingInstallments = debt.totalInstallments - paidInstallments;
+  const progressPercent = (paidInstallments / debt.totalInstallments) * 100;
+  const paidAmount = paidInstallments * debt.installmentAmount;
+  const remainingAmount = remainingInstallments * debt.installmentAmount;
+
+  return {
+    paidInstallments,
+    remainingInstallments,
+    progressPercent,
+    paidAmount,
+    remainingAmount,
+  };
+}
+
+/**
+ * Calculate debt totals from a list of debts
+ * @param debts - Array of debt entities
+ * @returns DebtTotals summary
+ */
+export function calculateDebtTotals(debts: Debt[]): DebtTotals {
+  const activeDebts = debts.filter((d) => d.status === 'active');
+  const negotiatedDebts = activeDebts.filter((d) => d.isNegotiated);
+  const pendingDebts = activeDebts.filter((d) => !d.isNegotiated);
+
+  let totalPaid = 0;
+  let monthlyInstallmentSum = 0;
+
+  for (const debt of negotiatedDebts) {
+    if (debt.installmentAmount && debt.totalInstallments) {
+      const paidInstallments = debt.currentInstallment - 1;
+      totalPaid += paidInstallments * debt.installmentAmount;
+      monthlyInstallmentSum += debt.installmentAmount;
+    }
+  }
+
+  const totalAmount = activeDebts.reduce((sum, d) => sum + d.totalAmount, 0);
+  const totalRemaining = totalAmount - totalPaid;
+
+  return {
+    totalDebts: activeDebts.length,
+    totalAmount,
+    totalPaid,
+    totalRemaining,
+    monthlyInstallmentSum,
+    negotiatedCount: negotiatedDebts.length,
+    pendingNegotiationCount: pendingDebts.length,
+  };
+}
+
+/**
+ * Get due date for current month based on dueDay
+ * @param dueDay - Day of month (1-31)
+ * @returns Date string in YYYY-MM-DD format
+ */
+export function getDebtDueDateForCurrentMonth(dueDay: number): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const monthYear = `${year}-${String(month).padStart(2, '0')}`;
+  return getDueDateForMonth(monthYear, dueDay);
+}
+
+/**
+ * Check if a debt installment is overdue
+ * @param debt - The debt entity
+ * @returns true if the debt has a dueDay and it's past that date
+ */
+export function isDebtInstallmentOverdue(debt: Debt): boolean {
+  if (!debt.isNegotiated || !debt.dueDay || debt.status !== 'active') {
+    return false;
+  }
+  const dueDate = getDebtDueDateForCurrentMonth(debt.dueDay);
+  return isOverdue(dueDate);
+}
