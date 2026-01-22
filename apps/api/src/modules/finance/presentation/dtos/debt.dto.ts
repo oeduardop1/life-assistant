@@ -32,7 +32,7 @@ export class CreateDebtDto {
 
   @ApiProperty({ example: 50000, description: 'Total debt amount' })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   totalAmount: number;
 
   @ApiPropertyOptional({
@@ -58,7 +58,7 @@ export class CreateDebtDto {
   })
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   installmentAmount?: number;
 
   @ApiPropertyOptional({
@@ -96,7 +96,7 @@ export class UpdateDebtDto {
   @ApiPropertyOptional({ example: 50000 })
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   totalAmount?: number;
 
   @ApiPropertyOptional({ enum: DebtStatusDto })
@@ -123,7 +123,7 @@ export class NegotiateDebtDto {
 
   @ApiProperty({ example: 1200, description: 'Monthly installment amount' })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   installmentAmount: number;
 
   @ApiProperty({ example: 15, description: 'Due day of month (1-31)' })

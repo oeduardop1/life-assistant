@@ -40,7 +40,7 @@ export class CreateBillDto {
 
   @ApiProperty({ example: 1500, description: 'Bill amount' })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   amount: number;
 
   @ApiProperty({ example: 10, description: 'Due day of month (1-31)' })
@@ -79,7 +79,7 @@ export class UpdateBillDto {
   @ApiPropertyOptional({ example: 1500 })
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   amount?: number;
 
   @ApiPropertyOptional({ example: 10 })

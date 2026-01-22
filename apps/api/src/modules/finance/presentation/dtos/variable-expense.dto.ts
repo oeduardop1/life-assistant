@@ -40,7 +40,7 @@ export class CreateVariableExpenseDto {
 
   @ApiProperty({ example: 800, description: 'Expected/budgeted amount' })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   expectedAmount: number;
 
   @ApiPropertyOptional({ example: 0, default: 0, description: 'Actual amount spent' })
@@ -79,7 +79,7 @@ export class UpdateVariableExpenseDto {
   @ApiPropertyOptional({ example: 800 })
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   expectedAmount?: number;
 
   @ApiPropertyOptional({ example: 650 })

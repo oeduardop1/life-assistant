@@ -513,20 +513,20 @@ _Testes Unitários Backend - Cálculos:_
 - [x] Exclusão de dívidas não negociadas do Total Orçado
 
 _Testes Unitários Backend - Validações:_
-- [ ] Validação Income: expectedAmount > 0, monthYear formato YYYY-MM
-- [ ] Validação Bill: amount > 0, dueDay 1-31
-- [ ] Validação Expense: expectedAmount > 0, actualAmount >= 0
-- [ ] Validação Investment: currentAmount >= 0, goalAmount > 0 (se definido)
-- [ ] Validação Debt condicional: isNegotiated=true requer parcelas, isNegotiated=false ignora
-- [ ] Validação Debt: totalAmount > 0, currentInstallment dentro do range
+- [x] Validação Income: expectedAmount > 0, monthYear formato YYYY-MM
+- [x] Validação Bill: amount > 0, dueDay 1-31
+- [x] Validação Expense: expectedAmount > 0, actualAmount >= 0
+- [x] Validação Investment: currentAmount >= 0, goalAmount > 0 (se definido)
+- [x] Validação Debt condicional: isNegotiated=true requer parcelas, isNegotiated=false ignora
+- [x] Validação Debt: totalAmount > 0, currentInstallment dentro do range
 
 _Testes Unitários Backend - Services:_
-- [ ] IncomeService: CRUD operations
-- [ ] BillService: CRUD + markPaid/markUnpaid
-- [ ] ExpenseService: CRUD operations
-- [ ] DebtService: CRUD + payInstallment + negotiate
-- [ ] InvestmentService: CRUD + updateValue
-- [ ] FinanceSummaryUseCase: cálculo de todos os KPIs
+- [x] IncomeService: CRUD operations
+- [x] BillService: CRUD + markPaid/markUnpaid
+- [x] ExpenseService: CRUD operations
+- [x] DebtService: CRUD + payInstallment + negotiate
+- [x] InvestmentService: CRUD + updateValue
+- [x] FinanceSummaryUseCase: cálculo de todos os KPIs
 
 _Testes Unitários Backend - Jobs:_
 - [ ] Job de recorrência: copia bills, expenses, incomes corretamente

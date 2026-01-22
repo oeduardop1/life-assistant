@@ -46,7 +46,7 @@ export class CreateIncomeDto {
 
   @ApiProperty({ example: 5000, description: 'Expected amount' })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   expectedAmount: number;
 
   @ApiPropertyOptional({ example: 5000, description: 'Actual amount received' })
@@ -90,7 +90,7 @@ export class UpdateIncomeDto {
   @ApiPropertyOptional({ example: 5000 })
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   expectedAmount?: number;
 
   @ApiPropertyOptional({ example: 5000 })
