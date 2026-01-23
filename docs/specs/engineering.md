@@ -2405,9 +2405,15 @@ RESEND_API_KEY=xxx
 
 **Soluções:**
 1. Verificar migrations aplicadas: `pnpm --filter database db:studio` → Migrations tab
-2. Drop e recriar (dev only, PERDE DADOS): `pnpm --filter database db:push --force`
-3. Editar migration manualmente se conflito: `packages/database/migrations/*.sql`
+2. Aplicar delta sem confirmação interativa: `pnpm drizzle-kit push --strict=false --force`
+3. Revisar SQL gerado: `packages/database/src/migrations/*.sql`
 4. Em último caso, resetar Supabase: `npx supabase db reset`
+
+**Workflow correto para alterações de schema:**
+1. Modificar schema em `packages/database/src/schema/`
+2. Gerar migração: `pnpm --filter database db:generate`
+3. Revisar SQL gerado
+4. Aplicar ao banco: `pnpm --filter database db:push --strict=false --force`
 
 #### RLS Policy Violations
 

@@ -10,6 +10,8 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-23 | M2.2 | Bugfix - Cálculos Dashboard | Corrigido Total Gasto: (1) bills pagas agora usa SQL SUM real em vez de estimativa por ratio, (2) criada tabela `debt_payments` para rastreio mensal de parcelas pagas, (3) parcelas de dívida incluídas no Total Gasto. Migration baseline regenerada (33 tabelas). CLAUDE.md atualizado com seção Database Development. |
+| 2026-01-23 | Infra | Database Migrations | Regenerada migration baseline com schema completo (33 tabelas, 30 enums). Corrigido drift: schema Finance (M2.2) não tinha migração. Documentação atualizada: data-model.md, engineering.md, CLAUDE.md. |
 | 2026-01-22 | M2.2 | Testes de Integração - Filtros e Paginação | 44 testes de integração: filtro monthYear (bills/incomes/expenses), filtro status (bills pending/paid/overdue, debts active/paid_off), filtro category (bills/expenses), filtro isNegotiated (debts), paginação limit/offset, metadata total. Testes extras: combined filters, isRecurring, type, multi-tenant isolation. Arquivo: finance-filters-pagination.integration.spec.ts. Padrão: inline controller + mock data + filterAndPaginate helper + supertest + JWT auth. |
 | 2026-01-22 | M2.2 | Testes de Integração - Regras de Negócio | 4 testes de integração: dívida não negociada não entra no total orçado, pagar parcela atualiza KPIs, pagar última parcela muda status para paid_off, negociar dívida inclui no total orçado. Arquivo: finance-business-rules.integration.spec.ts. Padrão: inline controller + mock data mutável + supertest + JWT auth. |
 | 2026-01-22 | M2.2 | Testes Unitários - Services | 5 arquivos de teste: incomes.service.spec.ts (13), bills.service.spec.ts (16), variable-expenses.service.spec.ts (12), debts.service.spec.ts (21), investments.service.spec.ts (13). Cobertura: CRUD operations, NotFoundException/BadRequestException, markPaid/markUnpaid, payInstallment (validações: não negociada, já quitada), negotiate (validação: já negociada), updateValue, getSummary, sumByMonthYear. FinanceSummaryUseCase já coberto por finance-summary.service.spec.ts existente (13 tests). 75 novos testes, total 786 tests passando. |
@@ -66,4 +68,4 @@
 
 ---
 
-*Última atualização: 22 Janeiro 2026*
+*Última atualização: 23 Janeiro 2026*

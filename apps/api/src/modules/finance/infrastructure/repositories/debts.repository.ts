@@ -1,9 +1,9 @@
 // apps/api/src/modules/finance/infrastructure/repositories/debts.repository.ts
 
 import { Injectable } from '@nestjs/common';
-import { eq, and, count } from '@life-assistant/database';
+import { eq, and, count, sql } from '@life-assistant/database';
 import { DatabaseService } from '../../../../database/database.service';
-import type { Debt, NewDebt, DebtStatus } from '@life-assistant/database';
+import type { Debt, NewDebt, DebtPayment, DebtStatus } from '@life-assistant/database';
 import type {
   DebtsRepositoryPort,
   DebtSearchParams,
@@ -176,6 +176,20 @@ export class DebtsRepository implements DebtsRepositoryPort {
         )
         .returning();
 
+      // Record the payment in debt_payments for month-aware tracking
+      if (updated && currentDebt.installmentAmount) {
+        const now = new Date();
+        const monthYear = `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        await db.insert(this.db.schema.debtPayments).values({
+          userId,
+          debtId: id,
+          installmentNumber: currentDebt.currentInstallment,
+          amount: currentDebt.installmentAmount,
+          monthYear,
+          paidAt: now,
+        });
+      }
+
       return updated ?? null;
     });
   }
@@ -246,6 +260,51 @@ export class DebtsRepository implements DebtsRepositoryPort {
         negotiatedCount,
         monthlyInstallmentSum,
       };
+    });
+  }
+
+  async recordPayment(
+    userId: string,
+    debtId: string,
+    data: { installmentNumber: number; amount: number; monthYear: string }
+  ): Promise<DebtPayment> {
+    return this.db.withUserId(userId, async (db) => {
+      const [payment] = await db
+        .insert(this.db.schema.debtPayments)
+        .values({
+          userId,
+          debtId,
+          installmentNumber: data.installmentNumber,
+          amount: data.amount.toString(),
+          monthYear: data.monthYear,
+        })
+        .returning();
+
+      if (!payment) {
+        throw new Error('Failed to record debt payment');
+      }
+      return payment;
+    });
+  }
+
+  async sumPaymentsByMonthYear(
+    userId: string,
+    monthYear: string
+  ): Promise<number> {
+    return this.db.withUserId(userId, async (db) => {
+      const [result] = await db
+        .select({
+          sum: sql<string>`COALESCE(SUM(${this.db.schema.debtPayments.amount}), 0)`,
+        })
+        .from(this.db.schema.debtPayments)
+        .where(
+          and(
+            eq(this.db.schema.debtPayments.userId, userId),
+            eq(this.db.schema.debtPayments.monthYear, monthYear)
+          )
+        );
+
+      return parseFloat(result?.sum ?? '0');
     });
   }
 }

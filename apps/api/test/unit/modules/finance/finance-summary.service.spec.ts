@@ -55,6 +55,7 @@ describe('FinanceSummaryService', () => {
   };
   let mockBillsService: {
     sumByMonthYear: ReturnType<typeof vi.fn>;
+    sumByMonthYearAndStatus: ReturnType<typeof vi.fn>;
     countByStatus: ReturnType<typeof vi.fn>;
   };
   let mockVariableExpensesService: {
@@ -62,6 +63,7 @@ describe('FinanceSummaryService', () => {
   };
   let mockDebtsService: {
     getSummary: ReturnType<typeof vi.fn>;
+    sumPaymentsByMonthYear: ReturnType<typeof vi.fn>;
   };
   let mockInvestmentsService: {
     getSummary: ReturnType<typeof vi.fn>;
@@ -80,6 +82,7 @@ describe('FinanceSummaryService', () => {
 
     mockBillsService = {
       sumByMonthYear: vi.fn(),
+      sumByMonthYearAndStatus: vi.fn(),
       countByStatus: vi.fn(),
     };
 
@@ -89,6 +92,7 @@ describe('FinanceSummaryService', () => {
 
     mockDebtsService = {
       getSummary: vi.fn(),
+      sumPaymentsByMonthYear: vi.fn(),
     };
 
     mockInvestmentsService = {
@@ -122,26 +126,55 @@ describe('FinanceSummaryService', () => {
     );
   });
 
+  /**
+   * Helper to set up default mocks for all services
+   */
+  function setupDefaultMocks(overrides: {
+    incomeExpected?: number;
+    incomeActual?: number;
+    totalBills?: number;
+    paidBillsAmount?: number;
+    billStatusCounts?: { pending: number; paid: number; overdue: number; canceled: number };
+    expensesExpected?: number;
+    expensesActual?: number;
+    debtPaymentsThisMonth?: number;
+    debtsSummary?: ReturnType<typeof createMockDebtSummary>;
+    investmentsSummary?: ReturnType<typeof createMockInvestmentSummary>;
+  } = {}) {
+    const {
+      incomeExpected = 0,
+      incomeActual = 0,
+      totalBills = 0,
+      paidBillsAmount = 0,
+      billStatusCounts = { pending: 0, paid: 0, overdue: 0, canceled: 0 },
+      expensesExpected = 0,
+      expensesActual = 0,
+      debtPaymentsThisMonth = 0,
+      debtsSummary = createMockDebtSummary({ monthlyInstallmentSum: 0 }),
+      investmentsSummary = createMockInvestmentSummary(),
+    } = overrides;
+
+    mockIncomesService.sumByMonthYear
+      .mockResolvedValueOnce(incomeExpected)
+      .mockResolvedValueOnce(incomeActual);
+    mockBillsService.sumByMonthYear.mockResolvedValue(totalBills);
+    mockBillsService.sumByMonthYearAndStatus.mockResolvedValue(paidBillsAmount);
+    mockBillsService.countByStatus.mockResolvedValue(billStatusCounts);
+    mockVariableExpensesService.sumByMonthYear
+      .mockResolvedValueOnce(expensesExpected)
+      .mockResolvedValueOnce(expensesActual);
+    mockDebtsService.getSummary.mockResolvedValue(debtsSummary);
+    mockDebtsService.sumPaymentsByMonthYear.mockResolvedValue(debtPaymentsThisMonth);
+    mockInvestmentsService.getSummary.mockResolvedValue(investmentsSummary);
+  }
+
   describe('getSummary', () => {
     describe('KPIs principais', () => {
       it('should_calculate_income_from_actual_amounts', async () => {
-        mockIncomesService.sumByMonthYear
-          .mockResolvedValueOnce(8000) // expectedAmount
-          .mockResolvedValueOnce(7500); // actualAmount
-        mockBillsService.sumByMonthYear.mockResolvedValue(3000);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 2,
-          paid: 3,
-          overdue: 0,
-          canceled: 0,
+        setupDefaultMocks({
+          incomeExpected: 8000,
+          incomeActual: 7500,
         });
-        mockVariableExpensesService.sumByMonthYear
-          .mockResolvedValueOnce(2000) // expectedAmount
-          .mockResolvedValueOnce(1800); // actualAmount
-        mockDebtsService.getSummary.mockResolvedValue(createMockDebtSummary());
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
 
         const result = await service.getSummary('user-123', '2024-01');
 
@@ -154,23 +187,13 @@ describe('FinanceSummaryService', () => {
         const expensesExpected = 2000;
         const monthlyInstallmentSum = 1500;
 
-        mockIncomesService.sumByMonthYear.mockResolvedValue(5000);
-        mockBillsService.sumByMonthYear.mockResolvedValue(totalBills);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 5,
-          paid: 0,
-          overdue: 0,
-          canceled: 0,
+        setupDefaultMocks({
+          incomeExpected: 5000,
+          incomeActual: 5000,
+          totalBills,
+          expensesExpected,
+          debtsSummary: createMockDebtSummary({ monthlyInstallmentSum }),
         });
-        mockVariableExpensesService.sumByMonthYear
-          .mockResolvedValueOnce(expensesExpected)
-          .mockResolvedValueOnce(0);
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
 
         const result = await service.getSummary('user-123', '2024-01');
 
@@ -180,94 +203,72 @@ describe('FinanceSummaryService', () => {
         expect(result.totalBudgeted).toBe(6500);
       });
 
-      it('should_calculate_paid_bills_proportionally_by_status_count', async () => {
-        const totalBills = 4000; // Total sum of all bills
-        // 2 out of 4 bills are paid → 50% ratio → paidBillsAmount = 4000 * 0.5 = 2000
+      it('should_calculate_paid_bills_from_actual_sql_sum', async () => {
+        // paidBillsAmount comes from sumByMonthYearAndStatus('paid')
+        // NOT from ratio calculation
+        const paidBillsAmount = 2500;
 
-        mockIncomesService.sumByMonthYear.mockResolvedValue(10000);
-        mockBillsService.sumByMonthYear.mockResolvedValue(totalBills);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 1,
-          paid: 2,
-          overdue: 1,
-          canceled: 0,
+        setupDefaultMocks({
+          incomeActual: 10000,
+          totalBills: 4000, // Total bills amount (irrelevant for totalSpent)
+          paidBillsAmount, // Only paid bills sum matters
+          billStatusCounts: { pending: 1, paid: 2, overdue: 1, canceled: 0 },
         });
-        mockVariableExpensesService.sumByMonthYear.mockResolvedValue(0);
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum: 0 })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
 
         const result = await service.getSummary('user-123', '2024-01');
 
-        // paidBillsRatio = 2 / (1+2+1+0) = 0.5
-        // paidBillsAmount = 4000 * 0.5 = 2000
-        expect(result.totalSpent).toBe(2000); // paidBillsAmount + expensesActual(0)
+        // totalSpent uses the actual SQL SUM of paid bills, not ratio
+        expect(result.totalSpent).toBe(paidBillsAmount);
+        expect(mockBillsService.sumByMonthYearAndStatus).toHaveBeenCalledWith(
+          'user-123',
+          '2024-01',
+          'paid'
+        );
       });
 
-      it('should_calculate_total_spent_as_paid_bills_plus_actual_expenses', async () => {
-        const totalBills = 3000;
+      it('should_calculate_total_spent_as_paid_bills_plus_expenses_plus_debt_payments', async () => {
+        const paidBillsAmount = 3000;
         const expensesActual = 1200;
+        const debtPaymentsThisMonth = 750;
 
-        mockIncomesService.sumByMonthYear.mockResolvedValue(10000);
-        mockBillsService.sumByMonthYear.mockResolvedValue(totalBills);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 0,
-          paid: 5, // All paid → ratio = 1.0
-          overdue: 0,
-          canceled: 0,
+        setupDefaultMocks({
+          incomeActual: 10000,
+          totalBills: 5000,
+          paidBillsAmount,
+          expensesExpected: 2000,
+          expensesActual,
+          debtPaymentsThisMonth,
         });
-        mockVariableExpensesService.sumByMonthYear
-          .mockResolvedValueOnce(2000) // expectedAmount
-          .mockResolvedValueOnce(expensesActual); // actualAmount
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum: 0 })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
 
         const result = await service.getSummary('user-123', '2024-01');
 
-        // All bills paid → paidBillsAmount = 3000
-        // totalSpent = 3000 + 1200 = 4200
-        expect(result.totalSpent).toBe(totalBills + expensesActual);
-        expect(result.totalSpent).toBe(4200);
+        expect(result.totalSpent).toBe(
+          paidBillsAmount + expensesActual + debtPaymentsThisMonth
+        );
+        expect(result.totalSpent).toBe(4950);
       });
 
       it('should_calculate_balance_as_income_minus_total_spent', async () => {
         const incomeActual = 10000;
-        const totalBills = 3000;
+        const paidBillsAmount = 3000;
         const expensesActual = 2000;
+        const debtPaymentsThisMonth = 500;
 
-        mockIncomesService.sumByMonthYear
-          .mockResolvedValueOnce(10000) // expectedAmount
-          .mockResolvedValueOnce(incomeActual); // actualAmount
-        mockBillsService.sumByMonthYear.mockResolvedValue(totalBills);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 0,
-          paid: 3, // All paid
-          overdue: 0,
-          canceled: 0,
+        setupDefaultMocks({
+          incomeExpected: 10000,
+          incomeActual,
+          totalBills: 3000,
+          paidBillsAmount,
+          expensesExpected: 2500,
+          expensesActual,
+          debtPaymentsThisMonth,
         });
-        mockVariableExpensesService.sumByMonthYear
-          .mockResolvedValueOnce(2500) // expectedAmount
-          .mockResolvedValueOnce(expensesActual); // actualAmount
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum: 0 })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
 
         const result = await service.getSummary('user-123', '2024-01');
 
-        // totalSpent = 3000 + 2000 = 5000
-        // balance = 10000 - 5000 = 5000
-        expect(result.balance).toBe(incomeActual - (totalBills + expensesActual));
-        expect(result.balance).toBe(5000);
+        const expectedTotalSpent = paidBillsAmount + expensesActual + debtPaymentsThisMonth;
+        expect(result.balance).toBe(incomeActual - expectedTotalSpent);
+        expect(result.balance).toBe(4500);
       });
 
       it('should_include_investment_summary_from_investments_service', async () => {
@@ -277,19 +278,9 @@ describe('FinanceSummaryService', () => {
           averageProgress: 25,
         });
 
-        mockIncomesService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 0,
-          paid: 0,
-          overdue: 0,
-          canceled: 0,
+        setupDefaultMocks({
+          investmentsSummary: investmentSummary,
         });
-        mockVariableExpensesService.sumByMonthYear.mockResolvedValue(0);
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum: 0 })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(investmentSummary);
 
         const result = await service.getSummary('user-123', '2024-01');
 
@@ -299,34 +290,23 @@ describe('FinanceSummaryService', () => {
       });
 
       it('should_return_zero_values_when_all_services_return_zero', async () => {
-        mockIncomesService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 0,
-          paid: 0,
-          overdue: 0,
-          canceled: 0,
-        });
-        mockVariableExpensesService.sumByMonthYear.mockResolvedValue(0);
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({
+        setupDefaultMocks({
+          debtsSummary: createMockDebtSummary({
             totalDebts: 0,
             totalAmount: 0,
             totalPaid: 0,
             totalRemaining: 0,
             negotiatedCount: 0,
             monthlyInstallmentSum: 0,
-          })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary({
+          }),
+          investmentsSummary: createMockInvestmentSummary({
             totalInvestments: 0,
             totalCurrentAmount: 0,
             totalGoalAmount: 0,
             totalMonthlyContribution: 0,
             averageProgress: 0,
-          })
-        );
+          }),
+        });
 
         const result = await service.getSummary('user-123', '2024-01');
 
@@ -341,152 +321,104 @@ describe('FinanceSummaryService', () => {
       });
 
       it('should_handle_no_bills_without_division_by_zero', async () => {
-        // When totalBillsCount = 0, paidBillsRatio should be 0
-        mockIncomesService.sumByMonthYear.mockResolvedValue(5000);
-        mockBillsService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 0,
-          paid: 0,
-          overdue: 0,
-          canceled: 0,
+        setupDefaultMocks({
+          incomeActual: 5000,
         });
-        mockVariableExpensesService.sumByMonthYear.mockResolvedValue(0);
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum: 0 })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
 
         const result = await service.getSummary('user-123', '2024-01');
 
         expect(result.totalSpent).toBe(0);
         expect(result.billsCount.total).toBe(0);
-        // No NaN or Infinity from 0/0
         expect(Number.isFinite(result.totalSpent)).toBe(true);
         expect(Number.isFinite(result.balance)).toBe(true);
       });
 
       it('should_calculate_negative_balance_when_spent_exceeds_income', async () => {
         const incomeActual = 3000;
-        const totalBills = 4000;
+        const paidBillsAmount = 4000;
         const expensesActual = 1000;
+        const debtPaymentsThisMonth = 500;
 
-        mockIncomesService.sumByMonthYear
-          .mockResolvedValueOnce(3000)
-          .mockResolvedValueOnce(incomeActual);
-        mockBillsService.sumByMonthYear.mockResolvedValue(totalBills);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 0,
-          paid: 4,
-          overdue: 0,
-          canceled: 0,
+        setupDefaultMocks({
+          incomeExpected: 3000,
+          incomeActual,
+          totalBills: 4000,
+          paidBillsAmount,
+          expensesExpected: 1500,
+          expensesActual,
+          debtPaymentsThisMonth,
         });
-        mockVariableExpensesService.sumByMonthYear
-          .mockResolvedValueOnce(1500)
-          .mockResolvedValueOnce(expensesActual);
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum: 0 })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
 
         const result = await service.getSummary('user-123', '2024-01');
 
-        // totalSpent = 4000 + 1000 = 5000
-        // balance = 3000 - 5000 = -2000
-        expect(result.balance).toBe(-2000);
+        // totalSpent = 4000 + 1000 + 500 = 5500
+        // balance = 3000 - 5500 = -2500
+        expect(result.balance).toBe(-2500);
         expect(result.balance).toBeLessThan(0);
+      });
+
+      it('should_include_only_debt_payments_from_target_month', async () => {
+        setupDefaultMocks({
+          incomeActual: 10000,
+          paidBillsAmount: 2000,
+          expensesActual: 1000,
+          debtPaymentsThisMonth: 1500,
+        });
+
+        const result = await service.getSummary('user-123', '2024-03');
+
+        expect(mockDebtsService.sumPaymentsByMonthYear).toHaveBeenCalledWith(
+          'user-123',
+          '2024-03'
+        );
+        expect(result.totalSpent).toBe(2000 + 1000 + 1500);
       });
     });
 
     describe('exclusion of non-negotiated debts from totalBudgeted', () => {
       it('should_only_use_monthly_installment_sum_from_debts_summary', async () => {
-        // monthlyInstallmentSum already excludes non-negotiated debts
-        // (calculated in repository as only active+negotiated)
         const monthlyInstallmentSum = 800;
 
-        mockIncomesService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.sumByMonthYear.mockResolvedValue(2000);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 2,
-          paid: 0,
-          overdue: 0,
-          canceled: 0,
-        });
-        mockVariableExpensesService.sumByMonthYear
-          .mockResolvedValueOnce(1000) // expectedAmount
-          .mockResolvedValueOnce(0); // actualAmount
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({
-            totalAmount: 50000, // Large total, but only installments matter
+        setupDefaultMocks({
+          totalBills: 2000,
+          billStatusCounts: { pending: 2, paid: 0, overdue: 0, canceled: 0 },
+          expensesExpected: 1000,
+          debtsSummary: createMockDebtSummary({
+            totalAmount: 50000,
             monthlyInstallmentSum,
-          })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
+          }),
+        });
 
         const result = await service.getSummary('user-123', '2024-01');
 
-        // totalBudgeted uses monthlyInstallmentSum, NOT totalAmount
         expect(result.totalBudgeted).toBe(2000 + 1000 + monthlyInstallmentSum);
         expect(result.totalBudgeted).toBe(3800);
       });
 
       it('should_not_include_non_negotiated_debt_amounts_in_total_budgeted', async () => {
-        // Scenario: monthlyInstallmentSum = 0 means no negotiated active debts
-        mockIncomesService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.sumByMonthYear.mockResolvedValue(1000);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 1,
-          paid: 0,
-          overdue: 0,
-          canceled: 0,
-        });
-        mockVariableExpensesService.sumByMonthYear
-          .mockResolvedValueOnce(500) // expectedAmount
-          .mockResolvedValueOnce(0); // actualAmount
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({
+        setupDefaultMocks({
+          totalBills: 1000,
+          billStatusCounts: { pending: 1, paid: 0, overdue: 0, canceled: 0 },
+          expensesExpected: 500,
+          debtsSummary: createMockDebtSummary({
             totalDebts: 5,
-            totalAmount: 100000, // Large debt total
-            negotiatedCount: 0, // None negotiated
-            monthlyInstallmentSum: 0, // No installments
-          })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
+            totalAmount: 100000,
+            negotiatedCount: 0,
+            monthlyInstallmentSum: 0,
+          }),
+        });
 
         const result = await service.getSummary('user-123', '2024-01');
 
-        // totalBudgeted should NOT include 100000 from non-negotiated debts
         expect(result.totalBudgeted).toBe(1000 + 500 + 0);
         expect(result.totalBudgeted).toBe(1500);
-        // But debts summary should still report the totalAmount
         expect(result.debts.totalAmount).toBe(100000);
       });
     });
 
     describe('month handling', () => {
       it('should_use_provided_month_year', async () => {
-        mockIncomesService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 0,
-          paid: 0,
-          overdue: 0,
-          canceled: 0,
-        });
-        mockVariableExpensesService.sumByMonthYear.mockResolvedValue(0);
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum: 0 })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
+        setupDefaultMocks();
 
         const result = await service.getSummary('user-123', '2024-06');
 
@@ -501,24 +433,19 @@ describe('FinanceSummaryService', () => {
           '2024-06',
           'actualAmount'
         );
+        expect(mockBillsService.sumByMonthYearAndStatus).toHaveBeenCalledWith(
+          'user-123',
+          '2024-06',
+          'paid'
+        );
+        expect(mockDebtsService.sumPaymentsByMonthYear).toHaveBeenCalledWith(
+          'user-123',
+          '2024-06'
+        );
       });
 
       it('should_default_to_current_month_when_not_provided', async () => {
-        mockIncomesService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.sumByMonthYear.mockResolvedValue(0);
-        mockBillsService.countByStatus.mockResolvedValue({
-          pending: 0,
-          paid: 0,
-          overdue: 0,
-          canceled: 0,
-        });
-        mockVariableExpensesService.sumByMonthYear.mockResolvedValue(0);
-        mockDebtsService.getSummary.mockResolvedValue(
-          createMockDebtSummary({ monthlyInstallmentSum: 0 })
-        );
-        mockInvestmentsService.getSummary.mockResolvedValue(
-          createMockInvestmentSummary()
-        );
+        setupDefaultMocks();
 
         const currentMonth = new Date().toISOString().slice(0, 7);
 

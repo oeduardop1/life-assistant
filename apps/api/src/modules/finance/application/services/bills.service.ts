@@ -92,6 +92,14 @@ export class BillsService {
     return this.repository.sumByMonthYear(userId, monthYear);
   }
 
+  async sumByMonthYearAndStatus(
+    userId: string,
+    monthYear: string,
+    status: string
+  ): Promise<number> {
+    return this.repository.sumByMonthYearAndStatus(userId, monthYear, status);
+  }
+
   async countByStatus(
     userId: string,
     monthYear: string

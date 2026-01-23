@@ -1,6 +1,6 @@
 // apps/api/src/modules/finance/domain/ports/debts.repository.port.ts
 
-import type { Debt, NewDebt } from '@life-assistant/database';
+import type { Debt, NewDebt, DebtPayment } from '@life-assistant/database';
 
 export interface DebtSearchParams {
   status?: string | undefined;
@@ -40,6 +40,12 @@ export interface DebtsRepositoryPort {
     }
   ): Promise<Debt | null>;
   getSummary(userId: string): Promise<DebtSummary>;
+  recordPayment(
+    userId: string,
+    debtId: string,
+    data: { installmentNumber: number; amount: number; monthYear: string }
+  ): Promise<DebtPayment>;
+  sumPaymentsByMonthYear(userId: string, monthYear: string): Promise<number>;
 }
 
 export const DEBTS_REPOSITORY = Symbol('DEBTS_REPOSITORY');

@@ -201,6 +201,29 @@ export class BillsRepository implements BillsRepositoryPort {
     });
   }
 
+  async sumByMonthYearAndStatus(
+    userId: string,
+    monthYear: string,
+    status: string
+  ): Promise<number> {
+    return this.db.withUserId(userId, async (db) => {
+      const [result] = await db
+        .select({
+          sum: sql<string>`COALESCE(SUM(${this.db.schema.bills.amount}), 0)`,
+        })
+        .from(this.db.schema.bills)
+        .where(
+          and(
+            eq(this.db.schema.bills.userId, userId),
+            eq(this.db.schema.bills.monthYear, monthYear),
+            eq(this.db.schema.bills.status, status as BillStatus)
+          )
+        );
+
+      return parseFloat(result?.sum ?? '0');
+    });
+  }
+
   async countByStatus(
     userId: string,
     monthYear: string

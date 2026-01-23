@@ -34,6 +34,7 @@ describe('BillsService', () => {
     markAsPaid: ReturnType<typeof vi.fn>;
     markAsUnpaid: ReturnType<typeof vi.fn>;
     sumByMonthYear: ReturnType<typeof vi.fn>;
+    sumByMonthYearAndStatus: ReturnType<typeof vi.fn>;
     countByStatus: ReturnType<typeof vi.fn>;
   };
   let mockLogger: {
@@ -54,6 +55,7 @@ describe('BillsService', () => {
       markAsPaid: vi.fn(),
       markAsUnpaid: vi.fn(),
       sumByMonthYear: vi.fn(),
+      sumByMonthYearAndStatus: vi.fn(),
       countByStatus: vi.fn(),
     };
 
@@ -294,6 +296,29 @@ describe('BillsService', () => {
 
       expect(result).toEqual(statusCounts);
       expect(mockRepository.countByStatus).toHaveBeenCalledWith('user-123', '2024-01');
+    });
+  });
+
+  describe('sumByMonthYearAndStatus', () => {
+    it('should_return_sum_for_month_and_status', async () => {
+      mockRepository.sumByMonthYearAndStatus.mockResolvedValue(3500);
+
+      const result = await service.sumByMonthYearAndStatus('user-123', '2024-01', 'paid');
+
+      expect(result).toBe(3500);
+      expect(mockRepository.sumByMonthYearAndStatus).toHaveBeenCalledWith(
+        'user-123',
+        '2024-01',
+        'paid'
+      );
+    });
+
+    it('should_return_zero_when_no_bills_match', async () => {
+      mockRepository.sumByMonthYearAndStatus.mockResolvedValue(0);
+
+      const result = await service.sumByMonthYearAndStatus('user-123', '2024-01', 'paid');
+
+      expect(result).toBe(0);
     });
   });
 });

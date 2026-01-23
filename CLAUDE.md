@@ -197,6 +197,68 @@ When encountering ambiguity, business decisions, or conflicts:
 
 Do NOT add TBDs for technical decisions you can make yourself.
 
+## Database Development
+
+### Schema Changes Workflow
+
+When modifying the database schema, ALWAYS follow this order:
+
+1. **Modify schema files** in `packages/database/src/schema/`
+2. **Generate migration**: `pnpm --filter database db:generate`
+3. **Review** the generated SQL in `packages/database/src/migrations/`
+4. **Apply to database**: `pnpm --filter database db:push` (applies delta to Supabase)
+
+### Commands
+
+```bash
+pnpm --filter database db:generate     # Generate migration from schema diff
+pnpm --filter database db:push         # Apply schema to Supabase (dev/prod)
+pnpm --filter database db:migrate      # Apply migrations sequentially (CI/new envs)
+pnpm --filter database db:studio       # Visual database explorer
+pnpm --filter database db:seed         # Run seed scripts
+pnpm --filter database db:apply-rls    # Apply RLS policies
+```
+
+### Key Rules
+
+- **NEVER use `db:push` without first generating a migration.** The migration file is the source of truth for schema history.
+- **Schema = TypeScript, migrations = SQL audit trail.** Both must stay in sync.
+- `db:push` compares TypeScript schema vs live database and applies only the delta. It's safe for existing databases.
+- `db:migrate` runs migration files sequentially. Use for fresh environments (CI, new dev setup).
+- For non-interactive execution: `pnpm drizzle-kit push --strict=false --force`
+- If `db:generate` asks interactive questions about renames vs. creates, answer based on the actual intent of the change.
+
+### Schema File Organization
+
+```
+packages/database/src/schema/
+├── index.ts              # Re-exports all schemas
+├── enums.ts              # PostgreSQL enums (CREATE TYPE)
+├── users.ts              # Core user table
+├── [domain].ts           # One file per domain entity
+└── [domain]-payments.ts  # Related sub-tables
+```
+
+### Adding a New Table
+
+1. Create `packages/database/src/schema/my-table.ts`
+2. Export from `packages/database/src/schema/index.ts`
+3. Export types from `packages/database/src/index.ts` if needed by API
+4. Run `pnpm --filter database db:generate`
+5. Review generated migration SQL
+6. Run `pnpm --filter database db:push`
+
+### Decimal/Money Fields
+
+PostgreSQL `DECIMAL` columns are returned as **strings** by Drizzle. Always use `parseFloat()` when doing arithmetic:
+```typescript
+// WRONG: string concatenation
+const total = acc + row.amount; // "0" + "100" = "0100"
+
+// CORRECT: parse first
+const total = acc + parseFloat(row.amount); // 0 + 100 = 100
+```
+
 ## Coding Style
 
 - TypeScript strict mode + Zod validation (no `any` without justification)
@@ -208,6 +270,7 @@ Do NOT add TBDs for technical decisions you can make yourself.
 
 | Topic | Reference |
 |-------|-----------|
+| Database | `docs/specs/data-model.md` §10, `CLAUDE.md` §Database Development |
 | Architecture | `docs/specs/engineering.md` §4 |
 | Testing | `docs/specs/engineering.md` §11 |
 | Security | `docs/specs/system.md` §6, `docs/specs/engineering.md` §6 |

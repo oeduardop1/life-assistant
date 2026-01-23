@@ -28,6 +28,7 @@ export * from './incomes';
 export * from './bills';
 export * from './variable-expenses';
 export * from './debts';
+export * from './debt-payments';
 export * from './investments';
 export * from './exports';
 export * from './habit-freezes';

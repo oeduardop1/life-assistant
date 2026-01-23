@@ -190,6 +190,7 @@ _Tabelas (Migrations):_
   - [x] `bills` - contas fixas (nome, categoria, valor, vencimento, status, paidAt, recorrente, monthYear)
   - [x] `variable_expenses` - despesas variáveis (nome, categoria, previsto, real, recorrente, monthYear)
   - [x] `debts` - dívidas (nome, credor, total, isNegotiated, parcelas, valor_parcela, parcela_atual, vencimento, status, notes)
+  - [x] `debt_payments` - histórico de pagamentos de parcelas por mês (userId, debtId, installmentNumber, amount, monthYear, paidAt)
   - [x] `investments` - investimentos (nome, tipo, meta, atual, aporte_mensal, prazo)
 
 _Endpoints REST:_
@@ -221,7 +222,7 @@ _Cálculos e KPIs:_
 - [x] Implementar cálculos de KPIs principais:
   - [x] Renda do mês: `SUM(incomes.actualAmount)`
   - [x] Total orçado: `SUM(bills.amount) + SUM(expenses.expectedAmount) + SUM(debts.installmentAmount WHERE isNegotiated=true AND status='active')`
-  - [x] Total gasto: `SUM(bills WHERE paid) + SUM(expenses.actualAmount) + SUM(parcelas pagas no mês)`
+  - [x] Total gasto: `SUM(bills WHERE paid) + SUM(expenses.actualAmount) + SUM(parcelas pagas no mês)` _(Bugfix 2026-01-23: corrigido de ratio→SQL SUM real + criada tabela `debt_payments` para rastreio mensal)_
   - [x] Saldo: `Renda - Gasto`
   - [x] Total investido: `SUM(investments.currentAmount)`
 - [x] Implementar cálculos de KPIs de dívidas:

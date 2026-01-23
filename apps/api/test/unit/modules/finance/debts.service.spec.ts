@@ -37,6 +37,8 @@ describe('DebtsService', () => {
     payInstallment: ReturnType<typeof vi.fn>;
     negotiate: ReturnType<typeof vi.fn>;
     getSummary: ReturnType<typeof vi.fn>;
+    recordPayment: ReturnType<typeof vi.fn>;
+    sumPaymentsByMonthYear: ReturnType<typeof vi.fn>;
   };
   let mockLogger: {
     setContext: ReturnType<typeof vi.fn>;
@@ -56,6 +58,8 @@ describe('DebtsService', () => {
       payInstallment: vi.fn(),
       negotiate: vi.fn(),
       getSummary: vi.fn(),
+      recordPayment: vi.fn(),
+      sumPaymentsByMonthYear: vi.fn(),
     };
 
     mockLogger = {
@@ -454,6 +458,32 @@ describe('DebtsService', () => {
 
       expect(result).toEqual(mockSummary);
       expect(mockRepository.getSummary).toHaveBeenCalledWith('user-123');
+    });
+  });
+
+  describe('sumPaymentsByMonthYear', () => {
+    it('should_return_sum_of_payments_for_month', async () => {
+      mockRepository.sumPaymentsByMonthYear.mockResolvedValue(1500);
+
+      const result = await service.sumPaymentsByMonthYear('user-123', '2024-03');
+
+      expect(result).toBe(1500);
+      expect(mockRepository.sumPaymentsByMonthYear).toHaveBeenCalledWith(
+        'user-123',
+        '2024-03'
+      );
+    });
+
+    it('should_return_zero_when_no_payments_in_month', async () => {
+      mockRepository.sumPaymentsByMonthYear.mockResolvedValue(0);
+
+      const result = await service.sumPaymentsByMonthYear('user-123', '2024-06');
+
+      expect(result).toBe(0);
+      expect(mockRepository.sumPaymentsByMonthYear).toHaveBeenCalledWith(
+        'user-123',
+        '2024-06'
+      );
     });
   });
 });

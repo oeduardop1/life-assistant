@@ -141,4 +141,11 @@ export class DebtsService {
   async getSummary(userId: string): Promise<DebtSummary> {
     return this.repository.getSummary(userId);
   }
+
+  async sumPaymentsByMonthYear(
+    userId: string,
+    monthYear: string
+  ): Promise<number> {
+    return this.repository.sumPaymentsByMonthYear(userId, monthYear);
+  }
 }

@@ -1,4 +1,8 @@
+CREATE TYPE "public"."bill_category" AS ENUM('housing', 'utilities', 'subscription', 'insurance', 'other');--> statement-breakpoint
+CREATE TYPE "public"."bill_status" AS ENUM('pending', 'paid', 'overdue', 'canceled');--> statement-breakpoint
+CREATE TYPE "public"."consolidation_status" AS ENUM('completed', 'failed', 'partial');--> statement-breakpoint
 CREATE TYPE "public"."conversation_type" AS ENUM('general', 'counselor', 'quick_action', 'report');--> statement-breakpoint
+CREATE TYPE "public"."debt_status" AS ENUM('active', 'paid_off', 'settled', 'defaulted');--> statement-breakpoint
 CREATE TYPE "public"."exercise_intensity" AS ENUM('low', 'medium', 'high');--> statement-breakpoint
 CREATE TYPE "public"."exercise_type" AS ENUM('cardio', 'strength', 'flexibility', 'sports', 'other');--> statement-breakpoint
 CREATE TYPE "public"."expense_category" AS ENUM('food', 'transport', 'housing', 'health', 'education', 'entertainment', 'shopping', 'bills', 'subscriptions', 'travel', 'gifts', 'investments', 'other');--> statement-breakpoint
@@ -6,14 +10,20 @@ CREATE TYPE "public"."export_status" AS ENUM('pending', 'processing', 'completed
 CREATE TYPE "public"."export_type" AS ENUM('full_data', 'partial_data', 'deletion_request');--> statement-breakpoint
 CREATE TYPE "public"."goal_status" AS ENUM('not_started', 'in_progress', 'completed', 'failed', 'canceled');--> statement-breakpoint
 CREATE TYPE "public"."habit_frequency" AS ENUM('daily', 'weekly', 'custom');--> statement-breakpoint
+CREATE TYPE "public"."income_frequency" AS ENUM('monthly', 'biweekly', 'weekly', 'annual', 'irregular');--> statement-breakpoint
+CREATE TYPE "public"."income_type" AS ENUM('salary', 'freelance', 'bonus', 'passive', 'investment', 'gift', 'other');--> statement-breakpoint
 CREATE TYPE "public"."interaction_type" AS ENUM('call', 'message', 'meeting', 'email', 'gift', 'other');--> statement-breakpoint
-CREATE TYPE "public"."life_area" AS ENUM('health', 'financial', 'relationships', 'career', 'personal_growth', 'leisure', 'spirituality', 'mental_health');--> statement-breakpoint
+CREATE TYPE "public"."investment_type" AS ENUM('emergency_fund', 'retirement', 'short_term', 'long_term', 'education', 'custom');--> statement-breakpoint
+CREATE TYPE "public"."knowledge_item_source" AS ENUM('conversation', 'user_input', 'ai_inference');--> statement-breakpoint
+CREATE TYPE "public"."knowledge_item_type" AS ENUM('fact', 'preference', 'memory', 'insight', 'person');--> statement-breakpoint
+CREATE TYPE "public"."life_area" AS ENUM('health', 'finance', 'professional', 'learning', 'spiritual', 'relationships');--> statement-breakpoint
 CREATE TYPE "public"."message_role" AS ENUM('user', 'assistant', 'system');--> statement-breakpoint
 CREATE TYPE "public"."notification_status" AS ENUM('pending', 'sent', 'read', 'dismissed');--> statement-breakpoint
 CREATE TYPE "public"."notification_type" AS ENUM('reminder', 'alert', 'report', 'insight', 'milestone', 'social');--> statement-breakpoint
 CREATE TYPE "public"."relationship_type" AS ENUM('family', 'friend', 'work', 'acquaintance', 'romantic', 'mentor', 'other');--> statement-breakpoint
+CREATE TYPE "public"."sub_area" AS ENUM('physical', 'mental', 'leisure', 'budget', 'savings', 'debts', 'investments', 'career', 'business', 'formal', 'informal', 'practice', 'community', 'family', 'romantic', 'social');--> statement-breakpoint
 CREATE TYPE "public"."subscription_status" AS ENUM('active', 'past_due', 'canceled', 'incomplete', 'incomplete_expired', 'trialing', 'unpaid', 'paused');--> statement-breakpoint
-CREATE TYPE "public"."tracking_type" AS ENUM('weight', 'water', 'sleep', 'exercise', 'meal', 'medication', 'expense', 'income', 'investment', 'habit', 'mood', 'energy', 'custom');--> statement-breakpoint
+CREATE TYPE "public"."tracking_type" AS ENUM('weight', 'water', 'sleep', 'exercise', 'expense', 'income', 'investment', 'habit', 'mood', 'energy', 'custom');--> statement-breakpoint
 CREATE TYPE "public"."user_plan" AS ENUM('free', 'pro', 'premium');--> statement-breakpoint
 CREATE TYPE "public"."user_status" AS ENUM('pending', 'active', 'suspended', 'canceled', 'deleted');--> statement-breakpoint
 CREATE TYPE "public"."vault_category" AS ENUM('personal', 'financial', 'work', 'health', 'legal', 'other');--> statement-breakpoint
@@ -28,7 +38,7 @@ CREATE TABLE "users" (
 	"timezone" varchar(50) DEFAULT 'America/Sao_Paulo' NOT NULL,
 	"locale" varchar(10) DEFAULT 'pt-BR' NOT NULL,
 	"currency" varchar(3) DEFAULT 'BRL' NOT NULL,
-	"preferences" jsonb DEFAULT '{"christianPerspective":false,"areaWeights":{"health":1,"financial":1,"relationships":1,"career":1,"personal_growth":0.8,"leisure":0.8,"spirituality":0.5,"mental_health":1},"notifications":{"pushEnabled":true,"telegramEnabled":false,"emailEnabled":true,"quietHoursEnabled":true,"quietHoursStart":"22:00","quietHoursEnd":"08:00","morningSummary":true,"morningSummaryTime":"07:00","weeklyReport":true,"monthlyReport":true},"tracking":{"waterGoal":2000,"sleepGoal":8,"exerciseGoalWeekly":150}}'::jsonb NOT NULL,
+	"preferences" jsonb DEFAULT '{"christianPerspective":false,"areaWeights":{"health":1,"finance":1,"professional":1,"learning":0.8,"spiritual":0.5,"relationships":1},"notifications":{"pushEnabled":true,"telegramEnabled":false,"emailEnabled":true,"quietHoursEnabled":true,"quietHoursStart":"22:00","quietHoursEnd":"08:00","morningSummary":true,"morningSummaryTime":"07:00","weeklyReport":true,"monthlyReport":true},"tracking":{"waterGoal":2000,"sleepGoal":8,"exerciseGoalWeekly":150},"onboarding":{"profileComplete":false,"areasComplete":false,"telegramComplete":false,"telegramSkipped":false,"tutorialComplete":false,"tutorialSkipped":false}}'::jsonb NOT NULL,
 	"plan" "user_plan" DEFAULT 'free' NOT NULL,
 	"plan_expires_at" timestamp with time zone,
 	"stripe_customer_id" varchar(255),
@@ -67,6 +77,7 @@ CREATE TABLE "tracking_entries" (
 	"user_id" uuid NOT NULL,
 	"type" "tracking_type" NOT NULL,
 	"area" "life_area" NOT NULL,
+	"sub_area" "sub_area",
 	"value" numeric(10, 2) NOT NULL,
 	"unit" varchar(20),
 	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -179,6 +190,7 @@ CREATE TABLE "goals" (
 	"title" varchar(255) NOT NULL,
 	"description" text,
 	"area" "life_area" NOT NULL,
+	"sub_area" "sub_area",
 	"target_value" numeric(10, 2) NOT NULL,
 	"current_value" numeric(10, 2) DEFAULT '0' NOT NULL,
 	"unit" varchar(50) NOT NULL,
@@ -205,6 +217,7 @@ CREATE TABLE "habits" (
 	"title" varchar(255) NOT NULL,
 	"description" text,
 	"area" "life_area" NOT NULL,
+	"sub_area" "sub_area",
 	"frequency" "habit_frequency" NOT NULL,
 	"days_of_week" jsonb DEFAULT '[]'::jsonb,
 	"times_per_period" integer,
@@ -319,6 +332,94 @@ CREATE TABLE "subscriptions" (
 	CONSTRAINT "subscriptions_stripe_subscription_id_unique" UNIQUE("stripe_subscription_id")
 );
 --> statement-breakpoint
+CREATE TABLE "incomes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"type" "income_type" NOT NULL,
+	"frequency" "income_frequency" NOT NULL,
+	"expected_amount" numeric(12, 2) NOT NULL,
+	"actual_amount" numeric(12, 2),
+	"is_recurring" boolean DEFAULT true NOT NULL,
+	"month_year" varchar(7) NOT NULL,
+	"currency" varchar(3) DEFAULT 'BRL' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "bills" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"category" "bill_category" NOT NULL,
+	"amount" numeric(12, 2) NOT NULL,
+	"due_day" integer NOT NULL,
+	"status" "bill_status" DEFAULT 'pending' NOT NULL,
+	"paid_at" timestamp with time zone,
+	"is_recurring" boolean DEFAULT true NOT NULL,
+	"month_year" varchar(7) NOT NULL,
+	"currency" varchar(3) DEFAULT 'BRL' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "variable_expenses" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"category" "expense_category" NOT NULL,
+	"expected_amount" numeric(12, 2) NOT NULL,
+	"actual_amount" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"is_recurring" boolean DEFAULT false NOT NULL,
+	"month_year" varchar(7) NOT NULL,
+	"currency" varchar(3) DEFAULT 'BRL' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "debts" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"creditor" varchar(255),
+	"total_amount" numeric(12, 2) NOT NULL,
+	"is_negotiated" boolean DEFAULT true NOT NULL,
+	"total_installments" integer,
+	"installment_amount" numeric(12, 2),
+	"current_installment" integer DEFAULT 1 NOT NULL,
+	"due_day" integer,
+	"status" "debt_status" DEFAULT 'active' NOT NULL,
+	"notes" text,
+	"currency" varchar(3) DEFAULT 'BRL' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "debt_payments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"debt_id" uuid NOT NULL,
+	"installment_number" integer NOT NULL,
+	"amount" numeric(12, 2) NOT NULL,
+	"month_year" varchar(7) NOT NULL,
+	"paid_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "investments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"type" "investment_type" NOT NULL,
+	"goal_amount" numeric(12, 2),
+	"current_amount" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"monthly_contribution" numeric(12, 2),
+	"deadline" date,
+	"currency" varchar(3) DEFAULT 'BRL' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "export_requests" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -347,17 +448,6 @@ CREATE TABLE "habit_freezes" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "embeddings" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" uuid NOT NULL,
-	"source_type" varchar(50) NOT NULL,
-	"source_id" uuid NOT NULL,
-	"content" text NOT NULL,
-	"chunk_index" varchar(10) DEFAULT '0' NOT NULL,
-	"embedding" vector(768) NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "audit_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid,
@@ -367,6 +457,66 @@ CREATE TABLE "audit_logs" (
 	"metadata" jsonb,
 	"ip" varchar(45),
 	"user_agent" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "user_memories" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"bio" text,
+	"occupation" varchar(255),
+	"family_context" text,
+	"current_goals" jsonb DEFAULT '[]'::jsonb,
+	"current_challenges" jsonb DEFAULT '[]'::jsonb,
+	"top_of_mind" jsonb DEFAULT '[]'::jsonb,
+	"values" jsonb DEFAULT '[]'::jsonb,
+	"communication_style" varchar(50),
+	"feedback_preferences" text,
+	"learned_patterns" jsonb DEFAULT '[]'::jsonb,
+	"christian_perspective" boolean DEFAULT false,
+	"version" integer DEFAULT 1 NOT NULL,
+	"last_consolidated_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "user_memories_user_id_unique" UNIQUE("user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "knowledge_items" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"type" "knowledge_item_type" NOT NULL,
+	"area" "life_area",
+	"sub_area" "sub_area",
+	"title" varchar(255),
+	"content" text NOT NULL,
+	"source" "knowledge_item_source" NOT NULL,
+	"source_ref" uuid,
+	"inference_evidence" text,
+	"confidence" real DEFAULT 0.9 NOT NULL,
+	"validated_by_user" boolean DEFAULT false,
+	"related_items" jsonb DEFAULT '[]'::jsonb,
+	"tags" jsonb DEFAULT '[]'::jsonb,
+	"person_metadata" jsonb,
+	"superseded_by_id" uuid,
+	"superseded_at" timestamp with time zone,
+	"deleted_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "memory_consolidations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"consolidated_from" timestamp with time zone NOT NULL,
+	"consolidated_to" timestamp with time zone NOT NULL,
+	"messages_processed" integer DEFAULT 0 NOT NULL,
+	"facts_created" integer DEFAULT 0 NOT NULL,
+	"facts_updated" integer DEFAULT 0 NOT NULL,
+	"inferences_created" integer DEFAULT 0 NOT NULL,
+	"memory_updates" jsonb,
+	"raw_output" jsonb,
+	"status" "consolidation_status" NOT NULL,
+	"error_message" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -393,10 +543,19 @@ ALTER TABLE "user_integrations" ADD CONSTRAINT "user_integrations_user_id_users_
 ALTER TABLE "calendar_events" ADD CONSTRAINT "calendar_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "budgets" ADD CONSTRAINT "budgets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "incomes" ADD CONSTRAINT "incomes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bills" ADD CONSTRAINT "bills_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "variable_expenses" ADD CONSTRAINT "variable_expenses_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "debts" ADD CONSTRAINT "debts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "debt_payments" ADD CONSTRAINT "debt_payments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "debt_payments" ADD CONSTRAINT "debt_payments_debt_id_debts_id_fk" FOREIGN KEY ("debt_id") REFERENCES "public"."debts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "investments" ADD CONSTRAINT "investments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "export_requests" ADD CONSTRAINT "export_requests_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "habit_freezes" ADD CONSTRAINT "habit_freezes_habit_id_habits_id_fk" FOREIGN KEY ("habit_id") REFERENCES "public"."habits"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "habit_freezes" ADD CONSTRAINT "habit_freezes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "embeddings" ADD CONSTRAINT "embeddings_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_memories" ADD CONSTRAINT "user_memories_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_items" ADD CONSTRAINT "knowledge_items_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "memory_consolidations" ADD CONSTRAINT "memory_consolidations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "conversations_user_id_idx" ON "conversations" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "conversations_created_at_idx" ON "conversations" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "messages_conversation_id_idx" ON "messages" USING btree ("conversation_id");--> statement-breakpoint
@@ -445,14 +604,40 @@ CREATE INDEX "budgets_year_month_idx" ON "budgets" USING btree ("year","month");
 CREATE INDEX "subscriptions_user_id_idx" ON "subscriptions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "subscriptions_stripe_subscription_id_idx" ON "subscriptions" USING btree ("stripe_subscription_id");--> statement-breakpoint
 CREATE INDEX "subscriptions_status_idx" ON "subscriptions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "incomes_user_id_idx" ON "incomes" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "incomes_month_year_idx" ON "incomes" USING btree ("month_year");--> statement-breakpoint
+CREATE INDEX "incomes_user_id_month_year_idx" ON "incomes" USING btree ("user_id","month_year");--> statement-breakpoint
+CREATE INDEX "incomes_type_idx" ON "incomes" USING btree ("type");--> statement-breakpoint
+CREATE INDEX "bills_user_id_idx" ON "bills" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "bills_month_year_idx" ON "bills" USING btree ("month_year");--> statement-breakpoint
+CREATE INDEX "bills_user_id_month_year_idx" ON "bills" USING btree ("user_id","month_year");--> statement-breakpoint
+CREATE INDEX "bills_status_idx" ON "bills" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "bills_due_day_idx" ON "bills" USING btree ("due_day");--> statement-breakpoint
+CREATE INDEX "variable_expenses_user_id_idx" ON "variable_expenses" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "variable_expenses_month_year_idx" ON "variable_expenses" USING btree ("month_year");--> statement-breakpoint
+CREATE INDEX "variable_expenses_user_id_month_year_idx" ON "variable_expenses" USING btree ("user_id","month_year");--> statement-breakpoint
+CREATE INDEX "variable_expenses_category_idx" ON "variable_expenses" USING btree ("category");--> statement-breakpoint
+CREATE INDEX "debts_user_id_idx" ON "debts" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "debts_status_idx" ON "debts" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "debts_is_negotiated_idx" ON "debts" USING btree ("is_negotiated");--> statement-breakpoint
+CREATE INDEX "debt_payments_user_id_idx" ON "debt_payments" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "debt_payments_debt_id_idx" ON "debt_payments" USING btree ("debt_id");--> statement-breakpoint
+CREATE INDEX "debt_payments_user_month_year_idx" ON "debt_payments" USING btree ("user_id","month_year");--> statement-breakpoint
+CREATE INDEX "investments_user_id_idx" ON "investments" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "investments_type_idx" ON "investments" USING btree ("type");--> statement-breakpoint
 CREATE INDEX "export_requests_user_id_idx" ON "export_requests" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "export_requests_status_idx" ON "export_requests" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "export_requests_requested_at_idx" ON "export_requests" USING btree ("requested_at");--> statement-breakpoint
 CREATE INDEX "habit_freezes_habit_id_idx" ON "habit_freezes" USING btree ("habit_id");--> statement-breakpoint
 CREATE INDEX "habit_freezes_user_id_idx" ON "habit_freezes" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "habit_freezes_date_range_idx" ON "habit_freezes" USING btree ("start_date","end_date");--> statement-breakpoint
-CREATE INDEX "embeddings_user_id_idx" ON "embeddings" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "embeddings_source_idx" ON "embeddings" USING btree ("source_type","source_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_user_id_idx" ON "audit_logs" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_action_idx" ON "audit_logs" USING btree ("action");--> statement-breakpoint
-CREATE INDEX "audit_logs_created_at_idx" ON "audit_logs" USING btree ("created_at");
+CREATE INDEX "audit_logs_created_at_idx" ON "audit_logs" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "knowledge_items_user_id_idx" ON "knowledge_items" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "knowledge_items_user_type_idx" ON "knowledge_items" USING btree ("user_id","type");--> statement-breakpoint
+CREATE INDEX "knowledge_items_user_area_idx" ON "knowledge_items" USING btree ("user_id","area");--> statement-breakpoint
+CREATE INDEX "knowledge_items_source_idx" ON "knowledge_items" USING btree ("source");--> statement-breakpoint
+CREATE INDEX "knowledge_items_user_active_scope_idx" ON "knowledge_items" USING btree ("user_id","type","area");--> statement-breakpoint
+CREATE INDEX "memory_consolidations_user_id_idx" ON "memory_consolidations" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "memory_consolidations_created_at_idx" ON "memory_consolidations" USING btree ("created_at");

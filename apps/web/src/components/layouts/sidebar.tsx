@@ -25,6 +25,11 @@ const navigation = [
     icon: MessageSquare,
   },
   {
+    name: 'Finanças',
+    href: '/finance',
+    icon: Wallet,
+  },
+  {
     name: 'Tracking',
     href: '/tracking',
     icon: Activity,
@@ -33,11 +38,6 @@ const navigation = [
     name: 'Memória',
     href: '/memory',
     icon: Brain,
-  },
-  {
-    name: 'Finanças',
-    href: '/finance',
-    icon: Wallet,
   },
   {
     name: 'Configurações',

@@ -25,6 +25,11 @@ export interface BillsRepositoryPort {
   markAsPaid(userId: string, id: string): Promise<Bill | null>;
   markAsUnpaid(userId: string, id: string): Promise<Bill | null>;
   sumByMonthYear(userId: string, monthYear: string): Promise<number>;
+  sumByMonthYearAndStatus(
+    userId: string,
+    monthYear: string,
+    status: string
+  ): Promise<number>;
   countByStatus(
     userId: string,
     monthYear: string

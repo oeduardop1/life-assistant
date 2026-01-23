@@ -75,6 +75,15 @@ interface MockExpense {
   monthYear: string;
 }
 
+interface MockDebtPayment {
+  id: string;
+  userId: string;
+  debtId: string;
+  installmentNumber: number;
+  amount: string;
+  monthYear: string;
+}
+
 // Initial mock data factory
 function createInitialMockData() {
   return {
@@ -122,7 +131,9 @@ function createInitialMockData() {
 let mockDebts: MockDebt[] = [];
 let mockBills: MockBill[] = [];
 let mockExpenses: MockExpense[] = [];
+let mockDebtPayments: MockDebtPayment[] = [];
 let debtIdCounter = 0;
+let paymentIdCounter = 0;
 
 // Summary calculation (mirrors FinanceSummaryService + DebtsRepository.getSummary logic)
 function calculateSummary(userId: string) {
@@ -164,11 +175,29 @@ function calculateSummary(userId: string) {
   // (mirrors finance-summary.service.ts:113-114)
   const totalBudgeted = totalBills + expensesExpected + monthlyInstallmentSum;
 
+  // totalSpent = paidBillsAmount + expensesActual + debtPaymentsThisMonth
+  const paidBillsAmount = userBills
+    .filter((b) => b.status === 'paid')
+    .reduce((sum, b) => sum + parseFloat(b.amount), 0);
+  const expensesActual = userExpenses.reduce(
+    (sum, e) => sum + parseFloat(e.actualAmount),
+    0
+  );
+  const debtPaymentsThisMonth = mockDebtPayments
+    .filter((p) => p.userId === userId && p.monthYear === '2026-01')
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+  const totalSpent = paidBillsAmount + expensesActual + debtPaymentsThisMonth;
+
   return {
     monthYear: '2026-01',
     totalBills,
     totalExpensesExpected: expensesExpected,
     totalBudgeted,
+    totalSpent,
+    paidBillsAmount,
+    expensesActual,
+    debtPaymentsThisMonth,
+    balance: 0 - totalSpent, // No incomes in this test setup
     debts: {
       totalDebts: userDebts.length,
       totalAmount,
@@ -265,7 +294,33 @@ class TestFinanceBusinessRulesController {
     debt.status = newInstallment > totalInstallments ? 'paid_off' : 'active';
     debt.updatedAt = new Date();
 
+    // Record payment in debt_payments (mirrors debts.repository.ts:180-191)
+    if (debt.installmentAmount) {
+      paymentIdCounter++;
+      mockDebtPayments.push({
+        id: `payment-${String(paymentIdCounter)}`,
+        userId,
+        debtId: id,
+        installmentNumber: debt.currentInstallment - 1,
+        amount: debt.installmentAmount,
+        monthYear: '2026-01',
+      });
+    }
+
     return { debt };
+  }
+
+  @Patch('bills/:id/pay')
+  markBillAsPaid(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string
+  ) {
+    const bill = mockBills.find((b) => b.id === id && b.userId === userId);
+    if (!bill) {
+      throw new NotFoundException(`Bill with id ${id} not found`);
+    }
+    bill.status = 'paid';
+    return { bill };
   }
 
   @Patch('debts/:id/negotiate')
@@ -398,7 +453,9 @@ describe('Finance Business Rules (Integration)', () => {
     mockDebts = [...initialData.debts];
     mockBills = [...initialData.bills];
     mockExpenses = [...initialData.expenses];
+    mockDebtPayments = [];
     debtIdCounter = 0;
+    paymentIdCounter = 0;
   });
 
   describe('Non-negotiated debt budget exclusion', () => {
@@ -504,6 +561,75 @@ describe('Finance Business Rules (Integration)', () => {
       const afterPaySummary = await getSummary(token);
       expect(afterPaySummary.debts.monthlyInstallmentSum).toBe(500); // Back to baseline
       expect(afterPaySummary.totalBudgeted).toBe(2800); // Back to baseline
+    });
+  });
+
+  describe('Total spent calculation', () => {
+    it('should_calculate_totalSpent_from_paid_bills_sum_not_ratio', async () => {
+      const token = await createToken({ sub: 'user-123' });
+
+      // Add bills with different amounts
+      mockBills.push(
+        { id: 'bill-2', userId: 'user-123', amount: '2000', monthYear: '2026-01', status: 'paid' },
+        { id: 'bill-3', userId: 'user-123', amount: '500', monthYear: '2026-01', status: 'paid' }
+      );
+
+      // Verify totalSpent uses exact SQL SUM of paid bills (2000 + 500 = 2500)
+      // NOT a ratio like (2/3 * totalBills)
+      const summary = await getSummary(token);
+
+      // paid bills: 2000 + 500 = 2500
+      // expenses actual: 400 (from baseline)
+      // debt payments: 0
+      expect(summary.paidBillsAmount).toBe(2500);
+      expect(summary.totalSpent).toBe(2500 + 400);
+    });
+
+    it('should_include_debt_payments_in_totalSpent_when_installment_paid', async () => {
+      const token = await createToken({ sub: 'user-123' });
+
+      // 1. Baseline: no debt payments
+      const baselineSummary = await getSummary(token);
+      expect(baselineSummary.debtPaymentsThisMonth).toBe(0);
+      expect(baselineSummary.totalSpent).toBe(400); // Only expenses actual
+
+      // 2. Pay one installment (500 BRL)
+      await request(app.getHttpServer())
+        .patch('/api/finance/debts/debt-baseline-1/pay-installment')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      // 3. Verify debt payment is included in totalSpent
+      const afterSummary = await getSummary(token);
+      expect(afterSummary.debtPaymentsThisMonth).toBe(500);
+      expect(afterSummary.totalSpent).toBe(400 + 500); // expenses + debt payment
+    });
+
+    it('should_calculate_totalSpent_as_paid_bills_plus_expenses_plus_debt_payments', async () => {
+      const token = await createToken({ sub: 'user-123' });
+
+      // Mark baseline bill as paid
+      await request(app.getHttpServer())
+        .patch('/api/finance/bills/bill-1/pay')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      // Pay one debt installment
+      await request(app.getHttpServer())
+        .patch('/api/finance/debts/debt-baseline-1/pay-installment')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      const summary = await getSummary(token);
+
+      // paid bills: 1500 (bill-1)
+      // expenses actual: 400 (baseline)
+      // debt payments: 500 (one installment)
+      expect(summary.paidBillsAmount).toBe(1500);
+      expect(summary.expensesActual).toBe(400);
+      expect(summary.debtPaymentsThisMonth).toBe(500);
+      expect(summary.totalSpent).toBe(1500 + 400 + 500);
+      expect(summary.totalSpent).toBe(2400);
     });
   });
 

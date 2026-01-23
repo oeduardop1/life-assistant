@@ -184,7 +184,7 @@ export function useMarkBillUnpaid() {
 export function calculateBillTotals(bills: Bill[]): BillTotals {
   return bills.reduce(
     (acc, bill) => {
-      const amount = bill.amount;
+      const amount = typeof bill.amount === 'string' ? parseFloat(bill.amount) : bill.amount;
       const isPaid = bill.status === 'paid';
       const isPending = bill.status === 'pending';
       const isOverdue = bill.status === 'overdue';

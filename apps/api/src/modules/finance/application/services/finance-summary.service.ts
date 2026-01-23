@@ -82,18 +82,22 @@ export class FinanceSummaryService {
       incomeActual,
       totalBills,
       billStatusCounts,
+      paidBillsAmount,
       expensesExpected,
       expensesActual,
       debtsSummary,
+      debtPaymentsThisMonth,
       investmentsSummary,
     ] = await Promise.all([
       this.incomesService.sumByMonthYear(userId, targetMonth, 'expectedAmount'),
       this.incomesService.sumByMonthYear(userId, targetMonth, 'actualAmount'),
       this.billsService.sumByMonthYear(userId, targetMonth),
       this.billsService.countByStatus(userId, targetMonth),
+      this.billsService.sumByMonthYearAndStatus(userId, targetMonth, 'paid'),
       this.variableExpensesService.sumByMonthYear(userId, targetMonth, 'expectedAmount'),
       this.variableExpensesService.sumByMonthYear(userId, targetMonth, 'actualAmount'),
       this.debtsService.getSummary(userId),
+      this.debtsService.sumPaymentsByMonthYear(userId, targetMonth),
       this.investmentsService.getSummary(userId),
     ]);
 
@@ -104,17 +108,12 @@ export class FinanceSummaryService {
     const canceled = billStatusCounts.canceled ?? 0;
     const totalBillsCount = pending + paid + overdue + canceled;
 
-    // Bills paid sum - need to calculate from paid bills only
-    // For simplicity, we'll estimate paid bills as proportion of total
-    const paidBillsRatio = totalBillsCount > 0 ? paid / totalBillsCount : 0;
-    const paidBillsAmount = totalBills * paidBillsRatio;
-
     // Total budgeted = bills + variable expenses expected + monthly debt installments
     const totalBudgeted =
       totalBills + expensesExpected + debtsSummary.monthlyInstallmentSum;
 
-    // Total spent = paid bills + variable expenses actual
-    const totalSpent = paidBillsAmount + expensesActual;
+    // Total spent = paid bills + variable expenses actual + debt payments this month
+    const totalSpent = paidBillsAmount + expensesActual + debtPaymentsThisMonth;
 
     // Balance = income actual - total spent
     const balance = incomeActual - totalSpent;

@@ -71,6 +71,7 @@ erDiagram
     users ||--o{ bills : has
     users ||--o{ variable_expenses : has
     users ||--o{ debts : has
+    debts ||--o{ debt_payments : has
     users ||--o{ investments : has
     users ||--o{ decisions : has
 
@@ -1766,7 +1767,7 @@ export type NewBudget = typeof budgets.$inferInsert;
 #### 4.14.1 Incomes (Rendas)
 
 ```typescript
-// packages/database/src/schema/finance/incomes.ts
+// packages/database/src/schema/incomes.ts
 
 import { pgTable, uuid, varchar, decimal, boolean, integer, timestamp, index } from 'drizzle-orm/pg-core';
 import { incomeTypeEnum, incomeFrequencyEnum } from '../enums';
@@ -1811,7 +1812,7 @@ export type NewIncome = typeof incomes.$inferInsert;
 #### 4.14.2 Bills (Contas Fixas)
 
 ```typescript
-// packages/database/src/schema/finance/bills.ts
+// packages/database/src/schema/bills.ts
 
 import { pgTable, uuid, varchar, decimal, integer, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { billStatusEnum, billCategoryEnum } from '../enums';
@@ -1861,7 +1862,7 @@ export type NewBill = typeof bills.$inferInsert;
 #### 4.14.3 Variable Expenses (Despesas Variáveis)
 
 ```typescript
-// packages/database/src/schema/finance/variable-expenses.ts
+// packages/database/src/schema/variable-expenses.ts
 
 import { pgTable, uuid, varchar, decimal, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { expenseCategoryEnum } from '../enums';
@@ -1908,7 +1909,7 @@ export type NewVariableExpense = typeof variableExpenses.$inferInsert;
 #### 4.14.4 Debts (Dívidas)
 
 ```typescript
-// packages/database/src/schema/finance/debts.ts
+// packages/database/src/schema/debts.ts
 
 import { pgTable, uuid, varchar, decimal, integer, timestamp, boolean, text, index } from 'drizzle-orm/pg-core';
 import { debtStatusEnum } from '../enums';
@@ -1964,7 +1965,47 @@ export type NewDebt = typeof debts.$inferInsert;
 **Regras de Validação:**
 - Se `isNegotiated = true`: campos `totalInstallments`, `installmentAmount`, `dueDay` são obrigatórios
 - Se `isNegotiated = false`: campos de parcelas são ignorados (dívida pendente de negociação)
-- Ao pagar parcela: incrementar `currentInstallment`
+- Ao pagar parcela: incrementar `currentInstallment` e registrar em `debt_payments`
+
+#### 4.14.5 Debt Payments (Pagamentos de Dívida)
+
+```typescript
+// packages/database/src/schema/debt-payments.ts
+
+import { pgTable, uuid, integer, decimal, varchar, timestamp, index } from 'drizzle-orm/pg-core';
+import { users } from './users';
+import { debts } from './debts';
+
+export const debtPayments = pgTable('debt_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  debtId: uuid('debt_id').notNull().references(() => debts.id, { onDelete: 'cascade' }),
+
+  // Payment details
+  installmentNumber: integer('installment_number').notNull(),
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  monthYear: varchar('month_year', { length: 7 }).notNull(), // "YYYY-MM"
+
+  // Timestamps
+  paidAt: timestamp('paid_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('debt_payments_user_id_idx').on(table.userId),
+  index('debt_payments_debt_id_idx').on(table.debtId),
+  index('debt_payments_user_month_year_idx').on(table.userId, table.monthYear),
+]);
+
+// Types
+export type DebtPayment = typeof debtPayments.$inferSelect;
+export type NewDebtPayment = typeof debtPayments.$inferInsert;
+```
+
+**Propósito:** Rastrear pagamentos de dívida por mês, permitindo incluir parcelas pagas no cálculo de "Total Gasto" do dashboard financeiro.
+
+**Regras:**
+- Criado automaticamente ao chamar `payInstallment()` no repositório de debts
+- `monthYear` no formato "YYYY-MM" (ex: "2026-01")
+- `amount` copia o `installmentAmount` da dívida no momento do pagamento
 - Se `currentInstallment > totalInstallments`: status automaticamente `paid_off`
 
 **Cálculos de Progresso (por dívida):**
@@ -1977,7 +2018,7 @@ export type NewDebt = typeof debts.$inferInsert;
 #### 4.14.5 Investments (Investimentos)
 
 ```typescript
-// packages/database/src/schema/finance/investments.ts
+// packages/database/src/schema/investments.ts
 
 import { pgTable, uuid, varchar, decimal, date, timestamp, index } from 'drizzle-orm/pg-core';
 import { investmentTypeEnum } from '../enums';
@@ -2479,6 +2520,7 @@ ALTER TABLE incomes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE variable_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE debts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE debt_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE investments ENABLE ROW LEVEL SECURITY;
 ```
 
@@ -2582,6 +2624,9 @@ CREATE POLICY "Users can only access own variable_expenses" ON variable_expenses
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own debts" ON debts
+  FOR ALL USING (user_id = (SELECT auth.user_id()));
+
+CREATE POLICY "Users can only access own debt_payments" ON debt_payments
   FOR ALL USING (user_id = (SELECT auth.user_id()));
 
 CREATE POLICY "Users can only access own investments" ON investments
@@ -2926,9 +2971,10 @@ seed().catch(console.error);
 | `bills` | Contas fixas com vencimento (aluguel, luz, assinaturas) | ✅ |
 | `variable_expenses` | Despesas variáveis planejadas (alimentação, lazer) | ✅ |
 | `debts` | Dívidas com parcelas (financiamentos, empréstimos) | ✅ |
+| `debt_payments` | Histórico de pagamentos de parcelas por mês | ✅ |
 | `investments` | Investimentos com metas e aportes | ✅ |
 
-**Total: 31 tabelas**
+**Total: 33 tabelas**
 
 ---
 
@@ -2962,15 +3008,14 @@ packages/database/
 │   │   ├── habit-freezes.ts  # Congelamento de streaks
 │   │   ├── memory.ts         # user_memories, knowledge_items, memory_consolidations (ADR-012)
 │   │   ├── audit.ts
-│   │   └── finance/          # Finance Module (M2.2)
-│   │       ├── index.ts      # Export all finance tables
-│   │       ├── incomes.ts
-│   │       ├── bills.ts
-│   │       ├── variable-expenses.ts
-│   │       ├── debts.ts
-│   │       └── investments.ts
+│   │   ├── incomes.ts          # Finance Module (M2.2)
+│   │   ├── bills.ts
+│   │   ├── variable-expenses.ts
+│   │   ├── debts.ts
+│   │   ├── debt-payments.ts
+│   │   └── investments.ts
 │   ├── migrations/
-│   │   └── 0001_initial.sql
+│   │   └── 0000_luxuriant_wraith.sql
 │   └── seed/
 │       └── index.ts
 ```
@@ -2999,18 +3044,28 @@ export default defineConfig({
 ### 10.3 Comandos
 
 ```bash
-# Gerar migration
-pnpm drizzle-kit generate
+# Gerar migration a partir do schema TypeScript
+pnpm --filter database db:generate
 
-# Aplicar migrations
-pnpm drizzle-kit migrate
+# Aplicar delta ao banco (compara schema TS vs banco real)
+pnpm --filter database db:push
 
-# Push direto (dev)
-pnpm drizzle-kit push
+# Aplicar sem confirmação interativa (CI/scripts)
+pnpm drizzle-kit push --strict=false --force
+
+# Aplicar migrations sequencialmente (novos ambientes)
+pnpm --filter database db:migrate
 
 # Studio (GUI)
-pnpm drizzle-kit studio
+pnpm --filter database db:studio
 ```
+
+**Workflow obrigatório para alterações de schema:**
+1. Modificar/criar arquivo em `src/schema/`
+2. Exportar no `src/schema/index.ts`
+3. `pnpm --filter database db:generate` → gera SQL incremental
+4. Revisar o SQL gerado em `src/migrations/`
+5. `pnpm --filter database db:push` → aplica ao banco
 
 ---
 
