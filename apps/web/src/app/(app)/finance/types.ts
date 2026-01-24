@@ -1013,12 +1013,16 @@ export function calculateDebtTotals(debts: Debt[]): DebtTotals {
   for (const debt of negotiatedDebts) {
     if (debt.installmentAmount && debt.totalInstallments) {
       const paidInstallments = debt.currentInstallment - 1;
-      totalPaid += paidInstallments * debt.installmentAmount;
-      monthlyInstallmentSum += debt.installmentAmount;
+      const installment = typeof debt.installmentAmount === 'string' ? parseFloat(debt.installmentAmount) : debt.installmentAmount;
+      totalPaid += paidInstallments * installment;
+      monthlyInstallmentSum += installment;
     }
   }
 
-  const totalAmount = activeDebts.reduce((sum, d) => sum + d.totalAmount, 0);
+  const totalAmount = activeDebts.reduce((sum, d) => {
+    const amount = typeof d.totalAmount === 'string' ? parseFloat(d.totalAmount) : d.totalAmount;
+    return sum + amount;
+  }, 0);
   const totalRemaining = totalAmount - totalPaid;
 
   return {

@@ -144,10 +144,12 @@ export function calculateExpenseTotals(expenses: Expense[]): ExpenseTotals {
   const result = expenses.reduce(
     (acc, expense) => {
       const isRecurring = expense.isRecurring;
+      const expected = typeof expense.expectedAmount === 'string' ? parseFloat(expense.expectedAmount) : expense.expectedAmount;
+      const actual = typeof expense.actualAmount === 'string' ? parseFloat(expense.actualAmount) : expense.actualAmount;
 
       return {
-        totalExpected: acc.totalExpected + expense.expectedAmount,
-        totalActual: acc.totalActual + expense.actualAmount,
+        totalExpected: acc.totalExpected + expected,
+        totalActual: acc.totalActual + actual,
         count: acc.count + 1,
         recurringCount: acc.recurringCount + (isRecurring ? 1 : 0),
         oneTimeCount: acc.oneTimeCount + (isRecurring ? 0 : 1),

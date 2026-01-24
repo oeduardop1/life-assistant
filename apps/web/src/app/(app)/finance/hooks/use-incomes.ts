@@ -151,12 +151,18 @@ export interface IncomeTotals {
  */
 export function calculateIncomeTotals(incomes: Income[]): IncomeTotals {
   return incomes.reduce(
-    (acc, income) => ({
-      totalExpected: acc.totalExpected + income.expectedAmount,
-      totalActual: acc.totalActual + (income.actualAmount ?? 0),
-      count: acc.count + 1,
-      recurringCount: acc.recurringCount + (income.isRecurring ? 1 : 0),
-    }),
+    (acc, income) => {
+      const expected = typeof income.expectedAmount === 'string' ? parseFloat(income.expectedAmount) : income.expectedAmount;
+      const actual = income.actualAmount
+        ? (typeof income.actualAmount === 'string' ? parseFloat(income.actualAmount) : income.actualAmount)
+        : 0;
+      return {
+        totalExpected: acc.totalExpected + expected,
+        totalActual: acc.totalActual + actual,
+        count: acc.count + 1,
+        recurringCount: acc.recurringCount + (income.isRecurring ? 1 : 0),
+      };
+    },
     { totalExpected: 0, totalActual: 0, count: 0, recurringCount: 0 }
   );
 }
