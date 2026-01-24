@@ -286,13 +286,11 @@ export default function FinanceDashboardPage() {
   const { data: summary, isLoading, isError, refetch } = useFinanceSummary(currentMonth);
   const { hasData } = useHasFinanceData(currentMonth);
 
-  // Mock data for charts (will be replaced with real data from API)
-  // TODO: Add chart data endpoints in future milestone
   const categoryBreakdown: CategoryBreakdown[] = summary
     ? [
-        { category: 'Contas Fixas', expected: summary.totalBills, actual: summary.totalBills * 0.8, color: '#3b82f6' },
+        { category: 'Contas Fixas', expected: summary.totalBills, actual: summary.paidBillsAmount, color: '#3b82f6' },
         { category: 'Despesas Variáveis', expected: summary.totalExpensesExpected, actual: summary.totalExpensesActual, color: '#22c55e' },
-        { category: 'Dívidas', expected: summary.debts.monthlyInstallmentSum, actual: summary.debts.monthlyInstallmentSum, color: '#f97316' },
+        { category: 'Dívidas', expected: summary.debts.monthlyInstallmentSum, actual: summary.debtPaymentsThisMonth, color: '#f97316' },
       ]
     : [];
 

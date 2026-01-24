@@ -63,6 +63,8 @@ const mockSummary: FinanceSummary = {
   totalExpensesActual: 1200,
   totalBudgeted: 3500,
   totalSpent: 3200,
+  paidBillsAmount: 2000,
+  debtPaymentsThisMonth: 500,
   balance: 1600,
   debts: {
     totalDebts: 2,

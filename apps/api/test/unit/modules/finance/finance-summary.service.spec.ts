@@ -219,6 +219,7 @@ describe('FinanceSummaryService', () => {
 
         // totalSpent uses the actual SQL SUM of paid bills, not ratio
         expect(result.totalSpent).toBe(paidBillsAmount);
+        expect(result.paidBillsAmount).toBe(paidBillsAmount);
         expect(mockBillsService.sumByMonthYearAndStatus).toHaveBeenCalledWith(
           'user-123',
           '2024-01',
@@ -317,6 +318,8 @@ describe('FinanceSummaryService', () => {
         expect(result.totalExpensesActual).toBe(0);
         expect(result.totalBudgeted).toBe(0);
         expect(result.totalSpent).toBe(0);
+        expect(result.paidBillsAmount).toBe(0);
+        expect(result.debtPaymentsThisMonth).toBe(0);
         expect(result.balance).toBe(0);
       });
 
@@ -371,6 +374,8 @@ describe('FinanceSummaryService', () => {
           'user-123',
           '2024-03'
         );
+        expect(result.debtPaymentsThisMonth).toBe(1500);
+        expect(result.paidBillsAmount).toBe(2000);
         expect(result.totalSpent).toBe(2000 + 1000 + 1500);
       });
     });

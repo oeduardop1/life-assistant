@@ -31,7 +31,9 @@ export interface FinanceSummary {
 
   // Budget summary
   totalBudgeted: number; // bills + expenses expected + negotiated debts monthly
-  totalSpent: number; // bills paid + expenses actual
+  totalSpent: number; // bills paid + expenses actual + debt payments this month
+  paidBillsAmount: number; // actual SQL SUM of paid bills
+  debtPaymentsThisMonth: number; // actual debt payments for this month
 
   // Balance
   balance: number; // income actual - total spent
@@ -142,6 +144,8 @@ export class FinanceSummaryService {
       // Budget summary
       totalBudgeted,
       totalSpent,
+      paidBillsAmount,
+      debtPaymentsThisMonth,
 
       // Balance
       balance,
