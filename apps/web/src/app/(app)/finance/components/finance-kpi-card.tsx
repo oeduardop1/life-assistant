@@ -144,7 +144,7 @@ interface FinanceKPICardsGridProps {
 export function FinanceKPICardsGrid({ children }: FinanceKPICardsGridProps) {
   return (
     <div
-      className="grid grid-cols-2 md:grid-cols-4 gap-4"
+      className="grid grid-cols-2 md:grid-cols-3 gap-4"
       data-testid="finance-kpi-cards-grid"
     >
       {children}

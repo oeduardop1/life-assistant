@@ -75,8 +75,6 @@ interface KPICardsSectionProps {
   balance: number;
   totalInvested: number;
   totalDebts: number;
-  monthlyInstallment: number;
-  totalPaid: number;
 }
 
 function KPICardsSection({
@@ -87,8 +85,6 @@ function KPICardsSection({
   balance,
   totalInvested,
   totalDebts,
-  monthlyInstallment,
-  totalPaid,
 }: KPICardsSectionProps) {
   const balanceColor = getBalanceColor(balance);
 
@@ -134,20 +130,6 @@ function KPICardsSection({
         value={totalDebts}
         icon="CreditCard"
         color="red"
-        loading={loading}
-      />
-      <FinanceKPICard
-        title="Parcela Mensal"
-        value={monthlyInstallment}
-        icon="Calendar"
-        color="yellow"
-        loading={loading}
-      />
-      <FinanceKPICard
-        title="Total Já Pago"
-        value={totalPaid}
-        icon="CheckCircle"
-        color="green"
         loading={loading}
       />
     </FinanceKPICardsGrid>
@@ -315,8 +297,6 @@ export default function FinanceDashboardPage() {
         balance={summary?.balance ?? 0}
         totalInvested={summary?.investments.totalCurrentAmount ?? 0}
         totalDebts={summary?.debts.totalRemaining ?? 0}
-        monthlyInstallment={summary?.debts.monthlyInstallmentSum ?? 0}
-        totalPaid={summary?.debts.totalPaid ?? 0}
       />
 
       {/* Charts */}
@@ -333,7 +313,7 @@ export default function FinanceDashboardPage() {
             pending: summary.billsCount.pending,
             overdue: summary.billsCount.overdue,
           }}
-          totalBills={summary.totalBills}
+          totalBills={summary.totalBills - summary.paidBillsAmount}
           monthlyInstallment={summary.debts.monthlyInstallmentSum}
           debtsCount={summary.debts.negotiatedCount}
         />
