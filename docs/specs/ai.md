@@ -835,6 +835,84 @@ export const tools: ToolDefinition[] = [
     // }
   },
 
+  // --- get_bills ---
+  {
+    name: 'get_bills',
+    description: 'Retorna TODAS as contas fixas com detalhes completos (nome, categoria, valor, vencimento, status, data pagamento). Use para ver contas individuais, verificar quais foram pagas, ou analisar gastos fixos.',
+    parameters: {
+      month: z.number().min(1).max(12).optional().describe('Mes (1-12). Se omitido, usa mes atual'),
+      year: z.number().min(2020).max(2100).optional().describe('Ano. Se omitido, usa ano atual'),
+      status: z.enum(['all', 'pending', 'paid', 'overdue']).default('all').describe('Filtro de status'),
+    },
+    requiresConfirmation: false,
+    inputExamples: [
+      { status: 'all' },
+      { month: 1, year: 2026, status: 'pending' },
+    ],
+    // Retorna:
+    // {
+    //   bills: Array<{ id, name, category, amount, dueDay, status, paidAt, isRecurring, monthYear, currency, daysUntilDue }>;
+    //   summary: { totalAmount, paidAmount, pendingAmount, overdueAmount, count, paidCount, pendingCount, overdueCount };
+    //   monthYear: string;
+    // }
+  },
+
+  // --- get_expenses ---
+  {
+    name: 'get_expenses',
+    description: 'Retorna TODAS as despesas variaveis com detalhes completos (nome, categoria, previsto, real, recorrente/pontual). Use para ver gastos individuais, comparar orcado vs real, ou analisar despesas por categoria.',
+    parameters: {
+      month: z.number().min(1).max(12).optional().describe('Mes (1-12). Se omitido, usa mes atual'),
+      year: z.number().min(2020).max(2100).optional().describe('Ano. Se omitido, usa ano atual'),
+    },
+    requiresConfirmation: false,
+    inputExamples: [
+      {},
+      { month: 1, year: 2026 },
+    ],
+    // Retorna:
+    // {
+    //   expenses: Array<{ id, name, category, expectedAmount, actualAmount, isRecurring, monthYear, currency, variance, percentUsed }>;
+    //   summary: { totalExpected, totalActual, variance, recurringCount, oneTimeCount, overBudgetCount };
+    //   monthYear: string;
+    // }
+  },
+
+  // --- get_incomes ---
+  {
+    name: 'get_incomes',
+    description: 'Retorna TODAS as rendas com detalhes completos (nome, tipo, frequencia, previsto, real). Use para ver fontes de renda individuais, verificar recebimentos, ou analisar previsto vs real.',
+    parameters: {
+      month: z.number().min(1).max(12).optional().describe('Mes (1-12). Se omitido, usa mes atual'),
+      year: z.number().min(2020).max(2100).optional().describe('Ano. Se omitido, usa ano atual'),
+    },
+    requiresConfirmation: false,
+    inputExamples: [
+      {},
+      { month: 1, year: 2026 },
+    ],
+    // Retorna:
+    // {
+    //   incomes: Array<{ id, name, type, frequency, expectedAmount, actualAmount, isRecurring, monthYear, currency, variance }>;
+    //   summary: { totalExpected, totalActual, variance, count, receivedCount, pendingCount };
+    //   monthYear: string;
+    // }
+  },
+
+  // --- get_investments ---
+  {
+    name: 'get_investments',
+    description: 'Retorna TODOS os investimentos com detalhes completos (nome, tipo, valor atual, meta, aporte mensal, prazo, progresso). Use para ver progresso de investimentos, calcular metas, ou analisar portfolio.',
+    parameters: {},
+    requiresConfirmation: false,
+    inputExamples: [{}],
+    // Retorna:
+    // {
+    //   investments: Array<{ id, name, type, currentAmount, goalAmount, monthlyContribution, deadline, currency, progress, remainingToGoal, monthsToGoal }>;
+    //   summary: { totalCurrentAmount, totalGoalAmount, totalMonthlyContribution, averageProgress, count };
+    // }
+  },
+
   // ========== WRITE TOOLS ==========
   // Nota: add_knowledge NÃO requer confirmação via sistema (IA confirma naturalmente na resposta)
   // record_metric, create_reminder, update_person requerem confirmação via sistema
@@ -2070,7 +2148,7 @@ Fingir que sabe algo que não sabe
 
 | Categoria | Tools | Confirmação |
 |-----------|-------|-------------|
-| **Read** | `search_knowledge`, `get_tracking_history`, `get_trends`, `get_person`, `analyze_context`, `get_finance_summary`, `get_pending_bills`, `get_debt_progress` | ❌ Não |
+| **Read** | `search_knowledge`, `get_tracking_history`, `get_trends`, `get_person`, `analyze_context`, `get_finance_summary`, `get_pending_bills`, `get_bills`, `get_expenses`, `get_incomes`, `get_investments`, `get_debt_progress` | ❌ Não |
 | **Write** | `record_metric`, `update_metric`, `delete_metric`, `add_knowledge`, `create_reminder`, `update_person`, `mark_bill_paid`, `create_expense` | ✅ Sim |
 
 ### 9.2 Regras de Confirmação
@@ -2084,6 +2162,10 @@ Fingir que sabe algo que não sabe
 | `analyze_context` | ❌ Não | Apenas leitura (análise de contexto) |
 | `get_finance_summary` | ❌ Não | Apenas leitura (resumo financeiro) |
 | `get_pending_bills` | ❌ Não | Apenas leitura (contas pendentes) |
+| `get_bills` | ❌ Não | Apenas leitura (listagem de contas) |
+| `get_expenses` | ❌ Não | Apenas leitura (listagem de despesas) |
+| `get_incomes` | ❌ Não | Apenas leitura (listagem de rendas) |
+| `get_investments` | ❌ Não | Apenas leitura (listagem de investimentos) |
 | `get_debt_progress` | ❌ Não | Apenas leitura (progresso de dívidas) |
 | `record_metric` | ✅ Sim | Modifica dados |
 | `update_metric` | ✅ Sim | Modifica dados existentes |

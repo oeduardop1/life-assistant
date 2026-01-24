@@ -71,6 +71,30 @@ vi.mock('@life-assistant/ai', () => ({
     parameters: {},
     requiresConfirmation: false,
   },
+  getBillsTool: {
+    name: 'get_bills',
+    description: 'Get all bills with details',
+    parameters: {},
+    requiresConfirmation: false,
+  },
+  getExpensesTool: {
+    name: 'get_expenses',
+    description: 'Get all variable expenses',
+    parameters: {},
+    requiresConfirmation: false,
+  },
+  getIncomesTool: {
+    name: 'get_incomes',
+    description: 'Get all incomes',
+    parameters: {},
+    requiresConfirmation: false,
+  },
+  getInvestmentsTool: {
+    name: 'get_investments',
+    description: 'Get all investments',
+    parameters: {},
+    requiresConfirmation: false,
+  },
   markBillPaidTool: {
     name: 'mark_bill_paid',
     description: 'Mark a bill as paid',

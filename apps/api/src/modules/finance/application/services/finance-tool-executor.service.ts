@@ -12,6 +12,10 @@ import {
 import {
   getFinanceSummaryParamsSchema,
   getPendingBillsParamsSchema,
+  getBillsParamsSchema,
+  getExpensesParamsSchema,
+  getIncomesParamsSchema,
+  getInvestmentsParamsSchema,
   markBillPaidParamsSchema,
   createExpenseParamsSchema,
   getDebtProgressParamsSchema,
@@ -20,6 +24,8 @@ import { FinanceSummaryService } from './finance-summary.service';
 import { BillsService } from './bills.service';
 import { VariableExpensesService } from './variable-expenses.service';
 import { DebtsService } from './debts.service';
+import { IncomesService } from './incomes.service';
+import { InvestmentsService } from './investments.service';
 
 /**
  * Finance Tool Executor - Executes finance-related tools for AI chat
@@ -35,7 +41,9 @@ export class FinanceToolExecutorService implements ToolExecutor {
     private readonly financeSummaryService: FinanceSummaryService,
     private readonly billsService: BillsService,
     private readonly variableExpensesService: VariableExpensesService,
-    private readonly debtsService: DebtsService
+    private readonly debtsService: DebtsService,
+    private readonly incomesService: IncomesService,
+    private readonly investmentsService: InvestmentsService
   ) {}
 
   /**
@@ -62,6 +70,18 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
         case 'create_expense':
           return await this.executeCreateExpense(toolCall, userId);
+
+        case 'get_bills':
+          return await this.executeGetBills(toolCall, userId);
+
+        case 'get_expenses':
+          return await this.executeGetExpenses(toolCall, userId);
+
+        case 'get_incomes':
+          return await this.executeGetIncomes(toolCall, userId);
+
+        case 'get_investments':
+          return await this.executeGetInvestments(toolCall, userId);
 
         case 'get_debt_progress':
           return await this.executeGetDebtProgress(toolCall, userId);
@@ -132,8 +152,27 @@ export class FinanceToolExecutorService implements ToolExecutor {
         balance: summary.balance,
         invested: summary.investments.totalCurrentAmount,
       },
+      breakdown: {
+        bills: {
+          total: summary.totalBills,
+          paidAmount: summary.paidBillsAmount,
+          pendingAmount: summary.totalBills - summary.paidBillsAmount,
+        },
+        expenses: {
+          expected: summary.totalExpensesExpected,
+          actual: summary.totalExpensesActual,
+        },
+        debts: {
+          paymentsThisMonth: summary.debtPaymentsThisMonth,
+        },
+      },
+      income: {
+        expected: summary.totalIncomeExpected,
+        actual: summary.totalIncomeActual,
+      },
       debts: {
         totalDebts: summary.debts.totalDebts,
+        totalAmount: summary.debts.totalAmount,
         monthlyInstallment: summary.debts.monthlyInstallmentSum,
         totalPaid: summary.debts.totalPaid,
         totalRemaining: summary.debts.totalRemaining,
@@ -141,6 +180,13 @@ export class FinanceToolExecutorService implements ToolExecutor {
         pendingNegotiationCount: summary.debts.totalDebts - summary.debts.negotiatedCount,
       },
       billsCount: summary.billsCount,
+      investments: {
+        count: summary.investments.totalInvestments,
+        totalCurrent: summary.investments.totalCurrentAmount,
+        totalGoal: summary.investments.totalGoalAmount,
+        monthlyContribution: summary.investments.totalMonthlyContribution,
+        averageProgress: summary.investments.averageProgress,
+      },
       monthYear: summary.monthYear,
     });
   }
@@ -461,6 +507,328 @@ export class FinanceToolExecutorService implements ToolExecutor {
         totalRemaining,
         averageProgress,
       },
+    });
+  }
+
+  /**
+   * Execute get_bills tool
+   */
+  private async executeGetBills(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = getBillsParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { month, year, status } = parseResult.data;
+
+    // Default to current month/year
+    const now = new Date();
+    const targetMonth = month ?? now.getMonth() + 1;
+    const targetYear = year ?? now.getFullYear();
+    const monthYear = `${String(targetYear)}-${String(targetMonth).padStart(2, '0')}`;
+
+    this.logger.debug(`get_bills params: monthYear=${monthYear}, status=${status}`);
+
+    // Ensure recurring bills exist for this month
+    await this.billsService.ensureRecurringForMonth(userId, monthYear);
+
+    // Get all bills (status='all' means no filter)
+    const findParams: { monthYear: string; status?: string } = { monthYear };
+    if (status !== 'all') {
+      findParams.status = status;
+    }
+
+    const { bills } = await this.billsService.findAll(userId, findParams);
+
+    // Calculate due status for each bill
+    const today = new Date();
+    const formattedBills = bills.map((bill) => {
+      const dueDate = new Date(targetYear, targetMonth - 1, bill.dueDay);
+      const daysUntilDue = Math.ceil(
+        (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      return {
+        id: bill.id,
+        name: bill.name,
+        category: bill.category,
+        amount: parseFloat(bill.amount),
+        dueDay: bill.dueDay,
+        status: bill.status,
+        paidAt: bill.paidAt ? bill.paidAt.toISOString() : null,
+        isRecurring: bill.isRecurring,
+        monthYear: bill.monthYear,
+        currency: bill.currency,
+        daysUntilDue,
+      };
+    });
+
+    // Calculate summary
+    const paidBills = formattedBills.filter((b) => b.status === 'paid');
+    const pendingBills = formattedBills.filter((b) => b.status === 'pending');
+    const overdueBills = formattedBills.filter((b) => b.status === 'overdue');
+
+    const summary = {
+      totalAmount: formattedBills.reduce((sum, b) => sum + b.amount, 0),
+      paidAmount: paidBills.reduce((sum, b) => sum + b.amount, 0),
+      pendingAmount: pendingBills.reduce((sum, b) => sum + b.amount, 0),
+      overdueAmount: overdueBills.reduce((sum, b) => sum + b.amount, 0),
+      count: formattedBills.length,
+      paidCount: paidBills.length,
+      pendingCount: pendingBills.length,
+      overdueCount: overdueBills.length,
+    };
+
+    this.logger.log(
+      `get_bills returned ${String(formattedBills.length)} bills for ${monthYear}`
+    );
+
+    return createSuccessResult(toolCall, {
+      bills: formattedBills,
+      summary,
+      monthYear,
+    });
+  }
+
+  /**
+   * Execute get_expenses tool
+   */
+  private async executeGetExpenses(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = getExpensesParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { month, year } = parseResult.data;
+
+    // Default to current month/year
+    const now = new Date();
+    const targetMonth = month ?? now.getMonth() + 1;
+    const targetYear = year ?? now.getFullYear();
+    const monthYear = `${String(targetYear)}-${String(targetMonth).padStart(2, '0')}`;
+
+    this.logger.debug(`get_expenses params: monthYear=${monthYear}`);
+
+    // Ensure recurring expenses exist for this month
+    await this.variableExpensesService.ensureRecurringForMonth(userId, monthYear);
+
+    const { expenses } = await this.variableExpensesService.findAll(userId, { monthYear });
+
+    const formattedExpenses = expenses.map((expense) => {
+      const expectedAmount = parseFloat(expense.expectedAmount);
+      const actualAmount = parseFloat(expense.actualAmount);
+      const variance = actualAmount - expectedAmount;
+      const percentUsed = expectedAmount > 0 ? Math.round((actualAmount / expectedAmount) * 100) : 0;
+
+      return {
+        id: expense.id,
+        name: expense.name,
+        category: expense.category,
+        expectedAmount,
+        actualAmount,
+        isRecurring: expense.isRecurring,
+        monthYear: expense.monthYear,
+        currency: expense.currency,
+        variance,
+        percentUsed,
+      };
+    });
+
+    // Calculate summary
+    const totalExpected = formattedExpenses.reduce((sum, e) => sum + e.expectedAmount, 0);
+    const totalActual = formattedExpenses.reduce((sum, e) => sum + e.actualAmount, 0);
+    const recurringCount = formattedExpenses.filter((e) => e.isRecurring).length;
+    const oneTimeCount = formattedExpenses.filter((e) => !e.isRecurring).length;
+    const overBudgetCount = formattedExpenses.filter((e) => e.variance > 0).length;
+
+    const summary = {
+      totalExpected,
+      totalActual,
+      variance: totalActual - totalExpected,
+      recurringCount,
+      oneTimeCount,
+      overBudgetCount,
+    };
+
+    this.logger.log(
+      `get_expenses returned ${String(formattedExpenses.length)} expenses for ${monthYear}`
+    );
+
+    return createSuccessResult(toolCall, {
+      expenses: formattedExpenses,
+      summary,
+      monthYear,
+    });
+  }
+
+  /**
+   * Execute get_incomes tool
+   */
+  private async executeGetIncomes(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = getIncomesParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { month, year } = parseResult.data;
+
+    // Default to current month/year
+    const now = new Date();
+    const targetMonth = month ?? now.getMonth() + 1;
+    const targetYear = year ?? now.getFullYear();
+    const monthYear = `${String(targetYear)}-${String(targetMonth).padStart(2, '0')}`;
+
+    this.logger.debug(`get_incomes params: monthYear=${monthYear}`);
+
+    // Ensure recurring incomes exist for this month
+    await this.incomesService.ensureRecurringForMonth(userId, monthYear);
+
+    const { incomes } = await this.incomesService.findAll(userId, { monthYear });
+
+    const formattedIncomes = incomes.map((income) => {
+      const expectedAmount = parseFloat(income.expectedAmount);
+      const actualAmount = income.actualAmount ? parseFloat(income.actualAmount) : null;
+      const variance = actualAmount !== null ? actualAmount - expectedAmount : null;
+
+      return {
+        id: income.id,
+        name: income.name,
+        type: income.type,
+        frequency: income.frequency,
+        expectedAmount,
+        actualAmount,
+        isRecurring: income.isRecurring,
+        monthYear: income.monthYear,
+        currency: income.currency,
+        variance,
+      };
+    });
+
+    // Calculate summary
+    const totalExpected = formattedIncomes.reduce((sum, i) => sum + i.expectedAmount, 0);
+    const totalActual = formattedIncomes.reduce((sum, i) => sum + (i.actualAmount ?? 0), 0);
+    const receivedCount = formattedIncomes.filter((i) => i.actualAmount !== null).length;
+    const pendingCount = formattedIncomes.filter((i) => i.actualAmount === null).length;
+
+    const summary = {
+      totalExpected,
+      totalActual,
+      variance: totalActual - totalExpected,
+      count: formattedIncomes.length,
+      receivedCount,
+      pendingCount,
+    };
+
+    this.logger.log(
+      `get_incomes returned ${String(formattedIncomes.length)} incomes for ${monthYear}`
+    );
+
+    return createSuccessResult(toolCall, {
+      incomes: formattedIncomes,
+      summary,
+      monthYear,
+    });
+  }
+
+  /**
+   * Execute get_investments tool
+   */
+  private async executeGetInvestments(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = getInvestmentsParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    this.logger.debug('get_investments params: (none)');
+
+    const { investments } = await this.investmentsService.findAll(userId, {});
+
+    const formattedInvestments = investments.map((inv) => {
+      const currentAmount = parseFloat(inv.currentAmount);
+      const goalAmount = inv.goalAmount ? parseFloat(inv.goalAmount) : null;
+      const monthlyContribution = inv.monthlyContribution ? parseFloat(inv.monthlyContribution) : null;
+      const progress = goalAmount !== null && goalAmount > 0
+        ? Math.round((currentAmount / goalAmount) * 100)
+        : null;
+      const remainingToGoal = goalAmount !== null ? goalAmount - currentAmount : null;
+      const monthsToGoal = remainingToGoal !== null && monthlyContribution !== null && monthlyContribution > 0
+        ? Math.ceil(remainingToGoal / monthlyContribution)
+        : null;
+
+      return {
+        id: inv.id,
+        name: inv.name,
+        type: inv.type,
+        currentAmount,
+        goalAmount,
+        monthlyContribution,
+        deadline: inv.deadline ?? null,
+        currency: inv.currency,
+        progress,
+        remainingToGoal,
+        monthsToGoal,
+      };
+    });
+
+    // Calculate summary
+    const totalCurrentAmount = formattedInvestments.reduce((sum, i) => sum + i.currentAmount, 0);
+    const totalGoalAmount = formattedInvestments
+      .filter((i) => i.goalAmount !== null)
+      .reduce((sum, i) => sum + (i.goalAmount ?? 0), 0);
+    const totalMonthlyContribution = formattedInvestments
+      .filter((i) => i.monthlyContribution !== null)
+      .reduce((sum, i) => sum + (i.monthlyContribution ?? 0), 0);
+    const investmentsWithProgress = formattedInvestments.filter((i) => i.progress !== null);
+    const averageProgress = investmentsWithProgress.length > 0
+      ? Math.round(
+          investmentsWithProgress.reduce((sum, i) => sum + (i.progress ?? 0), 0) /
+            investmentsWithProgress.length
+        )
+      : 0;
+
+    const summary = {
+      totalCurrentAmount,
+      totalGoalAmount,
+      totalMonthlyContribution,
+      averageProgress,
+      count: formattedInvestments.length,
+    };
+
+    this.logger.log(
+      `get_investments returned ${String(formattedInvestments.length)} investments`
+    );
+
+    return createSuccessResult(toolCall, {
+      investments: formattedInvestments,
+      summary,
     });
   }
 

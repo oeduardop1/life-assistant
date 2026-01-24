@@ -14,6 +14,10 @@ import {
   // Finance tools (M2.2)
   getFinanceSummaryTool,
   getPendingBillsTool,
+  getBillsTool,
+  getExpensesTool,
+  getIncomesTool,
+  getInvestmentsTool,
   markBillPaidTool,
   createExpenseTool,
   getDebtProgressTool,
@@ -95,6 +99,10 @@ export class ChatService {
     // Finance tools (M2.2)
     getFinanceSummaryTool,
     getPendingBillsTool,
+    getBillsTool,
+    getExpensesTool,
+    getIncomesTool,
+    getInvestmentsTool,
     markBillPaidTool,
     createExpenseTool,
     getDebtProgressTool,
@@ -114,6 +122,10 @@ export class ChatService {
     // Finance tools (M2.2)
     get_finance_summary: 'finance',
     get_pending_bills: 'finance',
+    get_bills: 'finance',
+    get_expenses: 'finance',
+    get_incomes: 'finance',
+    get_investments: 'finance',
     mark_bill_paid: 'finance',
     create_expense: 'finance',
     get_debt_progress: 'finance',

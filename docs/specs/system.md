@@ -1284,11 +1284,11 @@ Que tal uma caminhada de 20min?
 
 | Entidade | CREATE | READ | UPDATE | DELETE | Via IA (Tools) |
 |----------|--------|------|--------|--------|----------------|
-| Income | ✅ | ✅ | ✅ | ✅ | Parcial (get_finance_summary) |
-| Bill | ✅ | ✅ | ✅ | ✅ | get_pending_bills, mark_bill_paid |
-| VariableExpense | ✅ | ✅ | ✅ | ✅ | create_expense, get_finance_summary |
+| Income | ✅ | ✅ | ✅ | ✅ | get_incomes, get_finance_summary |
+| Bill | ✅ | ✅ | ✅ | ✅ | get_bills, get_pending_bills, mark_bill_paid |
+| VariableExpense | ✅ | ✅ | ✅ | ✅ | get_expenses, create_expense, get_finance_summary |
 | Debt | ✅ | ✅ | ✅ | ✅ | get_debt_progress, get_finance_summary |
-| Investment | ✅ | ✅ | ✅ | ✅ | Parcial (get_finance_summary) |
+| Investment | ✅ | ✅ | ✅ | ✅ | get_investments, get_finance_summary |
 
 #### Filtros e Paginação
 

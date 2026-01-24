@@ -569,6 +569,10 @@ O usuário pode interagir com suas finanças através de conversa natural com a 
 *Consultas:*
 - "Qual meu resumo financeiro deste mês?" → get_finance_summary
 - "Quais contas ainda preciso pagar?" → get_pending_bills
+- "Me mostra todas as minhas contas fixas" → get_bills
+- "Quais são meus gastos variáveis esse mês?" → get_expenses
+- "Quanto estou recebendo de salário?" → get_incomes
+- "Como estão meus investimentos?" → get_investments
 - "Como está o pagamento das minhas dívidas?" → get_debt_progress
 - "Quanto já paguei do financiamento do carro?" → get_debt_progress
 

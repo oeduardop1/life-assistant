@@ -10,6 +10,14 @@ import {
   getFinanceSummaryParamsSchema,
   getPendingBillsTool,
   getPendingBillsParamsSchema,
+  getBillsTool,
+  getBillsParamsSchema,
+  getExpensesTool,
+  getExpensesParamsSchema,
+  getIncomesTool,
+  getIncomesParamsSchema,
+  getInvestmentsTool,
+  getInvestmentsParamsSchema,
   markBillPaidTool,
   markBillPaidParamsSchema,
   createExpenseTool,
@@ -100,6 +108,183 @@ describe('Finance Tool Definitions', () => {
       it('should reject year out of range', () => {
         expect(() => getPendingBillsParamsSchema.parse({ year: 2019 })).toThrow();
         expect(() => getPendingBillsParamsSchema.parse({ year: 2101 })).toThrow();
+      });
+    });
+  });
+
+  describe('get_bills', () => {
+    it('should have correct tool name', () => {
+      expect(getBillsTool.name).toBe('get_bills');
+    });
+
+    it('should have a non-empty description', () => {
+      expect(getBillsTool.description).toBeTruthy();
+      expect(getBillsTool.description.length).toBeGreaterThan(10);
+    });
+
+    it('should not require confirmation (READ tool)', () => {
+      expect(getBillsTool.requiresConfirmation).toBe(false);
+    });
+
+    it('should have input examples', () => {
+      expect(getBillsTool.inputExamples).toBeDefined();
+      expect(getBillsTool.inputExamples?.length).toBeGreaterThan(0);
+    });
+
+    describe('parameter validation', () => {
+      it('should accept empty object (defaults)', () => {
+        expect(() => getBillsParamsSchema.parse({})).not.toThrow();
+      });
+
+      it('should default status to all', () => {
+        const result = getBillsParamsSchema.parse({});
+        expect(result.status).toBe('all');
+      });
+
+      it('should accept valid month (1-12)', () => {
+        expect(() => getBillsParamsSchema.parse({ month: 1 })).not.toThrow();
+        expect(() => getBillsParamsSchema.parse({ month: 12 })).not.toThrow();
+      });
+
+      it('should reject invalid month', () => {
+        expect(() => getBillsParamsSchema.parse({ month: 0 })).toThrow();
+        expect(() => getBillsParamsSchema.parse({ month: 13 })).toThrow();
+      });
+
+      it('should accept valid year', () => {
+        expect(() => getBillsParamsSchema.parse({ year: 2026 })).not.toThrow();
+      });
+
+      it('should reject year out of range', () => {
+        expect(() => getBillsParamsSchema.parse({ year: 2019 })).toThrow();
+        expect(() => getBillsParamsSchema.parse({ year: 2101 })).toThrow();
+      });
+
+      it('should accept valid status values', () => {
+        expect(() => getBillsParamsSchema.parse({ status: 'all' })).not.toThrow();
+        expect(() => getBillsParamsSchema.parse({ status: 'pending' })).not.toThrow();
+        expect(() => getBillsParamsSchema.parse({ status: 'paid' })).not.toThrow();
+        expect(() => getBillsParamsSchema.parse({ status: 'overdue' })).not.toThrow();
+      });
+
+      it('should reject invalid status', () => {
+        expect(() => getBillsParamsSchema.parse({ status: 'invalid' })).toThrow();
+      });
+    });
+  });
+
+  describe('get_expenses', () => {
+    it('should have correct tool name', () => {
+      expect(getExpensesTool.name).toBe('get_expenses');
+    });
+
+    it('should have a non-empty description', () => {
+      expect(getExpensesTool.description).toBeTruthy();
+      expect(getExpensesTool.description.length).toBeGreaterThan(10);
+    });
+
+    it('should not require confirmation (READ tool)', () => {
+      expect(getExpensesTool.requiresConfirmation).toBe(false);
+    });
+
+    it('should have input examples', () => {
+      expect(getExpensesTool.inputExamples).toBeDefined();
+      expect(getExpensesTool.inputExamples?.length).toBeGreaterThan(0);
+    });
+
+    describe('parameter validation', () => {
+      it('should accept empty object (defaults)', () => {
+        expect(() => getExpensesParamsSchema.parse({})).not.toThrow();
+      });
+
+      it('should accept valid month (1-12)', () => {
+        expect(() => getExpensesParamsSchema.parse({ month: 1 })).not.toThrow();
+        expect(() => getExpensesParamsSchema.parse({ month: 12 })).not.toThrow();
+      });
+
+      it('should reject invalid month', () => {
+        expect(() => getExpensesParamsSchema.parse({ month: 0 })).toThrow();
+        expect(() => getExpensesParamsSchema.parse({ month: 13 })).toThrow();
+      });
+
+      it('should accept valid year', () => {
+        expect(() => getExpensesParamsSchema.parse({ year: 2026 })).not.toThrow();
+      });
+
+      it('should reject year out of range', () => {
+        expect(() => getExpensesParamsSchema.parse({ year: 2019 })).toThrow();
+        expect(() => getExpensesParamsSchema.parse({ year: 2101 })).toThrow();
+      });
+    });
+  });
+
+  describe('get_incomes', () => {
+    it('should have correct tool name', () => {
+      expect(getIncomesTool.name).toBe('get_incomes');
+    });
+
+    it('should have a non-empty description', () => {
+      expect(getIncomesTool.description).toBeTruthy();
+      expect(getIncomesTool.description.length).toBeGreaterThan(10);
+    });
+
+    it('should not require confirmation (READ tool)', () => {
+      expect(getIncomesTool.requiresConfirmation).toBe(false);
+    });
+
+    it('should have input examples', () => {
+      expect(getIncomesTool.inputExamples).toBeDefined();
+      expect(getIncomesTool.inputExamples?.length).toBeGreaterThan(0);
+    });
+
+    describe('parameter validation', () => {
+      it('should accept empty object (defaults)', () => {
+        expect(() => getIncomesParamsSchema.parse({})).not.toThrow();
+      });
+
+      it('should accept valid month (1-12)', () => {
+        expect(() => getIncomesParamsSchema.parse({ month: 1 })).not.toThrow();
+        expect(() => getIncomesParamsSchema.parse({ month: 12 })).not.toThrow();
+      });
+
+      it('should reject invalid month', () => {
+        expect(() => getIncomesParamsSchema.parse({ month: 0 })).toThrow();
+        expect(() => getIncomesParamsSchema.parse({ month: 13 })).toThrow();
+      });
+
+      it('should accept valid year', () => {
+        expect(() => getIncomesParamsSchema.parse({ year: 2026 })).not.toThrow();
+      });
+
+      it('should reject year out of range', () => {
+        expect(() => getIncomesParamsSchema.parse({ year: 2019 })).toThrow();
+        expect(() => getIncomesParamsSchema.parse({ year: 2101 })).toThrow();
+      });
+    });
+  });
+
+  describe('get_investments', () => {
+    it('should have correct tool name', () => {
+      expect(getInvestmentsTool.name).toBe('get_investments');
+    });
+
+    it('should have a non-empty description', () => {
+      expect(getInvestmentsTool.description).toBeTruthy();
+      expect(getInvestmentsTool.description.length).toBeGreaterThan(10);
+    });
+
+    it('should not require confirmation (READ tool)', () => {
+      expect(getInvestmentsTool.requiresConfirmation).toBe(false);
+    });
+
+    it('should have input examples', () => {
+      expect(getInvestmentsTool.inputExamples).toBeDefined();
+      expect(getInvestmentsTool.inputExamples?.length).toBeGreaterThan(0);
+    });
+
+    describe('parameter validation', () => {
+      it('should accept empty object', () => {
+        expect(() => getInvestmentsParamsSchema.parse({})).not.toThrow();
       });
     });
   });
@@ -279,12 +464,12 @@ describe('Finance Tool Definitions', () => {
   });
 
   describe('Tool arrays', () => {
-    it('should have 5 total finance tools', () => {
-      expect(financeTools.length).toBe(5);
+    it('should have 9 total finance tools', () => {
+      expect(financeTools.length).toBe(9);
     });
 
-    it('should have 3 READ tools', () => {
-      expect(financeReadTools.length).toBe(3);
+    it('should have 7 READ tools', () => {
+      expect(financeReadTools.length).toBe(7);
       financeReadTools.forEach((tool) => {
         expect(tool.requiresConfirmation).toBe(false);
       });
@@ -301,6 +486,10 @@ describe('Finance Tool Definitions', () => {
       const readToolNames = financeReadTools.map((t) => t.name);
       expect(readToolNames).toContain('get_finance_summary');
       expect(readToolNames).toContain('get_pending_bills');
+      expect(readToolNames).toContain('get_bills');
+      expect(readToolNames).toContain('get_expenses');
+      expect(readToolNames).toContain('get_incomes');
+      expect(readToolNames).toContain('get_investments');
       expect(readToolNames).toContain('get_debt_progress');
     });
 

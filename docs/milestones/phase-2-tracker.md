@@ -678,6 +678,16 @@ _Tools para IA:_
 - [x] `create_expense` cria despesa via conversa (com confirmação)
 - [x] `get_debt_progress` retorna progresso das dívidas
 
+_Finance Tools Enhancement (AI Detail Access):_
+- [x] Enriquecer `get_finance_summary` com breakdown (bills/expenses/debts)
+- [x] Nova tool `get_bills` (listar todas contas com detalhes)
+- [x] Nova tool `get_expenses` (listar despesas com previsto/real)
+- [x] Nova tool `get_incomes` (listar rendas com detalhes)
+- [x] Nova tool `get_investments` (listar investimentos com progresso)
+- [x] Melhorar prompt de finanças no context-builder
+- [x] Atualizar ai.md, product.md, system.md com novas tools
+- [x] Testes unitários para novas tools
+
 _Dívidas não negociadas:_
 - [x] Podem ser criadas (apenas valor total, sem parcelas)
 - [x] NÃO entram no Total Orçado
