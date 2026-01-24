@@ -8,6 +8,13 @@
       "when": 1769205381804,
       "tag": "0000_luxuriant_wraith",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769221933769,
+      "tag": "0001_square_hiroim",
+      "breakpoints": true
     }
   ]
 }

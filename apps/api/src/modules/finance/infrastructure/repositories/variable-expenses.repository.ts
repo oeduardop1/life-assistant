@@ -1,7 +1,7 @@
 // apps/api/src/modules/finance/infrastructure/repositories/variable-expenses.repository.ts
 
 import { Injectable } from '@nestjs/common';
-import { eq, and, sql, count } from '@life-assistant/database';
+import { eq, and, sql, count, gt, isNotNull } from '@life-assistant/database';
 import { DatabaseService } from '../../../../database/database.service';
 import type { VariableExpense, NewVariableExpense } from '@life-assistant/database';
 import type {
@@ -178,6 +178,153 @@ export class VariableExpensesRepository
         );
 
       return parseFloat(result?.sum ?? '0');
+    });
+  }
+
+  // =========================================================================
+  // Recurring Methods
+  // =========================================================================
+
+  async findRecurringByMonth(
+    userId: string,
+    monthYear: string
+  ): Promise<VariableExpense[]> {
+    return this.db.withUserId(userId, async (db) => {
+      return db
+        .select()
+        .from(this.db.schema.variableExpenses)
+        .where(
+          and(
+            eq(this.db.schema.variableExpenses.userId, userId),
+            eq(this.db.schema.variableExpenses.monthYear, monthYear),
+            eq(this.db.schema.variableExpenses.isRecurring, true),
+            isNotNull(this.db.schema.variableExpenses.recurringGroupId)
+          )
+        );
+    });
+  }
+
+  async findByRecurringGroupIdAndMonth(
+    userId: string,
+    recurringGroupId: string,
+    monthYear: string
+  ): Promise<VariableExpense | null> {
+    return this.db.withUserId(userId, async (db) => {
+      const [expense] = await db
+        .select()
+        .from(this.db.schema.variableExpenses)
+        .where(
+          and(
+            eq(this.db.schema.variableExpenses.userId, userId),
+            eq(this.db.schema.variableExpenses.recurringGroupId, recurringGroupId),
+            eq(this.db.schema.variableExpenses.monthYear, monthYear)
+          )
+        )
+        .limit(1);
+
+      return expense ?? null;
+    });
+  }
+
+  async findByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<VariableExpense[]> {
+    return this.db.withUserId(userId, async (db) => {
+      return db
+        .select()
+        .from(this.db.schema.variableExpenses)
+        .where(
+          and(
+            eq(this.db.schema.variableExpenses.userId, userId),
+            eq(this.db.schema.variableExpenses.recurringGroupId, recurringGroupId)
+          )
+        );
+    });
+  }
+
+  async createMany(
+    userId: string,
+    data: Omit<NewVariableExpense, 'userId'>[]
+  ): Promise<VariableExpense[]> {
+    if (data.length === 0) return [];
+
+    return this.db.withUserId(userId, async (db) => {
+      const values = data.map((item) => ({ ...item, userId }));
+      return db
+        .insert(this.db.schema.variableExpenses)
+        .values(values)
+        .onConflictDoNothing({
+          target: [
+            this.db.schema.variableExpenses.userId,
+            this.db.schema.variableExpenses.recurringGroupId,
+            this.db.schema.variableExpenses.monthYear,
+          ],
+        })
+        .returning();
+    });
+  }
+
+  async updateByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string,
+    data: Partial<Omit<NewVariableExpense, 'userId'>>
+  ): Promise<number> {
+    return this.db.withUserId(userId, async (db) => {
+      const result = await db
+        .update(this.db.schema.variableExpenses)
+        .set({ ...data, updatedAt: new Date() })
+        .where(
+          and(
+            eq(this.db.schema.variableExpenses.userId, userId),
+            eq(this.db.schema.variableExpenses.recurringGroupId, recurringGroupId),
+            gt(this.db.schema.variableExpenses.monthYear, afterMonthYear)
+          )
+        )
+        .returning();
+
+      return result.length;
+    });
+  }
+
+  async deleteByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string
+  ): Promise<number> {
+    return this.db.withUserId(userId, async (db) => {
+      const result = await db
+        .delete(this.db.schema.variableExpenses)
+        .where(
+          and(
+            eq(this.db.schema.variableExpenses.userId, userId),
+            eq(this.db.schema.variableExpenses.recurringGroupId, recurringGroupId),
+            gt(this.db.schema.variableExpenses.monthYear, afterMonthYear)
+          )
+        )
+        .returning();
+
+      return result.length;
+    });
+  }
+
+  async deleteByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<number> {
+    return this.db.withUserId(userId, async (db) => {
+      const result = await db
+        .delete(this.db.schema.variableExpenses)
+        .where(
+          and(
+            eq(this.db.schema.variableExpenses.userId, userId),
+            eq(this.db.schema.variableExpenses.recurringGroupId, recurringGroupId)
+          )
+        )
+        .returning();
+
+      return result.length;
     });
   }
 }

@@ -38,11 +38,19 @@ const mockBill: Bill = {
   dueDay: 10,
   status: 'pending',
   paidAt: null,
-  isRecurring: true,
+  isRecurring: false,
+  recurringGroupId: null,
   monthYear: '2026-01',
   currency: 'BRL',
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
+};
+
+const mockRecurringBill: Bill = {
+  ...mockBill,
+  id: 'bill-recurring',
+  isRecurring: true,
+  recurringGroupId: 'group-1',
 };
 
 // =============================================================================
@@ -152,5 +160,49 @@ describe('DeleteBillDialog', () => {
         content.includes('Esta ação não pode ser desfeita')
       )
     ).toBeInTheDocument();
+  });
+
+  describe('recurring bill', () => {
+    it('should_show_scope_dialog_when_bill_has_recurringGroupId', async () => {
+      render(
+        <DeleteBillDialog
+          bill={mockRecurringBill}
+          open={true}
+          onOpenChange={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(await screen.findByTestId('recurring-scope-dialog')).toBeInTheDocument();
+      expect(await screen.findByText('Excluir conta recorrente')).toBeInTheDocument();
+    });
+
+    it('should_show_scope_options', async () => {
+      render(
+        <DeleteBillDialog
+          bill={mockRecurringBill}
+          open={true}
+          onOpenChange={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(await screen.findByTestId('scope-option-this')).toBeInTheDocument();
+      expect(await screen.findByTestId('scope-option-future')).toBeInTheDocument();
+      expect(await screen.findByTestId('scope-option-all')).toBeInTheDocument();
+    });
+
+    it('should_not_show_simple_confirm_dialog_for_recurring_bill', () => {
+      render(
+        <DeleteBillDialog
+          bill={mockRecurringBill}
+          open={true}
+          onOpenChange={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.queryByTestId('delete-bill-dialog')).not.toBeInTheDocument();
+    });
   });
 });

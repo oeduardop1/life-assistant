@@ -10,6 +10,7 @@ import type {
   CreateIncomeInput,
   UpdateIncomeInput,
   IncomeQueryParams,
+  RecurringScope,
 } from '../types';
 
 // =============================================================================
@@ -97,8 +98,9 @@ export function useUpdateIncome() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateIncomeInput }) => {
-      const response = await api.patch<IncomeResponse>(`/finance/incomes/${id}`, data);
+    mutationFn: async ({ id, data, scope }: { id: string; data: UpdateIncomeInput; scope?: RecurringScope }) => {
+      const query = scope ? `?scope=${scope}` : '';
+      const response = await api.patch<IncomeResponse>(`/finance/incomes/${id}${query}`, data);
       return response.income;
     },
     onSuccess: (income) => {
@@ -117,8 +119,9 @@ export function useDeleteIncome() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, monthYear }: { id: string; monthYear: string }) => {
-      await api.delete(`/finance/incomes/${id}`);
+    mutationFn: async ({ id, monthYear, scope }: { id: string; monthYear: string; scope?: RecurringScope }) => {
+      const query = scope ? `?scope=${scope}` : '';
+      await api.delete(`/finance/incomes/${id}${query}`);
       return { id, monthYear };
     },
     onSuccess: (_, variables) => {

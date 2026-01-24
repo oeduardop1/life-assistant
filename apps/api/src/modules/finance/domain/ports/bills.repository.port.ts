@@ -34,6 +34,37 @@ export interface BillsRepositoryPort {
     userId: string,
     monthYear: string
   ): Promise<Record<string, number>>;
+
+  // Recurring methods
+  findRecurringByMonth(userId: string, monthYear: string): Promise<Bill[]>;
+  findByRecurringGroupIdAndMonth(
+    userId: string,
+    recurringGroupId: string,
+    monthYear: string
+  ): Promise<Bill | null>;
+  findByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<Bill[]>;
+  createMany(
+    userId: string,
+    data: Omit<NewBill, 'userId'>[]
+  ): Promise<Bill[]>;
+  updateByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string,
+    data: Partial<Omit<NewBill, 'userId'>>
+  ): Promise<number>;
+  deleteByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string
+  ): Promise<number>;
+  deleteByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<number>;
 }
 
 export const BILLS_REPOSITORY = Symbol('BILLS_REPOSITORY');

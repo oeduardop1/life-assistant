@@ -14,6 +14,7 @@ function createMockIncome(overrides: Partial<Income> = {}): Income {
     expectedAmount: '5000',
     actualAmount: '5000',
     isRecurring: true,
+    recurringGroupId: null,
     monthYear: '2024-01',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
@@ -31,6 +32,13 @@ describe('IncomesService', () => {
     delete: ReturnType<typeof vi.fn>;
     countByUserId: ReturnType<typeof vi.fn>;
     sumByMonthYear: ReturnType<typeof vi.fn>;
+    findRecurringByMonth: ReturnType<typeof vi.fn>;
+    findByRecurringGroupIdAndMonth: ReturnType<typeof vi.fn>;
+    findByRecurringGroupId: ReturnType<typeof vi.fn>;
+    createMany: ReturnType<typeof vi.fn>;
+    updateByRecurringGroupIdAfterMonth: ReturnType<typeof vi.fn>;
+    deleteByRecurringGroupIdAfterMonth: ReturnType<typeof vi.fn>;
+    deleteByRecurringGroupId: ReturnType<typeof vi.fn>;
   };
   let mockLogger: {
     setContext: ReturnType<typeof vi.fn>;
@@ -48,12 +56,22 @@ describe('IncomesService', () => {
       delete: vi.fn(),
       countByUserId: vi.fn(),
       sumByMonthYear: vi.fn(),
+      findRecurringByMonth: vi.fn(),
+      findByRecurringGroupIdAndMonth: vi.fn(),
+      findByRecurringGroupId: vi.fn(),
+      createMany: vi.fn(),
+      updateByRecurringGroupIdAfterMonth: vi.fn(),
+      deleteByRecurringGroupIdAfterMonth: vi.fn(),
+      deleteByRecurringGroupId: vi.fn(),
     };
 
     mockLogger = {
       setContext: vi.fn(),
       log: vi.fn(),
     };
+
+    // Default: no recurring items (prevents ensureRecurringForMonth from throwing)
+    mockRepository.findRecurringByMonth.mockResolvedValue([]);
 
     service = new IncomesService(
       mockRepository as unknown as ConstructorParameters<typeof IncomesService>[0],
@@ -243,6 +261,192 @@ describe('IncomesService', () => {
         '2024-01',
         'actualAmount'
       );
+    });
+  });
+
+  // ===========================================================================
+  // Recurring Methods
+  // ===========================================================================
+
+  describe('create (recurring)', () => {
+    it('should_assign_recurringGroupId_when_isRecurring_is_true', async () => {
+      const mockIncome = createMockIncome({ isRecurring: true, recurringGroupId: 'generated-uuid' });
+      mockRepository.create.mockResolvedValue(mockIncome);
+
+      await service.create('user-123', {
+        name: 'Salário',
+        type: 'salary',
+        frequency: 'monthly',
+        expectedAmount: '5000',
+        isRecurring: true,
+        monthYear: '2024-01',
+      });
+
+      const createCall = mockRepository.create.mock.calls[0]!;
+      expect(createCall[1].recurringGroupId).toBeDefined();
+      expect(typeof createCall[1].recurringGroupId).toBe('string');
+    });
+
+    it('should_not_assign_recurringGroupId_when_isRecurring_is_false', async () => {
+      const mockIncome = createMockIncome({ isRecurring: false });
+      mockRepository.create.mockResolvedValue(mockIncome);
+
+      await service.create('user-123', {
+        name: 'Freelance',
+        type: 'freelance',
+        frequency: 'irregular',
+        expectedAmount: '2000',
+        isRecurring: false,
+        monthYear: '2024-01',
+      });
+
+      const createCall = mockRepository.create.mock.calls[0]!;
+      expect(createCall[1].recurringGroupId).toBeUndefined();
+    });
+  });
+
+  describe('ensureRecurringForMonth', () => {
+    it('should_create_entries_from_previous_month_recurring_items', async () => {
+      const recurringIncome = createMockIncome({
+        id: 'income-jan',
+        recurringGroupId: 'group-1',
+        isRecurring: true,
+        monthYear: '2024-01',
+      });
+
+      mockRepository.findRecurringByMonth.mockResolvedValue([recurringIncome]);
+      mockRepository.findByRecurringGroupIdAndMonth.mockResolvedValue(null);
+      mockRepository.createMany.mockResolvedValue([]);
+
+      await service.ensureRecurringForMonth('user-123', '2024-02');
+
+      expect(mockRepository.findRecurringByMonth).toHaveBeenCalledWith('user-123', '2024-01');
+      expect(mockRepository.createMany).toHaveBeenCalledWith('user-123', [
+        expect.objectContaining({
+          name: 'Salário',
+          type: 'salary',
+          frequency: 'monthly',
+          expectedAmount: '5000',
+          recurringGroupId: 'group-1',
+          isRecurring: true,
+          monthYear: '2024-02',
+          actualAmount: null,
+        }),
+      ]);
+    });
+
+    it('should_not_duplicate_if_entry_already_exists', async () => {
+      const recurringIncome = createMockIncome({
+        recurringGroupId: 'group-1',
+        monthYear: '2024-01',
+      });
+
+      mockRepository.findRecurringByMonth.mockResolvedValue([recurringIncome]);
+      mockRepository.findByRecurringGroupIdAndMonth.mockResolvedValue(
+        createMockIncome({ monthYear: '2024-02' })
+      );
+
+      await service.ensureRecurringForMonth('user-123', '2024-02');
+
+      expect(mockRepository.createMany).not.toHaveBeenCalled();
+    });
+
+    it('should_do_nothing_when_no_recurring_items', async () => {
+      mockRepository.findRecurringByMonth.mockResolvedValue([]);
+
+      await service.ensureRecurringForMonth('user-123', '2024-02');
+
+      expect(mockRepository.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateWithScope', () => {
+    it('should_update_only_this_when_scope_is_this', async () => {
+      const income = createMockIncome({ recurringGroupId: 'group-1' });
+      const updated = createMockIncome({ recurringGroupId: 'group-1', name: 'Novo' });
+      mockRepository.findById.mockResolvedValue(income);
+      mockRepository.update.mockResolvedValue(updated);
+
+      const result = await service.updateWithScope('user-123', 'income-123', { name: 'Novo' }, 'this');
+
+      expect(result).toEqual(updated);
+      expect(mockRepository.updateByRecurringGroupIdAfterMonth).not.toHaveBeenCalled();
+    });
+
+    it('should_update_future_when_scope_is_future', async () => {
+      const income = createMockIncome({ recurringGroupId: 'group-1', monthYear: '2024-03' });
+      const updated = createMockIncome({ recurringGroupId: 'group-1', name: 'Novo', monthYear: '2024-03' });
+      mockRepository.findById.mockResolvedValue(income);
+      mockRepository.update.mockResolvedValue(updated);
+      mockRepository.updateByRecurringGroupIdAfterMonth.mockResolvedValue(2);
+
+      await service.updateWithScope('user-123', 'income-123', { name: 'Novo' }, 'future');
+
+      expect(mockRepository.updateByRecurringGroupIdAfterMonth).toHaveBeenCalledWith(
+        'user-123', 'group-1', '2024-03', { name: 'Novo' }
+      );
+    });
+
+    it('should_update_all_when_scope_is_all', async () => {
+      const income = createMockIncome({ recurringGroupId: 'group-1' });
+      const allIncomes = [
+        createMockIncome({ id: 'i-1', monthYear: '2024-01' }),
+        createMockIncome({ id: 'i-2', monthYear: '2024-02' }),
+      ];
+      mockRepository.findById.mockResolvedValue(income);
+      mockRepository.findByRecurringGroupId.mockResolvedValue(allIncomes);
+      mockRepository.update.mockResolvedValue(income);
+
+      await service.updateWithScope('user-123', 'income-123', { name: 'Novo' }, 'all');
+
+      expect(mockRepository.update).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('deleteWithScope', () => {
+    it('should_delete_income_when_scope_is_this', async () => {
+      const income = createMockIncome({ recurringGroupId: 'group-1' });
+      mockRepository.findById.mockResolvedValue(income);
+      mockRepository.delete.mockResolvedValue(true);
+
+      await service.deleteWithScope('user-123', 'income-123', 'this');
+
+      expect(mockRepository.delete).toHaveBeenCalledWith('user-123', 'income-123');
+    });
+
+    it('should_stop_recurrence_and_delete_future_when_scope_is_future', async () => {
+      const income = createMockIncome({ recurringGroupId: 'group-1', monthYear: '2024-03' });
+      mockRepository.findById.mockResolvedValue(income);
+      mockRepository.update.mockResolvedValue(createMockIncome({ isRecurring: false }));
+      mockRepository.deleteByRecurringGroupIdAfterMonth.mockResolvedValue(2);
+
+      await service.deleteWithScope('user-123', 'income-123', 'future');
+
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'income-123', { isRecurring: false });
+      expect(mockRepository.deleteByRecurringGroupIdAfterMonth).toHaveBeenCalledWith(
+        'user-123', 'group-1', '2024-03'
+      );
+    });
+
+    it('should_delete_all_in_group_when_scope_is_all', async () => {
+      const income = createMockIncome({ recurringGroupId: 'group-1' });
+      mockRepository.findById.mockResolvedValue(income);
+      mockRepository.deleteByRecurringGroupId.mockResolvedValue(5);
+
+      await service.deleteWithScope('user-123', 'income-123', 'all');
+
+      expect(mockRepository.deleteByRecurringGroupId).toHaveBeenCalledWith('user-123', 'group-1');
+    });
+
+    it('should_delete_directly_when_no_recurringGroupId', async () => {
+      const income = createMockIncome({ recurringGroupId: null });
+      mockRepository.findById.mockResolvedValue(income);
+      mockRepository.delete.mockResolvedValue(true);
+
+      await service.deleteWithScope('user-123', 'income-123', 'all');
+
+      expect(mockRepository.delete).toHaveBeenCalledWith('user-123', 'income-123');
+      expect(mockRepository.deleteByRecurringGroupId).not.toHaveBeenCalled();
     });
   });
 });

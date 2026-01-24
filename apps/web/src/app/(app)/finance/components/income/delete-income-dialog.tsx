@@ -13,7 +13,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useDeleteIncome } from '../../hooks/use-incomes';
-import type { Income } from '../../types';
+import { RecurringScopeDialog } from '../recurring-scope-dialog';
+import type { Income, RecurringScope } from '../../types';
 
 // =============================================================================
 // Props
@@ -32,6 +33,8 @@ interface DeleteIncomeDialogProps {
 /**
  * DeleteIncomeDialog - Confirmation dialog for deleting an income
  *
+ * If the income is recurring, shows scope selection dialog instead.
+ *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export function DeleteIncomeDialog({
@@ -41,13 +44,14 @@ export function DeleteIncomeDialog({
 }: DeleteIncomeDialogProps) {
   const deleteIncome = useDeleteIncome();
 
-  const handleDelete = async () => {
+  const executeDelete = async (scope?: RecurringScope) => {
     if (!income) return;
 
     try {
       await deleteIncome.mutateAsync({
         id: income.id,
         monthYear: income.monthYear,
+        scope,
       });
 
       toast.success('Renda excluída com sucesso');
@@ -57,8 +61,33 @@ export function DeleteIncomeDialog({
     }
   };
 
+  const handleDelete = async () => {
+    await executeDelete();
+  };
+
+  const handleScopeConfirm = async (scope: RecurringScope) => {
+    await executeDelete(scope);
+  };
+
   if (!income) return null;
 
+  // Recurring income: show scope dialog
+  if (income.recurringGroupId) {
+    return (
+      <RecurringScopeDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        onConfirm={handleScopeConfirm}
+        title="Excluir renda recorrente"
+        description={`Escolha o escopo da exclusão para "${income.name}".`}
+        actionLabel="Excluir"
+        isDestructive
+        isPending={deleteIncome.isPending}
+      />
+    );
+  }
+
+  // Non-recurring income: show simple confirm dialog
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent data-testid="delete-income-dialog">

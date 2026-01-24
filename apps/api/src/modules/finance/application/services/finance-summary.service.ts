@@ -78,6 +78,13 @@ export class FinanceSummaryService {
 
     this.logger.log(`Getting finance summary for user ${userId}, month ${targetMonth}`);
 
+    // Ensure recurring items exist for this month
+    await Promise.all([
+      this.billsService.ensureRecurringForMonth(userId, targetMonth),
+      this.variableExpensesService.ensureRecurringForMonth(userId, targetMonth),
+      this.incomesService.ensureRecurringForMonth(userId, targetMonth),
+    ]);
+
     // Fetch all data in parallel
     const [
       incomeExpected,

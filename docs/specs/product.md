@@ -498,7 +498,7 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 **Rendas (Incomes):**
 - Rendas do mês (salário, freelance, bônus, passiva, investimentos, presente, outros)
 - Valor previsto vs valor real recebido
-- Rendas recorrentes (aparecem automaticamente todo mês)
+- Rendas recorrentes (geradas sob demanda ao visualizar o mês)
 - Soma total de receitas do período
 
 **Contas Fixas (Bills):**
@@ -506,11 +506,11 @@ A IA analisa automaticamente a memória e fornece insights proativos:
 - Categorias: moradia, serviços, assinatura, outros
 - Checkbox de "pago" com data de pagamento
 - Status: pendente, pago, vencido, cancelado
-- Contas recorrentes (geradas automaticamente)
+- Contas recorrentes (geradas sob demanda ao visualizar o mês)
 - Alerta 3 dias antes do vencimento
 
 **Despesas Variáveis:**
-- Despesas recorrentes (Alimentação, Transporte, Lazer) — automáticas todo mês
+- Despesas recorrentes (Alimentação, Transporte, Lazer) — geradas sob demanda
 - Despesas pontuais — criadas manualmente, só naquele mês
 - Valor previsto vs valor real gasto
 - Categorias configuráveis

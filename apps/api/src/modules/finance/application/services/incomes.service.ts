@@ -1,6 +1,7 @@
 // apps/api/src/modules/finance/application/services/incomes.service.ts
 
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { AppLoggerService } from '../../../../logger/logger.service';
 import type { Income, NewIncome } from '@life-assistant/database';
 import {
@@ -8,6 +9,18 @@ import {
   type IncomesRepositoryPort,
   type IncomeSearchParams,
 } from '../../domain/ports/incomes.repository.port';
+
+export type RecurringScope = 'this' | 'future' | 'all';
+
+function getPreviousMonth(monthYear: string): string {
+  const parts = monthYear.split('-');
+  const year = parseInt(parts[0]!, 10);
+  const month = parseInt(parts[1]!, 10);
+  if (month === 1) {
+    return `${year - 1}-12`;
+  }
+  return `${year}-${String(month - 1).padStart(2, '0')}`;
+}
 
 @Injectable()
 export class IncomesService {
@@ -24,7 +37,10 @@ export class IncomesService {
     data: Omit<NewIncome, 'userId'>
   ): Promise<Income> {
     this.logger.log(`Creating income for user ${userId}: ${data.name}`);
-    const income = await this.repository.create(userId, data);
+    const createData = data.isRecurring
+      ? { ...data, recurringGroupId: data.recurringGroupId ?? randomUUID() }
+      : data;
+    const income = await this.repository.create(userId, createData);
     this.logger.log(`Income created with id ${income.id}`);
     return income;
   }
@@ -33,6 +49,9 @@ export class IncomesService {
     userId: string,
     params: IncomeSearchParams
   ): Promise<{ incomes: Income[]; total: number }> {
+    if (params.monthYear) {
+      await this.ensureRecurringForMonth(userId, params.monthYear);
+    }
     const [incomes, total] = await Promise.all([
       this.repository.findByUserId(userId, params),
       this.repository.countByUserId(userId, params),
@@ -77,5 +96,121 @@ export class IncomesService {
     field: 'expectedAmount' | 'actualAmount'
   ): Promise<number> {
     return this.repository.sumByMonthYear(userId, monthYear, field);
+  }
+
+  // ===========================================================================
+  // Recurring Methods
+  // ===========================================================================
+
+  async ensureRecurringForMonth(
+    userId: string,
+    targetMonth: string
+  ): Promise<void> {
+    const previousMonth = getPreviousMonth(targetMonth);
+    const recurringItems = await this.repository.findRecurringByMonth(
+      userId,
+      previousMonth
+    );
+
+    if (recurringItems.length === 0) return;
+
+    const newItems: Omit<NewIncome, 'userId'>[] = [];
+
+    for (const item of recurringItems) {
+      if (!item.recurringGroupId) continue;
+
+      const existing = await this.repository.findByRecurringGroupIdAndMonth(
+        userId,
+        item.recurringGroupId,
+        targetMonth
+      );
+
+      if (!existing) {
+        newItems.push({
+          name: item.name,
+          type: item.type,
+          frequency: item.frequency,
+          expectedAmount: item.expectedAmount,
+          actualAmount: null,
+          currency: item.currency,
+          isRecurring: true,
+          recurringGroupId: item.recurringGroupId,
+          monthYear: targetMonth,
+        });
+      }
+    }
+
+    if (newItems.length > 0) {
+      await this.repository.createMany(userId, newItems);
+      this.logger.log(
+        `Generated ${newItems.length} recurring incomes for ${targetMonth}`
+      );
+    }
+  }
+
+  async updateWithScope(
+    userId: string,
+    id: string,
+    data: Partial<Omit<NewIncome, 'userId'>>,
+    scope: RecurringScope
+  ): Promise<Income> {
+    const income = await this.findById(userId, id);
+
+    if (scope === 'this' || !income.recurringGroupId) {
+      return this.update(userId, id, data);
+    }
+
+    if (scope === 'future') {
+      const updated = await this.update(userId, id, data);
+      await this.repository.updateByRecurringGroupIdAfterMonth(
+        userId,
+        income.recurringGroupId,
+        income.monthYear,
+        data
+      );
+      return updated;
+    }
+
+    // scope === 'all'
+    const all = await this.repository.findByRecurringGroupId(
+      userId,
+      income.recurringGroupId
+    );
+    for (const entry of all) {
+      await this.repository.update(userId, entry.id, data);
+    }
+    return this.findById(userId, id);
+  }
+
+  async deleteWithScope(
+    userId: string,
+    id: string,
+    scope: RecurringScope
+  ): Promise<void> {
+    const income = await this.findById(userId, id);
+
+    if (scope === 'this' || !income.recurringGroupId) {
+      await this.repository.delete(userId, id);
+      this.logger.log(`Income ${id} deleted (scope: this)`);
+      return;
+    }
+
+    if (scope === 'future') {
+      await this.repository.update(userId, id, { isRecurring: false });
+      await this.repository.deleteByRecurringGroupIdAfterMonth(
+        userId,
+        income.recurringGroupId,
+        income.monthYear
+      );
+      this.logger.log(`Income ${id} recurrence stopped (scope: future)`);
+      return;
+    }
+
+    // scope === 'all'
+    await this.repository.deleteByRecurringGroupId(
+      userId,
+      income.recurringGroupId
+    );
+    this.logger.log(`All incomes in group ${income.recurringGroupId} deleted`);
   }
 }

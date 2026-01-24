@@ -13,7 +13,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useDeleteExpense } from '../../hooks/use-expenses';
-import type { Expense } from '../../types';
+import { RecurringScopeDialog } from '../recurring-scope-dialog';
+import type { Expense, RecurringScope } from '../../types';
 
 // =============================================================================
 // Props
@@ -32,6 +33,8 @@ interface DeleteExpenseDialogProps {
 /**
  * DeleteExpenseDialog - Confirmation dialog for deleting a variable expense
  *
+ * If the expense is recurring, shows scope selection dialog instead.
+ *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export function DeleteExpenseDialog({
@@ -41,13 +44,14 @@ export function DeleteExpenseDialog({
 }: DeleteExpenseDialogProps) {
   const deleteExpense = useDeleteExpense();
 
-  const handleDelete = async () => {
+  const executeDelete = async (scope?: RecurringScope) => {
     if (!expense) return;
 
     try {
       await deleteExpense.mutateAsync({
         id: expense.id,
         monthYear: expense.monthYear,
+        scope,
       });
 
       toast.success('Despesa excluída com sucesso');
@@ -57,8 +61,33 @@ export function DeleteExpenseDialog({
     }
   };
 
+  const handleDelete = async () => {
+    await executeDelete();
+  };
+
+  const handleScopeConfirm = async (scope: RecurringScope) => {
+    await executeDelete(scope);
+  };
+
   if (!expense) return null;
 
+  // Recurring expense: show scope dialog
+  if (expense.recurringGroupId) {
+    return (
+      <RecurringScopeDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        onConfirm={handleScopeConfirm}
+        title="Excluir despesa recorrente"
+        description={`Escolha o escopo da exclusão para "${expense.name}".`}
+        actionLabel="Excluir"
+        isDestructive
+        isPending={deleteExpense.isPending}
+      />
+    );
+  }
+
+  // Non-recurring expense: show simple confirm dialog
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent data-testid="delete-expense-dialog">

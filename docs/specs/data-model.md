@@ -1788,6 +1788,7 @@ export const incomes = pgTable('incomes', {
 
   // Recurrence
   isRecurring: boolean('is_recurring').notNull().default(true),
+  recurringGroupId: uuid('recurring_group_id'), // Links recurring entries across months
 
   // Period (YYYY-MM format for month, e.g., "2026-01")
   monthYear: varchar('month_year', { length: 7 }).notNull(), // Format: YYYY-MM
@@ -1839,6 +1840,7 @@ export const bills = pgTable('bills', {
 
   // Recurrence
   isRecurring: boolean('is_recurring').notNull().default(true),
+  recurringGroupId: uuid('recurring_group_id'), // Links recurring entries across months
 
   // Period (YYYY-MM format)
   monthYear: varchar('month_year', { length: 7 }).notNull(),
@@ -1884,6 +1886,7 @@ export const variableExpenses = pgTable('variable_expenses', {
   // - true = Recorrente (aparece todo mês automaticamente: Alimentação, Transporte, Lazer)
   // - false = Pontual (só naquele mês específico)
   isRecurring: boolean('is_recurring').notNull().default(false),
+  recurringGroupId: uuid('recurring_group_id'), // Links recurring entries across months
 
   // Period (YYYY-MM format)
   monthYear: varchar('month_year', { length: 7 }).notNull(),

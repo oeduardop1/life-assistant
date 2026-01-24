@@ -11,6 +11,7 @@ import type {
   UpdateBillInput,
   BillQueryParams,
   BillTotals,
+  RecurringScope,
 } from '../types';
 
 // =============================================================================
@@ -99,8 +100,9 @@ export function useUpdateBill() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateBillInput }) => {
-      const response = await api.patch<BillResponse>(`/finance/bills/${id}`, data);
+    mutationFn: async ({ id, data, scope }: { id: string; data: UpdateBillInput; scope?: RecurringScope }) => {
+      const query = scope ? `?scope=${scope}` : '';
+      const response = await api.patch<BillResponse>(`/finance/bills/${id}${query}`, data);
       return response.bill;
     },
     onSuccess: (bill) => {
@@ -119,8 +121,9 @@ export function useDeleteBill() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, monthYear }: { id: string; monthYear: string }) => {
-      await api.delete(`/finance/bills/${id}`);
+    mutationFn: async ({ id, monthYear, scope }: { id: string; monthYear: string; scope?: RecurringScope }) => {
+      const query = scope ? `?scope=${scope}` : '';
+      await api.delete(`/finance/bills/${id}${query}`);
       return { id, monthYear };
     },
     onSuccess: (_, variables) => {

@@ -37,11 +37,19 @@ const mockIncome: Income = {
   frequency: 'monthly',
   expectedAmount: 5000,
   actualAmount: 5000,
-  isRecurring: true,
+  isRecurring: false,
+  recurringGroupId: null,
   monthYear: '2026-01',
   currency: 'BRL',
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
+};
+
+const mockRecurringIncome: Income = {
+  ...mockIncome,
+  id: 'income-recurring',
+  isRecurring: true,
+  recurringGroupId: 'group-1',
 };
 
 // =============================================================================
@@ -151,5 +159,49 @@ describe('DeleteIncomeDialog', () => {
         content.includes('Esta ação não pode ser desfeita')
       )
     ).toBeInTheDocument();
+  });
+
+  describe('recurring income', () => {
+    it('should_show_scope_dialog_when_income_has_recurringGroupId', async () => {
+      render(
+        <DeleteIncomeDialog
+          income={mockRecurringIncome}
+          open={true}
+          onOpenChange={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(await screen.findByTestId('recurring-scope-dialog')).toBeInTheDocument();
+      expect(await screen.findByText('Excluir renda recorrente')).toBeInTheDocument();
+    });
+
+    it('should_show_scope_options', async () => {
+      render(
+        <DeleteIncomeDialog
+          income={mockRecurringIncome}
+          open={true}
+          onOpenChange={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(await screen.findByTestId('scope-option-this')).toBeInTheDocument();
+      expect(await screen.findByTestId('scope-option-future')).toBeInTheDocument();
+      expect(await screen.findByTestId('scope-option-all')).toBeInTheDocument();
+    });
+
+    it('should_not_show_simple_confirm_dialog_for_recurring_income', () => {
+      render(
+        <DeleteIncomeDialog
+          income={mockRecurringIncome}
+          open={true}
+          onOpenChange={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.queryByTestId('delete-income-dialog')).not.toBeInTheDocument();
+    });
   });
 });

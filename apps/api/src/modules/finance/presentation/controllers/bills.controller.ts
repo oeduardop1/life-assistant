@@ -24,6 +24,7 @@ import { AuthenticatedUser } from '../../../../common/types/request.types';
 import { BillsService } from '../../application/services/bills.service';
 import { CreateBillDto, UpdateBillDto } from '../dtos/bill.dto';
 import { BillQueryDto } from '../dtos/query.dto';
+import { ScopeQueryDto } from '../dtos/scope-query.dto';
 
 @ApiTags('Finance - Bills')
 @ApiBearerAuth()
@@ -90,7 +91,8 @@ export class BillsController {
   async update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() dto: UpdateBillDto
+    @Body() dto: UpdateBillDto,
+    @Query() scopeQuery: ScopeQueryDto
   ) {
     const updateData: Record<string, unknown> = {};
 
@@ -103,7 +105,12 @@ export class BillsController {
     if (dto.monthYear !== undefined) updateData.monthYear = dto.monthYear;
     if (dto.currency !== undefined) updateData.currency = dto.currency;
 
-    const bill = await this.billsService.update(user.id, id, updateData);
+    const bill = await this.billsService.updateWithScope(
+      user.id,
+      id,
+      updateData,
+      scopeQuery.scope ?? 'this'
+    );
     return { bill };
   }
 
@@ -115,9 +122,10 @@ export class BillsController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Bill not found' })
   async delete(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string
+    @Param('id') id: string,
+    @Query() scopeQuery: ScopeQueryDto
   ) {
-    await this.billsService.delete(user.id, id);
+    await this.billsService.deleteWithScope(user.id, id, scopeQuery.scope ?? 'this');
   }
 
   @Patch(':id/mark-paid')

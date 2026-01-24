@@ -13,7 +13,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useDeleteBill } from '../../hooks/use-bills';
-import type { Bill } from '../../types';
+import { RecurringScopeDialog } from '../recurring-scope-dialog';
+import type { Bill, RecurringScope } from '../../types';
 
 // =============================================================================
 // Props
@@ -32,6 +33,8 @@ interface DeleteBillDialogProps {
 /**
  * DeleteBillDialog - Confirmation dialog for deleting a bill
  *
+ * If the bill is recurring, shows scope selection dialog instead.
+ *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export function DeleteBillDialog({
@@ -41,13 +44,14 @@ export function DeleteBillDialog({
 }: DeleteBillDialogProps) {
   const deleteBill = useDeleteBill();
 
-  const handleDelete = async () => {
+  const executeDelete = async (scope?: RecurringScope) => {
     if (!bill) return;
 
     try {
       await deleteBill.mutateAsync({
         id: bill.id,
         monthYear: bill.monthYear,
+        scope,
       });
 
       toast.success('Conta excluída com sucesso');
@@ -57,8 +61,33 @@ export function DeleteBillDialog({
     }
   };
 
+  const handleDelete = async () => {
+    await executeDelete();
+  };
+
+  const handleScopeConfirm = async (scope: RecurringScope) => {
+    await executeDelete(scope);
+  };
+
   if (!bill) return null;
 
+  // Recurring bill: show scope dialog
+  if (bill.recurringGroupId) {
+    return (
+      <RecurringScopeDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        onConfirm={handleScopeConfirm}
+        title="Excluir conta recorrente"
+        description={`Escolha o escopo da exclusão para "${bill.name}".`}
+        actionLabel="Excluir"
+        isDestructive
+        isPending={deleteBill.isPending}
+      />
+    );
+  }
+
+  // Non-recurring bill: show simple confirm dialog
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent data-testid="delete-bill-dialog">

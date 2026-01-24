@@ -210,11 +210,14 @@ _Endpoints REST:_
 - [x] Implementar endpoint de resumo:
   - [x] `GET /finance/summary` - retorna todos os KPIs do mês selecionado
 
-_Jobs e Recorrências:_
-- [ ] Implementar job mensal de recorrências (dia 1, 00:05 UTC):
-  - [ ] Copiar bills com `isRecurring=true` para novo mês (status='pending')
-  - [ ] Copiar variable_expenses com `isRecurring=true` para novo mês (actualAmount=0)
-  - [ ] Copiar incomes com `isRecurring=true` para novo mês (actualAmount=null)
+_Recorrências (Lazy Generation):_
+- [x] Schema: adicionar `recurringGroupId` (UUID nullable) + UNIQUE constraint `(userId, recurringGroupId, monthYear)` em bills, variable_expenses, incomes
+- [x] Repository: métodos `findRecurringByMonth`, `createMany` (ON CONFLICT DO NOTHING), `findByRecurringGroupId`, `updateByRecurringGroupIdAfterMonth`, `deleteByRecurringGroupIdAfterMonth`, `deleteByRecurringGroupId`
+- [x] Service: `ensureRecurringForMonth()` — gera entradas sob demanda ao acessar mês futuro
+- [x] Service: `updateWithScope(scope: 'this'|'future'|'all')` e `deleteWithScope(scope)`
+- [x] Controller: `ScopeQueryDto` como query param em PATCH/DELETE
+- [x] Frontend: `RecurringScopeDialog` componente + integração em edit/delete modals
+- [x] Frontend: mutations com `?scope=X` query param
 - [ ] Implementar job diário de verificação de vencimentos (00:30 UTC):
   - [ ] Atualizar bills para `status='overdue'` se dueDay < hoje e status='pending'
 
@@ -529,9 +532,15 @@ _Testes Unitários Backend - Services:_
 - [x] InvestmentService: CRUD + updateValue
 - [x] FinanceSummaryUseCase: cálculo de todos os KPIs
 
-_Testes Unitários Backend - Jobs:_
-- [ ] Job de recorrência: copia bills, expenses, incomes corretamente
-- [ ] Job de recorrência: não duplica registros se já existem
+_Testes Unitários Backend - Lazy Generation:_
+- [x] create() com isRecurring=true atribui recurringGroupId
+- [x] ensureRecurringForMonth() cria entradas a partir do mês anterior
+- [x] ensureRecurringForMonth() não duplica se entry já existe (idempotente)
+- [x] ensureRecurringForMonth() gera mesmo se anterior está cancelada (isRecurring=true prevalece)
+- [x] updateWithScope('this'|'future'|'all') atualiza corretamente
+- [x] deleteWithScope('this') cancela bill / deleta expense+income
+- [x] deleteWithScope('future') para recorrência + deleta futuros
+- [x] deleteWithScope('all') deleta todos do grupo
 - [ ] Job de vencimento: atualiza status para overdue corretamente
 - [ ] Job de vencimento: não altera bills já pagas
 
@@ -558,8 +567,10 @@ _Testes de Integração - Filtros e Paginação:_
 - [x] Paginação com limit e offset funciona
 - [x] Retorna metadata correta (total, limit, offset)
 
-_Testes de Integração - Jobs:_
-- [ ] Job de recorrência mensal executa corretamente
+_Testes de Integração - Lazy Generation:_
+- [x] Criar bill recorrente em jan → acessar fev → bill aparece como pending
+- [x] Editar com scope 'future' → próximos meses refletem alteração
+- [x] Deletar com scope 'all' → todos os meses removidos
 - [ ] Job de verificação de vencimentos executa corretamente
 - [ ] Notificações de vencimento são criadas
 
@@ -647,8 +658,10 @@ _Endpoints de Ação:_
 - [x] `negotiate` funciona para converter dívida pendente
 - [ ] `update-value` funciona para investimentos
 
-_Jobs e Automações:_
-- [ ] Job de recorrência mensal copia bills, expenses, incomes
+_Recorrências e Automações:_
+- [x] Lazy generation cria bills, expenses, incomes sob demanda ao navegar meses
+- [x] Scope-based edit/delete ('this'|'future'|'all') funciona para as 3 entidades
+- [x] RecurringScopeDialog aparece apenas para itens com recurringGroupId
 - [ ] Job de verificação de vencimentos atualiza status para overdue
 - [ ] Notificações de vencimento enviadas (3 dias antes, no dia)
 

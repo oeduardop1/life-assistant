@@ -24,6 +24,7 @@ import { AuthenticatedUser } from '../../../../common/types/request.types';
 import { IncomesService } from '../../application/services/incomes.service';
 import { CreateIncomeDto, UpdateIncomeDto } from '../dtos/income.dto';
 import { IncomeQueryDto } from '../dtos/query.dto';
+import { ScopeQueryDto } from '../dtos/scope-query.dto';
 
 @ApiTags('Finance - Incomes')
 @ApiBearerAuth()
@@ -90,7 +91,8 @@ export class IncomesController {
   async update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() dto: UpdateIncomeDto
+    @Body() dto: UpdateIncomeDto,
+    @Query() scopeQuery: ScopeQueryDto
   ) {
     const updateData: Record<string, unknown> = {};
 
@@ -105,7 +107,12 @@ export class IncomesController {
     if (dto.monthYear !== undefined) updateData.monthYear = dto.monthYear;
     if (dto.currency !== undefined) updateData.currency = dto.currency;
 
-    const income = await this.incomesService.update(user.id, id, updateData);
+    const income = await this.incomesService.updateWithScope(
+      user.id,
+      id,
+      updateData,
+      scopeQuery.scope ?? 'this'
+    );
     return { income };
   }
 
@@ -117,8 +124,9 @@ export class IncomesController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Income not found' })
   async delete(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string
+    @Param('id') id: string,
+    @Query() scopeQuery: ScopeQueryDto
   ) {
-    await this.incomesService.delete(user.id, id);
+    await this.incomesService.deleteWithScope(user.id, id, scopeQuery.scope ?? 'this');
   }
 }

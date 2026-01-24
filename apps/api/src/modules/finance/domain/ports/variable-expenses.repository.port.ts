@@ -35,6 +35,40 @@ export interface VariableExpensesRepositoryPort {
     monthYear: string,
     field: 'expectedAmount' | 'actualAmount'
   ): Promise<number>;
+
+  // Recurring methods
+  findRecurringByMonth(
+    userId: string,
+    monthYear: string
+  ): Promise<VariableExpense[]>;
+  findByRecurringGroupIdAndMonth(
+    userId: string,
+    recurringGroupId: string,
+    monthYear: string
+  ): Promise<VariableExpense | null>;
+  findByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<VariableExpense[]>;
+  createMany(
+    userId: string,
+    data: Omit<NewVariableExpense, 'userId'>[]
+  ): Promise<VariableExpense[]>;
+  updateByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string,
+    data: Partial<Omit<NewVariableExpense, 'userId'>>
+  ): Promise<number>;
+  deleteByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string
+  ): Promise<number>;
+  deleteByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<number>;
 }
 
 export const VARIABLE_EXPENSES_REPOSITORY = Symbol('VARIABLE_EXPENSES_REPOSITORY');

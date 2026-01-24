@@ -39,6 +39,7 @@ const mockBill: Bill = {
   status: 'pending',
   paidAt: null,
   isRecurring: true,
+  recurringGroupId: 'group-1',
   monthYear: '2026-01',
   currency: 'BRL',
   createdAt: '2026-01-01T00:00:00Z',

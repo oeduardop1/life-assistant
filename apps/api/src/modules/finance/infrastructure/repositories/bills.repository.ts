@@ -1,7 +1,7 @@
 // apps/api/src/modules/finance/infrastructure/repositories/bills.repository.ts
 
 import { Injectable } from '@nestjs/common';
-import { eq, and, sql, count } from '@life-assistant/database';
+import { eq, and, sql, count, gt, isNotNull } from '@life-assistant/database';
 import { DatabaseService } from '../../../../database/database.service';
 import type { Bill, NewBill, BillStatus } from '@life-assistant/database';
 import type {
@@ -255,6 +255,153 @@ export class BillsRepository implements BillsRepositoryPort {
       }
 
       return statusCounts;
+    });
+  }
+
+  // =========================================================================
+  // Recurring Methods
+  // =========================================================================
+
+  async findRecurringByMonth(
+    userId: string,
+    monthYear: string
+  ): Promise<Bill[]> {
+    return this.db.withUserId(userId, async (db) => {
+      return db
+        .select()
+        .from(this.db.schema.bills)
+        .where(
+          and(
+            eq(this.db.schema.bills.userId, userId),
+            eq(this.db.schema.bills.monthYear, monthYear),
+            eq(this.db.schema.bills.isRecurring, true),
+            isNotNull(this.db.schema.bills.recurringGroupId)
+          )
+        );
+    });
+  }
+
+  async findByRecurringGroupIdAndMonth(
+    userId: string,
+    recurringGroupId: string,
+    monthYear: string
+  ): Promise<Bill | null> {
+    return this.db.withUserId(userId, async (db) => {
+      const [bill] = await db
+        .select()
+        .from(this.db.schema.bills)
+        .where(
+          and(
+            eq(this.db.schema.bills.userId, userId),
+            eq(this.db.schema.bills.recurringGroupId, recurringGroupId),
+            eq(this.db.schema.bills.monthYear, monthYear)
+          )
+        )
+        .limit(1);
+
+      return bill ?? null;
+    });
+  }
+
+  async findByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<Bill[]> {
+    return this.db.withUserId(userId, async (db) => {
+      return db
+        .select()
+        .from(this.db.schema.bills)
+        .where(
+          and(
+            eq(this.db.schema.bills.userId, userId),
+            eq(this.db.schema.bills.recurringGroupId, recurringGroupId)
+          )
+        );
+    });
+  }
+
+  async createMany(
+    userId: string,
+    data: Omit<NewBill, 'userId'>[]
+  ): Promise<Bill[]> {
+    if (data.length === 0) return [];
+
+    return this.db.withUserId(userId, async (db) => {
+      const values = data.map((item) => ({ ...item, userId }));
+      return db
+        .insert(this.db.schema.bills)
+        .values(values)
+        .onConflictDoNothing({
+          target: [
+            this.db.schema.bills.userId,
+            this.db.schema.bills.recurringGroupId,
+            this.db.schema.bills.monthYear,
+          ],
+        })
+        .returning();
+    });
+  }
+
+  async updateByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string,
+    data: Partial<Omit<NewBill, 'userId'>>
+  ): Promise<number> {
+    return this.db.withUserId(userId, async (db) => {
+      const result = await db
+        .update(this.db.schema.bills)
+        .set({ ...data, updatedAt: new Date() })
+        .where(
+          and(
+            eq(this.db.schema.bills.userId, userId),
+            eq(this.db.schema.bills.recurringGroupId, recurringGroupId),
+            gt(this.db.schema.bills.monthYear, afterMonthYear)
+          )
+        )
+        .returning();
+
+      return result.length;
+    });
+  }
+
+  async deleteByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string
+  ): Promise<number> {
+    return this.db.withUserId(userId, async (db) => {
+      const result = await db
+        .delete(this.db.schema.bills)
+        .where(
+          and(
+            eq(this.db.schema.bills.userId, userId),
+            eq(this.db.schema.bills.recurringGroupId, recurringGroupId),
+            gt(this.db.schema.bills.monthYear, afterMonthYear)
+          )
+        )
+        .returning();
+
+      return result.length;
+    });
+  }
+
+  async deleteByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<number> {
+    return this.db.withUserId(userId, async (db) => {
+      const result = await db
+        .delete(this.db.schema.bills)
+        .where(
+          and(
+            eq(this.db.schema.bills.userId, userId),
+            eq(this.db.schema.bills.recurringGroupId, recurringGroupId)
+          )
+        )
+        .returning();
+
+      return result.length;
     });
   }
 }

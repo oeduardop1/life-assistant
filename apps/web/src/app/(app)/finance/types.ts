@@ -158,6 +158,14 @@ export interface FinanceSummaryParams {
   monthYear?: string;
 }
 
+/**
+ * Scope for recurring item edit/delete operations
+ * - 'this': only this month's entry
+ * - 'future': this month and all future months
+ * - 'all': all entries in the recurring group
+ */
+export type RecurringScope = 'this' | 'future' | 'all';
+
 // =============================================================================
 // Navigation Tabs
 // =============================================================================
@@ -328,6 +336,7 @@ export interface Income {
   expectedAmount: number;
   actualAmount: number | null;
   isRecurring: boolean;
+  recurringGroupId: string | null;
   monthYear: string;
   currency: string;
   createdAt: string;
@@ -489,6 +498,7 @@ export interface Bill {
   status: BillStatus;
   paidAt: string | null;
   isRecurring: boolean;
+  recurringGroupId: string | null;
   monthYear: string;
   currency: string;
   createdAt: string;
@@ -683,6 +693,7 @@ export interface Expense {
   expectedAmount: number;
   actualAmount: number;
   isRecurring: boolean;
+  recurringGroupId: string | null;
   monthYear: string;
   currency: string;
   createdAt: string;

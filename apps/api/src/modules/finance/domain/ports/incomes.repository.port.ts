@@ -26,6 +26,37 @@ export interface IncomesRepositoryPort {
     monthYear: string,
     field: 'expectedAmount' | 'actualAmount'
   ): Promise<number>;
+
+  // Recurring methods
+  findRecurringByMonth(userId: string, monthYear: string): Promise<Income[]>;
+  findByRecurringGroupIdAndMonth(
+    userId: string,
+    recurringGroupId: string,
+    monthYear: string
+  ): Promise<Income | null>;
+  findByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<Income[]>;
+  createMany(
+    userId: string,
+    data: Omit<NewIncome, 'userId'>[]
+  ): Promise<Income[]>;
+  updateByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string,
+    data: Partial<Omit<NewIncome, 'userId'>>
+  ): Promise<number>;
+  deleteByRecurringGroupIdAfterMonth(
+    userId: string,
+    recurringGroupId: string,
+    afterMonthYear: string
+  ): Promise<number>;
+  deleteByRecurringGroupId(
+    userId: string,
+    recurringGroupId: string
+  ): Promise<number>;
 }
 
 export const INCOMES_REPOSITORY = Symbol('INCOMES_REPOSITORY');

@@ -10,6 +10,7 @@ import {
   boolean,
   timestamp,
   index,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { billCategoryEnum, billStatusEnum } from './enums';
 import { users } from './users';
@@ -38,6 +39,7 @@ export const bills = pgTable(
 
     // Recurrence
     isRecurring: boolean('is_recurring').notNull().default(true),
+    recurringGroupId: uuid('recurring_group_id'),
 
     // Period (YYYY-MM format)
     monthYear: varchar('month_year', { length: 7 }).notNull(),
@@ -59,6 +61,12 @@ export const bills = pgTable(
     index('bills_user_id_month_year_idx').on(table.userId, table.monthYear),
     index('bills_status_idx').on(table.status),
     index('bills_due_day_idx').on(table.dueDay),
+    index('bills_user_recurring_group_idx').on(table.userId, table.recurringGroupId),
+    unique('bills_user_recurring_group_month_year_unique').on(
+      table.userId,
+      table.recurringGroupId,
+      table.monthYear
+    ),
   ]
 );
 

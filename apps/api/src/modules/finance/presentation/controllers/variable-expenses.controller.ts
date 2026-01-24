@@ -27,6 +27,7 @@ import {
   UpdateVariableExpenseDto,
 } from '../dtos/variable-expense.dto';
 import { VariableExpenseQueryDto } from '../dtos/query.dto';
+import { ScopeQueryDto } from '../dtos/scope-query.dto';
 
 @ApiTags('Finance - Variable Expenses')
 @ApiBearerAuth()
@@ -97,7 +98,8 @@ export class VariableExpensesController {
   async update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() dto: UpdateVariableExpenseDto
+    @Body() dto: UpdateVariableExpenseDto,
+    @Query() scopeQuery: ScopeQueryDto
   ) {
     const updateData: Record<string, unknown> = {};
 
@@ -111,10 +113,11 @@ export class VariableExpensesController {
     if (dto.monthYear !== undefined) updateData.monthYear = dto.monthYear;
     if (dto.currency !== undefined) updateData.currency = dto.currency;
 
-    const expense = await this.variableExpensesService.update(
+    const expense = await this.variableExpensesService.updateWithScope(
       user.id,
       id,
-      updateData
+      updateData,
+      scopeQuery.scope ?? 'this'
     );
     return { expense };
   }
@@ -127,8 +130,13 @@ export class VariableExpensesController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Expense not found' })
   async delete(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string
+    @Param('id') id: string,
+    @Query() scopeQuery: ScopeQueryDto
   ) {
-    await this.variableExpensesService.delete(user.id, id);
+    await this.variableExpensesService.deleteWithScope(
+      user.id,
+      id,
+      scopeQuery.scope ?? 'this'
+    );
   }
 }

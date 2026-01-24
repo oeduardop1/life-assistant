@@ -15,6 +15,7 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     status: 'pending',
     paidAt: null,
     isRecurring: true,
+    recurringGroupId: null,
     monthYear: '2024-01',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
@@ -36,6 +37,13 @@ describe('BillsService', () => {
     sumByMonthYear: ReturnType<typeof vi.fn>;
     sumByMonthYearAndStatus: ReturnType<typeof vi.fn>;
     countByStatus: ReturnType<typeof vi.fn>;
+    findRecurringByMonth: ReturnType<typeof vi.fn>;
+    findByRecurringGroupIdAndMonth: ReturnType<typeof vi.fn>;
+    findByRecurringGroupId: ReturnType<typeof vi.fn>;
+    createMany: ReturnType<typeof vi.fn>;
+    updateByRecurringGroupIdAfterMonth: ReturnType<typeof vi.fn>;
+    deleteByRecurringGroupIdAfterMonth: ReturnType<typeof vi.fn>;
+    deleteByRecurringGroupId: ReturnType<typeof vi.fn>;
   };
   let mockLogger: {
     setContext: ReturnType<typeof vi.fn>;
@@ -57,12 +65,22 @@ describe('BillsService', () => {
       sumByMonthYear: vi.fn(),
       sumByMonthYearAndStatus: vi.fn(),
       countByStatus: vi.fn(),
+      findRecurringByMonth: vi.fn(),
+      findByRecurringGroupIdAndMonth: vi.fn(),
+      findByRecurringGroupId: vi.fn(),
+      createMany: vi.fn(),
+      updateByRecurringGroupIdAfterMonth: vi.fn(),
+      deleteByRecurringGroupIdAfterMonth: vi.fn(),
+      deleteByRecurringGroupId: vi.fn(),
     };
 
     mockLogger = {
       setContext: vi.fn(),
       log: vi.fn(),
     };
+
+    // Default: no recurring items (prevents ensureRecurringForMonth from throwing)
+    mockRepository.findRecurringByMonth.mockResolvedValue([]);
 
     service = new BillsService(
       mockRepository as unknown as ConstructorParameters<typeof BillsService>[0],
@@ -85,14 +103,14 @@ describe('BillsService', () => {
       });
 
       expect(result).toEqual(mockBill);
-      expect(mockRepository.create).toHaveBeenCalledWith('user-123', {
+      expect(mockRepository.create).toHaveBeenCalledWith('user-123', expect.objectContaining({
         name: 'Aluguel',
         category: 'housing',
         amount: '1500',
         dueDay: 10,
         isRecurring: true,
         monthYear: '2024-01',
-      });
+      }));
     });
   });
 
@@ -319,6 +337,312 @@ describe('BillsService', () => {
       const result = await service.sumByMonthYearAndStatus('user-123', '2024-01', 'paid');
 
       expect(result).toBe(0);
+    });
+  });
+
+  // ===========================================================================
+  // Recurring Methods
+  // ===========================================================================
+
+  describe('create (recurring)', () => {
+    it('should_assign_recurringGroupId_when_isRecurring_is_true', async () => {
+      const mockBill = createMockBill({ isRecurring: true, recurringGroupId: 'generated-uuid' });
+      mockRepository.create.mockResolvedValue(mockBill);
+
+      await service.create('user-123', {
+        name: 'Aluguel',
+        category: 'housing',
+        amount: '1500',
+        dueDay: 10,
+        isRecurring: true,
+        monthYear: '2024-01',
+      });
+
+      const createCall = mockRepository.create.mock.calls[0]!;
+      expect(createCall[1].recurringGroupId).toBeDefined();
+      expect(typeof createCall[1].recurringGroupId).toBe('string');
+    });
+
+    it('should_not_assign_recurringGroupId_when_isRecurring_is_false', async () => {
+      const mockBill = createMockBill({ isRecurring: false });
+      mockRepository.create.mockResolvedValue(mockBill);
+
+      await service.create('user-123', {
+        name: 'Compra única',
+        category: 'other',
+        amount: '200',
+        dueDay: 15,
+        isRecurring: false,
+        monthYear: '2024-01',
+      });
+
+      const createCall = mockRepository.create.mock.calls[0]!;
+      expect(createCall[1].recurringGroupId).toBeUndefined();
+    });
+
+    it('should_preserve_existing_recurringGroupId', async () => {
+      const mockBill = createMockBill({ isRecurring: true, recurringGroupId: 'existing-group' });
+      mockRepository.create.mockResolvedValue(mockBill);
+
+      await service.create('user-123', {
+        name: 'Aluguel',
+        category: 'housing',
+        amount: '1500',
+        dueDay: 10,
+        isRecurring: true,
+        recurringGroupId: 'existing-group',
+        monthYear: '2024-01',
+      });
+
+      const createCall = mockRepository.create.mock.calls[0]!;
+      expect(createCall[1].recurringGroupId).toBe('existing-group');
+    });
+  });
+
+  describe('ensureRecurringForMonth', () => {
+    it('should_create_entries_from_previous_month_recurring_items', async () => {
+      const recurringBill = createMockBill({
+        id: 'bill-jan',
+        recurringGroupId: 'group-1',
+        isRecurring: true,
+        monthYear: '2024-01',
+      });
+
+      mockRepository.findRecurringByMonth.mockResolvedValue([recurringBill]);
+      mockRepository.findByRecurringGroupIdAndMonth.mockResolvedValue(null);
+      mockRepository.createMany.mockResolvedValue([]);
+
+      await service.ensureRecurringForMonth('user-123', '2024-02');
+
+      expect(mockRepository.findRecurringByMonth).toHaveBeenCalledWith('user-123', '2024-01');
+      expect(mockRepository.findByRecurringGroupIdAndMonth).toHaveBeenCalledWith(
+        'user-123',
+        'group-1',
+        '2024-02'
+      );
+      expect(mockRepository.createMany).toHaveBeenCalledWith('user-123', [
+        expect.objectContaining({
+          name: 'Aluguel',
+          category: 'housing',
+          amount: '1500',
+          dueDay: 10,
+          recurringGroupId: 'group-1',
+          isRecurring: true,
+          monthYear: '2024-02',
+          status: 'pending',
+          paidAt: null,
+        }),
+      ]);
+    });
+
+    it('should_not_duplicate_if_entry_already_exists', async () => {
+      const recurringBill = createMockBill({
+        recurringGroupId: 'group-1',
+        isRecurring: true,
+        monthYear: '2024-01',
+      });
+      const existingBill = createMockBill({
+        id: 'bill-feb',
+        recurringGroupId: 'group-1',
+        monthYear: '2024-02',
+      });
+
+      mockRepository.findRecurringByMonth.mockResolvedValue([recurringBill]);
+      mockRepository.findByRecurringGroupIdAndMonth.mockResolvedValue(existingBill);
+
+      await service.ensureRecurringForMonth('user-123', '2024-02');
+
+      expect(mockRepository.createMany).not.toHaveBeenCalled();
+    });
+
+    it('should_do_nothing_when_no_recurring_items_in_previous_month', async () => {
+      mockRepository.findRecurringByMonth.mockResolvedValue([]);
+
+      await service.ensureRecurringForMonth('user-123', '2024-02');
+
+      expect(mockRepository.findByRecurringGroupIdAndMonth).not.toHaveBeenCalled();
+      expect(mockRepository.createMany).not.toHaveBeenCalled();
+    });
+
+    it('should_skip_items_without_recurringGroupId', async () => {
+      const billWithoutGroup = createMockBill({
+        isRecurring: true,
+        recurringGroupId: null,
+      });
+
+      mockRepository.findRecurringByMonth.mockResolvedValue([billWithoutGroup]);
+
+      await service.ensureRecurringForMonth('user-123', '2024-02');
+
+      expect(mockRepository.findByRecurringGroupIdAndMonth).not.toHaveBeenCalled();
+      expect(mockRepository.createMany).not.toHaveBeenCalled();
+    });
+
+    it('should_handle_year_boundary_dec_to_jan', async () => {
+      mockRepository.findRecurringByMonth.mockResolvedValue([]);
+
+      await service.ensureRecurringForMonth('user-123', '2025-01');
+
+      expect(mockRepository.findRecurringByMonth).toHaveBeenCalledWith('user-123', '2024-12');
+    });
+
+    it('should_generate_even_if_previous_month_bill_is_canceled', async () => {
+      const canceledBill = createMockBill({
+        status: 'canceled',
+        isRecurring: true,
+        recurringGroupId: 'group-1',
+        monthYear: '2024-01',
+      });
+
+      mockRepository.findRecurringByMonth.mockResolvedValue([canceledBill]);
+      mockRepository.findByRecurringGroupIdAndMonth.mockResolvedValue(null);
+      mockRepository.createMany.mockResolvedValue([]);
+
+      await service.ensureRecurringForMonth('user-123', '2024-02');
+
+      expect(mockRepository.createMany).toHaveBeenCalledWith(
+        'user-123',
+        [expect.objectContaining({ monthYear: '2024-02', status: 'pending' })]
+      );
+    });
+  });
+
+  describe('findAll (recurring integration)', () => {
+    it('should_call_ensureRecurringForMonth_when_monthYear_is_provided', async () => {
+      mockRepository.findRecurringByMonth.mockResolvedValue([]);
+      mockRepository.findByUserId.mockResolvedValue([]);
+      mockRepository.countByUserId.mockResolvedValue(0);
+
+      await service.findAll('user-123', { monthYear: '2024-02' });
+
+      expect(mockRepository.findRecurringByMonth).toHaveBeenCalledWith('user-123', '2024-01');
+    });
+
+    it('should_not_call_ensureRecurringForMonth_when_monthYear_is_not_provided', async () => {
+      mockRepository.findByUserId.mockResolvedValue([]);
+      mockRepository.countByUserId.mockResolvedValue(0);
+
+      await service.findAll('user-123', {});
+
+      expect(mockRepository.findRecurringByMonth).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateWithScope', () => {
+    it('should_update_only_this_bill_when_scope_is_this', async () => {
+      const bill = createMockBill({ recurringGroupId: 'group-1' });
+      const updatedBill = createMockBill({ recurringGroupId: 'group-1', name: 'Novo Nome' });
+      mockRepository.findById.mockResolvedValue(bill);
+      mockRepository.update.mockResolvedValue(updatedBill);
+
+      const result = await service.updateWithScope('user-123', 'bill-123', { name: 'Novo Nome' }, 'this');
+
+      expect(result).toEqual(updatedBill);
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'bill-123', { name: 'Novo Nome' });
+      expect(mockRepository.updateByRecurringGroupIdAfterMonth).not.toHaveBeenCalled();
+    });
+
+    it('should_update_this_and_future_when_scope_is_future', async () => {
+      const bill = createMockBill({ recurringGroupId: 'group-1', monthYear: '2024-03' });
+      const updatedBill = createMockBill({ recurringGroupId: 'group-1', name: 'Novo Nome', monthYear: '2024-03' });
+      mockRepository.findById.mockResolvedValue(bill);
+      mockRepository.update.mockResolvedValue(updatedBill);
+      mockRepository.updateByRecurringGroupIdAfterMonth.mockResolvedValue(2);
+
+      const result = await service.updateWithScope('user-123', 'bill-123', { name: 'Novo Nome' }, 'future');
+
+      expect(result).toEqual(updatedBill);
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'bill-123', { name: 'Novo Nome' });
+      expect(mockRepository.updateByRecurringGroupIdAfterMonth).toHaveBeenCalledWith(
+        'user-123',
+        'group-1',
+        '2024-03',
+        { name: 'Novo Nome' }
+      );
+    });
+
+    it('should_update_all_bills_in_group_when_scope_is_all', async () => {
+      const bill = createMockBill({ id: 'bill-1', recurringGroupId: 'group-1', monthYear: '2024-03' });
+      const allBills = [
+        createMockBill({ id: 'bill-1', recurringGroupId: 'group-1', monthYear: '2024-01' }),
+        createMockBill({ id: 'bill-2', recurringGroupId: 'group-1', monthYear: '2024-02' }),
+        createMockBill({ id: 'bill-3', recurringGroupId: 'group-1', monthYear: '2024-03' }),
+      ];
+      const updatedBill = createMockBill({ id: 'bill-1', recurringGroupId: 'group-1', name: 'Novo Nome' });
+
+      mockRepository.findById.mockImplementation((_userId: string, id: string) => {
+        if (id === 'bill-1') return Promise.resolve(bill);
+        return Promise.resolve(updatedBill);
+      });
+      mockRepository.findByRecurringGroupId.mockResolvedValue(allBills);
+      mockRepository.update.mockResolvedValue(updatedBill);
+
+      await service.updateWithScope('user-123', 'bill-1', { name: 'Novo Nome' }, 'all');
+
+      expect(mockRepository.findByRecurringGroupId).toHaveBeenCalledWith('user-123', 'group-1');
+      expect(mockRepository.update).toHaveBeenCalledTimes(3);
+    });
+
+    it('should_fallback_to_this_scope_when_no_recurringGroupId', async () => {
+      const bill = createMockBill({ recurringGroupId: null });
+      const updatedBill = createMockBill({ recurringGroupId: null, name: 'Novo' });
+      mockRepository.findById.mockResolvedValue(bill);
+      mockRepository.update.mockResolvedValue(updatedBill);
+
+      await service.updateWithScope('user-123', 'bill-123', { name: 'Novo' }, 'all');
+
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'bill-123', { name: 'Novo' });
+      expect(mockRepository.findByRecurringGroupId).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteWithScope', () => {
+    it('should_cancel_bill_when_scope_is_this', async () => {
+      const bill = createMockBill({ recurringGroupId: 'group-1' });
+      mockRepository.findById.mockResolvedValue(bill);
+      mockRepository.update.mockResolvedValue(createMockBill({ status: 'canceled' }));
+
+      await service.deleteWithScope('user-123', 'bill-123', 'this');
+
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'bill-123', { status: 'canceled' });
+      expect(mockRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('should_stop_recurrence_and_delete_future_when_scope_is_future', async () => {
+      const bill = createMockBill({ recurringGroupId: 'group-1', monthYear: '2024-03' });
+      mockRepository.findById.mockResolvedValue(bill);
+      mockRepository.update.mockResolvedValue(createMockBill({ isRecurring: false }));
+      mockRepository.deleteByRecurringGroupIdAfterMonth.mockResolvedValue(2);
+
+      await service.deleteWithScope('user-123', 'bill-123', 'future');
+
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'bill-123', { isRecurring: false });
+      expect(mockRepository.deleteByRecurringGroupIdAfterMonth).toHaveBeenCalledWith(
+        'user-123',
+        'group-1',
+        '2024-03'
+      );
+    });
+
+    it('should_delete_all_bills_in_group_when_scope_is_all', async () => {
+      const bill = createMockBill({ recurringGroupId: 'group-1' });
+      mockRepository.findById.mockResolvedValue(bill);
+      mockRepository.deleteByRecurringGroupId.mockResolvedValue(5);
+
+      await service.deleteWithScope('user-123', 'bill-123', 'all');
+
+      expect(mockRepository.deleteByRecurringGroupId).toHaveBeenCalledWith('user-123', 'group-1');
+    });
+
+    it('should_cancel_when_no_recurringGroupId_regardless_of_scope', async () => {
+      const bill = createMockBill({ recurringGroupId: null });
+      mockRepository.findById.mockResolvedValue(bill);
+      mockRepository.update.mockResolvedValue(createMockBill({ status: 'canceled' }));
+
+      await service.deleteWithScope('user-123', 'bill-123', 'all');
+
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'bill-123', { status: 'canceled' });
+      expect(mockRepository.deleteByRecurringGroupId).not.toHaveBeenCalled();
     });
   });
 });

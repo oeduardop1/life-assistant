@@ -9,6 +9,7 @@ import {
   boolean,
   timestamp,
   index,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { incomeTypeEnum, incomeFrequencyEnum } from './enums';
 import { users } from './users';
@@ -32,6 +33,7 @@ export const incomes = pgTable(
 
     // Recurrence
     isRecurring: boolean('is_recurring').notNull().default(true),
+    recurringGroupId: uuid('recurring_group_id'),
 
     // Period (YYYY-MM format)
     monthYear: varchar('month_year', { length: 7 }).notNull(),
@@ -52,6 +54,12 @@ export const incomes = pgTable(
     index('incomes_month_year_idx').on(table.monthYear),
     index('incomes_user_id_month_year_idx').on(table.userId, table.monthYear),
     index('incomes_type_idx').on(table.type),
+    index('incomes_user_recurring_group_idx').on(table.userId, table.recurringGroupId),
+    unique('incomes_user_recurring_group_month_year_unique').on(
+      table.userId,
+      table.recurringGroupId,
+      table.monthYear
+    ),
   ]
 );
 

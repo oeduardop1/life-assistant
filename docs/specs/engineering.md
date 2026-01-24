@@ -1013,7 +1013,6 @@ export class ChatThrottlerGuard extends ThrottlerBehindProxyGuard {
 | `proactive-checkin` | Check-ins proativos | Baixa |
 | `notifications` | Envio de notificações | Alta |
 | `cleanup-onboarding` | Limpeza de onboardings abandonados (30d) | Baixa |
-| `finance-recurrence` | Gerar registros de rendas/contas/despesas recorrentes (M2.2) | Baixa |
 | `finance-reminders` | Enviar lembretes de vencimento de contas e parcelas (M2.2) | Alta |
 | `finance-overdue-check` | Atualizar status de contas vencidas (M2.2) | Média |
 
@@ -1184,26 +1183,11 @@ Para verificar resultado da consolidação:
 
 ### 7.5 Jobs do Módulo Finance (M2.2)
 
-#### finance-recurrence
+#### Recorrências (Lazy Generation)
 
-Gera registros recorrentes no início de cada mês.
+Registros recorrentes são gerados sob demanda no service layer (não via job). Ao buscar dados de um mês, `ensureRecurringForMonth()` verifica o mês anterior e cria cópias pendentes. Idempotência via UNIQUE constraint `(user_id, recurring_group_id, month_year)`.
 
-| Configuração | Valor |
-|--------------|-------|
-| **Cron** | `5 0 1 * *` (00:05 UTC, dia 1) |
-| **Prioridade** | Baixa |
-| **Retentativas** | 3 |
-
-**Processo:**
-1. Para cada usuário ativo:
-   - Buscar `incomes` do mês anterior com `isRecurring = true`
-   - Criar novos registros para o mês atual com `actualAmount = null`
-   - Buscar `bills` do mês anterior com `isRecurring = true`
-   - Criar novos registros com `status = pending`
-   - Buscar `variable_expenses` do mês anterior com `isRecurring = true`
-   - Criar novos registros com `actualAmount = 0`
-
-**JobId:** `finance-recurrence:${monthYear}` (ex: `finance-recurrence:2026-02`)
+Edição/exclusão com escopo `scope` (query param): `this`, `future`, `all`.
 
 #### finance-reminders
 

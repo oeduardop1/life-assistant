@@ -1099,7 +1099,8 @@ Que tal uma caminhada de 20min?
 
 **Regras:**
 - expectedAmount > 0
-- Rendas recorrentes são copiadas automaticamente no início de cada mês
+- Rendas recorrentes são geradas sob demanda ao acessar o mês (lazy generation)
+- Rendas recorrentes possuem `recurringGroupId` para identificar a série
 - Valor previsto vs real permite análise de variação
 
 ##### Contas Fixas (Bills)
@@ -1118,7 +1119,8 @@ Que tal uma caminhada de 20min?
 **Regras:**
 - amount > 0
 - dueDay: 1 ≤ dueDay ≤ 31
-- Contas recorrentes são copiadas automaticamente no início do mês
+- Contas recorrentes são geradas sob demanda ao acessar o mês (lazy generation)
+- Contas recorrentes possuem `recurringGroupId` para identificar a série
 - Status muda para `overdue` se dueDay < hoje e status = `pending`
 - Ao marcar como paga: status = `paid`, paidAt = now()
 
@@ -1135,7 +1137,8 @@ Que tal uma caminhada de 20min?
 
 **Regras:**
 - expectedAmount > 0
-- Despesas recorrentes são copiadas automaticamente no início do mês
+- Despesas recorrentes são geradas sob demanda ao acessar o mês (lazy generation)
+- Despesas recorrentes possuem `recurringGroupId` para identificar a série
 - Defaults recorrentes sugeridos: Alimentação/Mercado, Transporte/Gasolina, Lazer/Entretenimento
 - Despesas pontuais existem apenas no mês específico
 
@@ -1236,17 +1239,33 @@ Que tal uma caminhada de 20min?
 | `month_start` | Dia 1 do mês | "📊 Novo mês! Configure seu orçamento de {month}" | Média |
 | `month_end` | Último dia do mês | "📈 Resumo de {month}: Gastou R$ {spent} de R$ {budget}" | Média |
 
-#### Recorrências (Job Mensal)
+#### Recorrências (Lazy Generation)
 
-**Horário:** Dia 1 do mês, 00:05 UTC
+**Mecanismo:** Geração sob demanda ao buscar dados de um mês.
 
-**Processo:**
-1. Buscar bills com `isRecurring = true` do mês anterior
-2. Criar registros para novo mês com `status = pending`
-3. Buscar variable_expenses com `isRecurring = true` do mês anterior
-4. Criar registros para novo mês com `actualAmount = 0`
-5. Buscar incomes com `isRecurring = true` do mês anterior
-6. Criar registros para novo mês com `actualAmount = null`
+**Algoritmo (`ensureRecurringForMonth`):**
+1. Calcular mês anterior ao mês solicitado
+2. Buscar registros com `isRecurring = true` e `recurringGroupId IS NOT NULL` do mês anterior
+3. Para cada item: verificar se já existe entrada com mesmo `recurringGroupId` no mês alvo
+4. Se não existe: criar cópia com campos resetados
+
+**Campos copiados por entidade:**
+
+| Entidade | Campos copiados | Campos resetados |
+|----------|----------------|-----------------|
+| Bills | name, category, amount, dueDay, currency, recurringGroupId, isRecurring | status='pending', paidAt=null |
+| Expenses | name, category, expectedAmount, currency, recurringGroupId, isRecurring | actualAmount='0' |
+| Incomes | name, type, frequency, expectedAmount, currency, recurringGroupId, isRecurring | actualAmount=null |
+
+**Idempotência:** UNIQUE constraint em `(user_id, recurring_group_id, month_year)` + `ON CONFLICT DO NOTHING`.
+
+**Edição/Exclusão por escopo (`scope` query param):**
+
+| Scope | Comportamento Edit | Comportamento Delete (Bills) | Comportamento Delete (Expenses/Incomes) |
+|-------|-------------------|------------------------------|----------------------------------------|
+| `this` | Atualiza só este registro | Cancela (status='canceled') | Deleta o registro |
+| `future` | Atualiza este + futuros | Para recorrência + deleta futuros | Para recorrência + deleta futuros |
+| `all` | Atualiza todos do grupo | Deleta todos do grupo | Deleta todos do grupo |
 
 #### Atualização de Status Vencido (Job Diário)
 
@@ -1282,6 +1301,7 @@ Todos os endpoints de listagem (GET /incomes, /bills, /expenses, /debts, /invest
 | `category` | string | Filtrar por categoria | Bills, Expenses |
 | `status` | enum | Filtrar por status (paid/pending/overdue) | Bills |
 | `isRecurring` | boolean | Filtrar por recorrência | Bills, Expenses, Incomes |
+| `scope` | enum | Escopo para PATCH/DELETE recorrentes: `this`, `future`, `all` | Bills, Expenses, Incomes |
 | `isNegotiated` | boolean | Filtrar por negociação | Debts |
 | `page` | number | Página atual (default: 1) | Todos |
 | `limit` | number | Itens por página (default: 20, max: 100) | Todos |
@@ -1340,8 +1360,10 @@ pending ─── pagar() ───→ paid
 - [ ] Navegação entre meses funciona
 - [ ] Validações Zod aplicadas em todos os endpoints
 
-**Jobs e Automação:**
-- [ ] Job mensal de recorrência gera registros automaticamente (dia 1, 00:05 UTC)
+**Recorrência e Automação:**
+- [x] Lazy generation cria registros recorrentes ao acessar o mês
+- [x] Edição/exclusão por escopo (this/future/all) funciona
+- [x] UNIQUE constraint previne duplicatas em concorrência
 - [ ] Job diário atualiza status para overdue (00:30 UTC)
 - [ ] Notificações de vencimento enviadas
 
@@ -1898,7 +1920,7 @@ Comportamento similar ao Telegram.
 - [ ] Gráficos (barras, pizza, linha)
 - [ ] Navegação entre meses
 - [ ] Notificações de vencimento
-- [ ] Job de recorrência mensal
+- [x] Lazy generation de recorrências (sob demanda ao acessar mês)
 - [ ] Tool get_finance_summary funcional
 
 **Dívidas - Funcionalidades Específicas:**

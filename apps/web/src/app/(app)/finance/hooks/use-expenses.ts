@@ -11,6 +11,7 @@ import type {
   UpdateExpenseInput,
   ExpenseQueryParams,
   ExpenseTotals,
+  RecurringScope,
 } from '../types';
 
 // =============================================================================
@@ -98,8 +99,9 @@ export function useUpdateExpense() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateExpenseInput }) => {
-      const response = await api.patch<ExpenseResponse>(`/finance/expenses/${id}`, data);
+    mutationFn: async ({ id, data, scope }: { id: string; data: UpdateExpenseInput; scope?: RecurringScope }) => {
+      const query = scope ? `?scope=${scope}` : '';
+      const response = await api.patch<ExpenseResponse>(`/finance/expenses/${id}${query}`, data);
       return response.expense;
     },
     onSuccess: (expense) => {
@@ -118,8 +120,9 @@ export function useDeleteExpense() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, monthYear }: { id: string; monthYear: string }) => {
-      await api.delete(`/finance/expenses/${id}`);
+    mutationFn: async ({ id, monthYear, scope }: { id: string; monthYear: string; scope?: RecurringScope }) => {
+      const query = scope ? `?scope=${scope}` : '';
+      await api.delete(`/finance/expenses/${id}${query}`);
       return { id, monthYear };
     },
     onSuccess: (_, variables) => {

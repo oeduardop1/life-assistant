@@ -52,14 +52,17 @@ describe('FinanceSummaryService', () => {
   let service: FinanceSummaryService;
   let mockIncomesService: {
     sumByMonthYear: ReturnType<typeof vi.fn>;
+    ensureRecurringForMonth: ReturnType<typeof vi.fn>;
   };
   let mockBillsService: {
     sumByMonthYear: ReturnType<typeof vi.fn>;
     sumByMonthYearAndStatus: ReturnType<typeof vi.fn>;
     countByStatus: ReturnType<typeof vi.fn>;
+    ensureRecurringForMonth: ReturnType<typeof vi.fn>;
   };
   let mockVariableExpensesService: {
     sumByMonthYear: ReturnType<typeof vi.fn>;
+    ensureRecurringForMonth: ReturnType<typeof vi.fn>;
   };
   let mockDebtsService: {
     getSummary: ReturnType<typeof vi.fn>;
@@ -78,16 +81,19 @@ describe('FinanceSummaryService', () => {
 
     mockIncomesService = {
       sumByMonthYear: vi.fn(),
+      ensureRecurringForMonth: vi.fn().mockResolvedValue(undefined),
     };
 
     mockBillsService = {
       sumByMonthYear: vi.fn(),
       sumByMonthYearAndStatus: vi.fn(),
       countByStatus: vi.fn(),
+      ensureRecurringForMonth: vi.fn().mockResolvedValue(undefined),
     };
 
     mockVariableExpensesService = {
       sumByMonthYear: vi.fn(),
+      ensureRecurringForMonth: vi.fn().mockResolvedValue(undefined),
     };
 
     mockDebtsService = {
