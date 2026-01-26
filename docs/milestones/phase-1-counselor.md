@@ -1,7 +1,7 @@
 # Fase 1: Conselheira (v1.x)
 
 > **Objetivo:** Implementar a feature principal de ajudar o usuário através de chat com IA e memória gerenciada pela IA (ADR-012).
-> **Referências:** `docs/specs/product.md` §2.1, §6.1, §6.2, `docs/specs/ai.md`, `docs/specs/system.md` §3.2, §3.6
+> **Referências:** `docs/specs/README.md`, `docs/specs/core/ai-personality.md`, `docs/specs/domains/chat.md`
 
 ---
 
@@ -9,11 +9,11 @@
 
 **Objetivo:** Criar abstração de LLM com suporte a Tool Use (Function Calling).
 
-**Referências:** `docs/specs/engineering.md` §8, `docs/specs/ai.md` §2, `ADR-012`
+**Referências:** `docs/specs/core/architecture.md` §8, `docs/specs/core/ai-personality.md` §2, `ADR-012`
 
 **Tasks:**
 
-- [x] Criar interface `LLMPort` conforme `docs/specs/engineering.md` §8.2:
+- [x] Criar interface `LLMPort` conforme `docs/specs/core/ai-personality.md` §6:
   ```typescript
   interface LLMPort {
     chat(params: ChatParams): Promise<ChatResponse>;
@@ -27,7 +27,7 @@
 - [x] **Implementar Tool Use Examples por provider:**
   - [x] Claude: usar campo `input_examples` com beta header `advanced-tool-use-2025-11-20`
   - [x] Gemini: criar método `enrichDescriptionWithExamples()` para workaround
-  - [x] Adicionar exemplos para todas as 7 tools conforme `docs/specs/ai.md` §6.2
+  - [x] Adicionar exemplos para todas as 7 tools conforme `docs/specs/core/ai-personality.md` §8
 - [x] Implementar `GeminiAdapter` com suporte a Function Calling
 - [x] Implementar `ClaudeAdapter` com suporte a Tool Use
 - [x] Criar `LLMFactory` que retorna adapter baseado em ENV
@@ -73,7 +73,7 @@
 
 **Objetivo:** Implementar chat com IA com streaming de resposta.
 
-**Referências:** `docs/specs/system.md` §3.2, `docs/specs/ai.md` §4
+**Referências:** `docs/specs/domains/chat.md`, `docs/specs/core/ai-personality.md` §4
 
 **Tasks:**
 
@@ -93,7 +93,7 @@
   - [x] DELETE /chat/conversations/:id - soft delete (90 dias retenção)
 - [x] Implementar DTOs com class-validator
 - [x] Implementar streaming via Server-Sent Events (SSE)
-- [x] Implementar system prompt base conforme `docs/specs/ai.md` §4.1
+- [x] Implementar system prompt base conforme `docs/specs/core/ai-personality.md` §4
 - [ ] ~~Implementar rate limiting por plano~~ → Migrado para **M3.5**
 - [x] Salvar mensagens no banco
 - [x] Implementar tipos de conversa: general, counselor
@@ -152,7 +152,7 @@
 
 **Objetivo:** Implementar sistema de memória com Tool Use e consolidação automática.
 
-**Referências:** `docs/specs/ai.md` §6-7, `docs/specs/data-model.md` §7, `ADR-012`
+**Referências:** `docs/specs/core/ai-personality.md` §8, `docs/specs/domains/memory.md`, `ADR-012`
 
 **Tasks:**
 
@@ -204,7 +204,7 @@
   - [x] Cria/atualiza knowledge_items
   - [x] Atualiza user_memory
   - [x] Salva registro em memory_consolidations
-- [x] Criar consolidation prompt builder conforme docs/specs/ai.md §6.5.2
+- [x] Criar consolidation prompt builder conforme docs/specs/core/ai-personality.md §8
 - [x] Criar response parser com validação Zod
 - [x] Implementar scheduling timezone-aware via BullMQ `tz` option
 
@@ -270,7 +270,7 @@
   - [x] Criar AdminModule (`apps/api/src/modules/admin/`)
   - [x] Criar AdminJobsController com endpoint `POST /admin/jobs/memory-consolidation/trigger`
   - [x] Proteger endpoint para `NODE_ENV=development`
-  - [x] Documentar uso em `docs/specs/engineering.md` §7.6
+  - [x] Documentar uso em `docs/specs/core/architecture.md`
 
 ---
 
@@ -278,7 +278,7 @@
 
 **Objetivo:** Implementar tela para visualizar e gerenciar o que a IA sabe sobre o usuário.
 
-**Referências:** `docs/specs/product.md` §6.2, `ADR-012`
+**Referências:** `docs/specs/domains/memory.md`, `ADR-012`
 
 **Tasks:**
 
@@ -354,7 +354,7 @@
 
 **Objetivo:** Implementar gerenciamento temporal de conhecimento com detecção de mudanças de estado (padrão Zep/Graphiti Temporal Knowledge Graphs).
 
-**Referências:** `docs/specs/ai.md` §6.7, `docs/specs/data-model.md` §4.5
+**Referências:** `docs/specs/core/ai-personality.md` §8, `docs/specs/core/data-conventions.md`
 
 **Contexto:**
 Sistema detectava contradições de forma inconsistente:
@@ -385,8 +385,8 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [x] Estilizar items superseded com badge e opacidade
 
 **Documentação:**
-- [x] Atualizar docs/specs/data-model.md com campos temporais
-- [x] Adicionar seção 6.7 ao docs/specs/ai.md (Contradiction Detection)
+- [x] Atualizar docs/specs/core/data-conventions.md com campos temporais
+- [x] Adicionar seção ao docs/specs/core/ai-personality.md (Contradiction Detection)
 
 **Testes:**
 - [x] Atualizar unit tests para `KnowledgeItemsService.exportAll()`
@@ -413,7 +413,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Permitir que a IA faça conexões entre fatos e detecte contradições em tempo real durante conversas.
 
-**Referências:** `docs/specs/ai.md` §6.6, `ADR-014`
+**Referências:** `docs/specs/core/ai-personality.md` §8, `ADR-014`
 
 **Tasks:**
 
@@ -434,7 +434,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Documentação:**
 - [x] Criar ADR-014: Real-time Inference Architecture
-- [x] Atualizar docs/specs/ai.md (§4.1, §6.2, §6.6, §9.1, §9.2)
+- [x] Atualizar docs/specs/core/ai-personality.md (§4, §8)
 
 **Testes:**
 - [x] Testes unitários para `analyze_context`:
@@ -466,20 +466,20 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar feature opt-in de perspectiva cristã no chat.
 
-**Referências:** `docs/specs/product.md` §8, `docs/specs/ai.md` §4.3
+**Referências:** `docs/specs/domains/spiritual.md`, `docs/specs/core/ai-personality.md` §5
 
 **Tasks:**
 
 **Backend:**
 - [ ] Adicionar configuração `christianPerspective: boolean` no user_settings
-- [ ] Implementar system prompt de perspectiva cristã (conforme `docs/specs/ai.md` §4.3)
+- [ ] Implementar system prompt de perspectiva cristã (conforme `docs/specs/core/ai-personality.md` §5)
 - [ ] Integrar com chat: aplicar prompt quando habilitado
 
 **Frontend:**
 - [ ] Criar toggle nas configurações do usuário (`/settings/preferences`)
 - [ ] Adicionar seção "Perspectiva Cristã" com explicação
 - [ ] Componente ToggleWithDescription para o setting
-- [ ] Adicionar opção de habilitar perspectiva cristã na etapa 2 do onboarding (toggle opcional junto com seleção de áreas) — conforme `docs/specs/product.md` §7.1 item 2c
+- [ ] Adicionar opção de habilitar perspectiva cristã na etapa 2 do onboarding (toggle opcional junto com seleção de áreas) — conforme `docs/specs/core/user-journeys.md`
 
 **Testes:**
 - [ ] Teste unitário: prompt correto é aplicado quando habilitado
@@ -502,7 +502,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar guardrails para tópicos sensíveis.
 
-**Referências:** `docs/specs/ai.md` §8
+**Referências:** `docs/specs/core/ai-personality.md` §7
 
 **Tasks:**
 
@@ -563,7 +563,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 **Finalizar componentes de estado:**
 - [x] ErrorBoundary: adicionar link "Precisa de ajuda?" para suporte
 
-**Alinhar Empty States com `docs/specs/system.md` §4.1:**
+**Alinhar Empty States com `docs/specs/core/ux-states.md`:**
 - [x] Chat: ajustar mensagem para "Converse com sua assistente" + CTA "Iniciar conversa"
 - [x] Memória: ajustar mensagem para "A IA ainda está aprendendo sobre você" + CTA "Iniciar conversa"
 
@@ -597,7 +597,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Testes de responsividade (Playwright viewports: mobile 375px, tablet 768px, desktop 1280px)
 
 **Definition of Done:**
-- [x] Empty states alinhados com docs/specs/system.md §4.1
+- [x] Empty states alinhados com docs/specs/core/ux-states.md
 - [x] Error states com botão retry e link suporte
 - [x] Toasts em todas as operações CRUD (Chat + Memória)
 - [x] App responsivo e funcional em mobile, tablet e desktop
@@ -624,7 +624,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 **Referências:**
 - [Automatic Context Compaction - Claude Docs](https://platform.claude.com/cookbook/tool-use-automatic-context-compaction)
 - [Effective Context Engineering - Anthropic](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
-- `docs/specs/ai.md` §4
+- `docs/specs/core/ai-personality.md` §4
 
 **Problema:**
 - Atualmente só as últimas 20 mensagens são enviadas ao LLM
@@ -685,7 +685,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 - [ ] Summary é persistido e reutilizado
 - [ ] Token usage é reduzido em conversas longas
 - [ ] Testes passam
-- [ ] Documentação atualizada (docs/specs/ai.md)
+- [ ] Documentação atualizada (docs/specs/core/ai-personality.md)
 
 ---
 
@@ -693,7 +693,7 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 **Objetivo:** Implementar funcionalidade core de suporte a decisões: captura via chat, CRUD, e visualização.
 
-**Referências:** `docs/adr/ADR-016-decision-support-architecture.md`, `docs/specs/product.md` §6.18, `docs/specs/system.md` §3.12, `docs/specs/ai.md` §6.9
+**Referências:** `docs/adr/ADR-016-decision-support-architecture.md`, `docs/specs/domains/decisions.md`, `docs/specs/core/ai-personality.md` §8
 
 **Pré-requisitos:** M1.3 (Knowledge Items)
 
