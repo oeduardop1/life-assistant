@@ -1,7 +1,7 @@
 # Fase 0: Fundação (v0.x)
 
 > **Objetivo:** Estabelecer toda a infraestrutura técnica necessária antes de qualquer feature de negócio.
-> **Referências:** `docs/specs/engineering.md` §1-§10
+> **Referências:** `docs/specs/core/architecture.md`
 
 ---
 
@@ -14,7 +14,7 @@
 - [x] Inicializar repositório Git
 - [x] Configurar pnpm workspaces (`pnpm-workspace.yaml`)
 - [x] Configurar Turborepo (`turbo.json` com tasks: build, dev, lint, typecheck, test, clean)
-- [x] Criar estrutura de diretórios conforme `docs/specs/engineering.md` §3.1:
+- [x] Criar estrutura de diretórios conforme `docs/specs/core/architecture.md` §3:
   ```
   apps/web/
   apps/api/
@@ -28,7 +28,7 @@
 - [x] Configurar TypeScript base (`tsconfig.json`) com strict mode
 - [x] Configurar ESLint compartilhado (flat config ESLint 9+)
 - [x] Configurar Prettier
-- [x] Criar `.env.example` com todas as variáveis de `docs/specs/engineering.md` §16
+- [x] Criar `.env.example` com todas as variáveis de ambiente
 - [x] Criar `docker-compose.yml` para desenvolvimento local (PostgreSQL + Redis + MinIO)
 - [x] Documentar comandos no README.md
 - [x] Testar que `pnpm install` e `pnpm build` funcionam
@@ -42,7 +42,7 @@
 
 **Notas:**
 - **07 Jan 2026:** Milestone concluído com sucesso
-- Turborepo v2+ usa `tasks` em vez de `pipeline` - docs/specs/engineering.md atualizado
+- Turborepo v2+ usa `tasks` em vez de `pipeline` - docs/specs/core/architecture.md atualizado
 - Docker images atualizadas para versões mais recentes:
   - PostgreSQL 17 (pgvector não é mais necessário — ADR-012)
   - Redis 8 Alpine (`redis:8-alpine`)
@@ -60,7 +60,7 @@
 **Tasks:**
 
 - [x] Configurar tsup para build do package
-- [x] Criar tipos base conforme `docs/specs/data-model.md`:
+- [x] Criar tipos base conforme `docs/specs/core/data-conventions.md`:
   - [x] `LifeArea` enum (6 áreas principais + SubArea per ADR-017)
   - [x] `TrackingType` enum
   - [x] `DecisionStatus` enum
@@ -239,7 +239,7 @@
 
 - [x] Instalar dependências (drizzle-orm, drizzle-kit, pg, dotenv)
 - [x] Configurar `drizzle.config.ts`
-- [x] Criar schemas conforme `docs/specs/data-model.md`:
+- [x] Criar schemas conforme `docs/specs/core/data-conventions.md`:
   - [x] **Core:** users
   - [x] **Chat:** conversations, messages
   - [x] **Tracking:** tracking_entries, life_balance_history
@@ -251,8 +251,8 @@
   - [x] **Integrations:** user_integrations, calendar_events, budgets, subscriptions
   - [x] **System:** audit_logs, notifications, reminders, export_requests
   - [x] **Embeddings:** embeddings (com pgvector) — **DEPRECADO: ADR-012 remove esta tabela**
-- [x] Criar índices conforme `docs/specs/data-model.md` §10
-- [x] Configurar RLS policies conforme `docs/specs/engineering.md` §6
+- [x] Criar índices conforme `docs/specs/core/data-conventions.md` §9
+- [x] Configurar RLS policies conforme `docs/specs/core/auth-security.md`
 - [x] Criar migration inicial
 - [x] Criar seed para dados de teste
 - [x] Criar scripts npm: db:generate, db:migrate, db:push, db:studio
@@ -294,7 +294,7 @@
 **Tasks:**
 
 - [x] Inicializar NestJS com CLI
-- [x] Configurar estrutura de módulos conforme `docs/specs/engineering.md` §4:
+- [x] Configurar estrutura de módulos conforme `docs/specs/core/architecture.md` §4:
   ```
   src/
     modules/
@@ -339,7 +339,7 @@
   - [x] ValidationPipe global
   - [x] Global prefix `/api`
   - [x] Graceful shutdown (onModuleDestroy)
-- [x] Criar Dockerfile conforme `docs/specs/engineering.md` §9.3
+- [x] Criar Dockerfile conforme `docs/specs/core/architecture.md` §9
 - [x] Configurar Vitest + Supertest
 - [x] Escrever testes unitários (100% coverage):
   - [x] AuthGuard tests (7 tests)
@@ -400,7 +400,7 @@
 - [x] Criar .env.example com NEXT_PUBLIC_API_URL
 
 **2. Estrutura de Diretórios:**
-- [x] Configurar estrutura conforme `docs/specs/engineering.md` §3.1:
+- [x] Configurar estrutura conforme `docs/specs/core/architecture.md` §3:
   ```
   src/app/(auth)/layout.tsx, (app)/layout.tsx, (app)/dashboard/page.tsx,
   layout.tsx, page.tsx, not-found.tsx, error.tsx
@@ -459,8 +459,8 @@
 - [x] Smoke tests: should_load_homepage_successfully, should_toggle_theme_successfully, should_toggle_sidebar_successfully
 
 **14. Documentação:**
-- [x] Atualizar docs/specs/engineering.md §2.2 com decisões arquiteturais frontend (Tailwind v4, shadcn/ui, State Management, Route Groups)
-- [x] Atualizar docs/specs/engineering.md §17 com Troubleshooting frontend
+- [x] Atualizar docs/specs/core/frontend-architecture.md com decisões arquiteturais frontend (Tailwind v4, shadcn/ui, State Management, Route Groups)
+- [x] Atualizar docs/specs/core/architecture.md §17 com Troubleshooting frontend
 - [x] Atualizar README.md raiz com seção Web App
 
 **Definition of Done:**
@@ -482,7 +482,7 @@
 - 3 smoke tests E2E via Playwright (homepage, theme toggle, sidebar toggle) - todos passando em 4 browsers
 - Docker com Next.js standalone output, non-root user (nextjs), Node 24 LTS Alpine
 - **Decisão arquitetural:** Type encapsulation pattern implementado (ver ADR-008)
-- **Documentação:** Movida para docs/specs/engineering.md (§2.2, §17) - sem README separado conforme padrão do projeto
+- **Documentação:** Movida para docs/specs/core/frontend-architecture.md e docs/specs/core/architecture.md
 
 ---
 
@@ -490,7 +490,7 @@
 
 **Objetivo:** Implementar fluxo completo de autenticação.
 
-**Referências:** `docs/specs/system.md` §3.1, `docs/specs/integrations.md` §5
+**Referências:** `docs/specs/core/auth-security.md`, `docs/specs/integrations/supabase-auth.md`
 
 **Tasks:**
 
@@ -569,7 +569,7 @@
 
 **Objetivo:** Implementar wizard de configuração inicial após signup.
 
-**Referências:** `docs/specs/system.md` §3.1
+**Referências:** `docs/specs/core/user-journeys.md`
 
 **Tasks:**
 
@@ -583,7 +583,7 @@
   - [x] `ProfileStepDto` (name: min 2 chars, timezone: valid IANA timezone)
   - [x] `AreasStepDto` (areas: LifeArea[], min 3, max 8)
   - [x] `TelegramStepDto` (telegramId?: string, skipped: boolean)
-- [x] Criar `OnboardingModule` com Clean Architecture (conforme `docs/specs/engineering.md` §4):
+- [x] Criar `OnboardingModule` com Clean Architecture (conforme `docs/specs/core/architecture.md` §4):
   - [x] `OnboardingController` em `presentation/controllers/`
   - [x] `OnboardingService` em `application/services/`
   - [x] DTOs em `presentation/dtos/` com barrel export
@@ -651,7 +651,7 @@
 - [x] Progresso é salvo automaticamente
 - [x] Usuário só acessa app após etapas obrigatórias
 - [x] Skip funciona nas etapas opcionais
-- [x] OnboardingModule segue Clean Architecture (`docs/specs/engineering.md` §4)
+- [x] OnboardingModule segue Clean Architecture (`docs/specs/core/architecture.md` §4)
 - [x] DTOs validados com class-validator
 - [x] Middleware redireciona para onboarding quando necessário
 - [x] Callback redireciona para onboarding após verificação de email
@@ -666,7 +666,7 @@
 
 **Objetivo:** Configurar pipeline de integração e deploy contínuo.
 
-**Referências:** `docs/specs/engineering.md` §12, §13
+**Referências:** `docs/specs/core/architecture.md` §12
 
 **Completed:** 08 Jan 2026
 
@@ -707,7 +707,7 @@
   - [ ] `RAILWAY_TOKEN`
   - [ ] `SENTRY_DSN`
   - [ ] `SENTRY_AUTH_TOKEN` (para source maps)
-- [x] Documentar branch protection em `docs/specs/engineering.md` §12.3 (ativar quando tiver time)
+- [x] Documentar branch protection em `docs/specs/core/architecture.md` §12 (ativar quando tiver time)
 
 **Definition of Done:**
 - [x] CI roda em todo push (main, develop, feature/*)
@@ -754,7 +754,7 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 
 **Documentação:**
 - [x] Criar ADR-013: Test Data Management
-- [x] Documentar padrões de teste em `docs/specs/engineering.md` §11.5
+- [x] Documentar padrões de teste em `docs/specs/core/architecture.md` §10
 
 **Definition of Done:**
 - [x] Seed pode ser executado múltiplas vezes sem criar duplicatas
