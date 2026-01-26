@@ -167,7 +167,7 @@ BEGIN
     NEW.updated_at = now();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;--> statement-breakpoint
+$$ LANGUAGE plpgsql SET search_path = '';--> statement-breakpoint
 
 -- =============================================================================
 -- TABLES (with IF NOT EXISTS)
@@ -1022,7 +1022,7 @@ BEGIN
     ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;--> statement-breakpoint
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';--> statement-breakpoint
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DO $$ BEGIN
