@@ -40,38 +40,29 @@ pnpm test             # Unit tests
 pnpm test:e2e         # E2E tests
 ```
 
-## Documentation Precedence
+## Documentation Reference
 
-| # | Document | Purpose |
-|---|----------|---------|
-| 1 | `docs/specs/README.md` | Navegação + glossário |
-| 2 | `docs/specs/core/` | Arquitetura, auth, convenções, AI |
-| 3 | `docs/specs/domains/[module].md` | Regras por módulo |
-| 4 | `docs/specs/integrations/` | APIs externas |
-| - | `docs/milestones/` | Tasks, progress |
-| - | `TBD_TRACKER.md` | Pending decisions |
+**Precedence:** Core (1) → Domains (2) → Integrations (3). In case of conflict, higher precedence wins.
 
-**Core documents:**
-- `core/architecture.md` — Stack, padrões, testes, Docker
-- `core/auth-security.md` — Auth, RLS, LGPD
-- `core/data-conventions.md` — DB, naming, migrations
-- `core/ai-personality.md` — Persona, prompts, LLM
-- `core/user-journeys.md` — Jornadas de usuário
+| Category | Topic | Document |
+|----------|-------|----------|
+| **Core** | Architecture, Stack, Testing | `docs/specs/core/architecture.md` |
+| | Auth, RLS, LGPD | `docs/specs/core/auth-security.md` |
+| | Database, Naming, Migrations | `docs/specs/core/data-conventions.md` |
+| | AI Persona, Prompts, LLM | `docs/specs/core/ai-personality.md` |
+| | User Journeys | `docs/specs/core/user-journeys.md` |
+| **Domains** | Finance (M2.2) | `docs/specs/domains/finance.md` |
+| | Memory (ADR-012) | `docs/specs/domains/memory.md` |
+| | Tracking (ADR-015/017) | `docs/specs/domains/tracking.md` |
+| | Decisions, People, Vault | `docs/specs/domains/*.md` |
+| | Goals, Habits, Notifications, Chat | `docs/specs/domains/*.md` |
+| **Integrations** | Telegram, Google Calendar, Stripe | `docs/specs/integrations/*.md` |
+| | Supabase Auth, Gemini, Cloudflare R2 | `docs/specs/integrations/*.md` |
+| **Other** | Tasks & Progress | `docs/milestones/` |
+| | Pending Decisions | `TBD_TRACKER.md` |
+| | Navigation & Glossary | `docs/specs/README.md` |
 
-**Domain documents:**
-- `domains/finance.md` (M2.2), `domains/memory.md` (ADR-012), `domains/tracking.md` (ADR-015/017)
-- `domains/decisions.md`, `domains/people.md`, `domains/vault.md`
-- `domains/goals-habits.md`, `domains/notifications.md`, `domains/chat.md`
-
-**Integrations:**
-- `integrations/telegram.md`, `integrations/google-calendar.md`, `integrations/stripe.md`
-- `integrations/supabase-auth.md`, `integrations/gemini.md`, `integrations/cloudflare-r2.md`
-
-**Legacy (reference only):** `docs/specs/legacy/` contains original files for historical reference.
-
-> ⚠️ **IMPORTANTE:** Os arquivos em `docs/specs/legacy/` são **somente leitura**. NUNCA atualize esses arquivos. Todas as alterações de documentação devem ser feitas nos novos arquivos em `core/`, `domains/` ou `integrations/`.
-
-**In case of conflict, follow precedence order.**
+> ⚠️ **NEVER update `docs/specs/legacy/`** — read-only historical reference.
 
 ## ⚠️ MANDATORY PROTOCOL (PLANNING & IMPLEMENTATION)
 
@@ -294,16 +285,3 @@ const total = acc + parseFloat(row.amount); // 0 + 100 = 100
 - Business rules in `application/` layer only
 - Portuguese in user-facing content, English in code
 
-## Quick References
-
-| Topic | Reference |
-|-------|-----------|
-| Database | `docs/specs/core/data-conventions.md`, `CLAUDE.md` §Database Development |
-| Architecture | `docs/specs/core/architecture.md` |
-| Testing | `docs/specs/core/architecture.md` §Testing |
-| Security | `docs/specs/core/auth-security.md` |
-| AI/LLM | `docs/specs/core/ai-personality.md` |
-| Finance | `docs/specs/domains/finance.md` |
-| Memory | `docs/specs/domains/memory.md` |
-| Tracking | `docs/specs/domains/tracking.md` |
-| Integrations | `docs/specs/integrations/` |
