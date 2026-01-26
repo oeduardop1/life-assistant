@@ -16,7 +16,7 @@ life-assistant/
 ├── packages/        # Shared libraries
 ├── docs/            # Documentation
 │   ├── adr/         # Architecture Decision Records
-│   ├── specs/       # Product, system, engineering specs
+│   ├── specs/       # Domain-driven specs (core/, domains/, integrations/)
 │   └── milestones/  # Tasks and progress
 └── infra/           # Docker, deployment
 ```
@@ -69,6 +69,8 @@ pnpm test:e2e         # E2E tests
 
 **Legacy (reference only):** `docs/specs/legacy/` contains original files for historical reference.
 
+> ⚠️ **IMPORTANTE:** Os arquivos em `docs/specs/legacy/` são **somente leitura**. NUNCA atualize esses arquivos. Todas as alterações de documentação devem ser feitas nos novos arquivos em `core/`, `domains/` ou `integrations/`.
+
 **In case of conflict, follow precedence order.**
 
 ## ⚠️ MANDATORY PROTOCOL (PLANNING & IMPLEMENTATION)
@@ -109,13 +111,20 @@ After Step 1 is complete:
 4. If divergence found:
 ```
    ⚠️ Documentation drift detected:
-   - File: [which project doc]
+   - File: [which project doc in core/, domains/, or integrations/]
    - Project says: [current approach]
    - Context7 says: [recommended approach]
    - Recommendation: [what to update]
    → Awaiting authorization to update documentation
 ```
    **STOP and wait for authorization. Do NOT proceed until approved.**
+
+> **IMPORTANTE:** Atualizações de documentação devem ser feitas APENAS em:
+> - `docs/specs/core/` — Para arquitetura, auth, convenções, AI
+> - `docs/specs/domains/` — Para regras de negócio por módulo
+> - `docs/specs/integrations/` — Para APIs externas
+>
+> **NUNCA atualize arquivos em `docs/specs/legacy/`** — esses são apenas referência histórica.
 
 ### Step 3: Create/Refine Plan
 
@@ -129,8 +138,8 @@ After Steps 1-2 are complete:
 
 ### Step 4: Implement
 
-- Follow patterns from `docs/specs/engineering.md`
-- Cite source when stating rules: "Per `docs/specs/system.md` §3.2..."
+- Follow patterns from `docs/specs/core/architecture.md`
+- Cite source when stating rules: "Per `docs/specs/domains/finance.md` §3..."
 - Prefer CLI scaffolding over manual file creation
 
 ### Step 5: Test & Fix
@@ -281,7 +290,7 @@ const total = acc + parseFloat(row.amount); // 0 + 100 = 100
 ## Coding Style
 
 - TypeScript strict mode + Zod validation (no `any` without justification)
-- Domain names from `docs/specs/data-model.md`
+- Domain names from `docs/specs/core/data-conventions.md`
 - Business rules in `application/` layer only
 - Portuguese in user-facing content, English in code
 
@@ -289,12 +298,12 @@ const total = acc + parseFloat(row.amount); // 0 + 100 = 100
 
 | Topic | Reference |
 |-------|-----------|
-| Database | `docs/specs/data-model.md` §10, `CLAUDE.md` §Database Development |
-| Architecture | `docs/specs/engineering.md` §4 |
-| Testing | `docs/specs/engineering.md` §11 |
-| Security | `docs/specs/system.md` §6, `docs/specs/engineering.md` §6 |
-| Commits & PRs | `docs/specs/engineering.md` §15 |
-| Business Rules | `docs/specs/system.md` §3 |
-| Multi-tenancy | `docs/specs/engineering.md` §6, `docs/specs/data-model.md` §6 |
-| LLM Abstraction | `docs/specs/engineering.md` §8 |
-| Jobs | `docs/specs/engineering.md` §7 |
+| Database | `docs/specs/core/data-conventions.md`, `CLAUDE.md` §Database Development |
+| Architecture | `docs/specs/core/architecture.md` |
+| Testing | `docs/specs/core/architecture.md` §Testing |
+| Security | `docs/specs/core/auth-security.md` |
+| AI/LLM | `docs/specs/core/ai-personality.md` |
+| Finance | `docs/specs/domains/finance.md` |
+| Memory | `docs/specs/domains/memory.md` |
+| Tracking | `docs/specs/domains/tracking.md` |
+| Integrations | `docs/specs/integrations/` |
