@@ -14,12 +14,17 @@ export type RecurringScope = 'this' | 'future' | 'all';
 
 function getPreviousMonth(monthYear: string): string {
   const parts = monthYear.split('-');
-  const year = parseInt(parts[0]!, 10);
-  const month = parseInt(parts[1]!, 10);
-  if (month === 1) {
-    return `${year - 1}-12`;
+  const yearStr = parts[0];
+  const monthStr = parts[1];
+  if (!yearStr || !monthStr) {
+    throw new Error(`Invalid monthYear format: ${monthYear}`);
   }
-  return `${year}-${String(month - 1).padStart(2, '0')}`;
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  if (month === 1) {
+    return `${String(year - 1)}-12`;
+  }
+  return `${String(year)}-${String(month - 1).padStart(2, '0')}`;
 }
 
 @Injectable()
@@ -172,7 +177,7 @@ export class BillsService {
     if (newItems.length > 0) {
       await this.repository.createMany(userId, newItems);
       this.logger.log(
-        `Generated ${newItems.length} recurring bills for ${targetMonth}`
+        `Generated ${String(newItems.length)} recurring bills for ${targetMonth}`
       );
     }
   }
