@@ -133,3 +133,16 @@ Usar projeto Supabase Cloud mesmo em desenvolvimento.
 - [Supabase CLI Documentation](https://supabase.com/docs/guides/cli)
 - [ADR-002: Supabase para Database e Auth](./ADR-002-supabase-database-auth.md)
 - [engineering.md §9 - Docker/Infra](../specs/engineering.md)
+
+---
+
+## Update (2026-01-25): Migration Consolidation
+
+As of this date, **Supabase migrations are deprecated**. All schema changes must go through Drizzle ORM:
+
+- `supabase/migrations/` folder is now empty
+- Use `db:generate` + `db:migrate` for all schema changes
+- Supabase CLI is used only for starting the local database, not for migrations
+- The command `npx supabase db reset` should not be used; use `pnpm infra:down -r -f && pnpm infra:up` instead
+
+See ADR-019 for the migration consolidation decision.

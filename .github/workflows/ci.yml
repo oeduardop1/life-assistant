@@ -72,6 +72,11 @@ jobs:
       - name: Start Supabase
         run: supabase start
 
+      - name: Apply database migrations
+        run: pnpm --filter @life-assistant/database db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+
       - name: Build project
         run: pnpm build
 

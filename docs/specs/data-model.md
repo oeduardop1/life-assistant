@@ -3050,27 +3050,30 @@ export default defineConfig({
 # Gerar migration a partir do schema TypeScript
 pnpm --filter database db:generate
 
-# Aplicar delta ao banco (compara schema TS vs banco real)
-pnpm --filter database db:push
-
-# Aplicar sem confirmação interativa (CI/scripts)
-pnpm drizzle-kit push --strict=false --force
-
-# Aplicar migrations sequencialmente (novos ambientes)
+# Aplicar migrations pendentes (RECOMENDADO - seguro, idempotente)
 pnpm --filter database db:migrate
 
 # Studio (GUI)
 pnpm --filter database db:studio
+
+# Seed (dados de teste)
+pnpm --filter database db:seed
+
+# RLS policies
+pnpm --filter database db:apply-rls
 ```
+
+> **⚠️ IMPORTANTE:** Nunca use `db:push` em scripts ou CI. Use apenas `db:migrate`.
+> O `db:push` pode propor operações destrutivas (TRUNCATE, DROP). Ver `CLAUDE.md` §Database Development.
 
 **Workflow obrigatório para alterações de schema:**
 1. Modificar/criar arquivo em `src/schema/`
 2. Exportar no `src/schema/index.ts`
 3. `pnpm --filter database db:generate` → gera SQL incremental
 4. Revisar o SQL gerado em `src/migrations/`
-5. `pnpm --filter database db:push` → aplica ao banco
+5. `pnpm --filter database db:migrate` → aplica ao banco
 
 ---
 
-*Última atualização: 21 Janeiro 2026*
-*Revisão: Dívidas não negociadas (isNegotiated), campos de parcelas nullable, campo notes, cálculos de progresso por dívida*
+*Última atualização: 25 Janeiro 2026*
+*Revisão: Migration workflow atualizado - db:migrate como padrão, db:push deprecado*

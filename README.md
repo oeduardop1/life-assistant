@@ -34,7 +34,7 @@ pnpm infra:up
 pnpm dev
 ```
 
-> O `infra:up` ja aplica as migrations do banco e executa o seed automaticamente.
+> O `infra:up` ja aplica as migrations do banco. O seed e executado automaticamente apenas na primeira vez (banco vazio). Use `--seed` para forcar o seed em bancos existentes.
 
 ## Fluxo de Desenvolvimento Diario
 
@@ -153,9 +153,9 @@ life-assistant/
 ├── packages/
 │   ├── ai/                  # Abstracao de LLM (Anthropic, Google)
 │   ├── config/              # Configuracoes e validacao ENV
-│   ├── database/            # Schema Drizzle + migrations
+│   ├── database/            # Schema Drizzle + migrations (single source of truth)
 │   └── shared/              # Tipos e utilitarios compartilhados
-├── supabase/                # Migrations e seeds do banco
+├── supabase/                # Configuracao Supabase (config.toml, seeds)
 ├── scripts/                 # Scripts de automacao
 ├── docs/
 │   ├── adr/                 # Architecture Decision Records
@@ -230,6 +230,7 @@ Os scripts `infra:up` e `infra:down` possuem opcoes avancadas para diferentes ce
 | `--timeout, -t N` | Timeout em segundos (default: 120) |
 | `--verbose, -v` | Mostra output detalhado para debug |
 | `--skip-migrations` | Pula migrations e seed do banco |
+| `--seed, -s` | Forca o seed do banco mesmo em bancos existentes (idempotente) |
 | `--help, -h` | Mostra todas as opcoes |
 
 **Parar (`pnpm infra:down`)**

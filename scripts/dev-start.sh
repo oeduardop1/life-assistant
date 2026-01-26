@@ -44,6 +44,7 @@ DB_WAIT_TIMEOUT=$DEFAULT_DB_WAIT_TIMEOUT
 CLEAN_MODE=false
 VERBOSE_MODE=false
 SKIP_MIGRATIONS=false
+FORCE_SEED=false
 
 # Supabase ports
 readonly SUPABASE_API_PORT=54321
@@ -200,6 +201,9 @@ ${BOLD}OPTIONS${NC}
     ${GREEN}--skip-migrations${NC}
                       Skip database migrations and seeding
 
+    ${GREEN}--seed, -s${NC}        Force database seeding even on existing databases
+                      (seed is idempotent - uses ON CONFLICT DO NOTHING)
+
     ${GREEN}--timeout, -t${NC} N   Set timeout for operations in seconds (default: 120)
 
     ${GREEN}--verbose, -v${NC}     Show detailed debug output
@@ -220,8 +224,8 @@ ${BOLD}WHAT IT STARTS${NC}
 
 ${BOLD}AFTER STARTUP${NC}
     The script will also:
-      • Apply database migrations (Drizzle)
-      • Seed the database with test data
+      • Apply database migrations (Drizzle - safe, applies only pending)
+      • Seed the database with test data (only on first setup or with --seed)
 
 ${BOLD}EXAMPLES${NC}
     ${GRAY}# Start all services${NC}
@@ -264,6 +268,10 @@ parse_args() {
                 ;;
             --skip-migrations)
                 SKIP_MIGRATIONS=true
+                shift
+                ;;
+            --seed|-s)
+                FORCE_SEED=true
                 shift
                 ;;
             --verbose|-v)
@@ -633,46 +641,81 @@ apply_database_schema() {
 
     cd "$PROJECT_ROOT"
 
-    # Apply migrations
-    print_info "Running Drizzle migrations..."
-    print_debug "Command: pnpm --filter @life-assistant/database db:push"
-    echo ""
-    echo -e "  ${YELLOW}⚠ NOTE: Drizzle may ask for confirmation on schema changes.${NC}"
-    echo -e "  ${YELLOW}  If prompted, type 'yes' to confirm destructive changes.${NC}"
-    echo ""
+    # Detect if this is a fresh database (no users table = first setup)
+    local is_fresh_db=false
+    local db_check
+    db_check=$(docker exec supabase_db_life-assistant psql -U postgres -d postgres -tAc \
+        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users');" 2>/dev/null) || true
 
-    # Run db:push INTERACTIVELY (don't capture output)
-    # This allows the user to see and respond to Drizzle prompts
-    local push_exit_code=0
-    pnpm --filter @life-assistant/database db:push || push_exit_code=$?
-
-    if [[ $push_exit_code -eq 0 ]]; then
-        print_success "Database schema applied"
+    if [[ "$db_check" != "t" ]]; then
+        is_fresh_db=true
+        print_info "Fresh database detected - will run migrations + seed"
     else
-        print_warning "Schema push had issues (exit code: $push_exit_code)"
-        print_debug "You may need to run manually: pnpm --filter @life-assistant/database db:push"
+        print_info "Existing database detected - checking migration status"
+    fi
+
+    # Check if there are pending migrations before running
+    local migration_files_count=0
+    local journal_entries_count=0
+    local has_pending_migrations=true
+
+    # Count migration SQL files
+    migration_files_count=$(find "$PROJECT_ROOT/packages/database/src/migrations" -maxdepth 1 -name "*.sql" 2>/dev/null | wc -l | tr -d ' ')
+
+    # Count journal entries (if table exists)
+    journal_entries_count=$(docker exec supabase_db_life-assistant psql -U postgres -d postgres -tAc \
+        "SELECT COUNT(*)::int FROM drizzle.__drizzle_migrations;" 2>/dev/null) || journal_entries_count=0
+
+    if [[ "$migration_files_count" -eq "$journal_entries_count" ]] && [[ "$journal_entries_count" -gt 0 ]]; then
+        has_pending_migrations=false
+        print_success "Database schema up to date ($journal_entries_count migrations applied)"
+    fi
+
+    if [[ "$has_pending_migrations" == "true" ]]; then
+        # Apply migrations (safe, non-interactive, applies only pending SQL files)
+        print_info "Running Drizzle migrations..."
+        print_debug "Command: pnpm --filter @life-assistant/database db:migrate"
+
+        local migrate_exit_code=0
+        pnpm --filter @life-assistant/database db:migrate || migrate_exit_code=$?
+
+        if [[ $migrate_exit_code -eq 0 ]]; then
+            print_success "Database migrations applied"
+        else
+            print_error "Migration failed (exit code: $migrate_exit_code)"
+            print_debug "Check migration files in: packages/database/src/migrations/"
+            print_debug "For a fresh start: pnpm infra:down -rf && pnpm infra:up"
+            end_step
+            return 1
+        fi
     fi
 
     echo ""
 
-    # Seed database
-    print_info "Running database seed..."
-    print_debug "Command: pnpm --filter @life-assistant/database db:seed"
-
-    local seed_exit_code=0
-    local seed_output
-    seed_output=$(pnpm --filter @life-assistant/database db:seed 2>&1) || seed_exit_code=$?
-
-    if [[ $seed_exit_code -eq 0 ]]; then
-        print_success "Database seeded"
-        # Show output only in verbose mode on success
-        print_verbose "$seed_output"
-    else
-        print_warning "Seed had issues (exit code: $seed_exit_code)"
-        # Always show output on warning to help debugging
-        if [[ -n "$seed_output" ]]; then
-            echo -e "${GRAY}$seed_output${NC}"
+    # Seed database (only on fresh DB or with --seed flag)
+    if [[ "$is_fresh_db" == "true" ]] || [[ "$FORCE_SEED" == "true" ]]; then
+        if [[ "$FORCE_SEED" == "true" ]] && [[ "$is_fresh_db" != "true" ]]; then
+            print_info "Running database seed (--seed flag)..."
+        else
+            print_info "Running database seed (first setup)..."
         fi
+        print_debug "Command: pnpm --filter @life-assistant/database db:seed"
+
+        local seed_exit_code=0
+        local seed_output
+        seed_output=$(pnpm --filter @life-assistant/database db:seed 2>&1) || seed_exit_code=$?
+
+        if [[ $seed_exit_code -eq 0 ]]; then
+            print_success "Database seeded"
+            print_verbose "$seed_output"
+        else
+            print_warning "Seed had issues (exit code: $seed_exit_code)"
+            if [[ -n "$seed_output" ]]; then
+                echo -e "${GRAY}$seed_output${NC}"
+            fi
+        fi
+    else
+        print_debug "Skipping seed (existing database - use --seed to force)"
     fi
 
     end_step

@@ -591,7 +591,7 @@ remove_volumes() {
     dc_volumes=$(get_docker_compose_volumes)
 
     local all_volumes="$supabase_volumes"$'\n'"$dc_volumes"
-    all_volumes=$(echo "$all_volumes" | grep -v '^$' | sort -u)
+    all_volumes=$(echo "$all_volumes" | grep -v '^$' | sort -u || true)
 
     if [[ -z "$all_volumes" ]]; then
         print_success "No volumes to remove"
@@ -667,7 +667,7 @@ verify_stopped() {
         local remaining_volumes
         remaining_volumes=$(get_supabase_volumes)
         remaining_volumes+=$'\n'$(get_docker_compose_volumes)
-        remaining_volumes=$(echo "$remaining_volumes" | grep -v '^$' | sort -u)
+        remaining_volumes=$(echo "$remaining_volumes" | grep -v '^$' | sort -u || true)
 
         if [[ -n "$remaining_volumes" ]]; then
             local vol_count

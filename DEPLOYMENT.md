@@ -146,13 +146,25 @@ Copie a connection string e substitua `[YOUR-PASSWORD]` pela senha do banco.
 
 ### 2.5 Aplicar Migrations
 
-```bash
-# Conectar ao projeto remoto
-npx supabase link --project-ref <project-ref>
+As migrações do banco são gerenciadas pelo Drizzle ORM.
 
-# Aplicar migrations
-npx supabase db push
+**Opção A: Via Deploy do Railway (Recomendado)**
+
+O Railway aplica migrações automaticamente através do `DATABASE_URL` durante o deploy.
+Basta garantir que as migrações Drizzle estejam commitadas e pusheadas.
+
+**Opção B: Manual (se necessário)**
+
+```bash
+# Configurar DATABASE_URL apontando para produção
+export DATABASE_URL="postgres://..."
+
+# Aplicar migrações pendentes
+pnpm --filter @life-assistant/database db:migrate
 ```
+
+> **⚠️ IMPORTANTE:** Nunca use `supabase db push` para produção. Use apenas migrações Drizzle.
+> O diretório `supabase/migrations/` deve estar vazio — todo o schema é gerenciado pelo Drizzle.
 
 ---
 

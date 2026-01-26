@@ -10,6 +10,8 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-25 | Infra | feat(migrations): consolidate to Drizzle single source of truth | Removido sistema de migrations Supabase. Drizzle agora é única fonte para schema. Migration 0000_luxuriant_wraith.sql reescrita com padrões idempotentes (DO $$ EXCEPTION WHEN duplicate_object, IF NOT EXISTS). Triggers updated_at + auth sync incluídos. Removido bootstrap-migrations.ts e db:bootstrap. CI atualizado com db:migrate step. Docs: CLAUDE.md, README.md, DEPLOYMENT.md, ci.yml, changelog.md. |
+| 2026-01-24 | Infra | fix(dev-start): replace db:push with db:migrate | Previne perda de dados no startup diário. bootstrap-migrations.ts registra migrations existentes para DBs criados via push. Detecta banco novo vs existente, seed condicional (apenas primeiro setup ou --seed flag). Atualizado: CLAUDE.md, engineering.md, README.md. |
 | 2026-01-24 | M2.2 | Finance Tools Enhancement | 4 novas READ tools (get_bills, get_expenses, get_incomes, get_investments) + enriquecimento get_finance_summary com breakdown (bills/expenses/debts). AI agora acessa 100% dos detalhes financeiros individuais. Prompt melhorado com fluxo obrigatório de análise e distinção clara entre categorias. Docs: ai.md, product.md, system.md atualizados. |
 | 2026-01-24 | M2.2 | Recorrências - Lazy Generation | Substituído job-based por lazy generation: `recurringGroupId` (UUID) + UNIQUE constraint em bills/expenses/incomes, `ensureRecurringForMonth()` gera entradas sob demanda, scope-based edit/delete ('this'/'future'/'all'), `RecurringScopeDialog` no frontend, `ScopeQueryDto` no backend. Repositórios: 7 novos métodos x3 entidades. Testes: +19 unit (bills/expenses/incomes recurring), +16 integration (lazy gen + scope ops), +10 frontend (RecurringScopeDialog + delete dialogs). Migration aplicada. ADR-018 criado. Docs atualizados: system.md, data-model.md, engineering.md, product.md, phase-2-tracker.md. |
 | 2026-01-23 | M2.2 | Bugfix - Cálculos Dashboard | Corrigido Total Gasto: (1) bills pagas agora usa SQL SUM real em vez de estimativa por ratio, (2) criada tabela `debt_payments` para rastreio mensal de parcelas pagas, (3) parcelas de dívida incluídas no Total Gasto. Migration baseline regenerada (33 tabelas). CLAUDE.md atualizado com seção Database Development. |
@@ -70,4 +72,4 @@
 
 ---
 
-*Última atualização: 24 Janeiro 2026*
+*Última atualização: 25 Janeiro 2026*

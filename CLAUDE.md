@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Life Assistant AI is a SaaS platform with integrated AI that serves as a personal assistant, second brain, counselor, and life tracker. See `docs/milestones/` for current progress.
+Life Assistant AI is a SaaS platform with integrated AI that serves as a memory, counselor, personal assistant, and life tracker. See `docs/milestones/` for current progress.
 
 **Stack:** Next.js + NestJS + PostgreSQL (Supabase) + Drizzle + BullMQ + Redis
 
@@ -199,34 +199,46 @@ Do NOT add TBDs for technical decisions you can make yourself.
 
 ## Database Development
 
+### Single Source of Truth: Drizzle ORM
+
+**CRITICAL: All schema changes go through Drizzle ORM only.**
+
+- **Schema files**: `packages/database/src/schema/*.ts`
+- **Migrations**: `packages/database/src/migrations/*.sql`
+- **RLS policies**: `packages/database/scripts/apply-rls.ts`
+
+**NEVER create SQL files in `supabase/migrations/`** - that folder must remain empty.
+Supabase CLI is used only for running the local database, not for migrations.
+
 ### Schema Changes Workflow
 
-When modifying the database schema, ALWAYS follow this order:
+ALWAYS follow these steps for ANY schema change (new table, modify existing, add column, etc.):
 
-1. **Modify schema files** in `packages/database/src/schema/`
-2. **Generate migration**: `pnpm --filter database db:generate`
-3. **Review** the generated SQL in `packages/database/src/migrations/`
-4. **Apply to database**: `pnpm --filter database db:push` (applies delta to Supabase)
+1. **Create or modify** schema file in `packages/database/src/schema/`
+   - New table? Create `my-table.ts` and export from `index.ts`
+   - Existing table? Edit the relevant `.ts` file
+2. **Export types** from `packages/database/src/index.ts` (if API needs them)
+3. **Generate migration**: `pnpm --filter database db:generate`
+4. **Review** the generated SQL in `packages/database/src/migrations/`
+5. **Apply**: `pnpm --filter database db:migrate`
 
 ### Commands
 
-```bash
-pnpm --filter database db:generate     # Generate migration from schema diff
-pnpm --filter database db:push         # Apply schema to Supabase (dev/prod)
-pnpm --filter database db:migrate      # Apply migrations sequentially (CI/new envs)
-pnpm --filter database db:studio       # Visual database explorer
-pnpm --filter database db:seed         # Run seed scripts
-pnpm --filter database db:apply-rls    # Apply RLS policies
-```
+| Command | Purpose | Safe? |
+|---------|---------|-------|
+| `db:generate` | Generate migration from schema diff | ✅ Yes |
+| `db:migrate` | Apply pending migrations | ✅ Yes |
+| `db:studio` | Visual database explorer | ✅ Yes |
+| `db:seed` | Run seed scripts | ✅ Yes |
+| `db:apply-rls` | Apply RLS policies | ✅ Yes |
+| `db:push` | Push schema directly | ⚠️ Interactive only |
 
 ### Key Rules
 
-- **NEVER use `db:push` without first generating a migration.** The migration file is the source of truth for schema history.
-- **Schema = TypeScript, migrations = SQL audit trail.** Both must stay in sync.
-- `db:push` compares TypeScript schema vs live database and applies only the delta. It's safe for existing databases.
-- `db:migrate` runs migration files sequentially. Use for fresh environments (CI, new dev setup).
-- For non-interactive execution: `pnpm drizzle-kit push --strict=false --force`
-- If `db:generate` asks interactive questions about renames vs. creates, answer based on the actual intent of the change.
+1. **NEVER use `db:push` in scripts or CI** - can TRUNCATE/DROP and cause data loss
+2. **Always use `db:migrate`** - only applies pending SQL, never destructive
+3. **Migrations are idempotent** - safe to re-run on existing databases
+4. If `db:generate` asks about renames vs. creates, answer based on actual intent
 
 ### Schema File Organization
 
@@ -238,15 +250,6 @@ packages/database/src/schema/
 ├── [domain].ts           # One file per domain entity
 └── [domain]-payments.ts  # Related sub-tables
 ```
-
-### Adding a New Table
-
-1. Create `packages/database/src/schema/my-table.ts`
-2. Export from `packages/database/src/schema/index.ts`
-3. Export types from `packages/database/src/index.ts` if needed by API
-4. Run `pnpm --filter database db:generate`
-5. Review generated migration SQL
-6. Run `pnpm --filter database db:push`
 
 ### Decimal/Money Fields
 

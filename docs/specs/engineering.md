@@ -1386,6 +1386,9 @@ Ver `ai.md` §6.2 para exemplos completos de cada tool.
 
 O projeto usa Supabase CLI para desenvolvimento local (veja ADR-009). Isso fornece alta paridade com produção (Supabase Cloud) e inclui PostgreSQL, Auth API, e captura de emails.
 
+> **⚠️ Migrations:** O diretório `supabase/migrations/` está vazio. Todas as migrações são gerenciadas pelo **Drizzle ORM**.
+> Ver `CLAUDE.md` §Database Development para workflow completo de schema changes.
+
 **Portas do Supabase CLI:**
 
 | Serviço | Porta | Descrição |
@@ -1407,10 +1410,9 @@ npx supabase status
 
 # Parar serviços
 npx supabase stop
-
-# Resetar banco (aplica migrations)
-npx supabase db reset
 ```
+
+> **Nota:** O comando `npx supabase db reset` não é mais utilizado. Use `pnpm infra:down -r -f && pnpm infra:up` para reset completo.
 
 **Emails de desenvolvimento:** Em ambiente local, todos os emails (confirmação, reset de senha) são capturados no Inbucket. Acesse http://localhost:54324 para visualizar.
 
@@ -2389,15 +2391,19 @@ RESEND_API_KEY=xxx
 
 **Soluções:**
 1. Verificar migrations aplicadas: `pnpm --filter database db:studio` → Migrations tab
-2. Aplicar delta sem confirmação interativa: `pnpm drizzle-kit push --strict=false --force`
+2. Aplicar migrations pendentes: `pnpm --filter database db:migrate`
 3. Revisar SQL gerado: `packages/database/src/migrations/*.sql`
-4. Em último caso, resetar Supabase: `npx supabase db reset`
+4. Em último caso, resetar Supabase: `pnpm infra:down -rf && pnpm infra:up`
 
 **Workflow correto para alterações de schema:**
 1. Modificar schema em `packages/database/src/schema/`
 2. Gerar migração: `pnpm --filter database db:generate`
 3. Revisar SQL gerado
-4. Aplicar ao banco: `pnpm --filter database db:push --strict=false --force`
+4. Aplicar ao banco: `pnpm --filter database db:migrate`
+
+**Quando usar `db:push`:**
+- APENAS para prototipagem interativa manual onde você revisa cada prompt
+- NUNCA em scripts automatizados ou CI — pode propor TRUNCATE/DROP e causar perda de dados
 
 #### RLS Policy Violations
 
