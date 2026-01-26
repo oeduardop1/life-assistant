@@ -226,6 +226,7 @@ ${BOLD}AFTER STARTUP${NC}
     The script will also:
       • Apply database migrations (Drizzle - safe, applies only pending)
       • Seed the database with test data (only on first setup or with --seed)
+      • Apply RLS policies (only if not already enabled)
 
 ${BOLD}EXAMPLES${NC}
     ${GRAY}# Start all services${NC}
@@ -716,6 +717,31 @@ apply_database_schema() {
         fi
     else
         print_debug "Skipping seed (existing database - use --seed to force)"
+    fi
+
+    echo ""
+
+    # Apply RLS policies (only if not already enabled)
+    # Check if RLS is enabled on the users table as indicator
+    local rls_enabled
+    rls_enabled=$(docker exec supabase_db_life-assistant psql -U postgres -d postgres -tAc \
+        "SELECT relrowsecurity FROM pg_class WHERE relname = 'users' AND relnamespace = 'public'::regnamespace;" 2>/dev/null) || rls_enabled=""
+
+    if [[ "$rls_enabled" == "t" ]]; then
+        print_success "RLS policies already applied"
+    else
+        print_info "Applying RLS policies..."
+        print_debug "Command: pnpm --filter @life-assistant/database db:apply-rls"
+
+        local rls_exit_code=0
+        pnpm --filter @life-assistant/database db:apply-rls || rls_exit_code=$?
+
+        if [[ $rls_exit_code -eq 0 ]]; then
+            print_success "RLS policies applied"
+        else
+            print_warning "RLS application had issues (exit code: $rls_exit_code)"
+            print_debug "You can manually apply with: pnpm --filter @life-assistant/database db:apply-rls"
+        fi
     fi
 
     end_step
