@@ -1,7 +1,7 @@
 # Fase 2: Tracker (v2.x)
 
 > **Objetivo:** Implementar sistema de tracking de métricas, módulos de dados (Finance, Hábitos, CRM), Life Balance Score, dashboard e relatórios.
-> **Referências:** `docs/specs/product.md` §2.3, §6.7, §6.8, §6.14, §6.15, §6.17, `docs/specs/system.md` §3.3, §3.4, §3.7, §3.9, §3.10
+> **Referências:** `docs/specs/domains/tracking.md`, `docs/specs/domains/finance.md`, `docs/specs/domains/people.md`, `docs/specs/domains/goals.md`, `docs/specs/domains/reports.md`
 
 ---
 
@@ -11,7 +11,7 @@
 
 **Filosofia:** Baixo atrito (ADR-015). IA detecta métricas na conversa e oferece registrar. Dashboard é secundário, para quem prefere controle direto. Sistema funciona normalmente sem nenhum tracking.
 
-**Referências:** `docs/specs/system.md` §3.3, `docs/adr/ADR-015-tracking-low-friction-philosophy.md`
+**Referências:** `docs/specs/domains/tracking.md`, `docs/adr/ADR-015-tracking-low-friction-philosophy.md`
 
 **Tasks:**
 
@@ -22,7 +22,7 @@
   - [x] `GetHistoryUseCase` - buscar histórico com filtros
   - [x] `GetAggregationsUseCase` - cálculos (média, soma, etc)
   - [x] `TrackingRepository`
-- [x] Implementar tipos de tracking (conforme `docs/specs/system.md` §3.3):
+- [x] Implementar tipos de tracking (conforme `docs/specs/domains/tracking.md`):
   - [x] weight (0-500kg)
   - [x] water (0-10000ml)
   - [x] sleep (0-24h, com qualidade 1-10)
@@ -31,7 +31,7 @@
   - [x] energy (1-10)
   - [x] custom
   - ~~expense/income~~ → Usar M2.2 Finance
-- [x] Implementar validações conforme `docs/specs/system.md` §3.3
+- [x] Implementar validações conforme `docs/specs/domains/tracking.md`
 - [x] Implementar agregações (média, soma, variação)
 - [x] Integrar com Tool Use (captura conversacional):
   - [x] Implementar executor da tool `record_metric` no ToolExecutorService
@@ -152,7 +152,7 @@ _Testes E2E (6 tasks):_
 
 **Filosofia:** Baixo atrito. Usuário cadastra orçamento no início do mês e marca contas como pagas ao longo do mês.
 
-**Referências:** `docs/specs/system.md` §3.3 (Tracking), `docs/specs/data-model.md` §4.13 (Budgets)
+**Referências:** `docs/specs/domains/tracking.md`, `docs/specs/domains/finance.md`
 
 > **Nota:** Este módulo alimenta a área "finance" do Life Balance Score (M2.5).
 
@@ -782,7 +782,7 @@ _Testes:_
 
 **Objetivo:** Implementar sistema de metas e tracking de hábitos.
 
-**Referências:** `docs/specs/system.md` §3.9, `docs/specs/product.md` §6.15
+**Referências:** `docs/specs/domains/goals.md`, `docs/specs/domains/habits.md`
 
 > **Nota:** Este módulo alimenta as áreas "learning" e "spiritual" do Life Balance Score (M2.5).
 
@@ -852,7 +852,7 @@ _Testes:_
 
 **Objetivo:** Implementar gerenciamento de relacionamentos pessoais.
 
-**Referências:** `docs/specs/system.md` §3.7, `docs/specs/product.md` §6.6
+**Referências:** `docs/specs/domains/people.md`
 
 > **Nota:** Este módulo alimenta a área "relationships" do Life Balance Score (M2.5).
 
@@ -915,7 +915,7 @@ _Testes:_
 
 **Objetivo:** Implementar cálculo do Life Balance Score e análise de tendências/correlações entre métricas.
 
-**Referências:** `docs/specs/system.md` §3.4, `docs/specs/ai.md` §6.2
+**Referências:** `docs/specs/domains/tracking.md`, `docs/specs/core/ai-personality.md`
 
 **Pré-requisitos:** M2.1 (Tracking), M2.2 (Finance), M2.3 (Hábitos), M2.4 (CRM)
 
@@ -934,7 +934,7 @@ _Testes:_
   - [ ] Calcular score de cada área (0-100)
   - [ ] Aplicar pesos configuráveis
   - [ ] Calcular Life Balance Score geral
-- [ ] Implementar fórmulas por área (conforme `docs/specs/system.md` §3.4):
+- [ ] Implementar fórmulas por área (conforme `docs/specs/domains/tracking.md`):
   - [ ] Saúde: peso (IMC), exercício, sono, água, alimentação
   - [ ] Financeiro: budget, savings, debt, investments
   - [ ] Relacionamentos: interações, qualidade
@@ -1104,7 +1104,7 @@ _Testes:_
 
 **Objetivo:** Implementar dashboard com visão geral da vida do usuário.
 
-**Referências:** `docs/specs/product.md` §6.14
+**Referências:** `docs/specs/domains/tracking.md`
 
 **Pré-requisitos:** M2.5 (Life Balance Score)
 
@@ -1156,7 +1156,7 @@ _Testes:_
 
 **Objetivo:** Implementar geração de relatórios periódicos.
 
-**Referências:** `docs/specs/system.md` §3.10, `docs/specs/ai.md` §7.1, §7.2
+**Referências:** `docs/specs/domains/reports.md`, `docs/specs/core/ai-personality.md`
 
 **Pré-requisitos:** M2.5 (Life Balance Score), M2.6 (Dashboard)
 
@@ -1167,7 +1167,7 @@ _Testes:_
   - [ ] `GenerateMorningSummaryUseCase`
   - [ ] `GenerateWeeklyReportUseCase`
   - [ ] `GenerateMonthlyReportUseCase`
-- [ ] Implementar prompts de relatório (conforme `docs/specs/ai.md` §7.1, §7.2)
+- [ ] Implementar prompts de relatório (conforme `docs/specs/core/ai-personality.md`)
 - [ ] Criar jobs para geração:
   - [ ] Morning summary: configurável (default 07:00), janela de 20 min
   - [ ] Weekly report: domingo 20:00

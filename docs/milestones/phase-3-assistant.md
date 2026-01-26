@@ -1,7 +1,7 @@
 # Fase 3: Assistente (v3.x)
 
 > **Objetivo:** Implementar integrações externas e funcionalidades de assistente pessoal.
-> **Referências:** `docs/specs/product.md` §2.2, §5.2, §6.4, §6.5, §6.6, `docs/specs/integrations.md`
+> **Referências:** `docs/specs/domains/vault.md`, `docs/specs/domains/notifications.md`, `docs/specs/integrations/README.md`
 
 ---
 
@@ -9,7 +9,7 @@
 
 **Objetivo:** Implementar bot do Telegram para interação rápida.
 
-**Referências:** `docs/specs/integrations.md` §2
+**Referências:** `docs/specs/integrations/telegram.md`
 
 **Tasks:**
 
@@ -70,7 +70,7 @@
 
 **Objetivo:** Sincronizar eventos do Google Calendar.
 
-**Referências:** `docs/specs/integrations.md` §3
+**Referências:** `docs/specs/integrations/google-calendar.md`
 
 **Tasks:**
 
@@ -128,7 +128,7 @@
 
 **Objetivo:** Implementar área segura para dados sensíveis.
 
-**Referências:** `docs/specs/system.md` §3.8, `docs/specs/product.md` §6.5
+**Referências:** `docs/specs/domains/vault.md`
 
 **Tasks:**
 
@@ -189,7 +189,7 @@
 
 **Objetivo:** Implementar sistema de notificações e check-ins proativos.
 
-**Referências:** `docs/specs/system.md` §3.11, `docs/specs/product.md` §6.16, `docs/specs/ai.md` §7.4
+**Referências:** `docs/specs/domains/notifications.md`, `docs/specs/core/ai-personality.md`
 
 **Tasks:**
 
@@ -199,7 +199,7 @@
   - [ ] Canais: push (web), telegram, email, in-app
   - [ ] Respeitar quiet hours
   - [ ] Preferências por tipo
-- [ ] Implementar check-ins proativos (conforme `docs/specs/ai.md` §7.4):
+- [ ] Implementar check-ins proativos (conforme `docs/specs/core/ai-personality.md`):
   - [ ] Dias sem tracking
   - [ ] Queda de humor
   - [ ] Evento próximo
@@ -215,14 +215,14 @@
   - [ ] Job diário para verificar follow-ups pendentes e criar notificações
   - [ ] Integração: follow-ups aparecem na lista de check-ins do dia
 - [ ] Criar jobs para envio
-- [ ] Implementar job de notificações de onboarding abandonado (conforme `docs/specs/system.md` §3.1):
+- [ ] Implementar job de notificações de onboarding abandonado (conforme `docs/specs/core/user-journeys.md`):
   - [ ] Dia 3: email "Complete seu cadastro para começar a usar o app!"
   - [ ] Dia 7: email "Falta pouco! Termine o cadastro."
   - [ ] Dia 14: email "Seus dados expiram em 16 dias. Complete agora!"
   - [ ] Dia 25: email "Última chance! Seus dados serão removidos em 5 dias."
 - [ ] Criar template de email para lembretes de onboarding
 
-**Backend - Data Retention & Purge Jobs (Per `docs/specs/system.md` §2.5, `ADR-010`):**
+**Backend - Data Retention & Purge Jobs (Per `docs/specs/core/auth-security.md`, `docs/adr/ADR-010-soft-delete-strategy.md`):**
 - [ ] Criar job `purge-soft-deleted-users`:
   - [ ] Executar diariamente
   - [ ] Hard delete registros com `deletedAt > 30 dias`
@@ -290,7 +290,7 @@
 
 **Objetivo:** Implementar sistema de assinaturas e pagamentos.
 
-**Referências:** `docs/specs/integrations.md` §4
+**Referências:** `docs/specs/integrations/stripe.md`
 
 **Tasks:**
 
@@ -304,7 +304,7 @@
   - [ ] Rate limiting de mensagens por plano (migrado de M1.2)
   - [ ] Usar Redis (Upstash) para storage distribuído
   - [ ] Implementar ThrottlerBehindProxyGuard para Railway/Vercel
-  - [ ] Limites conforme `docs/specs/system.md` §2.6
+  - [ ] Limites conforme `docs/specs/core/auth-security.md`
 - [ ] Notificar falhas de pagamento
 
 **Frontend:**
@@ -347,7 +347,7 @@
 
 **Objetivo:** Implementar upload e armazenamento de arquivos.
 
-**Referências:** `docs/specs/integrations.md` §7
+**Referências:** `docs/specs/integrations/cloudflare-r2.md`
 
 **Tasks:**
 
@@ -404,7 +404,7 @@
 
 **Objetivo:** Implementar job de follow-up para decisões, estendendo M1.11 (Decision Support Core).
 
-**Referências:** `docs/adr/ADR-016-decision-support-architecture.md`, `docs/specs/system.md` §3.12
+**Referências:** `docs/adr/ADR-016-decision-support-architecture.md`, `docs/specs/domains/decisions.md`
 
 **Pré-requisitos:** M1.11 (Decision Support Core), M3.4 (Notificações Proativas)
 
