@@ -44,14 +44,30 @@ pnpm test:e2e         # E2E tests
 
 | # | Document | Purpose |
 |---|----------|---------|
-| 1 | `docs/specs/product.md` | Features, personas |
-| 2 | `docs/specs/system.md` | Business rules, flows |
-| 3 | `docs/specs/engineering.md` | Tech stack, architecture |
-| 4 | `docs/specs/data-model.md` | Database schema |
-| 5 | `docs/specs/ai.md` | LLM behavior, prompts |
-| 6 | `docs/specs/integrations.md` | External APIs |
+| 1 | `docs/specs/README.md` | Navegação + glossário |
+| 2 | `docs/specs/core/` | Arquitetura, auth, convenções, AI |
+| 3 | `docs/specs/domains/[module].md` | Regras por módulo |
+| 4 | `docs/specs/integrations/` | APIs externas |
 | - | `docs/milestones/` | Tasks, progress |
 | - | `TBD_TRACKER.md` | Pending decisions |
+
+**Core documents:**
+- `core/architecture.md` — Stack, padrões, testes, Docker
+- `core/auth-security.md` — Auth, RLS, LGPD
+- `core/data-conventions.md` — DB, naming, migrations
+- `core/ai-personality.md` — Persona, prompts, LLM
+- `core/user-journeys.md` — Jornadas de usuário
+
+**Domain documents:**
+- `domains/finance.md` (M2.2), `domains/memory.md` (ADR-012), `domains/tracking.md` (ADR-015/017)
+- `domains/decisions.md`, `domains/people.md`, `domains/vault.md`
+- `domains/goals-habits.md`, `domains/notifications.md`, `domains/chat.md`
+
+**Integrations:**
+- `integrations/telegram.md`, `integrations/google-calendar.md`, `integrations/stripe.md`
+- `integrations/supabase-auth.md`, `integrations/gemini.md`, `integrations/cloudflare-r2.md`
+
+**Legacy (reference only):** `docs/specs/legacy/` contains original files for historical reference.
 
 **In case of conflict, follow precedence order.**
 
@@ -87,7 +103,7 @@ Before creating a plan or writing any code:
 ### Step 2: Validate Documentation
 
 After Step 1 is complete:
-1. Read relevant project docs (product.md, system.md, engineering.md, etc.)
+1. Read relevant project docs (`docs/specs/core/`, `docs/specs/domains/[module].md`)
 2. Query Context7 for ALL libraries/frameworks involved in this task
 3. Compare: does project documentation match Context7 best practices?
 4. If divergence found:
