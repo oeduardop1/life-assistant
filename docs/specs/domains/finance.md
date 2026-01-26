@@ -142,7 +142,46 @@ O módulo financeiro permite ao usuário gerenciar suas finanças pessoais atrav
 
 **Idempotência:** UNIQUE constraint em `(user_id, recurring_group_id, month_year)` + `ON CONFLICT DO NOTHING`.
 
-### 3.2 Edit/Delete Scope
+### 3.2 Recurring Group Pattern
+
+Itens recorrentes (rendas, contas, despesas) usam `recurringGroupId` para:
+1. Agrupar instâncias mensais do mesmo item
+2. Prevenir duplicação via unique constraint
+3. Permitir edição/exclusão em lote (escopo `all` ou `future`)
+
+**Schema:**
+```typescript
+recurringGroupId: uuid('recurring_group_id'), // UUID compartilhado entre meses
+monthYear: varchar('month_year', { length: 7 }), // 'YYYY-MM' format
+isRecurring: boolean('is_recurring').notNull().default(true),
+```
+
+**Unique Constraint:**
+```sql
+-- Previne duplicação de itens recorrentes no mesmo mês
+CREATE UNIQUE INDEX idx_bills_recurring_unique
+  ON bills(user_id, recurring_group_id, month_year)
+  WHERE recurring_group_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_incomes_recurring_unique
+  ON incomes(user_id, recurring_group_id, month_year)
+  WHERE recurring_group_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_expenses_recurring_unique
+  ON variable_expenses(user_id, recurring_group_id, month_year)
+  WHERE recurring_group_id IS NOT NULL;
+```
+
+**Exemplo de uso:**
+```
+Salário janeiro:   { id: 'x', recurringGroupId: 'abc', monthYear: '2025-01' }
+Salário fevereiro: { id: 'y', recurringGroupId: 'abc', monthYear: '2025-02' }
+Salário março:     { id: 'z', recurringGroupId: 'abc', monthYear: '2025-03' }
+```
+→ Mesmo `recurringGroupId` vincula os registros
+→ Constraint previne dois salários com mesmo `recurringGroupId` no mesmo mês
+
+### 3.3 Edit/Delete Scope
 
 | Scope | Edit Behavior | Delete Bills | Delete Expenses/Incomes |
 |-------|--------------|--------------|-------------------------|
@@ -150,7 +189,7 @@ O módulo financeiro permite ao usuário gerenciar suas finanças pessoais atrav
 | `future` | Atualiza este + futuros | Para recorrência + deleta futuros | Para recorrência + deleta futuros |
 | `all` | Atualiza todos do grupo | Deleta todos do grupo | Deleta todos do grupo |
 
-### 3.3 Status Transitions
+### 3.4 Status Transitions
 
 #### Bills
 ```
@@ -170,7 +209,7 @@ Criação com isNegotiated=true:
   partially_paid ─── pagar_parcela() (última) ─────→ paid_off
 ```
 
-### 3.4 Debt Payment Flow
+### 3.5 Debt Payment Flow
 
 - Ao pagar parcela: `currentInstallment++`
 - Se `currentInstallment > totalInstallments`: `status = 'paid_off'`
@@ -763,12 +802,16 @@ ALTER TABLE incomes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE variable_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE debts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE debt_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE investments ENABLE ROW LEVEL SECURITY;
 
+-- Uses Supabase built-in auth.uid() function
 CREATE POLICY "user_access" ON incomes
-  FOR ALL USING (user_id = current_setting('app.user_id')::uuid);
--- (mesma policy para todas as tabelas)
+  FOR ALL USING (user_id = (SELECT auth.uid()));
+-- (mesma policy para todas as tabelas do módulo)
 ```
+
+> **Referência:** Ver `docs/specs/core/auth-security.md` §3.2 para detalhes sobre `auth.uid()`.
 
 ---
 
@@ -840,4 +883,4 @@ CREATE POLICY "user_access" ON incomes
 
 ---
 
-*Última atualização: 25 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

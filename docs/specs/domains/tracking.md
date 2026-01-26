@@ -436,12 +436,15 @@ CREATE TABLE life_balance_history (
 ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE life_balance_history ENABLE ROW LEVEL SECURITY;
 
+-- Uses Supabase built-in auth.uid() function
 CREATE POLICY "user_access" ON tracking_entries
-  FOR ALL USING (user_id = current_setting('app.user_id')::uuid);
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "user_access" ON life_balance_history
-  FOR ALL USING (user_id = current_setting('app.user_id')::uuid);
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 ```
+
+> **Referência:** Ver `docs/specs/core/auth-security.md` §3.2 para detalhes sobre `auth.uid()`.
 
 ---
 

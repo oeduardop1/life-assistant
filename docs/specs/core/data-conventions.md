@@ -64,6 +64,8 @@
 
 ## 4. ER Diagram
 
+> **Nota:** Tabelas marcadas com `(planned)` estão documentadas mas ainda não implementadas.
+
 ```mermaid
 erDiagram
     users ||--o{ conversations : has
@@ -91,15 +93,12 @@ erDiagram
     users ||--o{ variable_expenses : has
     users ||--o{ debts : has
     users ||--o{ investments : has
-    users ||--o{ decisions : has
 
     debts ||--o{ debt_payments : has
-    decisions ||--o{ decision_options : has
-    decisions ||--o{ decision_criteria : has
-    decision_options ||--o{ decision_scores : has
-    decision_criteria ||--o{ decision_scores : evaluates
     conversations ||--o{ messages : contains
     notes ||--o{ knowledge_items : generates
+    notes ||--o{ note_links : links_from
+    notes ||--o{ note_links : links_to
     notes ||--o{ person_notes : links
     habits ||--o{ habit_completions : has
     habits ||--o{ habit_freezes : has
@@ -107,7 +106,17 @@ erDiagram
     goals ||--o{ tracking_entries : updates
     people ||--o{ person_notes : has
     people ||--o{ person_interactions : has
+
+    %% Planned tables (ADR-016 - Decision Support)
+    %% users ||--o{ decisions : has
+    %% decisions ||--o{ decision_options : has
+    %% decisions ||--o{ decision_criteria : has
+    %% decision_options ||--o{ decision_scores : has
+    %% decision_criteria ||--o{ decision_scores : evaluates
 ```
+
+**Planned Tables (not yet implemented):**
+- `decisions`, `decision_options`, `decision_criteria`, `decision_scores` — ADR-016 Decision Support (Phase 3)
 
 ---
 
@@ -121,7 +130,7 @@ export const lifeAreaEnum = pgEnum('life_area', [
   'health', 'finance', 'professional', 'learning', 'spiritual', 'relationships'
 ]);
 
-// 17 sub-areas
+// 16 sub-areas
 export const subAreaEnum = pgEnum('sub_area', [
   // health
   'physical', 'mental', 'leisure',
@@ -150,8 +159,8 @@ export const userStatusEnum = pgEnum('user_status', [
 
 ```typescript
 export const trackingTypeEnum = pgEnum('tracking_type', [
-  'weight', 'water', 'sleep', 'exercise', 'meal', 'medication',
-  'expense', 'income', 'investment', 'habit', 'mood', 'energy', 'custom'
+  'weight', 'water', 'sleep', 'exercise', 'expense', 'income',
+  'investment', 'habit', 'mood', 'energy', 'custom'
 ]);
 ```
 
@@ -526,137 +535,183 @@ ALTER TABLE debt_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE investments ENABLE ROW LEVEL SECURITY;
 ```
 
-### 9.2 Helper Function (auth.user_id)
+### 9.2 Helper Function (auth.uid)
 
-> **Nota de performance:** usar `(SELECT auth.user_id())` evita execução por linha.
+Supabase provides a built-in `auth.uid()` function that reads from `request.jwt.claim.sub`.
 
-```sql
-CREATE OR REPLACE FUNCTION auth.user_id() RETURNS uuid AS $$
-  SELECT COALESCE(
-    NULLIF(current_setting('app.user_id', true), '')::uuid,
-    NULLIF(current_setting('request.jwt.claims', true)::json->>'sub', '')::uuid
-  );
-$$ LANGUAGE sql STABLE;
-```
+> **Nota de performance:** usar `(SELECT auth.uid())` evita execução por linha.
+>
+> **See:** https://supabase.com/docs/guides/database/postgres/row-level-security
+
+Our `withUserId` and `withUserTransaction` helpers set `request.jwt.claim.sub` to make `auth.uid()` work for backend API calls.
 
 ### 9.3 Policy Pattern (Generic)
 
 ```sql
 CREATE POLICY "Users can only access own data" ON my_table
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 ```
 
 ### 9.4 Policies by Table
 
 ```sql
 CREATE POLICY "Users can only access own data" ON users
-  FOR ALL USING (id = (SELECT auth.user_id()));
+  FOR ALL USING (id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own conversations" ON conversations
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own messages" ON messages
   FOR ALL USING (
     conversation_id IN (
-      SELECT id FROM conversations WHERE user_id = (SELECT auth.user_id())
+      SELECT id FROM conversations WHERE user_id = (SELECT auth.uid())
     )
   );
 
 CREATE POLICY "Users can only access own tracking" ON tracking_entries
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own scores" ON life_balance_history
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own notes" ON notes
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own people" ON people
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own vault" ON vault_items
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own goals" ON goals
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own habits" ON habits
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own notifications" ON notifications
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own reminders" ON reminders
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own integrations" ON user_integrations
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own audit logs" ON audit_logs
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own calendar events" ON calendar_events
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own budgets" ON budgets
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own subscriptions" ON subscriptions
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own export requests" ON export_requests
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own habit freezes" ON habit_freezes
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own user_memories" ON user_memories
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own knowledge_items" ON knowledge_items
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own memory_consolidations" ON memory_consolidations
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own incomes" ON incomes
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own bills" ON bills
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own variable_expenses" ON variable_expenses
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own debts" ON debts
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own debt_payments" ON debt_payments
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own investments" ON investments
-  FOR ALL USING (user_id = (SELECT auth.user_id()));
+  FOR ALL USING (user_id = (SELECT auth.uid()));
 ```
 
 ### 9.5 Setting User Context
 
+Use the helper functions from `packages/database/src/client.ts`:
+
 ```typescript
-// In repository/service layer
-await db.execute(sql`SET LOCAL app.user_id = ${userId}`);
+import { withUserId, withUserTransaction } from '@life-assistant/database';
+
+// Single operation (no transaction)
+const notes = await withUserId(userId, async (db) => {
+  return db.select().from(schema.notes);
+});
+
+// Multiple operations in transaction
+const result = await withUserTransaction(userId, async (db) => {
+  await db.insert(schema.notes).values({ ... });
+  await db.insert(schema.knowledgeItems).values({ ... });
+  return { success: true };
+});
 ```
 
-### 9.6 Helper Function
+### 9.6 Helper Functions Implementation
+
+See `docs/specs/core/auth-security.md` §3.4-3.5 for full implementation details.
 
 ```typescript
+// packages/database/src/client.ts
+
+// For single operations (non-transactional)
 export async function withUserId<T>(
   userId: string,
-  callback: (db: Database) => Promise<T>
+  callback: (db: ReturnType<typeof drizzle<typeof schema>>) => Promise<T>
 ): Promise<T> {
-  const db = getDb();
-  await db.execute(sql`SET LOCAL app.user_id = ${userId}`);
-  return callback(db);
+  const client = await getPool().connect();
+  try {
+    // Set request.jwt.claim.sub so auth.uid() returns the user ID
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [userId]);
+    const scopedDb = drizzle(client as unknown as Pool, { schema });
+    return await callback(scopedDb);
+  } finally {
+    await client.query("SELECT set_config('request.jwt.claim.sub', '', false)");
+    client.release();
+  }
+}
+
+// For transactional operations
+export async function withUserTransaction<T>(
+  userId: string,
+  callback: (db: ReturnType<typeof drizzle<typeof schema>>) => Promise<T>
+): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    // Set request.jwt.claim.sub so auth.uid() returns the user ID
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [userId]);
+    const txDb = drizzle(client as unknown as Pool, { schema });
+    const result = await callback(txDb);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 ```
+
+**Important:** Never use `SET LOCAL` directly - it requires an active transaction. The helpers above use `set_config()` with appropriate scoping.
 
 ---
 
@@ -692,6 +747,30 @@ await db.update(notes)
   .where(eq(notes.id, noteId));
 ```
 
+### 10.3 Soft Delete Scope by Table
+
+| Tabela | Soft Delete | Motivo |
+|--------|-------------|--------|
+| users | ✅ Sim | LGPD - direito ao esquecimento |
+| conversations | ✅ Sim | Usuário pode excluir conversas |
+| notes | ✅ Sim | Lixeira com recuperação |
+| people | ✅ Sim | CRM com arquivamento |
+| goals | ✅ Sim | Histórico de metas |
+| habits | ✅ Sim | Histórico de hábitos |
+| vault_items | ✅ Sim | Segurança - auditoria |
+| reminders | ✅ Sim | Recuperação |
+| knowledge_items | ✅ Sim | Contradições resolvidas |
+| export_requests | ✅ Sim | Auditoria LGPD |
+| tracking_entries | ❌ Não | Dados históricos imutáveis |
+| messages | ❌ Não | Imutáveis por design |
+| habit_completions | ❌ Não | Histórico de streaks |
+| incomes | ❌ Não | Dados financeiros históricos |
+| bills | ❌ Não | Dados financeiros históricos |
+| variable_expenses | ❌ Não | Dados financeiros históricos |
+| debts | ❌ Não | Histórico financeiro |
+| investments | ❌ Não | Histórico financeiro |
+| audit_logs | ❌ Não | Compliance - nunca deletar |
+
 ---
 
 ## 11. Triggers
@@ -707,18 +786,33 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
--- Aplicar a todas as tabelas com updated_at
-CREATE TRIGGER update_users_updated_at
-  BEFORE UPDATE ON users
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_conversations_updated_at
-  BEFORE UPDATE ON conversations
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ... aplicar para todas as tabelas com updated_at
 ```
+
+**Tabelas com trigger `updated_at`:**
+
+| Tabela | Trigger Name |
+|--------|-------------|
+| users | set_updated_at_users |
+| conversations | set_updated_at_conversations |
+| tracking_entries | set_updated_at_tracking_entries |
+| notes | set_updated_at_notes |
+| people | set_updated_at_people |
+| vault_items | set_updated_at_vault_items |
+| goals | set_updated_at_goals |
+| habits | set_updated_at_habits |
+| reminders | set_updated_at_reminders |
+| user_integrations | set_updated_at_user_integrations |
+| calendar_events | set_updated_at_calendar_events |
+| budgets | set_updated_at_budgets |
+| subscriptions | set_updated_at_subscriptions |
+| incomes | set_updated_at_incomes |
+| bills | set_updated_at_bills |
+| variable_expenses | set_updated_at_variable_expenses |
+| debts | set_updated_at_debts |
+| investments | set_updated_at_investments |
+| export_requests | set_updated_at_export_requests |
+| user_memories | set_updated_at_user_memories |
+| knowledge_items | set_updated_at_knowledge_items |
 
 ### 11.2 Note Excerpt Trigger
 
@@ -778,6 +872,34 @@ CREATE TRIGGER habit_streak_trigger
   WHEN (NEW.completed = true)
   EXECUTE FUNCTION update_habit_streak();
 ```
+
+### 11.4 Auth Sync Trigger
+
+Sincroniza novos usuários de `auth.users` (Supabase Auth) para `public.users`:
+
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.users (id, email, name, created_at, updated_at)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+    NOW(),
+    NOW()
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+> **Nota:** Este trigger é criado diretamente no Supabase Dashboard pois requer acesso ao schema `auth`.
 
 ---
 
@@ -1086,6 +1208,7 @@ pnpm --filter database db:seed:prod
 | `tracking_entries` | Registros de métricas | ✅ |
 | `life_balance_history` | Histórico de scores | ✅ |
 | `notes` | Notas automáticas (resumos, análises) | ✅ |
+| `note_links` | Wikilinks entre notas (bidirecionais) | — |
 | `people` | Contatos (CRM) | ✅ |
 | `person_notes` | Notas vinculadas a pessoas | ✅ |
 | `person_interactions` | Interações com pessoas | ✅ |
@@ -1115,7 +1238,7 @@ pnpm --filter database db:seed:prod
 | `debt_payments` | Histórico de pagamentos de parcelas por mês | ✅ |
 | `investments` | Investimentos com metas e aportes | ✅ |
 
-**Total: 33 tabelas**
+**Total: 34 tabelas** (+ 4 planned: decisions, decision_options, decision_criteria, decision_scores)
 
 ---
 
@@ -1485,4 +1608,4 @@ export const investments = pgTable('investments', {
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

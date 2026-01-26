@@ -124,36 +124,39 @@ const { payload } = await jose.jwtVerify(token, JWKS);
 |-------|-----------|
 | `user_id` obrigatório | Toda tabela sensível tem `user_id` |
 | RLS habilitado | Postgres Row Level Security em todas as tabelas |
-| Context obrigatório | Toda query roda com `SET LOCAL app.user_id` |
+| Context obrigatório | Toda query roda com `SET LOCAL request.jwt.claim.sub` |
 | Proibido query sem escopo | Repositories exigem `userId` em todo método |
 
 ### 3.2 RLS Policy Examples
 
-#### Supabase Native (Frontend/Direct Access)
+#### auth.uid() - Supabase Built-in Function
 
-Usa `auth.uid()` para queries diretas via Supabase client:
+Supabase provides a built-in `auth.uid()` function that reads from `request.jwt.claim.sub`:
 
 ```sql
--- Habilitar RLS
-ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
-
--- Policy usando auth.uid() (Supabase nativo)
-CREATE POLICY "Users can only access own data" ON tracking_entries
-  FOR ALL USING (user_id = auth.uid());
-
--- Alternativa: auth.user_id() para compatibilidade
-CREATE POLICY "Users can only access own data" ON users
-  FOR ALL USING (id = (SELECT auth.user_id()));
+-- Built-in function, no need to create
+-- auth.uid() reads from request.jwt.claim.sub
 ```
 
-#### API Backend (Session Variable)
+Our `withUserId` and `withUserTransaction` helpers set `request.jwt.claim.sub` to make `auth.uid()` work for backend API calls.
 
-Para queries via API NestJS, usamos session variable:
+> **Nota de performance:** Use `(SELECT auth.uid())` to avoid per-row function execution.
+>
+> **See:** https://supabase.com/docs/guides/database/postgres/row-level-security
+
+#### Policy Pattern (Unified)
 
 ```sql
--- Policy usando session variable (API backend)
+-- Enable RLS
+ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
+
+-- Policy using auth.uid() (works for both frontend and backend)
 CREATE POLICY "Users can only access own data" ON tracking_entries
-  FOR ALL USING (user_id = current_setting('app.user_id')::uuid);
+  FOR ALL USING (user_id = (SELECT auth.uid()));
+
+-- For users table (id instead of user_id)
+CREATE POLICY "Users can only access own data" ON users
+  FOR ALL USING (id = (SELECT auth.uid()));
 ```
 
 ### 3.3 Repository Pattern
@@ -167,19 +170,65 @@ export interface TrackingRepositoryPort {
 }
 ```
 
-### 3.4 Database Context Helper
+### 3.4 Database Context Helper (withUserId)
+
+For single operations without explicit transaction:
 
 ```typescript
 // packages/database/src/client.ts
 export async function withUserId<T>(
   userId: string,
-  callback: (db: Database) => Promise<T>
+  callback: (db: ReturnType<typeof drizzle<typeof schema>>) => Promise<T>
 ): Promise<T> {
-  const db = getDb();
-  await db.execute(sql`SET LOCAL app.user_id = ${userId}`);
-  return callback(db);
+  const client = await getPool().connect();
+  try {
+    // Set request.jwt.claim.sub so auth.uid() returns the user ID
+    // Third param 'false' = session-scoped (persists for this connection)
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [userId]);
+    const scopedDb = drizzle(client as unknown as Pool, { schema });
+    return await callback(scopedDb);
+  } finally {
+    // Clear session setting before releasing connection back to pool
+    await client.query("SELECT set_config('request.jwt.claim.sub', '', false)");
+    client.release();
+  }
 }
 ```
+
+### 3.5 Database Context Helper (withUserTransaction)
+
+For operations requiring a transaction:
+
+```typescript
+// packages/database/src/client.ts
+export async function withUserTransaction<T>(
+  userId: string,
+  callback: (db: ReturnType<typeof drizzle<typeof schema>>) => Promise<T>
+): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    // Set request.jwt.claim.sub so auth.uid() returns the user ID
+    // Third param 'true' = local to transaction
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [userId]);
+    const txDb = drizzle(client as unknown as Pool, { schema });
+    const result = await callback(txDb);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+```
+
+**When to use each:**
+| Function | Use Case |
+|----------|----------|
+| `withUserId` | Single query or non-transactional operations |
+| `withUserTransaction` | Multiple related queries that must succeed or fail together |
 
 ---
 
@@ -501,4 +550,4 @@ export type NewExportRequest = typeof exportRequests.$inferInsert;
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

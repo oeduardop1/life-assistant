@@ -56,7 +56,7 @@ export async function closePool(): Promise<void> {
  * Execute a callback with RLS context set for a specific user
  * Uses SET LOCAL to scope the setting to the transaction
  *
- * @param userId - The user ID to set in app.user_id
+ * @param userId - The user ID to set for RLS via request.jwt.claim.sub
  * @param callback - Function to execute with the scoped database
  * @returns The result of the callback
  *
@@ -64,6 +64,8 @@ export async function closePool(): Promise<void> {
  * const notes = await withUserId(userId, async (db) => {
  *   return db.select().from(schema.notes);
  * });
+ *
+ * @see https://supabase.com/docs/guides/local-development/testing/overview
  */
 export async function withUserId<T>(
   userId: string,
@@ -71,17 +73,18 @@ export async function withUserId<T>(
 ): Promise<T> {
   const client = await getPool().connect();
   try {
-    // Set the user_id in the session context for RLS
+    // Set the user_id using Supabase's standard request.jwt.claim.sub
+    // This is read by the built-in auth.uid() function
     // Using set_config() function which supports parameterized queries
     // Third parameter 'false' makes it session-scoped (persists for this connection)
     // Note: We use 'false' here because withUserId doesn't wrap in a transaction
     // For transaction-scoped settings, use withUserTransaction instead
-    await client.query("SELECT set_config('app.user_id', $1, false)", [userId]);
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [userId]);
     const scopedDb = drizzle(client as unknown as Pool, { schema });
     return await callback(scopedDb);
   } finally {
     // Clear the session setting before releasing the connection back to the pool
-    await client.query("SELECT set_config('app.user_id', '', false)");
+    await client.query("SELECT set_config('request.jwt.claim.sub', '', false)");
     client.release();
   }
 }
@@ -117,9 +120,11 @@ export async function withTransaction<T>(
  * Execute a callback within a transaction with RLS context
  * Combines withTransaction and withUserId functionality
  *
- * @param userId - The user ID to set in app.user_id
+ * @param userId - The user ID to set for RLS via request.jwt.claim.sub
  * @param callback - Function to execute within the transaction
  * @returns The result of the callback
+ *
+ * @see https://supabase.com/docs/guides/local-development/testing/overview
  */
 export async function withUserTransaction<T>(
   userId: string,
@@ -128,9 +133,10 @@ export async function withUserTransaction<T>(
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
-    // Using set_config() function which supports parameterized queries
+    // Set the user_id using Supabase's standard request.jwt.claim.sub
+    // This is read by the built-in auth.uid() function
     // Third parameter 'true' makes it local to the transaction
-    await client.query("SELECT set_config('app.user_id', $1, true)", [userId]);
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [userId]);
     const txDb = drizzle(client as unknown as Pool, { schema });
     const result = await callback(txDb);
     await client.query('COMMIT');

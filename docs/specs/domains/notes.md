@@ -73,6 +73,39 @@ export const notes = pgTable('notes', {
 }));
 ```
 
+### 4.2 Note Links (Wikilinks)
+
+Wikilinks entre notas (bidirecionais):
+
+```typescript
+// packages/database/src/schema/notes.ts
+
+export const noteLinks = pgTable('note_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sourceNoteId: uuid('source_note_id')
+    .notNull()
+    .references(() => notes.id, { onDelete: 'cascade' }),
+  targetNoteId: uuid('target_note_id')
+    .notNull()
+    .references(() => notes.id, { onDelete: 'cascade' }),
+  linkText: varchar('link_text', { length: 255 }), // Se diferente do título
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => [
+  index('note_links_source_idx').on(table.sourceNoteId),
+  index('note_links_target_idx').on(table.targetNoteId),
+]);
+
+export type NoteLink = typeof noteLinks.$inferSelect;
+export type NewNoteLink = typeof noteLinks.$inferInsert;
+```
+
+**Uso:**
+- Links são extraídos do conteúdo Markdown (formato `[[título da nota]]`)
+- Quando uma nota é deletada, links de/para ela são removidos via cascade
+- Permite navegação bidirecional (backlinks)
+
 ---
 
 ## 5. Search (Full-Text)
@@ -159,4 +192,4 @@ Todas as queries em `notes` são protegidas por RLS:
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

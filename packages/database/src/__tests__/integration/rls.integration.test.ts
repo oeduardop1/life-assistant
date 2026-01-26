@@ -83,7 +83,7 @@ describe('RLS Policies Integration Tests', () => {
       const client = await pool.connect();
       try {
         // Set RLS context for user 1 using set_config (supports parameterized queries)
-        await client.query("SELECT set_config('app.user_id', $1, true)", [USER_1_ID]);
+        await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [USER_1_ID]);
 
         // Query notes - should only see user 1's notes
         const result = await client.query('SELECT * FROM notes WHERE user_id = $1', [USER_1_ID]);
@@ -99,7 +99,7 @@ describe('RLS Policies Integration Tests', () => {
       const client = await pool.connect();
       try {
         // Set RLS context for user 2
-        await client.query("SELECT set_config('app.user_id', $1, true)", [USER_2_ID]);
+        await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [USER_2_ID]);
 
         // Query tracking entries - should only see user 2's entries
         const result = await client.query('SELECT * FROM tracking_entries WHERE user_id = $1', [
@@ -113,17 +113,17 @@ describe('RLS Policies Integration Tests', () => {
       }
     });
 
-    it('should verify auth.user_id() returns the set user for RLS policies', async () => {
+    it('should verify auth.uid() returns the set user for RLS policies', async () => {
       // Note: set_config with is_local=true requires a transaction
       // Per node-postgres docs, we use BEGIN/COMMIT for transactions
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
         // Set RLS context for user 1 (is_local=true means it's transaction-scoped)
-        await client.query("SELECT set_config('app.user_id', $1, true)", [USER_1_ID]);
+        await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [USER_1_ID]);
 
-        // Verify auth.user_id() returns the expected value
-        const result = await client.query('SELECT auth.user_id() as user_id');
+        // Verify auth.uid() returns the expected value
+        const result = await client.query('SELECT auth.uid() as user_id');
         expect(result.rows[0].user_id).toBe(USER_1_ID);
         await client.query('COMMIT');
       } catch (e) {
@@ -139,15 +139,15 @@ describe('RLS Policies Integration Tests', () => {
       try {
         // First transaction - user 1
         await client.query('BEGIN');
-        await client.query("SELECT set_config('app.user_id', $1, true)", [USER_1_ID]);
-        let result = await client.query('SELECT auth.user_id() as user_id');
+        await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [USER_1_ID]);
+        let result = await client.query('SELECT auth.uid() as user_id');
         expect(result.rows[0].user_id).toBe(USER_1_ID);
         await client.query('COMMIT');
 
         // Second transaction - user 2
         await client.query('BEGIN');
-        await client.query("SELECT set_config('app.user_id', $1, true)", [USER_2_ID]);
-        result = await client.query('SELECT auth.user_id() as user_id');
+        await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [USER_2_ID]);
+        result = await client.query('SELECT auth.uid() as user_id');
         expect(result.rows[0].user_id).toBe(USER_2_ID);
         await client.query('COMMIT');
       } catch (e) {
@@ -160,17 +160,17 @@ describe('RLS Policies Integration Tests', () => {
   });
 
   describe('RLS without context', () => {
-    it('should return null from auth.user_id() when context is cleared', async () => {
-      // This test verifies that auth.user_id() returns NULL when
+    it('should return null from auth.uid() when context is cleared', async () => {
+      // This test verifies that auth.uid() returns NULL when
       // the context is cleared (set to empty string or NULL)
       const client = await pool.connect();
       try {
         // Clear any previous context - setting to empty string
-        // which NULLIF in auth.user_id() will convert to NULL
-        await client.query("SELECT set_config('app.user_id', '', true)");
+        // which NULLIF in auth.uid() will convert to NULL
+        await client.query("SELECT set_config('request.jwt.claim.sub', '', true)");
 
-        // Now auth.user_id() should return NULL due to NULLIF
-        const result = await client.query('SELECT auth.user_id() as user_id');
+        // Now auth.uid() should return NULL due to NULLIF
+        const result = await client.query('SELECT auth.uid() as user_id');
         expect(result.rows[0].user_id).toBeNull();
       } finally {
         client.release();
@@ -196,7 +196,7 @@ describe('RLS Policies Integration Tests', () => {
       // User 1 context - verify the context is set correctly
       const user1Context = await withUserId(USER_1_ID, async (scopedDb) => {
         const result = await scopedDb.execute(
-          sql`SELECT current_setting('app.user_id', true) as user_id`
+          sql`SELECT current_setting('request.jwt.claim.sub', true) as user_id`
         );
         return result.rows[0] as { user_id: string };
       });
@@ -204,7 +204,7 @@ describe('RLS Policies Integration Tests', () => {
       // User 2 context - verify the context switches
       const user2Context = await withUserId(USER_2_ID, async (scopedDb) => {
         const result = await scopedDb.execute(
-          sql`SELECT current_setting('app.user_id', true) as user_id`
+          sql`SELECT current_setting('request.jwt.claim.sub', true) as user_id`
         );
         return result.rows[0] as { user_id: string };
       });

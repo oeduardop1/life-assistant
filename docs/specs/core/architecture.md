@@ -587,8 +587,10 @@ Toda função/classe exportada de package DEVE ter JSDoc:
 /**
  * Execute uma callback com contexto RLS para um usuário específico.
  *
- * Define `app.user_id` no session context do PostgreSQL, garantindo que
- * políticas RLS sejam aplicadas corretamente.
+ * Define `request.jwt.claim.sub` no session context do PostgreSQL para que
+ * auth.uid() retorne o ID do usuário e políticas RLS sejam aplicadas.
+ *
+ * @see https://supabase.com/docs/guides/database/postgres/row-level-security
  */
 export async function withUserId<T>(
   userId: string,
@@ -1552,7 +1554,7 @@ NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=4096 pnpm build
 #### RLS Policy Violations
 
 **Soluções:**
-- Garantir `SET LOCAL app.user_id` nas queries
+- Usar `withUserId()` ou `withUserTransaction()` helpers (set `request.jwt.claim.sub`)
 - Conferir policies em `core/data-conventions.md`
 
 #### TypeScript Type Errors
