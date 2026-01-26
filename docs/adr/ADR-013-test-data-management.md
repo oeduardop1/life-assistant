@@ -112,7 +112,7 @@ Per [Drizzle ORM Documentation](https://orm.drizzle.team/docs/insert):
 | `packages/database/src/seed/index.ts` | Adicionar IDs fixos para tracking entries |
 | `apps/web/e2e/setup/global-teardown.ts` | Criar arquivo de teardown |
 | `apps/web/playwright.config.ts` | Adicionar `globalTeardown` |
-| `docs/specs/engineering.md` | Documentar padrões de teste |
+| `docs/specs/core/architecture.md` §10 | Documentar padrões de teste |
 
 ### Padrão de IDs Determinísticos
 

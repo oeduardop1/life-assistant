@@ -288,7 +288,146 @@ O versículo do dia considera:
 
 ---
 
-## 13. Definition of Done
+## 13. Data Model
+
+> **Status:** planejado (tabelas ainda não existem em `packages/database/src/schema/*`).
+
+### 13.1 devotionals
+
+```typescript
+export const devotionals = pgTable('devotionals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  date: date('date').notNull(),
+  passage: varchar('passage', { length: 255 }),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+### 13.2 bible_reading_plans
+
+```typescript
+export const bibleReadingPlans = pgTable('bible_reading_plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  durationDays: integer('duration_days').notNull(),
+  startedAt: date('started_at').notNull(),
+  pausedAt: date('paused_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 13.3 bible_reading_progress
+
+```typescript
+export const bibleReadingProgress = pgTable('bible_reading_progress', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  planId: uuid('plan_id').notNull().references(() => bibleReadingPlans.id),
+
+  dayNumber: integer('day_number').notNull(),
+  passage: varchar('passage', { length: 255 }),
+  readAt: date('read_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+### 13.4 saved_verses
+
+```typescript
+export const savedVerses = pgTable('saved_verses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  reference: varchar('reference', { length: 100 }).notNull(),
+  text: text('text').notNull(),
+  translation: varchar('translation', { length: 20 }),
+  context: text('context'),
+  tags: jsonb('tags').default([]),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+### 13.5 prayer_requests
+
+```typescript
+export const prayerRequests = pgTable('prayer_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  forPerson: varchar('for_person', { length: 255 }),
+  status: varchar('status', { length: 50 }).default('praying'),
+  answeredAt: date('answered_at'),
+  answerNotes: text('answer_notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 13.6 church_attendance
+
+```typescript
+export const churchAttendance = pgTable('church_attendance', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  date: date('date').notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // presencial/online
+  community: varchar('community', { length: 255 }),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+### 13.7 spiritual_groups
+
+```typescript
+export const spiritualGroups = pgTable('spiritual_groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // célula, ministério, escola bíblica
+  frequency: varchar('frequency', { length: 50 }),
+  leader: varchar('leader', { length: 255 }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 13.8 fasting_entries
+
+```typescript
+export const fastingEntries = pgTable('fasting_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  startAt: timestamp('start_at').notNull(),
+  endAt: timestamp('end_at'),
+  type: varchar('type', { length: 50 }), // parcial/completo
+  purpose: text('purpose'),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+---
+
+## 14. Definition of Done
 
 - [ ] Registro de devocional via conversa
 - [ ] Plano de leitura bíblica com progresso
@@ -303,4 +442,4 @@ O versículo do dia considera:
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

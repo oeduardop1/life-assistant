@@ -371,11 +371,17 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 | Documento | Descrição |
 |-----------|-----------|
 | [architecture.md](core/architecture.md) | Stack, padrões de código, testes, Docker |
+| [api-contract.md](core/api-contract.md) | Inventário de endpoints, auth, paginação, envelopes |
+| [errors.md](core/errors.md) | Padrão de erros e códigos HTTP |
+| [frontend-architecture.md](core/frontend-architecture.md) | Arquitetura frontend + design system |
 | [auth-security.md](core/auth-security.md) | Autenticação, RLS, LGPD, criptografia |
 | [data-conventions.md](core/data-conventions.md) | Convenções de banco, naming, migrations |
 | [ai-personality.md](core/ai-personality.md) | Persona da IA, prompts base, Tool Use (ADR-012) |
 | [user-journeys.md](core/user-journeys.md) | Jornadas de usuário detalhadas |
 | [ux-states.md](core/ux-states.md) | Empty/loading/error states, confirmações |
+| [realtime.md](core/realtime.md) | SSE/Realtime, eventos, reconexão |
+| [observability.md](core/observability.md) | Logs, tracing, runbooks, incidentes |
+| [data-import.md](core/data-import.md) | Importação CSV/JSON, validação, fluxo |
 
 ### Domains (Módulos Funcionais)
 
@@ -414,6 +420,9 @@ O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são conf
 | [stripe.md](integrations/stripe.md) | 🟡 Em dev | Pagamentos e assinaturas |
 | [gemini.md](integrations/gemini.md) | ✅ Produção | LLM provider |
 | [cloudflare-r2.md](integrations/cloudflare-r2.md) | ✅ Produção | Armazenamento de arquivos |
+| [resend.md](integrations/resend.md) | 🟡 Planejado | Email transacional |
+| [web-push.md](integrations/web-push.md) | 🟡 Planejado | Push notifications (Web) |
+| [apple-calendar.md](integrations/apple-calendar.md) | ⚪ Futuro | Apple Calendar (ICS/CalDAV) |
 
 ### Legacy (Arquivos Originais)
 
@@ -567,4 +576,4 @@ Arquivos originais mantidos para referência histórica:
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

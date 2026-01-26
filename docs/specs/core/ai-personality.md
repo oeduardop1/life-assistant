@@ -198,7 +198,6 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **record_metric**: Registrar métricas (peso, gastos, humor, etc.)
 - **search_knowledge**: Buscar fatos sobre o usuário. SEMPRE use quando perguntarem sobre o usuário ou quando precisar de contexto adicional
 - **add_knowledge**: Registrar novo fato aprendido
-- **add_knowledge**:
   - **SEMPRE inclua o campo `area`** com uma das opções: health, finance, professional, learning, spiritual, relationships
   - Opcionalmente, inclua `subArea` para maior especificidade (ex: physical, mental, leisure, budget, career, formal, etc.)
   - Exemplo: `add_knowledge({ type: "fact", content: "é solteiro", area: "relationships", subArea: "romantic", confidence: 0.95 })`
@@ -1166,7 +1165,7 @@ export const tools: ToolDefinition[] = [
       name: z.string().min(1).max(100)
         .describe('Nome da despesa'),
       category: z.enum(['alimentacao', 'transporte', 'lazer', 'saude', 'educacao', 'vestuario', 'outros'])
-        .describe('Categoria da despesa'),
+        .describe('Categoria PT do usuário (mapeada para enum do DB)'),
       budgetedAmount: z.number().positive().optional()
         .describe('Valor orçado (planejado)'),
       actualAmount: z.number().positive().optional()
@@ -1185,6 +1184,8 @@ export const tools: ToolDefinition[] = [
     //   expense: { id: string; name: string; category: string; actualAmount: number; };
     // }
   },
+
+  // Mapeamento formal PT -> EN: ver docs/specs/core/data-conventions.md (expenseCategoryPtMapping)
 
   // ========== INTERNAL TOOLS (não em allTools) ==========
   // Nota: respond_to_confirmation NÃO está em allTools.
@@ -1215,6 +1216,9 @@ export const tools: ToolDefinition[] = [
       { intent: 'correct', correctedValue: 81, correctedUnit: 'kg', confidence: 0.90, reasoning: 'Usuário corrigiu para 81kg' },
     ],
   },
+
+  // ========== PLANNED TOOLS (não implementados) ==========
+  // As tools abaixo estão documentadas para implementação futura (ADR-016)
   {
     name: 'save_decision',
     description: `Salva uma decisão importante do usuário para acompanhamento futuro.
@@ -1806,4 +1810,4 @@ interface QualityEvaluation {
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

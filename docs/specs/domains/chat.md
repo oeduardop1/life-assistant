@@ -18,10 +18,12 @@ O módulo de Chat é a interface principal de interação com a IA:
 |---------|-----------|
 | Chat natural | Conversa em linguagem natural com a IA |
 | Memória de longo prazo | IA lembra de conversas passadas (via Memory) |
-| Busca semântica | Encontra informações por significado, não só palavras |
+| Busca por tools | Busca via `search_knowledge` e filtros (sem embeddings) |
 | Contexto automático | IA traz informações relevantes sem pedir |
 | Histórico de conversas | Acesso a todas as conversas anteriores |
 | Exportação de conversas | Download em .md ou .pdf |
+
+> **ADR-012:** Sem embeddings. A busca ocorre por tools (ex: `search_knowledge`) e filtros.
 
 ---
 

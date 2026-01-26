@@ -43,13 +43,15 @@
 | [Telegram Bot](telegram.md) | ✅ Produção | Interface de chat via Telegram |
 | [WhatsApp Business](whatsapp.md) | ⚪ Futuro | Canal de chat via Cloud API |
 | [Google Calendar](google-calendar.md) | ✅ Produção | Sincronização de eventos |
-| Apple Calendar | ⚪ Futuro | Integração via CalDAV |
+| [Apple Calendar](apple-calendar.md) | ⚪ Futuro | Integração via CalDAV |
 | [Stripe](stripe.md) | 🟡 Em dev | Pagamentos e assinaturas |
 | [Supabase Auth](supabase-auth.md) | ✅ Produção | Autenticação OAuth |
 | [Gemini](gemini.md) | ✅ Produção | LLM provider principal |
 | OpenAI | ⚪ Opcional | LLM provider backup |
 | Anthropic | ⚪ Opcional | LLM provider backup |
 | [Cloudflare R2](cloudflare-r2.md) | ✅ Produção | Armazenamento de arquivos |
+| [Resend](resend.md) | 🟡 Planejado | Envio de emails transacionais |
+| [Web Push](web-push.md) | 🟡 Planejado | Push notifications (Web/PWA) |
 
 ---
 
@@ -370,4 +372,4 @@ router.get('/health/integrations', async (req, res) => {
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

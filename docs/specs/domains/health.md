@@ -334,10 +334,9 @@ Tipos relevantes para saúde:
 - `water`
 - `sleep`
 - `exercise`
-- `meal`
-- `medication`
 - `mood`
 - `energy`
+> **Nota:** medicamentos e exames são tratados nas tabelas médicas planejadas (10.3).
 
 ### 10.2 Metadata por Tipo
 
@@ -360,6 +359,81 @@ Tipos relevantes para saúde:
 
 // mood/energy
 { notes?: string }
+```
+
+### 10.3 Medical History (planned)
+
+> **Status:** planejado (tabelas ainda não existem em `packages/database/src/schema/*`).
+
+```typescript
+export const medicalConsultations = pgTable('medical_consultations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  date: date('date').notNull(),
+  doctor: varchar('doctor', { length: 255 }),
+  specialty: varchar('specialty', { length: 100 }),
+  reason: text('reason'),
+  result: text('result'),
+  nextAppointmentAt: date('next_appointment_at'),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const medicalExams = pgTable('medical_exams', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  value: varchar('value', { length: 100 }),
+  unit: varchar('unit', { length: 20 }),
+  reference: varchar('reference', { length: 100 }),
+  status: varchar('status', { length: 50 }),
+  date: date('date').notNull(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const medications = pgTable('medications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  dosage: varchar('dosage', { length: 100 }),
+  frequency: varchar('frequency', { length: 100 }),
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  reason: text('reason'),
+  status: varchar('status', { length: 50 }).default('active'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const vaccines = pgTable('vaccines', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  dose: varchar('dose', { length: 50 }),
+  date: date('date').notNull(),
+  nextDoseAt: date('next_dose_at'),
+  location: varchar('location', { length: 255 }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const therapySessions = pgTable('therapy_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  date: date('date').notNull(),
+  therapist: varchar('therapist', { length: 255 }),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
 ```
 
 ---

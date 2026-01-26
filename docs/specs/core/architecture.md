@@ -23,9 +23,15 @@
 
 - Escopo/features: `docs/specs/README.md`
 - Regras/fluxos/DoD: `docs/specs/domains/*` e `docs/specs/core/*`
+- Contrato de API: `docs/specs/core/api-contract.md`
+- Erros e códigos HTTP: `docs/specs/core/errors.md`
 - Tech/infra: `docs/specs/core/architecture.md`
+- Frontend: `docs/specs/core/frontend-architecture.md`
 - Modelo de dados: `docs/specs/core/data-conventions.md`
 - IA/Prompts: `docs/specs/core/ai-personality.md`
+- Realtime: `docs/specs/core/realtime.md`
+- Observabilidade: `docs/specs/core/observability.md`
+- Importação de dados: `docs/specs/core/data-import.md`
 - Integrações: `docs/specs/integrations/*`
 - Priorização: `docs/milestones/`
 - Pendências: `TBD_TRACKER.md`
@@ -42,7 +48,8 @@
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
 │   │  Next.js (Frontend)        │  NestJS Controllers (API)              │   │
 │   │  - Pages/Components        │  - REST Endpoints                      │   │
-│   │  - React Query             │  - WebSocket Gateways                  │   │
+│   │  - React Query             │  - SSE Streaming (Chat)                │   │
+│   │                            │  - WebSocket Gateways (planejado)      │   │
 │   │  - Hooks                   │  - Webhooks (Telegram, Stripe)         │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -99,7 +106,7 @@
 │   Next.js (App Router) + React Query                                        │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼ REST/WebSocket
+                                    ▼ REST/SSE (hoje) / WebSocket (futuro)
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         RAILWAY (Backend)                                    │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -108,7 +115,7 @@
 │   │  │ Modules   │ │ Services  │ │Controllers│ │  Guards   │            │   │
 │   │  └───────────┘ └───────────┘ └───────────┘ └───────────┘            │   │
 │   │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐            │   │
-│   │  │  BullMQ   │ │ Socket.io │ │ Tool Use  │ │ Webhooks  │            │   │
+│   │  │  BullMQ   │ │ SSE (Chat)│ │ Tool Use  │ │ Webhooks  │            │   │
 │   │  │  (Jobs)   │ │ (Realtime)│ │   (AI)    │ │(TG/Stripe)│            │   │
 │   │  └───────────┘ └───────────┘ └───────────┘ └───────────┘            │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
@@ -149,7 +156,7 @@
 | **Backend** | NestJS | Módulos, DI, escalável com time |
 | **Database** | PostgreSQL (Supabase) + Drizzle | Confiável, RLS integrado |
 | **Cache** | Redis (Upstash) | Sessions, rate limit, pub/sub, queues |
-| **Real-time** | Socket.io | Chat, notificações em tempo real |
+| **Real-time** | SSE (Chat) + Socket.io (futuro) | Streaming do chat hoje, websockets planejados |
 | **Jobs** | BullMQ | Background processing com Redis |
 | **AI** | Gemini/Claude + Tool Use | LLM abstraction com function calling (ADR-012) |
 | **Auth** | Supabase Auth | Social login, JWT, RLS integrado |
@@ -181,7 +188,8 @@
 | Drizzle ORM | Database ORM |
 | Zod | Validação |
 | BullMQ | Job queues |
-| Socket.io | WebSockets |
+| SSE (Chat) | Streaming de respostas |
+| Socket.io | WebSockets (planejado) |
 | jose | JWT validation (Supabase tokens) |
 
 ### 3.3 AI Stack
@@ -468,13 +476,16 @@ All API responses are wrapped in a standard format:
 ```typescript
 interface ApiResponse<T> {
   success: boolean;
-  data: T;
+  data?: T;
+  error?: { code: string; message: string; details?: unknown };
   meta: {
     timestamp: string;  // ISO 8601
     requestId: string;  // UUID for tracing
   };
 }
 ```
+
+> Erros seguem `docs/specs/core/errors.md`.
 
 ### 6.6 Package Patterns & Documentation
 
@@ -1138,6 +1149,8 @@ export class HealthController {
 | ADR-015 | Low-friction tracking philosophy | Accepted |
 | ADR-016 | Decision Support system | Accepted |
 | ADR-017 | Life Areas structure | Accepted |
+
+> **Nota:** Apesar do ADR-005, o real-time **atual** de chat usa SSE. Socket.io permanece planejado.
 
 ---
 
@@ -1862,4 +1875,4 @@ volumes:
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

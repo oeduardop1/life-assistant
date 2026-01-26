@@ -181,6 +181,8 @@ Agregação de eventos de todos os membros:
 - Escola dos filhos
 - Trabalho dos pais
 
+> **Nota:** Hoje não há tabela dedicada. O plano é usar `calendar_events` com metadados de participantes.
+
 ### 9.2 Conflitos
 
 Alerta quando eventos de membros se sobrepõem:
@@ -209,6 +211,8 @@ Alerta quando eventos de membros se sobrepõem:
 ---
 
 ## 11. Data Model
+
+> **Status:** planejado (tabelas ainda não existem em `packages/database/src/schema/*`).
 
 ### 11.1 family_members
 
@@ -251,6 +255,59 @@ export const familyActivities = pgTable('family_activities', {
 });
 ```
 
+### 11.3 family_tasks
+
+```typescript
+export const familyTasks = pgTable('family_tasks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  title: varchar('title', { length: 255 }).notNull(),
+  assigneeId: uuid('assignee_id'), // family_members.id
+  frequency: varchar('frequency', { length: 50 }),
+  lastDoneAt: date('last_done_at'),
+  nextDueAt: date('next_due_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 11.4 family_budgets
+
+```typescript
+export const familyBudgets = pgTable('family_budgets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  monthYear: varchar('month_year', { length: 7 }).notNull(), // YYYY-MM
+  category: varchar('category', { length: 100 }).notNull(),
+  plannedAmount: decimal('planned_amount', { precision: 12, scale: 2 }).notNull(),
+  actualAmount: decimal('actual_amount', { precision: 12, scale: 2 }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 11.5 family_goals
+
+```typescript
+export const familyGoals = pgTable('family_goals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  targetValue: decimal('target_value', { precision: 12, scale: 2 }),
+  currentValue: decimal('current_value', { precision: 12, scale: 2 }).default('0'),
+  deadline: date('deadline'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
 ---
 
 ## 12. Definition of Done
@@ -268,4 +325,4 @@ export const familyActivities = pgTable('family_activities', {
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

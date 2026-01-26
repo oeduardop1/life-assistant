@@ -294,6 +294,46 @@ export type NewPerson = typeof people.$inferInsert;
 export type PersonInteraction = typeof personInteractions.$inferSelect;
 ```
 
+### Gifts & Groups (planned)
+
+> **Status:** planejado (tabelas ainda não existem em `packages/database/src/schema/*`).
+
+```typescript
+export const gifts = pgTable('gifts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  personId: uuid('person_id').notNull().references(() => people.id),
+
+  direction: varchar('direction', { length: 10 }).notNull(), // given | received
+  description: text('description').notNull(),
+  occasion: varchar('occasion', { length: 100 }),
+  date: date('date').notNull(),
+  value: decimal('value', { precision: 12, scale: 2 }),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const personGroups = pgTable('person_groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  color: varchar('color', { length: 20 }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const personGroupMembers = pgTable('person_group_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  groupId: uuid('group_id').notNull().references(() => personGroups.id),
+  personId: uuid('person_id').notNull().references(() => people.id),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
 ---
 
 ## 6. Related Documents
@@ -319,4 +359,4 @@ export type PersonInteraction = typeof personInteractions.$inferSelect;
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

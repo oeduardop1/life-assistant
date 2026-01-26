@@ -218,6 +218,8 @@ Via conversa:
 
 ## 11. Data Model
 
+> **Status:** planejado (tabelas ainda não existem em `packages/database/src/schema/*`).
+
 ### 11.1 wellbeing_entries
 
 ```typescript
@@ -226,7 +228,7 @@ export const wellbeingEntries = pgTable('wellbeing_entries', {
   userId: uuid('user_id').notNull().references(() => users.id),
 
   type: varchar('type', { length: 50 }).notNull(),
-  // Types: stress, satisfaction, work_hours, leisure, social, gratitude
+  // Types: stress, satisfaction, work_hours, leisure, social, gratitude, achievement, work_life_balance
 
   value: integer('value'), // 1-10 para escalas
   date: date('date').notNull(),
@@ -269,6 +271,52 @@ export const vacations = pgTable('vacations', {
 
   notes: text('notes'),
   isPlanned: boolean('is_planned').default(false),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+### 11.4 gratitude_entries
+
+```typescript
+export const gratitudeEntries = pgTable('gratitude_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  date: date('date').notNull(),
+  items: jsonb('items').notNull().default([]), // string[]
+  reflection: text('reflection'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+### 11.5 social_activities
+
+```typescript
+export const socialActivities = pgTable('social_activities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  date: date('date').notNull(),
+  activity: varchar('activity', { length: 255 }).notNull(),
+  people: jsonb('people').default([]), // string[] ou ids
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+### 11.6 achievements
+
+```typescript
+export const achievements = pgTable('achievements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  date: date('date').notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

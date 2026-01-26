@@ -325,6 +325,8 @@ Relatórios são salvos como notas automáticas:
 
 ## 12. Data Model
 
+> **Status:** planejado (tabela ainda não existe em `packages/database/src/schema/*`).
+
 ### 12.1 reports
 
 ```typescript
@@ -368,4 +370,4 @@ export const reports = pgTable('reports', {
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

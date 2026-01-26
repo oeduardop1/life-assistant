@@ -252,6 +252,8 @@ Baseado em spaced repetition (SM-2):
 
 ## 11. Data Model
 
+> **Status:** planejado (tabelas ainda não existem em `packages/database/src/schema/*`).
+
 ### 11.1 books
 
 ```typescript
@@ -301,6 +303,109 @@ export const courses = pgTable('courses', {
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 11.3 book_goals
+
+```typescript
+export const bookGoals = pgTable('book_goals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  year: integer('year').notNull(),
+  targetBooks: integer('target_books').notNull(),
+  completedBooks: integer('completed_books').default(0),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 11.4 learning_certifications
+
+```typescript
+export const learningCertifications = pgTable('learning_certifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  institution: varchar('institution', { length: 255 }).notNull(),
+  obtainedAt: date('obtained_at').notNull(),
+  expiresAt: date('expires_at'),
+  credentialId: varchar('credential_id', { length: 255 }),
+  verificationUrl: text('verification_url'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 11.5 study_sessions
+
+```typescript
+export const studySessions = pgTable('study_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  date: date('date').notNull(),
+  durationMinutes: integer('duration_minutes').notNull(),
+  area: studyAreaEnum('area').notNull(),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+### 11.6 study_goals
+
+```typescript
+export const studyGoals = pgTable('study_goals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  period: varchar('period', { length: 20 }).notNull(), // weekly, monthly, yearly
+  targetHours: integer('target_hours').notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 11.7 flashcards
+
+```typescript
+export const flashcards = pgTable('flashcards', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  deck: varchar('deck', { length: 255 }).notNull(),
+  front: text('front').notNull(),
+  back: text('back').notNull(),
+  area: studyAreaEnum('area'),
+
+  ease: integer('ease').default(3), // 1-5
+  nextReviewAt: date('next_review_at'),
+  lastReviewedAt: date('last_reviewed_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 11.8 flashcard_reviews
+
+```typescript
+export const flashcardReviews = pgTable('flashcard_reviews', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  flashcardId: uuid('flashcard_id').notNull().references(() => flashcards.id),
+
+  reviewedAt: timestamp('reviewed_at').defaultNow().notNull(),
+  score: integer('score').notNull(), // 0-5
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 ```
 

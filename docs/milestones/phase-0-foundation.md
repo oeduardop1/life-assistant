@@ -87,9 +87,9 @@
 - [x] Configurar Vitest com coverage 100%
 - [x] Testes de enums (`enums.test.ts`):
   - [x] Verificar valores de UserStatus (5)
-  - [x] Verificar valores de LifeArea (8)
-  - [x] Verificar valores de TrackingType (13)
-  - [x] Verificar valores de ConversationType (5)
+  - [x] Verificar valores de LifeArea (6)
+  - [x] Verificar valores de TrackingType (11)
+  - [x] Verificar valores de ConversationType (4)
   - [x] Verificar valores de DecisionStatus (7)
   - [x] Verificar valores de VaultItemType (5)
   - [x] Verificar valores de VaultCategory (6)
@@ -275,8 +275,9 @@
 **Notas:**
 - **07 Jan 2026:** Milestone concluído com sucesso
 - Dependências: drizzle-orm@0.38.4, drizzle-kit@0.30.4, pg@8.16.1, dotenv@17.2.3
-- 28 tabelas implementadas conforme docs/specs/data-model.md
-- 21 enums PostgreSQL definidos
+- 33 tabelas implementadas (24 do spec original + 9 adicionais de Finance M2.2 e Memory ADR-012)
+- 30 enums PostgreSQL definidos (21 originais + 9 de Finance/Memory)
+- Tabelas extras: incomes, bills, variable_expenses, debts, debt_payments, investments, user_memories, knowledge_items, memory_consolidations
 - RLS policies com otimização de performance: `(SELECT auth.user_id())` em vez de `auth.user_id()` - evita execução por-linha (conforme Supabase docs)
 - Pool error handler adicionado conforme node-postgres best practices
 - dotenv import adicionado ao drizzle.config.ts para CLI commands
@@ -729,7 +730,7 @@
 
 **Objetivo:** Implementar infraestrutura robusta de testes para desenvolvimento sustentável.
 
-**Referências:** `docs/specs/engineering.md` §11.5, `ADR-011`, `ADR-013`
+**Referências:** `docs/specs/core/architecture.md` §10, `ADR-011`, `ADR-013`
 
 **Completed:** 13 Jan 2026
 

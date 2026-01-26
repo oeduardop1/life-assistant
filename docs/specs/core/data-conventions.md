@@ -60,11 +60,20 @@
 - **UUIDs** gerados com `gen_random_uuid()`
 - **Timestamps** sempre em UTC
 
+### 3.1 RLS & Retention (Planned Tables)
+
+- **RLS obrigatório:** toda tabela sensível deve ter `user_id` e policy `auth.uid()` (ver `docs/specs/core/auth-security.md`).
+- **Exceções conhecidas:** `audit_logs` mantém `user_id` sem FK (LGPD), podendo ficar nulo após exclusão.
+- **Retenção (padrão):** indefinida até o usuário solicitar exclusão (LGPD).
+- **Casos especiais já definidos:**
+  - **Onboarding incompleto:** dados parciais expiram após 30 dias (ver `auth-security.md`).
+  - **Export requests:** mantidos para auditoria LGPD (sem TTL definido).
+
 ---
 
 ## 4. ER Diagram
 
-> **Nota:** Tabelas marcadas com `(planned)` estão documentadas mas ainda não implementadas.
+> **Nota:** O diagrama lista apenas tabelas implementadas. As tabelas planejadas estão listadas abaixo.
 
 ```mermaid
 erDiagram
@@ -117,6 +126,14 @@ erDiagram
 
 **Planned Tables (not yet implemented):**
 - `decisions`, `decision_options`, `decision_criteria`, `decision_scores` — ADR-016 Decision Support (Phase 3)
+- `reports` — Relatórios periódicos
+- **Learning:** `books`, `courses`, `book_goals`, `learning_certifications`, `study_sessions`, `study_goals`, `flashcards`, `flashcard_reviews`
+- **Professional:** `career_history`, `projects`, `project_tasks`, `professional_skills`, `professional_certifications`, `okr_objectives`, `okr_key_results`
+- **Family:** `family_members`, `family_activities`, `family_tasks`, `family_budgets`, `family_goals`
+- **Wellbeing:** `wellbeing_entries`, `hobbies`, `vacations`, `gratitude_entries`, `social_activities`, `achievements`
+- **Health (medical):** `medical_consultations`, `medical_exams`, `medications`, `vaccines`, `therapy_sessions`
+- **Spiritual:** `devotionals`, `bible_reading_plans`, `bible_reading_progress`, `saved_verses`, `prayer_requests`, `church_attendance`, `spiritual_groups`, `fasting_entries`
+- **People:** `gifts`, `person_groups`, `person_group_members`
 
 ---
 
@@ -236,6 +253,18 @@ export const expenseCategoryEnum = pgEnum('expense_category', [
   'entertainment', 'shopping', 'bills', 'subscriptions',
   'travel', 'gifts', 'investments', 'other'
 ]);
+
+// Mapeamento formal PT -> Enum (AI tools → DB)
+// Fonte: docs/specs/core/ai-personality.md (create_expense)
+export const expenseCategoryPtMapping = {
+  alimentacao: 'food',
+  transporte: 'transport',
+  lazer: 'entertainment',
+  saude: 'health',
+  educacao: 'education',
+  vestuario: 'shopping',
+  outros: 'other',
+} as const;
 
 export const exerciseIntensityEnum = pgEnum('exercise_intensity', [
   'low', 'medium', 'high'
@@ -1238,7 +1267,18 @@ pnpm --filter database db:seed:prod
 | `debt_payments` | Histórico de pagamentos de parcelas por mês | ✅ |
 | `investments` | Investimentos com metas e aportes | ✅ |
 
-**Total: 34 tabelas** (+ 4 planned: decisions, decision_options, decision_criteria, decision_scores)
+**Total: 33 tabelas implementadas** (ver `packages/database/src/schema/*.ts`)
+
+**Planned (não implementadas):**
+- Decision Support: `decisions`, `decision_options`, `decision_criteria`, `decision_scores`
+- Relatórios: `reports`
+- Learning: `books`, `courses`, `book_goals`, `learning_certifications`, `study_sessions`, `study_goals`, `flashcards`, `flashcard_reviews`
+- Professional: `career_history`, `projects`, `project_tasks`, `professional_skills`, `professional_certifications`, `okr_objectives`, `okr_key_results`
+- Family: `family_members`, `family_activities`, `family_tasks`, `family_budgets`, `family_goals`
+- Wellbeing: `wellbeing_entries`, `hobbies`, `vacations`, `gratitude_entries`, `social_activities`, `achievements`
+- Health (medical): `medical_consultations`, `medical_exams`, `medications`, `vaccines`, `therapy_sessions`
+- Spiritual: `devotionals`, `bible_reading_plans`, `bible_reading_progress`, `saved_verses`, `prayer_requests`, `church_attendance`, `spiritual_groups`, `fasting_entries`
+- People: `gifts`, `person_groups`, `person_group_members`
 
 ---
 

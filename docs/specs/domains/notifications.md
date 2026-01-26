@@ -269,6 +269,8 @@ export type NewReminder = typeof reminders.$inferInsert;
 ## 12. Related Documents
 
 - [telegram.md](../integrations/telegram.md) — Detalhes do bot e notificações
+- [resend.md](../integrations/resend.md) — Email transacional (planejado)
+- [web-push.md](../integrations/web-push.md) — Push web (planejado)
 - [reports.md](reports.md) — Detalhes de relatórios periódicos
 - [goals-habits.md](goals-habits.md) — Lembretes de hábitos
 - [people.md](people.md) — Lembretes de contato e aniversários
@@ -301,4 +303,4 @@ export type NewReminder = typeof reminders.$inferInsert;
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

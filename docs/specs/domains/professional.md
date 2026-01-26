@@ -176,6 +176,8 @@ Key Results:
 
 ## 7. Data Model
 
+> **Status:** planejado (tabelas ainda não existem em `packages/database/src/schema/*`).
+
 ### 7.1 career_history
 
 ```typescript
@@ -220,6 +222,92 @@ export const projects = pgTable('projects', {
   deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 7.3 project_tasks
+
+```typescript
+export const projectTasks = pgTable('project_tasks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  projectId: uuid('project_id').notNull().references(() => projects.id),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  priority: varchar('priority', { length: 20 }).default('medium'),
+  status: varchar('status', { length: 20 }).default('pending'),
+  deadline: date('deadline'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 7.4 professional_skills
+
+```typescript
+export const professionalSkills = pgTable('professional_skills', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  level: varchar('level', { length: 50 }).notNull(), // beginner/intermediate/advanced/expert
+  yearsExperience: integer('years_experience'),
+  lastUsedAt: date('last_used_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 7.5 professional_certifications
+
+```typescript
+export const professionalCertifications = pgTable('professional_certifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  institution: varchar('institution', { length: 255 }).notNull(),
+  obtainedAt: date('obtained_at').notNull(),
+  expiresAt: date('expires_at'),
+  credentialId: varchar('credential_id', { length: 255 }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 7.6 okr_objectives
+
+```typescript
+export const okrObjectives = pgTable('okr_objectives', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+
+  title: varchar('title', { length: 255 }).notNull(),
+  period: varchar('period', { length: 50 }).notNull(), // Q1, 2026, etc.
+  status: varchar('status', { length: 50 }).default('in_progress'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+### 7.7 okr_key_results
+
+```typescript
+export const okrKeyResults = pgTable('okr_key_results', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  objectiveId: uuid('objective_id').notNull().references(() => okrObjectives.id),
+
+  description: text('description').notNull(),
+  currentValue: decimal('current_value', { precision: 12, scale: 2 }).default('0'),
+  targetValue: decimal('target_value', { precision: 12, scale: 2 }).notNull(),
+  unit: varchar('unit', { length: 20 }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 ```
 

@@ -372,6 +372,8 @@ interface SupportTicket {
 6. Notificação de conclusão
 ```
 
+> Detalhes técnicos: `docs/specs/core/data-import.md`.
+
 ---
 
 ## 13. Public API (Future)
@@ -467,4 +469,4 @@ export const subscriptions = pgTable('subscriptions', {
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 26 Janeiro 2026*

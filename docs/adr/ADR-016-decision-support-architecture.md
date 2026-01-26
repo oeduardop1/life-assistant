@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted (Planejado - tabelas e tools ainda não implementados)
 
 ## Date
 
@@ -31,9 +31,9 @@ O Life Assistant possui dois modos de conversa: **Chat** (conversação geral) e
 | ❌ Modelagem de cenários | Não calcula impacto numérico de opções |
 | ❌ Detecção proativa | Usuário precisa pedir ajuda explicitamente |
 
-### Descoberta: Tabelas Existentes
+### Tabelas Planejadas (Não Implementadas)
 
-Durante análise, descobriu-se que **tabelas de decisões já existem no banco** (migration snapshot M0.4):
+As tabelas de decisões foram **planejadas** mas **nunca criadas**:
 
 ```sql
 -- Tabelas criadas mas nunca implementadas
