@@ -209,4 +209,4 @@ export enum SubArea {
 - ADR-015: Tracking de Baixo Atrito (filosofia de dados ausentes)
 - ADR-012: Tool Use + Memory Consolidation (arquitetura de memória)
 - M2.5: Life Balance Score implementation
-- docs/specs/system.md §3.4: Cálculo do Life Balance Score
+- docs/specs/domains/tracking.md: Cálculo do Life Balance Score

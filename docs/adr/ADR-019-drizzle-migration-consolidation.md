@@ -85,7 +85,7 @@ Usar **Drizzle ORM como única fonte de verdade** para migrations, eliminando Su
 | `scripts/dev-start.sh` | Removida lógica de bootstrap |
 | `.github/workflows/ci.yml` | Adicionado step `db:migrate` |
 | `CLAUDE.md`, `README.md`, `DEPLOYMENT.md` | Documentação atualizada |
-| `docs/specs/engineering.md`, `docs/specs/data-model.md` | Workflow atualizado |
+| `docs/specs/core/architecture.md`, `docs/specs/core/data-conventions.md` | Workflow atualizado |
 
 ## Workflow Atual
 
