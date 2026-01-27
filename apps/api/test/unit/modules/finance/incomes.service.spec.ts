@@ -417,15 +417,15 @@ describe('IncomesService', () => {
       expect(mockRepository.delete).not.toHaveBeenCalled();
     });
 
-    it('should_stop_recurrence_and_delete_future_when_scope_is_future', async () => {
+    it('should_exclude_current_and_delete_future_when_scope_is_future', async () => {
       const income = createMockIncome({ recurringGroupId: 'group-1', monthYear: '2024-03' });
       mockRepository.findById.mockResolvedValue(income);
-      mockRepository.update.mockResolvedValue(createMockIncome({ isRecurring: false }));
+      mockRepository.update.mockResolvedValue(createMockIncome({ status: 'excluded', isRecurring: false }));
       mockRepository.deleteByRecurringGroupIdAfterMonth.mockResolvedValue(2);
 
       await service.deleteWithScope('user-123', 'income-123', 'future');
 
-      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'income-123', { isRecurring: false });
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'income-123', { status: 'excluded', isRecurring: false });
       expect(mockRepository.deleteByRecurringGroupIdAfterMonth).toHaveBeenCalledWith(
         'user-123', 'group-1', '2024-03'
       );

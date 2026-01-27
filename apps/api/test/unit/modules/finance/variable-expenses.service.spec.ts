@@ -390,15 +390,15 @@ describe('VariableExpensesService', () => {
       expect(mockRepository.delete).not.toHaveBeenCalled();
     });
 
-    it('should_stop_recurrence_and_delete_future_when_scope_is_future', async () => {
+    it('should_exclude_current_and_delete_future_when_scope_is_future', async () => {
       const expense = createMockExpense({ recurringGroupId: 'group-1', monthYear: '2024-03' });
       mockRepository.findById.mockResolvedValue(expense);
-      mockRepository.update.mockResolvedValue(createMockExpense({ isRecurring: false }));
+      mockRepository.update.mockResolvedValue(createMockExpense({ status: 'excluded', isRecurring: false }));
       mockRepository.deleteByRecurringGroupIdAfterMonth.mockResolvedValue(2);
 
       await service.deleteWithScope('user-123', 'expense-123', 'future');
 
-      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'expense-123', { isRecurring: false });
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'expense-123', { status: 'excluded', isRecurring: false });
       expect(mockRepository.deleteByRecurringGroupIdAfterMonth).toHaveBeenCalledWith(
         'user-123', 'group-1', '2024-03'
       );

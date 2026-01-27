@@ -201,13 +201,14 @@ export class VariableExpensesService {
     }
 
     if (scope === 'future') {
-      await this.repository.update(userId, id, { isRecurring: false });
+      // Exclude current month AND stop recurrence
+      await this.repository.update(userId, id, { status: 'excluded', isRecurring: false });
       await this.repository.deleteByRecurringGroupIdAfterMonth(
         userId,
         expense.recurringGroupId,
         expense.monthYear
       );
-      this.logger.log(`Variable expense ${id} recurrence stopped (scope: future)`);
+      this.logger.log(`Variable expense ${id} and future months excluded/deleted (scope: future)`);
       return;
     }
 

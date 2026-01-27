@@ -202,13 +202,14 @@ export class IncomesService {
     }
 
     if (scope === 'future') {
-      await this.repository.update(userId, id, { isRecurring: false });
+      // Exclude current month AND stop recurrence
+      await this.repository.update(userId, id, { status: 'excluded', isRecurring: false });
       await this.repository.deleteByRecurringGroupIdAfterMonth(
         userId,
         income.recurringGroupId,
         income.monthYear
       );
-      this.logger.log(`Income ${id} recurrence stopped (scope: future)`);
+      this.logger.log(`Income ${id} and future months excluded/deleted (scope: future)`);
       return;
     }
 
