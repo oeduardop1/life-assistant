@@ -231,14 +231,14 @@ export class BillsService {
     }
 
     if (scope === 'future') {
-      // Stop recurrence from this month forward
-      await this.repository.update(userId, id, { isRecurring: false });
+      // Cancel current month AND stop recurrence
+      await this.repository.update(userId, id, { status: 'canceled', isRecurring: false });
       await this.repository.deleteByRecurringGroupIdAfterMonth(
         userId,
         bill.recurringGroupId,
         bill.monthYear
       );
-      this.logger.log(`Bill ${id} recurrence stopped (scope: future)`);
+      this.logger.log(`Bill ${id} and future months canceled/deleted (scope: future)`);
       return;
     }
 
