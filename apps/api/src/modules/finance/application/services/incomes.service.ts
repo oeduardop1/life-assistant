@@ -195,8 +195,9 @@ export class IncomesService {
     const income = await this.findById(userId, id);
 
     if (scope === 'this' || !income.recurringGroupId) {
-      await this.repository.delete(userId, id);
-      this.logger.log(`Income ${id} deleted (scope: this)`);
+      // Mark as excluded (don't delete — lazy gen would recreate)
+      await this.repository.update(userId, id, { status: 'excluded' });
+      this.logger.log(`Income ${id} excluded (scope: this)`);
       return;
     }
 

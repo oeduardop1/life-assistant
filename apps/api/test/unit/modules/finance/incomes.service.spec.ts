@@ -16,6 +16,8 @@ function createMockIncome(overrides: Partial<Income> = {}): Income {
     isRecurring: true,
     recurringGroupId: null,
     monthYear: '2024-01',
+    currency: 'BRL',
+    status: 'active',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     ...overrides,
@@ -404,14 +406,15 @@ describe('IncomesService', () => {
   });
 
   describe('deleteWithScope', () => {
-    it('should_delete_income_when_scope_is_this', async () => {
+    it('should_mark_as_excluded_when_scope_is_this', async () => {
       const income = createMockIncome({ recurringGroupId: 'group-1' });
       mockRepository.findById.mockResolvedValue(income);
-      mockRepository.delete.mockResolvedValue(true);
+      mockRepository.update.mockResolvedValue({ ...income, status: 'excluded' });
 
       await service.deleteWithScope('user-123', 'income-123', 'this');
 
-      expect(mockRepository.delete).toHaveBeenCalledWith('user-123', 'income-123');
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'income-123', { status: 'excluded' });
+      expect(mockRepository.delete).not.toHaveBeenCalled();
     });
 
     it('should_stop_recurrence_and_delete_future_when_scope_is_future', async () => {
@@ -438,14 +441,14 @@ describe('IncomesService', () => {
       expect(mockRepository.deleteByRecurringGroupId).toHaveBeenCalledWith('user-123', 'group-1');
     });
 
-    it('should_delete_directly_when_no_recurringGroupId', async () => {
+    it('should_mark_as_excluded_when_no_recurringGroupId', async () => {
       const income = createMockIncome({ recurringGroupId: null });
       mockRepository.findById.mockResolvedValue(income);
-      mockRepository.delete.mockResolvedValue(true);
+      mockRepository.update.mockResolvedValue({ ...income, status: 'excluded' });
 
       await service.deleteWithScope('user-123', 'income-123', 'all');
 
-      expect(mockRepository.delete).toHaveBeenCalledWith('user-123', 'income-123');
+      expect(mockRepository.update).toHaveBeenCalledWith('user-123', 'income-123', { status: 'excluded' });
       expect(mockRepository.deleteByRecurringGroupId).not.toHaveBeenCalled();
     });
   });

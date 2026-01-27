@@ -11,7 +11,7 @@ import {
   index,
   unique,
 } from 'drizzle-orm/pg-core';
-import { incomeTypeEnum, incomeFrequencyEnum } from './enums';
+import { incomeTypeEnum, incomeFrequencyEnum, incomeStatusEnum } from './enums';
 import { users } from './users';
 
 export const incomes = pgTable(
@@ -41,6 +41,9 @@ export const incomes = pgTable(
     // Currency (ISO 4217)
     currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
 
+    // Status (for soft-delete with scope='this')
+    status: incomeStatusEnum('status').notNull().default('active'),
+
     // Timestamps
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -55,6 +58,7 @@ export const incomes = pgTable(
     index('incomes_user_id_month_year_idx').on(table.userId, table.monthYear),
     index('incomes_type_idx').on(table.type),
     index('incomes_user_recurring_group_idx').on(table.userId, table.recurringGroupId),
+    index('incomes_status_idx').on(table.status),
     unique('incomes_user_recurring_group_month_year_unique').on(
       table.userId,
       table.recurringGroupId,

@@ -11,7 +11,7 @@ import {
   index,
   unique,
 } from 'drizzle-orm/pg-core';
-import { expenseCategoryEnum } from './enums';
+import { expenseCategoryEnum, expenseStatusEnum } from './enums';
 import { users } from './users';
 
 export const variableExpenses = pgTable(
@@ -42,6 +42,9 @@ export const variableExpenses = pgTable(
     // Currency (ISO 4217)
     currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
 
+    // Status (for soft-delete with scope='this')
+    status: expenseStatusEnum('status').notNull().default('active'),
+
     // Timestamps
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -56,6 +59,7 @@ export const variableExpenses = pgTable(
     index('variable_expenses_user_id_month_year_idx').on(table.userId, table.monthYear),
     index('variable_expenses_category_idx').on(table.category),
     index('variable_expenses_user_recurring_group_idx').on(table.userId, table.recurringGroupId),
+    index('variable_expenses_status_idx').on(table.status),
     unique('variable_expenses_user_recurring_group_month_year_unique').on(
       table.userId,
       table.recurringGroupId,

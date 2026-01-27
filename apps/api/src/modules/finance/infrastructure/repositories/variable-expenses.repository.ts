@@ -1,7 +1,7 @@
 // apps/api/src/modules/finance/infrastructure/repositories/variable-expenses.repository.ts
 
 import { Injectable } from '@nestjs/common';
-import { eq, and, sql, count, gt, isNotNull } from '@life-assistant/database';
+import { eq, and, sql, count, gt, isNotNull, ne } from '@life-assistant/database';
 import { DatabaseService } from '../../../../database/database.service';
 import type { VariableExpense, NewVariableExpense } from '@life-assistant/database';
 import type {
@@ -37,7 +37,10 @@ export class VariableExpensesRepository
     params: VariableExpenseSearchParams
   ): Promise<VariableExpense[]> {
     return this.db.withUserId(userId, async (db) => {
-      const conditions = [eq(this.db.schema.variableExpenses.userId, userId)];
+      const conditions = [
+        eq(this.db.schema.variableExpenses.userId, userId),
+        ne(this.db.schema.variableExpenses.status, 'excluded'),
+      ];
 
       if (params.monthYear) {
         conditions.push(
@@ -129,7 +132,10 @@ export class VariableExpensesRepository
     params: VariableExpenseSearchParams
   ): Promise<number> {
     return this.db.withUserId(userId, async (db) => {
-      const conditions = [eq(this.db.schema.variableExpenses.userId, userId)];
+      const conditions = [
+        eq(this.db.schema.variableExpenses.userId, userId),
+        ne(this.db.schema.variableExpenses.status, 'excluded'),
+      ];
 
       if (params.monthYear) {
         conditions.push(
@@ -173,7 +179,8 @@ export class VariableExpensesRepository
         .where(
           and(
             eq(this.db.schema.variableExpenses.userId, userId),
-            eq(this.db.schema.variableExpenses.monthYear, monthYear)
+            eq(this.db.schema.variableExpenses.monthYear, monthYear),
+            ne(this.db.schema.variableExpenses.status, 'excluded')
           )
         );
 
@@ -189,6 +196,9 @@ export class VariableExpensesRepository
     userId: string,
     monthYear: string
   ): Promise<VariableExpense[]> {
+    // NOTE: Do NOT filter by status here!
+    // Excluded items must still propagate to create future months.
+    // The 'excluded' status only hides the item from display, not from recurrence chain.
     return this.db.withUserId(userId, async (db) => {
       return db
         .select()

@@ -15,6 +15,13 @@
       "when": 1769221933769,
       "tag": "0001_square_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769480393143,
+      "tag": "0002_gray_hiroim",
+      "breakpoints": true
     }
   ]
 }

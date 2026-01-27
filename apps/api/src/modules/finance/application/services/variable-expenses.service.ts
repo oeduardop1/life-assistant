@@ -194,8 +194,9 @@ export class VariableExpensesService {
     const expense = await this.findById(userId, id);
 
     if (scope === 'this' || !expense.recurringGroupId) {
-      await this.repository.delete(userId, id);
-      this.logger.log(`Variable expense ${id} deleted (scope: this)`);
+      // Mark as excluded (don't delete — lazy gen would recreate)
+      await this.repository.update(userId, id, { status: 'excluded' });
+      this.logger.log(`Variable expense ${id} excluded (scope: this)`);
       return;
     }
 

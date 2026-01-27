@@ -6,7 +6,7 @@ Accepted
 
 ## Date
 
-2026-01-23
+2026-01-23 (Atualizado: 2026-01-26)
 
 ## Context
 
@@ -49,13 +49,15 @@ Quando `findAll(userId, { monthYear })` ou `getSummary(userId, monthYear)` é ch
 
 Para edição/exclusão de itens recorrentes, adicionado parâmetro `scope`:
 
-| Scope | Update | Delete (Bills) | Delete (Expenses/Incomes) |
-|-------|--------|-----------------|--------------------------|
-| `this` | Altera apenas este mês | Marca como `canceled` (não deleta) | Deleta o registro |
-| `future` | Altera este + todos os meses futuros | Para recorrência + deleta futuros | Para recorrência + deleta futuros |
-| `all` | Altera todos do grupo | Deleta todos do grupo | Deleta todos do grupo |
+| Scope | Update | Delete |
+|-------|--------|--------|
+| `this` | Altera apenas este mês | Marca como `excluded`/`canceled` (soft delete) |
+| `future` | Altera este + todos os meses futuros | Para recorrência + deleta futuros |
+| `all` | Altera todos do grupo | Deleta todos do grupo |
 
-Bills usam `status='canceled'` em vez de DELETE para `scope='this'` porque, se deletadas, o lazy generation recriaria o registro no próximo acesso (pois o mês anterior ainda tem `isRecurring=true`).
+**Soft delete para `scope='this'`:** Todas as entidades (Bills, Incomes, Variable Expenses) usam soft delete via campo `status` (`'canceled'` para Bills, `'excluded'` para Incomes/Expenses) em vez de DELETE físico. Isso é necessário porque, se o registro fosse deletado, o lazy generation recriaria o registro no próximo acesso (o mês anterior ainda tem `isRecurring=true`).
+
+**Importante:** O filtro `status != 'excluded'` é aplicado apenas nas queries de **exibição** (`findByUserId`, `countByUserId`, `sumByMonthYear`), **nunca** em `findRecurringByMonth`. Itens excluídos devem continuar propagando para criar meses futuros — a exclusão afeta apenas a visibilidade, não a cadeia de recorrência.
 
 ## Consequences
 
@@ -88,3 +90,71 @@ A decisão de gerar apenas a partir do mês imediatamente anterior (e não de fo
 2. **Geração recursiva (todos os meses intermediários):** Descartado por complexidade e potencial de loops longos.
 3. **Trigger PostgreSQL (AFTER INSERT on month access):** Rejeitado por acoplar lógica de negócio ao banco.
 4. **Geração no login:** Rejeitado por não cobrir navegação entre meses e por gerar para módulos que o usuário pode não acessar.
+
+## Industry Research: Comparação com Google Calendar
+
+### Como o Google Calendar gerencia recorrências
+
+Segundo a [documentação oficial](https://developers.google.com/workspace/calendar/api/guides/recurringevents), o Google Calendar:
+
+1. **Armazena um único registro "pai"** com campo `recurrence` contendo regra RRULE (RFC 5545)
+2. **Gera instâncias dinamicamente** quando o usuário consulta o calendário
+3. **Exclusões usam soft delete:** Instâncias excluídas recebem `status: "cancelled"`, não são deletadas fisicamente
+4. **Exceções são registros separados:** Modificações em uma única instância criam registro filho com `recurringEventId` apontando para o pai
+
+### Três abordagens da indústria
+
+| Abordagem | Descrição | Usado por | Trade-offs |
+|-----------|-----------|-----------|------------|
+| **Instâncias Materializadas** | Criar todos os registros futuros antecipadamente | Sistemas legados | Infla banco; problema com "sem data final" |
+| **Lazy Generation Pura** | Só armazenar regra, calcular em runtime | Calendários simples | Performance em consultas complexas |
+| **Híbrida** | Regra + pré-computar próximos N meses | Google Calendar (~1 ano), Asana (~30 dias) | Complexidade de implementação |
+
+### Por que nossa abordagem é adequada
+
+Para o domínio de **finanças pessoais**, a lazy generation simplificada é preferível ao modelo RRULE completo:
+
+| Aspecto | Google Calendar (RRULE) | Life Assistant (Lazy) |
+|---------|-------------------------|----------------------|
+| **Valores por instância** | Todos iguais | Cada mês tem `actualAmount` diferente ✅ |
+| **Histórico** | Derivado da regra | Preservado exatamente ✅ |
+| **Edição individual** | Cria exceção complexa | Edita registro diretamente ✅ |
+| **Complexidade** | Parser RRULE necessário | Lógica simples de cópia ✅ |
+| **Visibilidade futura** | Infinita via RRULE | Limitada a navegação |
+
+**Justificativa técnica:**
+
+1. **Valores mudam:** Diferente de eventos de calendário, rendas/despesas têm `actualAmount` que varia mensalmente — cada mês precisa de seu próprio registro.
+2. **Histórico importa:** Queremos saber exatamente quanto foi gasto em Jan/2025, não recalcular a partir de uma regra.
+3. **Escopo limitado:** Usuários de finanças pessoais raramente navegam além de 12 meses.
+4. **Simplicidade:** Não requer biblioteca `rrule.js` nem parser de RFC 5545.
+
+### Melhoria futura opcional
+
+Se necessário, podemos evoluir para abordagem **híbrida** sem breaking changes:
+
+```typescript
+// Ao criar item recorrente, pré-computar próximos 6 meses
+async create(userId: string, data: CreateIncomeDto): Promise<Income> {
+  const income = await this.repository.create(userId, data);
+
+  if (data.isRecurring) {
+    const futureMonths = getNextMonths(data.monthYear, 6);
+    await this.repository.createMany(userId,
+      futureMonths.map(month => ({ ...data, monthYear: month, actualAmount: '0' }))
+    );
+  }
+
+  return income;
+}
+```
+
+Isso eliminaria a necessidade de navegação para ver meses futuros, mantendo a simplicidade do modelo atual.
+
+## References
+
+- [Google Calendar API - Recurring Events](https://developers.google.com/workspace/calendar/api/guides/recurringevents)
+- [Apriorit - Implementing Recurring Events in Calendar Apps](https://www.apriorit.com/dev-blog/web-recurring-events-feature-calendar-app-development)
+- [Codegenes - Calendar Recurring Events Storage Methods](https://www.codegenes.net/blog/calendar-recurring-repeating-events-best-storage-method/)
+- [RFC 5545 - iCalendar Specification](https://datatracker.ietf.org/doc/html/rfc5545)
+- [rrule.js - JavaScript RRULE Library](https://github.com/jkbrzt/rrule)

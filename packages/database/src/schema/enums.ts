@@ -259,6 +259,16 @@ export const investmentTypeEnum = pgEnum('investment_type', [
   'custom',
 ]);
 
+export const incomeStatusEnum = pgEnum('income_status', [
+  'active',
+  'excluded',
+]);
+
+export const expenseStatusEnum = pgEnum('expense_status', [
+  'active',
+  'excluded',
+]);
+
 // ============================================================================
 // Subscriptions (Stripe)
 // ============================================================================
@@ -344,6 +354,8 @@ export type BillStatus = (typeof billStatusEnum.enumValues)[number];
 export type ExpenseCategory = (typeof expenseCategoryEnum.enumValues)[number];
 export type DebtStatus = (typeof debtStatusEnum.enumValues)[number];
 export type InvestmentType = (typeof investmentTypeEnum.enumValues)[number];
+export type IncomeStatus = (typeof incomeStatusEnum.enumValues)[number];
+export type ExpenseStatus = (typeof expenseStatusEnum.enumValues)[number];
 export type SubscriptionStatus = (typeof subscriptionStatusEnum.enumValues)[number];
 export type ExportStatus = (typeof exportStatusEnum.enumValues)[number];
 export type ExportType = (typeof exportTypeEnum.enumValues)[number];
