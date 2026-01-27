@@ -1,10 +1,9 @@
 /**
- * Zod validation schemas for onboarding forms
+ * Zod validation schemas for onboarding forms (3 steps: profile → telegram → tutorial)
  * @see docs/specs/system.md §3.1 for onboarding requirements
  */
 
 import { z } from 'zod';
-import { LifeArea } from '@life-assistant/shared';
 
 /**
  * Profile step validation schema
@@ -26,20 +25,6 @@ export const profileStepSchema = z.object({
 });
 
 export type ProfileStepData = z.infer<typeof profileStepSchema>;
-
-/**
- * Areas step validation schema
- * - Minimum 3 areas, maximum 6 (ADR-017)
- * - Must be valid LifeArea enum values
- */
-export const areasStepSchema = z.object({
-  areas: z
-    .array(z.nativeEnum(LifeArea))
-    .min(3, 'Selecione pelo menos 3 áreas da vida')
-    .max(6, 'Você pode selecionar no máximo 6 áreas'),
-});
-
-export type AreasStepData = z.infer<typeof areasStepSchema>;
 
 /**
  * Telegram step validation schema
@@ -64,9 +49,9 @@ export const completeOnboardingSchema = z.object({
 export type CompleteOnboardingData = z.infer<typeof completeOnboardingSchema>;
 
 /**
- * Onboarding step type
+ * Onboarding step type (3 steps: profile → telegram → tutorial)
  */
-export type OnboardingStep = 'profile' | 'areas' | 'telegram' | 'tutorial';
+export type OnboardingStep = 'profile' | 'telegram' | 'tutorial';
 
 /**
  * Onboarding status response from API
@@ -77,7 +62,6 @@ export interface OnboardingStatus {
   data: {
     name?: string;
     timezone?: string;
-    areas?: LifeArea[];
     telegramId?: string;
     telegramSkipped?: boolean;
     tutorialSkipped?: boolean;

@@ -5,7 +5,7 @@ import { OnboardingPage } from '../pages';
  * E2E Tests for Onboarding Flow
  *
  * These tests verify the complete onboarding experience including:
- * - 4-step wizard (profile, areas, telegram, tutorial)
+ * - 3-step wizard (profile, telegram, tutorial)
  * - Required steps validation
  * - Optional step skipping
  * - Progress persistence
@@ -50,7 +50,7 @@ test.describe('Onboarding Navigation', () => {
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
   });
 
-  test('should_show_stepper_with_4_steps', async ({ onboardingUserPage }) => {
+  test('should_show_stepper_with_3_steps', async ({ onboardingUserPage }) => {
     // Use onboarding user (pending onboarding)
     const page = onboardingUserPage;
 
@@ -60,9 +60,9 @@ test.describe('Onboarding Navigation', () => {
     // Wait for the page to load
     await page.waitForURL(/\/onboarding/, { timeout: 10000 });
 
-    // Check stepper has 4 steps
+    // Check stepper has 3 steps (profile → telegram → tutorial)
     const steps = page.locator('nav[aria-label="Progresso do onboarding"] li');
-    await expect(steps).toHaveCount(4);
+    await expect(steps).toHaveCount(3);
   });
 
   test('should_redirect_pending_user_to_onboarding', async ({ onboardingUserPage }) => {
@@ -114,7 +114,7 @@ test.describe.serial('Complete Onboarding Flow', () => {
   // These tests run serially because they modify the onboarding user's state
   // Each test builds on the previous one
 
-  test('step1_should_fill_profile_and_navigate_to_areas', async ({ onboardingUserPage }) => {
+  test('step1_should_fill_profile_and_navigate_to_telegram', async ({ onboardingUserPage }) => {
     const page = onboardingUserPage;
     const onboardingPage = new OnboardingPage(page);
 
@@ -126,27 +126,11 @@ test.describe.serial('Complete Onboarding Flow', () => {
     await onboardingPage.fillProfile('E2E Test User');
     await onboardingPage.submitStep();
 
-    // Should navigate to areas step
-    await expect(page).toHaveURL(/\/onboarding\/areas/, { timeout: 10000 });
-  });
-
-  test('step2_should_select_areas_and_navigate_to_telegram', async ({ onboardingUserPage }) => {
-    const page = onboardingUserPage;
-    const onboardingPage = new OnboardingPage(page);
-
-    // Should be at areas step (or navigate there)
-    await onboardingPage.gotoStep('areas');
-    await expect(page).toHaveURL(/\/onboarding\/areas/);
-
-    // Select 3 valid areas (minimum required)
-    await onboardingPage.selectAreas(['Saúde', 'Finanças', 'Carreira']);
-    await onboardingPage.submitStep();
-
     // Should navigate to telegram step
     await expect(page).toHaveURL(/\/onboarding\/telegram/, { timeout: 10000 });
   });
 
-  test('step3_should_skip_telegram_and_navigate_to_tutorial', async ({ onboardingUserPage }) => {
+  test('step2_should_skip_telegram_and_navigate_to_tutorial', async ({ onboardingUserPage }) => {
     const page = onboardingUserPage;
     const onboardingPage = new OnboardingPage(page);
 
@@ -161,7 +145,7 @@ test.describe.serial('Complete Onboarding Flow', () => {
     await expect(page).toHaveURL(/\/onboarding\/tutorial/, { timeout: 10000 });
   });
 
-  test('step4_should_complete_tutorial_and_redirect_to_dashboard', async ({ onboardingUserPage }) => {
+  test('step3_should_complete_tutorial_and_redirect_to_dashboard', async ({ onboardingUserPage }) => {
     const page = onboardingUserPage;
     const onboardingPage = new OnboardingPage(page);
 
@@ -204,16 +188,11 @@ test.describe('Fresh Onboarding with Login', () => {
     await onboardingPage.fillProfile('Fresh Flow User');
     await onboardingPage.submitStep();
 
-    // Step 2: Areas
-    await expect(page).toHaveURL(/\/onboarding\/areas/, { timeout: 10000 });
-    await onboardingPage.selectAreas(['Saúde', 'Finanças', 'Carreira']);
-    await onboardingPage.submitStep();
-
-    // Step 3: Telegram (skip)
+    // Step 2: Telegram (skip)
     await expect(page).toHaveURL(/\/onboarding\/telegram/, { timeout: 10000 });
     await onboardingPage.skipCurrentStep();
 
-    // Step 4: Tutorial (skip)
+    // Step 3: Tutorial (skip)
     await expect(page).toHaveURL(/\/onboarding\/tutorial/, { timeout: 10000 });
     await onboardingPage.skipCurrentStep();
 

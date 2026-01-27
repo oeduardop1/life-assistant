@@ -1,10 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { LifeArea } from '@life-assistant/shared';
 
 /**
- * Onboarding step identifiers
+ * Onboarding step identifiers (3 steps: profile → telegram → tutorial)
  */
-export type OnboardingStep = 'profile' | 'areas' | 'telegram' | 'tutorial';
+export type OnboardingStep = 'profile' | 'telegram' | 'tutorial';
 
 /**
  * Data collected during onboarding
@@ -21,15 +20,6 @@ export class OnboardingDataDto {
     example: 'America/Sao_Paulo',
   })
   timezone?: string;
-
-  // ADR-017: Updated to 6 main areas
-  @ApiPropertyOptional({
-    description: 'Selected life areas',
-    example: [LifeArea.HEALTH, LifeArea.FINANCE, LifeArea.PROFESSIONAL],
-    isArray: true,
-    enum: LifeArea,
-  })
-  areas?: LifeArea[];
 
   @ApiPropertyOptional({
     description: 'Telegram user ID',
@@ -57,7 +47,7 @@ export class OnboardingStatusDto {
   @ApiProperty({
     description: 'Current step of the onboarding process',
     example: 'profile',
-    enum: ['profile', 'areas', 'telegram', 'tutorial'],
+    enum: ['profile', 'telegram', 'tutorial'],
   })
   currentStep: OnboardingStep;
 
@@ -65,7 +55,7 @@ export class OnboardingStatusDto {
     description: 'Steps that have been completed',
     example: ['profile'],
     isArray: true,
-    enum: ['profile', 'areas', 'telegram', 'tutorial'],
+    enum: ['profile', 'telegram', 'tutorial'],
   })
   completedSteps: OnboardingStep[];
 
@@ -94,8 +84,8 @@ export class StepSaveResponseDto {
 
   @ApiProperty({
     description: 'Next step to navigate to',
-    example: 'areas',
-    enum: ['profile', 'areas', 'telegram', 'tutorial', 'complete'],
+    example: 'telegram',
+    enum: ['profile', 'telegram', 'tutorial', 'complete'],
   })
   nextStep: OnboardingStep | 'complete';
 }

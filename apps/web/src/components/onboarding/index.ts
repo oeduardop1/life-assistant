@@ -1,18 +1,16 @@
 /**
  * Onboarding Components
  *
- * Components for the 4-step onboarding wizard:
+ * Components for the 3-step onboarding wizard:
  * 1. Profile (required)
- * 2. Areas (required)
- * 3. Telegram (optional)
- * 4. Tutorial (optional)
+ * 2. Telegram (optional)
+ * 3. Tutorial (optional)
  *
  * @see docs/specs/system.md §3.1 for onboarding flow
  */
 
 export { OnboardingStepper } from './onboarding-stepper';
 export { ProfileForm } from './profile-form';
-export { AreaSelector } from './area-selector';
 export { TelegramConnect } from './telegram-connect';
 export { TutorialCarousel } from './tutorial-carousel';
 export { SkipButton } from './skip-button';

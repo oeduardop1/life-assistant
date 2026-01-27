@@ -92,14 +92,14 @@ describe('preferences', () => {
   });
 
   describe('defaultUserPreferences', () => {
-    // ADR-017: Updated to 6 main areas
+    // ADR-017: 6 fixed areas with equal weights (1.0)
     it('should have correct default values', () => {
       expect(defaultUserPreferences.christianPerspective).toBe(false);
       expect(defaultUserPreferences.areaWeights.health).toBe(1.0);
       expect(defaultUserPreferences.areaWeights.finance).toBe(1.0);
       expect(defaultUserPreferences.areaWeights.professional).toBe(1.0);
-      expect(defaultUserPreferences.areaWeights.learning).toBe(0.8);
-      expect(defaultUserPreferences.areaWeights.spiritual).toBe(0.5);
+      expect(defaultUserPreferences.areaWeights.learning).toBe(1.0);
+      expect(defaultUserPreferences.areaWeights.spiritual).toBe(1.0);
       expect(defaultUserPreferences.areaWeights.relationships).toBe(1.0);
     });
 

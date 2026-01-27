@@ -228,7 +228,7 @@ async function ensureUserExists(user: TestUser, label: string): Promise<void> {
 
 /**
  * Default user preferences for testing
- * ADR-017: 6 main areas
+ * ADR-017: 6 fixed areas with equal weights (1.0)
  */
 const DEFAULT_PREFERENCES = {
   christianPerspective: false,
@@ -236,8 +236,8 @@ const DEFAULT_PREFERENCES = {
     health: 1,
     finance: 1,
     professional: 1,
-    learning: 0.8,
-    spiritual: 0.5,
+    learning: 1,
+    spiritual: 1,
     relationships: 1,
   },
   notifications: {
@@ -259,7 +259,6 @@ const DEFAULT_PREFERENCES = {
   },
   onboarding: {
     profileComplete: false,
-    areasComplete: false,
     telegramComplete: false,
     telegramSkipped: false,
     tutorialComplete: false,
@@ -341,13 +340,12 @@ async function ensurePublicUserExists(user: TestUser): Promise<void> {
 }
 
 /**
- * Preferences for a user with completed onboarding
+ * Preferences for a user with completed onboarding (3 steps: profile → telegram → tutorial)
  */
 const COMPLETED_ONBOARDING_PREFERENCES = {
   ...DEFAULT_PREFERENCES,
   onboarding: {
     profileComplete: true,
-    areasComplete: true,
     telegramComplete: false,
     telegramSkipped: true,
     tutorialComplete: false,

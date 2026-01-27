@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import type { OnboardingStep } from '@/lib/validations/onboarding';
 
 /**
- * Step configuration with labels and descriptions
+ * Step configuration with labels and descriptions (3 steps: profile → telegram → tutorial)
  */
 const STEPS: Array<{
   id: OnboardingStep;
@@ -16,11 +16,6 @@ const STEPS: Array<{
     id: 'profile',
     label: 'Perfil',
     description: 'Nome e fuso horário',
-  },
-  {
-    id: 'areas',
-    label: 'Áreas da Vida',
-    description: 'Selecione suas prioridades',
   },
   {
     id: 'telegram',
@@ -42,7 +37,7 @@ interface OnboardingStepperProps {
 /**
  * OnboardingStepper - Visual progress indicator for the onboarding wizard
  *
- * Shows 4 steps with their completion status:
+ * Shows 3 steps with their completion status:
  * - Completed: green checkmark
  * - Current: highlighted circle
  * - Pending: gray circle

@@ -25,7 +25,7 @@ import type { OnboardingStep } from '@/lib/validations/onboarding';
  */
 function getStepFromPathname(pathname: string): OnboardingStep {
   const segment = pathname.split('/').pop();
-  const validSteps: OnboardingStep[] = ['profile', 'areas', 'telegram', 'tutorial'];
+  const validSteps: OnboardingStep[] = ['profile', 'telegram', 'tutorial'];
   if (segment && validSteps.includes(segment as OnboardingStep)) {
     return segment as OnboardingStep;
   }

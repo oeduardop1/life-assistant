@@ -9,7 +9,6 @@ import type {
   StepSaveResponse,
   OnboardingCompleteResponse,
   ProfileStepData,
-  AreasStepData,
   TelegramStepData,
 } from '@/lib/validations/onboarding';
 
@@ -135,31 +134,6 @@ export function useOnboarding() {
   );
 
   /**
-   * Save areas step data
-   */
-  const saveAreasStep = useCallback(
-    async (data: AreasStepData): Promise<StepSaveResponse> => {
-      setIsSaving(true);
-      setError(null);
-      try {
-        const response = await apiRequest<StepSaveResponse>('/onboarding/step/areas', {
-          method: 'PATCH',
-          body: JSON.stringify(data),
-        });
-        await fetchStatus(); // Refresh status after save
-        return response;
-      } catch (err) {
-        const apiError = err as ApiError;
-        setError(apiError.message ?? 'Failed to save areas');
-        throw err;
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [apiRequest, fetchStatus],
-  );
-
-  /**
    * Save telegram step data (or skip)
    */
   const saveTelegramStep = useCallback(
@@ -260,7 +234,6 @@ export function useOnboarding() {
     // Actions
     fetchStatus,
     saveProfileStep,
-    saveAreasStep,
     saveTelegramStep,
     completeOnboarding,
     goToStep,
@@ -271,7 +244,7 @@ export function useOnboarding() {
       status?.completedSteps.includes(step) ?? false,
     canAccessStep: (step: OnboardingStep) => {
       if (!status) return step === 'profile';
-      const stepOrder: OnboardingStep[] = ['profile', 'areas', 'telegram', 'tutorial'];
+      const stepOrder: OnboardingStep[] = ['profile', 'telegram', 'tutorial'];
       const currentIndex = stepOrder.indexOf(status.currentStep);
       const stepIndex = stepOrder.indexOf(step);
       return stepIndex <= currentIndex || status.completedSteps.includes(step);

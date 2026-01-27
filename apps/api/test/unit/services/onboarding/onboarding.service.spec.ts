@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
-import { LifeArea, UserStatus } from '@life-assistant/shared';
+import { UserStatus } from '@life-assistant/shared';
 
 // Mock the database package
 vi.mock('@life-assistant/database', () => ({
@@ -37,13 +37,12 @@ function createMockUser(overrides: Partial<{
 }
 
 /**
- * Create default onboarding preferences for testing
+ * Create default onboarding preferences for testing (3 steps: profile → telegram → tutorial)
  */
 function createDefaultPrefs() {
   return {
     onboarding: {
       profileComplete: false,
-      areasComplete: false,
       telegramComplete: false,
       telegramSkipped: false,
       tutorialComplete: false,
@@ -53,8 +52,8 @@ function createDefaultPrefs() {
       health: 1.0,
       finance: 1.0,
       professional: 1.0,
-      learning: 0.8,
-      spiritual: 0.5,
+      learning: 1.0,
+      spiritual: 1.0,
       relationships: 1.0,
     },
     notifications: {
@@ -139,7 +138,7 @@ describe('OnboardingService', () => {
       expect(status.isComplete).toBe(false);
     });
 
-    it('should_return_areas_as_current_step_when_profile_complete', async () => {
+    it('should_return_telegram_as_current_step_when_profile_complete', async () => {
       const mockUser = createMockUser({ name: 'Test User' });
       const mockPrefs = createDefaultPrefs();
       mockPrefs.onboarding.profileComplete = true;
@@ -160,7 +159,7 @@ describe('OnboardingService', () => {
 
       const status = await onboardingService.getOnboardingStatus('user-123');
 
-      expect(status.currentStep).toBe('areas');
+      expect(status.currentStep).toBe('telegram');
       expect(status.completedSteps).toContain('profile');
     });
 
@@ -172,7 +171,6 @@ describe('OnboardingService', () => {
       const mockPrefs = createDefaultPrefs();
       mockPrefs.onboarding = {
         profileComplete: true,
-        areasComplete: true,
         telegramComplete: true,
         telegramSkipped: false,
         tutorialComplete: true,
@@ -196,7 +194,7 @@ describe('OnboardingService', () => {
       const status = await onboardingService.getOnboardingStatus('user-123');
 
       expect(status.isComplete).toBe(true);
-      expect(status.completedSteps).toEqual(['profile', 'areas', 'telegram', 'tutorial']);
+      expect(status.completedSteps).toEqual(['profile', 'telegram', 'tutorial']);
     });
 
     it('should_throw_when_user_not_found', async () => {
@@ -254,7 +252,7 @@ describe('OnboardingService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.nextStep).toBe('areas');
+      expect(result.nextStep).toBe('telegram');
       expect(mockDatabaseService.withUserTransaction).toHaveBeenCalledWith(
         'user-123',
         expect.any(Function),
@@ -283,69 +281,11 @@ describe('OnboardingService', () => {
     });
   });
 
-  describe('saveAreasStep', () => {
-    it('should_save_areas_with_correct_weights', async () => {
-      const mockUser = createMockUser({ name: 'Test User' });
-      const mockPrefs = createDefaultPrefs();
-      mockPrefs.onboarding.profileComplete = true;
-
-      let savedPreferences: unknown = null;
-      const mockUpdate = vi.fn().mockReturnValue({
-        set: vi.fn().mockImplementation((data: { preferences: unknown }) => {
-          savedPreferences = data.preferences;
-          return {
-            where: vi.fn().mockResolvedValue(undefined),
-          };
-        }),
-      });
-
-      mockDatabaseService.withUserId.mockImplementation(async (_userId, callback) => {
-        return callback({
-          select: () => ({
-            from: () => ({
-              where: () => ({
-                limit: () => Promise.resolve([mockUser]),
-              }),
-            }),
-          }),
-        });
-      });
-
-      mockDatabaseService.withUserTransaction.mockImplementation(async (_userId, callback) => {
-        return callback({
-          update: mockUpdate,
-        });
-      });
-
-      vi.mocked(safeParseUserPreferences).mockReturnValue(mockPrefs);
-
-      // ADR-017: Updated to 6 main areas (FINANCIAL → FINANCE, CAREER → PROFESSIONAL)
-      const selectedAreas = [LifeArea.HEALTH, LifeArea.FINANCE, LifeArea.PROFESSIONAL];
-
-      const result = await onboardingService.saveAreasStep('user-123', {
-        areas: selectedAreas,
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.nextStep).toBe('telegram');
-      expect(savedPreferences).toBeDefined();
-
-      // ADR-017: Updated area names (financial → finance, career → professional, leisure removed as top-level area)
-      const prefs = savedPreferences as { areaWeights: Record<string, number> };
-      expect(prefs.areaWeights.health).toBe(1.0);
-      expect(prefs.areaWeights.finance).toBe(1.0);
-      expect(prefs.areaWeights.professional).toBe(1.0);
-      expect(prefs.areaWeights.relationships).toBe(0.0);
-      expect(prefs.areaWeights.spiritual).toBe(0.0); // ADR-017: leisure is now a sub-area, using spiritual instead
-    });
-  });
-
   describe('saveTelegramStep', () => {
     it('should_save_telegram_connection', async () => {
       const mockUser = createMockUser({ name: 'Test User' });
       const mockPrefs = createDefaultPrefs();
       mockPrefs.onboarding.profileComplete = true;
-      mockPrefs.onboarding.areasComplete = true;
 
       const mockUpdate = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -426,7 +366,6 @@ describe('OnboardingService', () => {
       const mockUser = createMockUser({ name: 'Test User' });
       const mockPrefs = createDefaultPrefs();
       mockPrefs.onboarding.profileComplete = true;
-      mockPrefs.onboarding.areasComplete = true;
 
       const mockUpdate = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -463,7 +402,7 @@ describe('OnboardingService', () => {
     it('should_throw_when_required_steps_not_complete', async () => {
       const mockUser = createMockUser();
       const mockPrefs = createDefaultPrefs();
-      // Only profile is complete, areas is not
+      // Profile is not complete
 
       mockDatabaseService.withUserId.mockImplementation(async (_userId, callback) => {
         return callback({
@@ -480,7 +419,7 @@ describe('OnboardingService', () => {
       vi.mocked(safeParseUserPreferences).mockReturnValue(mockPrefs);
 
       await expect(onboardingService.completeOnboarding('user-123')).rejects.toThrow(
-        'Required steps (profile, areas) must be completed before finishing onboarding',
+        'Required step (profile) must be completed before finishing onboarding',
       );
     });
 
@@ -488,7 +427,6 @@ describe('OnboardingService', () => {
       const mockUser = createMockUser({ name: 'Test User' });
       const mockPrefs = createDefaultPrefs();
       mockPrefs.onboarding.profileComplete = true;
-      mockPrefs.onboarding.areasComplete = true;
 
       let savedPreferences: unknown = null;
       const mockUpdate = vi.fn().mockReturnValue({

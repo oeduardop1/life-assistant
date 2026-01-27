@@ -13,7 +13,6 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@ne
 import { OnboardingService } from '../../application/services/onboarding.service';
 import {
   ProfileStepDto,
-  AreasStepDto,
   TelegramStepDto,
   OnboardingStatusDto,
   StepSaveResponseDto,
@@ -46,7 +45,7 @@ export class OnboardingController {
   @ApiOperation({ summary: 'Save progress for a specific onboarding step' })
   @ApiParam({
     name: 'step',
-    enum: ['profile', 'areas', 'telegram'],
+    enum: ['profile', 'telegram'],
     description: 'The step to save',
   })
   @ApiResponse({
@@ -59,14 +58,11 @@ export class OnboardingController {
   async saveStep(
     @CurrentUser() user: AuthenticatedUser,
     @Param('step') step: OnboardingStep,
-    @Body() body: ProfileStepDto | AreasStepDto | TelegramStepDto,
+    @Body() body: ProfileStepDto | TelegramStepDto,
   ): Promise<StepSaveResponseDto> {
     switch (step) {
       case 'profile':
         return this.onboardingService.saveProfileStep(user.id, body as ProfileStepDto);
-
-      case 'areas':
-        return this.onboardingService.saveAreasStep(user.id, body as AreasStepDto);
 
       case 'telegram':
         return this.onboardingService.saveTelegramStep(user.id, body as TelegramStepDto);

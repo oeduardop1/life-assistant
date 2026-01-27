@@ -11,8 +11,8 @@ export const DEFAULT_WEIGHTS: Record<LifeArea, number> = {
   [LifeArea.HEALTH]: 1.0,
   [LifeArea.FINANCE]: 1.0,
   [LifeArea.PROFESSIONAL]: 1.0,
-  [LifeArea.LEARNING]: 0.8,
-  [LifeArea.SPIRITUAL]: 0.5,
+  [LifeArea.LEARNING]: 1.0,
+  [LifeArea.SPIRITUAL]: 1.0,
   [LifeArea.RELATIONSHIPS]: 1.0,
 };
 

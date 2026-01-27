@@ -21,8 +21,7 @@ import { APP_GUARD, Reflector } from '@nestjs/core';
 import request from 'supertest';
 import { SignJWT, jwtVerify } from 'jose';
 import type { Request } from 'express';
-import { IsArray, IsString, IsBoolean, IsOptional, MinLength, ArrayMinSize, ArrayMaxSize, IsEnum } from 'class-validator';
-import { LifeArea } from '@life-assistant/shared';
+import { IsString, IsBoolean, IsOptional, MinLength } from 'class-validator';
 
 const jwtSecret = 'super-secret-jwt-token-with-at-least-32-characters-for-testing';
 
@@ -48,14 +47,6 @@ class ProfileStepDto {
   timezone!: string;
 }
 
-class AreasStepDto {
-  @IsArray()
-  @ArrayMinSize(3, { message: 'Selecione pelo menos 3 areas da vida' })
-  @ArrayMaxSize(6, { message: 'Voce pode selecionar no maximo 6 areas' })
-  @IsEnum(LifeArea, { each: true })
-  areas!: LifeArea[];
-}
-
 class TelegramStepDto {
   @IsOptional()
   @IsString()
@@ -66,12 +57,11 @@ class TelegramStepDto {
 }
 
 // ========================================================================
-// Mock OnboardingService
+// Mock OnboardingService (3 steps: profile → telegram → tutorial)
 // ========================================================================
 const mockOnboardingService = {
   getOnboardingStatus: vi.fn(),
   saveProfileStep: vi.fn(),
-  saveAreasStep: vi.fn(),
   saveTelegramStep: vi.fn(),
   completeOnboarding: vi.fn(),
 };
@@ -156,15 +146,6 @@ class TestOnboardingController {
     @Body() dto: ProfileStepDto,
   ) {
     return mockOnboardingService.saveProfileStep(user.id, dto);
-  }
-
-  @Patch('step/areas')
-  @HttpCode(HttpStatus.OK)
-  async saveAreasStep(
-    @CurrentUser() user: { id: string },
-    @Body() dto: AreasStepDto,
-  ) {
-    return mockOnboardingService.saveAreasStep(user.id, dto);
   }
 
   @Patch('step/telegram')
@@ -287,7 +268,7 @@ describe('Onboarding Endpoints (Integration)', () => {
       const token = await createToken({ sub: 'user-123' });
       mockOnboardingService.saveProfileStep.mockResolvedValue({
         success: true,
-        nextStep: 'areas',
+        nextStep: 'telegram',
       });
 
       const response = await request(app.getHttpServer())
@@ -298,7 +279,7 @@ describe('Onboarding Endpoints (Integration)', () => {
 
       expect(response.body).toMatchObject({
         success: true,
-        nextStep: 'areas',
+        nextStep: 'telegram',
       });
       expect(mockOnboardingService.saveProfileStep).toHaveBeenCalledWith(
         'user-123',
@@ -327,84 +308,6 @@ describe('Onboarding Endpoints (Integration)', () => {
       const response = await request(app.getHttpServer())
         .patch('/api/onboarding/step/profile')
         .send(validProfileData)
-        .expect(401);
-
-      expect(response.body.statusCode).toBe(401);
-    });
-  });
-
-  // =========================================================================
-  // PATCH /api/onboarding/step/areas
-  // =========================================================================
-  describe('PATCH /api/onboarding/step/areas', () => {
-    const validAreasData = {
-      areas: [LifeArea.HEALTH, LifeArea.FINANCE, LifeArea.PROFESSIONAL],
-    };
-
-    it('should_save_areas_data', async () => {
-      const token = await createToken({ sub: 'user-123' });
-      mockOnboardingService.saveAreasStep.mockResolvedValue({
-        success: true,
-        nextStep: 'telegram',
-      });
-
-      const response = await request(app.getHttpServer())
-        .patch('/api/onboarding/step/areas')
-        .set('Authorization', `Bearer ${token}`)
-        .send(validAreasData)
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        nextStep: 'telegram',
-      });
-      expect(mockOnboardingService.saveAreasStep).toHaveBeenCalledWith(
-        'user-123',
-        validAreasData,
-      );
-    });
-
-    // Note: DTO validation tests are handled at service layer in integration tests
-    // due to Vitest decorator metadata compatibility issues.
-    it('should_reject_less_than_3_areas', async () => {
-      const token = await createToken({ sub: 'user-123' });
-      mockOnboardingService.saveAreasStep.mockRejectedValue(
-        new BadRequestException('Selecione pelo menos 3 areas da vida'),
-      );
-
-      const response = await request(app.getHttpServer())
-        .patch('/api/onboarding/step/areas')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ areas: [LifeArea.HEALTH, LifeArea.FINANCE] })
-        .expect(400);
-
-      expect(response.body.statusCode).toBe(400);
-    });
-
-    // Note: DTO validation tests are handled at service layer in integration tests
-    // due to Vitest decorator metadata compatibility issues.
-    it('should_reject_more_than_6_areas', async () => {
-      const token = await createToken({ sub: 'user-123' });
-      mockOnboardingService.saveAreasStep.mockRejectedValue(
-        new BadRequestException('Voce pode selecionar no maximo 6 areas'),
-      );
-      const allAreas = Object.values(LifeArea);
-      // Add more than 6 areas (even though there are only 6 in enum, this tests the logic)
-      const tooManyAreas = [...allAreas, ...allAreas.slice(0, 1)]; // 7 areas
-
-      const response = await request(app.getHttpServer())
-        .patch('/api/onboarding/step/areas')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ areas: tooManyAreas })
-        .expect(400);
-
-      expect(response.body.statusCode).toBe(400);
-    });
-
-    it('should_return_401_without_token', async () => {
-      const response = await request(app.getHttpServer())
-        .patch('/api/onboarding/step/areas')
-        .send(validAreasData)
         .expect(401);
 
       expect(response.body.statusCode).toBe(401);

@@ -2,7 +2,7 @@ import { type Page, type Locator } from '@playwright/test';
 
 /**
  * Page Object for the Onboarding pages
- * Provides methods to interact with the 4-step onboarding wizard
+ * Provides methods to interact with the 3-step onboarding wizard (profile → telegram → tutorial)
  *
  * @see docs/specs/system.md §3.1 for onboarding flow requirements
  */
@@ -15,9 +15,6 @@ export class OnboardingPage {
   // Profile step elements
   readonly nameInput: Locator;
   readonly timezoneSelect: Locator;
-
-  // Areas step elements
-  readonly areaCards: Locator;
 
   // Common buttons
   readonly continueButton: Locator;
@@ -32,9 +29,6 @@ export class OnboardingPage {
     // Profile step
     this.nameInput = page.locator('input[name="name"]');
     this.timezoneSelect = page.locator('.react-timezone-select');
-
-    // Areas step - cards are buttons
-    this.areaCards = page.locator('[class*="rounded-lg"][class*="border-2"]').filter({ hasText: /.+/ });
 
     // Common buttons
     this.continueButton = page.getByRole('button', { name: /continuar|comecar|proximo/i });
@@ -51,7 +45,7 @@ export class OnboardingPage {
   /**
    * Navigate to a specific step
    */
-  async gotoStep(step: 'profile' | 'areas' | 'telegram' | 'tutorial') {
+  async gotoStep(step: 'profile' | 'telegram' | 'tutorial') {
     await this.page.goto(`/onboarding/${step}`);
   }
 
@@ -79,29 +73,6 @@ export class OnboardingPage {
    */
   async skipCurrentStep() {
     await this.skipButton.click();
-  }
-
-  /**
-   * Select life areas (step 2)
-   * @param areaLabels Array of area labels to select (e.g., ['Saúde', 'Finanças', 'Carreira'])
-   */
-  async selectAreas(areaLabels: string[]) {
-    for (const label of areaLabels) {
-      // Use a more specific locator to find the exact label text within the button
-      // The label is in a span with font-medium class
-      const areaCard = this.page.locator('button').filter({
-        has: this.page.locator('span.font-medium', { hasText: new RegExp(`^${label}$`) }),
-      });
-      await areaCard.click();
-    }
-  }
-
-  /**
-   * Get the count of selected areas
-   */
-  async getSelectedAreasCount(): Promise<number> {
-    const selectedCards = this.page.locator('[class*="border-primary"][class*="bg-primary"]');
-    return await selectedCards.count();
   }
 
   /**

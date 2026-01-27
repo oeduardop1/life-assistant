@@ -8,14 +8,14 @@ export const userPreferencesSchema = z.object({
   // Christian perspective enabled
   christianPerspective: z.boolean().default(false),
 
-  // Life area weights (0.0 to 2.0) - 6 areas (ADR-017)
+  // Life area weights (0.0 to 2.0) - 6 fixed areas with equal weights (ADR-017)
   areaWeights: z
     .object({
       health: z.number().min(0).max(2).default(1.0),
       finance: z.number().min(0).max(2).default(1.0),
       professional: z.number().min(0).max(2).default(1.0),
-      learning: z.number().min(0).max(2).default(0.8),
-      spiritual: z.number().min(0).max(2).default(0.5),
+      learning: z.number().min(0).max(2).default(1.0),
+      spiritual: z.number().min(0).max(2).default(1.0),
       relationships: z.number().min(0).max(2).default(1.0),
     })
     .default({}),
@@ -54,11 +54,10 @@ export const userPreferencesSchema = z.object({
     })
     .default({}),
 
-  // Onboarding progress state
+  // Onboarding progress state (3 steps: profile → telegram → tutorial)
   onboarding: z
     .object({
       profileComplete: z.boolean().default(false),
-      areasComplete: z.boolean().default(false),
       telegramComplete: z.boolean().default(false),
       telegramSkipped: z.boolean().default(false),
       tutorialComplete: z.boolean().default(false),

@@ -12,17 +12,17 @@ import {
 import { LifeArea } from './enums';
 
 describe('DEFAULT_WEIGHTS', () => {
-  // ADR-017: Changed from 8 to 6 main areas
+  // ADR-017: 6 fixed areas with equal weights (1.0)
   it('should have all 6 life areas', () => {
     expect(Object.keys(DEFAULT_WEIGHTS)).toHaveLength(6);
   });
 
-  it('should have weights for each life area', () => {
+  it('should have equal weights (1.0) for all life areas', () => {
     expect(DEFAULT_WEIGHTS[LifeArea.HEALTH]).toBe(1.0);
     expect(DEFAULT_WEIGHTS[LifeArea.FINANCE]).toBe(1.0);
     expect(DEFAULT_WEIGHTS[LifeArea.PROFESSIONAL]).toBe(1.0);
-    expect(DEFAULT_WEIGHTS[LifeArea.LEARNING]).toBe(0.8);
-    expect(DEFAULT_WEIGHTS[LifeArea.SPIRITUAL]).toBe(0.5);
+    expect(DEFAULT_WEIGHTS[LifeArea.LEARNING]).toBe(1.0);
+    expect(DEFAULT_WEIGHTS[LifeArea.SPIRITUAL]).toBe(1.0);
     expect(DEFAULT_WEIGHTS[LifeArea.RELATIONSHIPS]).toBe(1.0);
   });
 

@@ -5,23 +5,22 @@ import { AppLoggerService } from '../../../../logger/logger.service';
 import { MemoryConsolidationScheduler } from '../../../../jobs/memory-consolidation/memory-consolidation.scheduler';
 import {
   ProfileStepDto,
-  AreasStepDto,
   TelegramStepDto,
   OnboardingStatusDto,
   StepSaveResponseDto,
   OnboardingCompleteResponseDto,
   type OnboardingStep,
 } from '../../presentation/dtos';
-import { LifeArea, UserStatus } from '@life-assistant/shared';
+import { UserStatus } from '@life-assistant/shared';
 import {
   type UserPreferences,
   safeParseUserPreferences,
 } from '@life-assistant/database';
 
 /**
- * Define step order for navigation
+ * Define step order for navigation (3 steps: profile → telegram → tutorial)
  */
-const STEP_ORDER: OnboardingStep[] = ['profile', 'areas', 'telegram', 'tutorial'];
+const STEP_ORDER: OnboardingStep[] = ['profile', 'telegram', 'tutorial'];
 
 /**
  * OnboardingService - Application layer for onboarding operations
@@ -52,16 +51,13 @@ export class OnboardingService {
     }
 
     const prefs = safeParseUserPreferences(user.preferences);
-    const { onboarding, areaWeights } = prefs;
+    const { onboarding } = prefs;
 
     // Determine completed steps based on onboarding flags
     const completedSteps: OnboardingStep[] = [];
 
     if (onboarding.profileComplete) {
       completedSteps.push('profile');
-    }
-    if (onboarding.areasComplete) {
-      completedSteps.push('areas');
     }
     if (onboarding.telegramComplete) {
       completedSteps.push('telegram');
@@ -72,9 +68,6 @@ export class OnboardingService {
 
     // Determine current step (first incomplete step)
     const currentStep = STEP_ORDER.find(step => !completedSteps.includes(step)) ?? 'profile';
-    const areas = Object.entries(areaWeights)
-      .filter(([_, weight]) => weight > 0)
-      .map(([area]) => area as LifeArea);
 
     return {
       currentStep,
@@ -82,7 +75,6 @@ export class OnboardingService {
       data: {
         name: user.name,
         timezone: user.timezone,
-        ...(areas.length > 0 ? { areas } : {}),
         telegramSkipped: onboarding.telegramSkipped,
         tutorialSkipped: onboarding.tutorialSkipped,
       },
@@ -129,56 +121,6 @@ export class OnboardingService {
     });
 
     this.logger.log(`Profile step saved for user: ${userId}`);
-
-    return {
-      success: true,
-      nextStep: 'areas',
-    };
-  }
-
-  /**
-   * Save areas step data (selected life areas)
-   */
-  async saveAreasStep(userId: string, dto: AreasStepDto): Promise<StepSaveResponseDto> {
-    this.logger.log(`Saving areas step for user: ${userId}`);
-
-    const user = await this.getUserById(userId);
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-
-    // Build area weights object with proper type (ADR-017: 6 areas)
-    const areaWeights: UserPreferences['areaWeights'] = {
-      health: dto.areas.includes(LifeArea.HEALTH) ? 1.0 : 0.0,
-      finance: dto.areas.includes(LifeArea.FINANCE) ? 1.0 : 0.0,
-      professional: dto.areas.includes(LifeArea.PROFESSIONAL) ? 1.0 : 0.0,
-      learning: dto.areas.includes(LifeArea.LEARNING) ? 0.8 : 0.0,
-      spiritual: dto.areas.includes(LifeArea.SPIRITUAL) ? 0.5 : 0.0,
-      relationships: dto.areas.includes(LifeArea.RELATIONSHIPS) ? 1.0 : 0.0,
-    };
-
-    const currentPrefs = safeParseUserPreferences(user.preferences);
-
-    const updatedPrefs: UserPreferences = {
-      ...currentPrefs,
-      areaWeights,
-      onboarding: {
-        ...currentPrefs.onboarding,
-        areasComplete: true,
-      },
-    };
-
-    await this.databaseService.withUserTransaction(userId, async (db) => {
-      await db
-        .update(this.databaseService.schema.users)
-        .set({
-          preferences: updatedPrefs,
-          updatedAt: new Date(),
-        })
-        .where(this.whereUserId(userId));
-    });
-
-    this.logger.log(`Areas step saved for user: ${userId}`);
 
     return {
       success: true,
@@ -240,8 +182,8 @@ export class OnboardingService {
     // Verify required steps are complete
     const status = await this.getOnboardingStatus(userId);
 
-    if (!status.completedSteps.includes('profile') || !status.completedSteps.includes('areas')) {
-      throw new BadRequestException('Required steps (profile, areas) must be completed before finishing onboarding');
+    if (!status.completedSteps.includes('profile')) {
+      throw new BadRequestException('Required step (profile) must be completed before finishing onboarding');
     }
 
     const user = await this.getUserById(userId);
