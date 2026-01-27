@@ -43,7 +43,16 @@ export const debts = pgTable(
     // Due date (day of month 1-31, required if isNegotiated = true)
     dueDay: integer('due_day'),
 
+    // Start month for installments (YYYY-MM format, required if isNegotiated = true)
+    // Determines visibility period: from startMonthYear to startMonthYear + (totalInstallments - 1) months
+    startMonthYear: varchar('start_month_year', { length: 7 }),
+
     // Status
+    // active: normal debt being paid
+    // overdue: installments behind schedule (currentInstallment < expected by time elapsed)
+    // paid_off: all installments paid
+    // settled: debt settled for less than owed
+    // defaulted: debt in default (always visible as alert)
     status: debtStatusEnum('status').notNull().default('active'),
 
     // Notes

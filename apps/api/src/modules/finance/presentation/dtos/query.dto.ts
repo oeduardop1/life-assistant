@@ -99,6 +99,15 @@ export class VariableExpenseQueryDto extends BaseQueryDto {
 }
 
 export class DebtQueryDto extends BaseQueryDto {
+  @ApiPropertyOptional({
+    example: '2026-01',
+    description: 'Filter debts visible in this month (YYYY-MM)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}$/, { message: 'monthYear must be in YYYY-MM format' })
+  monthYear?: string;
+
   @ApiPropertyOptional({ enum: DebtStatusDto })
   @IsOptional()
   @IsEnum(DebtStatusDto)

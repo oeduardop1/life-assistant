@@ -10,6 +10,8 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-27 | M2.2 | Simplificado | Visibilidade de dívidas segue padrão da indústria (Mobills, YNAB, Organizze): dívida só aparece de startMonthYear até endMonth. Removido conceito de "carência" (grace period). Backend: debts.repository.ts, finance-tool-executor.service.ts. Frontend: debt-card.tsx (removido badge "Em carência"), types.ts (removido isDebtInGracePeriod). Docs: finance.md §3.6 atualizado. |
+| 2026-01-27 | M2.2 | Bugfix | KPIs de dívidas corrigidos: (1) "Total Pago" agora inclui pagamentos de dívidas quitadas (paid_off), (2) "Parcelas Próximas" conta apenas dívidas ativas/overdue, (3) "Total de Dívidas" calcula restante apenas de dívidas ativas, (4) "Total Orçado" filtra dívidas por mês (monthYear passado para getSummary). Frontend: DebtCard colapsável (clique expande/colapsi detalhes). |
 | 2026-01-25 | Infra | feat(migrations): consolidate to Drizzle single source of truth | Removido sistema de migrations Supabase. Drizzle agora é única fonte para schema. Migration 0000_luxuriant_wraith.sql reescrita com padrões idempotentes (DO $$ EXCEPTION WHEN duplicate_object, IF NOT EXISTS). Triggers updated_at + auth sync incluídos. Removido bootstrap-migrations.ts e db:bootstrap. CI atualizado com db:migrate step. Docs: CLAUDE.md, README.md, DEPLOYMENT.md, ci.yml, changelog.md. |
 | 2026-01-24 | Infra | fix(dev-start): replace db:push with db:migrate | Previne perda de dados no startup diário. bootstrap-migrations.ts registra migrations existentes para DBs criados via push. Detecta banco novo vs existente, seed condicional (apenas primeiro setup ou --seed flag). Atualizado: CLAUDE.md, engineering.md, README.md. |
 | 2026-01-24 | M2.2 | Finance Tools Enhancement | 4 novas READ tools (get_bills, get_expenses, get_incomes, get_investments) + enriquecimento get_finance_summary com breakdown (bills/expenses/debts). AI agora acessa 100% dos detalhes financeiros individuais. Prompt melhorado com fluxo obrigatório de análise e distinção clara entre categorias. Docs: ai.md, product.md, system.md atualizados. |
@@ -72,4 +74,4 @@
 
 ---
 
-*Última atualização: 25 Janeiro 2026*
+*Última atualização: 27 Janeiro 2026*

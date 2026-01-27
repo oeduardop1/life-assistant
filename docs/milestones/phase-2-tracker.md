@@ -285,6 +285,32 @@ _Tools para IA:_
 - [x] Implementar tool `get_debt_progress`:
   - [x] Retorna progresso detalhado de uma ou todas as dívidas
   - [x] Permite IA responder "como está minha dívida do carro?"
+  - [x] Adicionar parâmetro `monthYear` para filtrar dívidas por mês
+
+_Dívidas - Filtro por Mês e Status Overdue:_
+- [x] Adicionar campo `startMonthYear` na tabela `debts`
+- [x] Adicionar status `overdue` ao enum `debt_status`
+- [x] Implementar filtro de dívidas por mês no repository
+- [x] Dívida só aparece de startMonthYear até endMonth (sem grace period - padrão da indústria)
+- [ ] Implementar detecção de status overdue via job agendado (não sob demanda)
+- [ ] Permitir pagamento de múltiplas parcelas
+- [x] Atualizar tool `get_debt_progress` com parâmetro `monthYear`
+- [x] Atualizar tool executor para filtrar dívidas por mês
+
+_Frontend - Dívidas (Filtro por Mês):_
+- [x] Integrar página `/finance/debts` com `useFinanceContext` para usar `currentMonth`
+- [x] Criar componente `MonthPicker` para formulário de dívidas
+- [x] Adicionar badge overdue no DebtCard (removido badge "carência" - não é padrão da indústria)
+- [x] Atualizar hook `useDebts` para aceitar parâmetro `monthYear`
+- [ ] Atualizar `PayInstallmentDialog` para aceitar quantidade
+
+_Testes - Dívidas (Filtro por Mês):_
+- [ ] Unit: filtro por mês calcula período corretamente
+- [ ] Unit: detecção de overdue funciona
+- [ ] Unit: pagamento de múltiplas parcelas
+- [ ] Unit: validação de startMonthYear
+- [ ] Integration: dívida de 10 parcelas aparece apenas em 10 meses
+- [ ] E2E: navegar entre meses e verificar visibilidade de dívidas
 
 _Notificações:_
 - [ ] Implementar notificações financeiras:

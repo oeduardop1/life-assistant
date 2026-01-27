@@ -7,6 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { MonthPicker } from '../month-picker';
+import {
+  getCurrentMonth,
+  formatMonthDisplay,
+  calculateDebtEndMonth,
+} from '../../types';
 
 // =============================================================================
 // Types
@@ -20,6 +26,7 @@ export interface DebtFormData {
   totalInstallments?: number;
   installmentAmount?: number;
   dueDay?: number;
+  startMonthYear?: string;
   notes: string;
 }
 
@@ -67,12 +74,15 @@ export function DebtForm({
       totalInstallments: undefined,
       installmentAmount: undefined,
       dueDay: undefined,
+      startMonthYear: getCurrentMonth(),
       notes: '',
       ...defaultValues,
     },
   });
 
   const isNegotiated = watch('isNegotiated');
+  const startMonthYear = watch('startMonthYear') ?? getCurrentMonth();
+  const totalInstallments = watch('totalInstallments');
 
   return (
     <form
@@ -216,6 +226,19 @@ export function DebtForm({
               <p className="text-xs text-destructive">{errors.dueDay.message}</p>
             )}
           </div>
+
+          {/* Start Month */}
+          <MonthPicker
+            value={startMonthYear}
+            onChange={(month) => setValue('startMonthYear', month)}
+            label="Mês da Primeira Parcela"
+            description={
+              totalInstallments && totalInstallments > 0
+                ? `Última parcela: ${formatMonthDisplay(calculateDebtEndMonth(startMonthYear, totalInstallments))}`
+                : undefined
+            }
+            data-testid="debt-form-start-month"
+          />
         </div>
       )}
 

@@ -45,6 +45,7 @@ export function CreateDebtModal({
         totalInstallments: data.isNegotiated ? data.totalInstallments : undefined,
         installmentAmount: data.isNegotiated ? data.installmentAmount : undefined,
         dueDay: data.isNegotiated ? data.dueDay : undefined,
+        startMonthYear: data.isNegotiated ? data.startMonthYear : undefined,
         notes: data.notes || undefined,
       });
 

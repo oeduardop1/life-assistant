@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, AlertCircle, RefreshCw, CreditCard } from 'lucide-react';
+import { Plus, AlertCircle, RefreshCw, CreditCard, Eye, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useDebts } from '../hooks/use-debts';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useDebts, useAllDebts } from '../hooks/use-debts';
+import { useFinanceContext } from '../context/finance-context';
 import {
   DebtList,
   DebtSummary,
@@ -14,13 +17,13 @@ import {
   NegotiateDebtModal,
   PayInstallmentDialog,
 } from '../components/debt';
-import { calculateDebtTotals, type Debt } from '../types';
+import { calculateDebtTotals, formatMonthDisplay, type Debt } from '../types';
 
 // =============================================================================
 // Types
 // =============================================================================
 
-type DebtStatusFilter = 'all' | 'active' | 'paid_off';
+type DebtStatusFilter = 'all' | 'active' | 'overdue' | 'paid_off';
 
 // =============================================================================
 // Empty State
@@ -106,38 +109,83 @@ interface PageHeaderProps {
   statusFilter: DebtStatusFilter;
   onStatusFilterChange: (filter: DebtStatusFilter) => void;
   onAddClick: () => void;
+  showAllDebts: boolean;
+  onShowAllDebtsChange: (value: boolean) => void;
+  currentMonth: string;
 }
 
-function PageHeader({ statusFilter, onStatusFilterChange, onAddClick }: PageHeaderProps) {
+function PageHeader({
+  statusFilter,
+  onStatusFilterChange,
+  onAddClick,
+  showAllDebts,
+  onShowAllDebtsChange,
+  currentMonth,
+}: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h2 className="text-xl font-semibold">Dívidas</h2>
-        <p className="text-sm text-muted-foreground">
-          Gerencie suas dívidas e financiamentos
-        </p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">Dívidas</h2>
+          <p className="text-sm text-muted-foreground">
+            Gerencie suas dívidas e financiamentos
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Tabs
+            value={statusFilter}
+            onValueChange={(value: string) => onStatusFilterChange(value as DebtStatusFilter)}
+          >
+            <TabsList data-testid="debt-status-filter">
+              <TabsTrigger value="all" data-testid="debt-filter-all">
+                Todas
+              </TabsTrigger>
+              <TabsTrigger value="active" data-testid="debt-filter-active">
+                Ativas
+              </TabsTrigger>
+              <TabsTrigger value="overdue" data-testid="debt-filter-overdue">
+                Em Atraso
+              </TabsTrigger>
+              <TabsTrigger value="paid_off" data-testid="debt-filter-paid-off">
+                Quitadas
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button onClick={onAddClick} data-testid="add-debt-button">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Dívida
+          </Button>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <Tabs
-          value={statusFilter}
-          onValueChange={(value: string) => onStatusFilterChange(value as DebtStatusFilter)}
-        >
-          <TabsList data-testid="debt-status-filter">
-            <TabsTrigger value="all" data-testid="debt-filter-all">
-              Todas
-            </TabsTrigger>
-            <TabsTrigger value="active" data-testid="debt-filter-active">
-              Ativas
-            </TabsTrigger>
-            <TabsTrigger value="paid_off" data-testid="debt-filter-paid-off">
-              Quitadas
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <Button onClick={onAddClick} data-testid="add-debt-button">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Dívida
-        </Button>
+
+      {/* View Toggle */}
+      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+        <div className="flex items-center gap-2 text-sm">
+          {showAllDebts ? (
+            <>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Mostrando:</span>
+              <span className="font-medium">Todas as dívidas</span>
+            </>
+          ) : (
+            <>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Mostrando dívidas de:</span>
+              <span className="font-medium">{formatMonthDisplay(currentMonth)}</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="show-all-debts" className="text-sm text-muted-foreground cursor-pointer">
+            Ver todas
+          </Label>
+          <Switch
+            id="show-all-debts"
+            checked={showAllDebts}
+            onCheckedChange={onShowAllDebtsChange}
+            data-testid="show-all-debts-toggle"
+          />
+        </div>
       </div>
     </div>
   );
@@ -175,17 +223,34 @@ function SectionHeader({ title, count }: SectionHeaderProps) {
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export default function DebtsPage() {
+  // Finance context - month navigation
+  const { currentMonth } = useFinanceContext();
+
   // Filter state
   const [statusFilter, setStatusFilter] = useState<DebtStatusFilter>('all');
+  const [showAllDebts, setShowAllDebts] = useState(false);
 
-  // Data fetching
-  const { data, isLoading, isError, refetch } = useDebts();
-  const allDebts = data?.debts ?? [];
+  // Data fetching - all debts for KPIs (global view)
+  const { data: allDebtsData, isLoading: isLoadingAll, isError: isErrorAll, refetch: refetchAll } = useAllDebts();
+
+  // Data fetching - month filtered debts for list (when not showing all)
+  const { data: monthDebtsData, isLoading: isLoadingMonth, isError: isErrorMonth, refetch: refetchMonth } = useDebts({ monthYear: currentMonth });
+
+  // Choose which data to show in the list based on toggle
+  const listDebts = showAllDebts ? (allDebtsData?.debts ?? []) : (monthDebtsData?.debts ?? []);
+  const isLoading = showAllDebts ? isLoadingAll : isLoadingMonth;
+  const isError = isErrorAll || isErrorMonth;
+
+  const refetch = () => {
+    refetchAll();
+    refetchMonth();
+  };
 
   // Filter debts based on status
-  const filteredDebts = allDebts.filter((debt) => {
+  const filteredDebts = listDebts.filter((debt) => {
     if (statusFilter === 'all') return true;
-    if (statusFilter === 'active') return debt.status === 'active';
+    if (statusFilter === 'active') return debt.status === 'active' || debt.status === 'overdue';
+    if (statusFilter === 'overdue') return debt.status === 'overdue';
     if (statusFilter === 'paid_off') return debt.status === 'paid_off';
     return true;
   });
@@ -194,7 +259,9 @@ export default function DebtsPage() {
   const negotiatedDebts = filteredDebts.filter((debt) => debt.isNegotiated);
   const pendingDebts = filteredDebts.filter((debt) => !debt.isNegotiated);
 
-  const totals = calculateDebtTotals(allDebts);
+  // KPIs always use ALL debts (global view)
+  const allDebtsForTotals = allDebtsData?.debts ?? [];
+  const totals = calculateDebtTotals(allDebtsForTotals);
 
   // Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -264,10 +331,13 @@ export default function DebtsPage() {
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         onAddClick={() => setCreateModalOpen(true)}
+        showAllDebts={showAllDebts}
+        onShowAllDebtsChange={setShowAllDebts}
+        currentMonth={currentMonth}
       />
 
-      {/* Summary */}
-      <DebtSummary totals={totals} loading={isLoading} />
+      {/* Summary - always uses global data */}
+      <DebtSummary totals={totals} loading={isLoadingAll} />
 
       {/* List or Empty State */}
       {isEmpty ? (
@@ -287,6 +357,7 @@ export default function DebtsPage() {
               <DebtList
                 debts={negotiatedDebts}
                 loading={isLoading}
+                currentMonth={currentMonth}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onPayInstallment={handlePayInstallment}
@@ -304,6 +375,7 @@ export default function DebtsPage() {
               <DebtList
                 debts={pendingDebts}
                 loading={isLoading}
+                currentMonth={currentMonth}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onNegotiate={handleNegotiate}

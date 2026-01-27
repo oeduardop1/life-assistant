@@ -599,7 +599,8 @@ describe('Debt Conditional Validation (Service-level)', () => {
       expect(result.currentInstallment).toBe(6);
       expect(mockRepository.payInstallment).toHaveBeenCalledWith(
         'user-123',
-        'debt-123'
+        'debt-123',
+        1
       );
     });
 

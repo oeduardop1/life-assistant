@@ -867,16 +867,26 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: 'get_debt_progress',
-    description: 'Retorna progresso de pagamento das dívidas negociadas. Inclui parcelas pagas, restantes e percentual de conclusão.',
+    description: 'Retorna progresso de pagamento das dívidas. Filtra por mês se monthYear fornecido. Inclui parcelas pagas, restantes e percentual de conclusão.',
     parameters: z.object({
       debtId: z.string().uuid().optional()
         .describe('ID da dívida específica. Se omitido, retorna todas as dívidas.'),
+      monthYear: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional()
+        .describe('Filtrar dívidas visíveis neste mês (YYYY-MM). Aplica regras de visibilidade.'),
     }),
     requiresConfirmation: false,
     inputExamples: [
       {},
       { debtId: '123e4567-e89b-12d3-a456-426614174000' },
+      { monthYear: '2026-01' },
     ],
+    // Comportamento com monthYear:
+    // - Dívidas não negociadas: sempre retornadas
+    // - Dívidas em default: sempre retornadas (alerta)
+    // - Dívidas quitadas: apenas se mês <= mês de quitação
+    // - Dívidas negociadas: apenas se mês está no período (startMonthYear a endMonth)
+    // - Carência: dívida visível com isInGracePeriod=true se currentMonth < startMonthYear
+    //
     // Retorno esperado:
     // interface DebtProgressResponse {
     //   debts: Array<{
@@ -892,13 +902,17 @@ export const tools: ToolDefinition[] = [
     //     totalRemaining: number;
     //     percentComplete: number;
     //     nextDueDate?: string;
+    //     startMonthYear?: string;  // Mês de início das parcelas (YYYY-MM)
     //     isNegotiated: boolean;
+    //     status: 'active' | 'overdue' | 'paid_off' | 'settled' | 'defaulted';
+    //     isInGracePeriod?: boolean;  // true se currentMonth < startMonthYear
     //   }>;
     //   summary: {
     //     totalDebts: number;
     //     totalPaid: number;
     //     totalRemaining: number;
     //     averageProgress: number;
+    //     overdueCount: number;  // Quantidade de dívidas em atraso
     //   };
     // }
   },

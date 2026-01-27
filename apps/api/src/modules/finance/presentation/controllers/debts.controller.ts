@@ -22,7 +22,12 @@ import {
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../../../common/types/request.types';
 import { DebtsService } from '../../application/services/debts.service';
-import { CreateDebtDto, UpdateDebtDto, NegotiateDebtDto } from '../dtos/debt.dto';
+import {
+  CreateDebtDto,
+  UpdateDebtDto,
+  NegotiateDebtDto,
+  PayInstallmentDto,
+} from '../dtos/debt.dto';
 import { DebtQueryDto } from '../dtos/query.dto';
 
 @ApiTags('Finance - Debts')
@@ -47,6 +52,7 @@ export class DebtsController {
       totalInstallments: dto.totalInstallments,
       installmentAmount: dto.installmentAmount?.toString(),
       dueDay: dto.dueDay,
+      startMonthYear: dto.startMonthYear,
       notes: dto.notes,
       currency: dto.currency ?? 'BRL',
     });
@@ -61,11 +67,18 @@ export class DebtsController {
     @Query() query: DebtQueryDto
   ) {
     const { debts, total } = await this.debtsService.findAll(user.id, {
+      monthYear: query.monthYear,
       status: query.status,
       isNegotiated: query.isNegotiated,
       limit: query.limit,
       offset: query.offset,
     });
+
+    // Note: Overdue status is NOT checked here on purpose.
+    // Navigating between months is just for visualization - it should not change debt status.
+    // Overdue detection should be done via a scheduled job using the real current date,
+    // or calculated dynamically in the frontend for display purposes.
+
     return { debts, total };
   }
 
@@ -99,6 +112,8 @@ export class DebtsController {
     if (dto.totalAmount !== undefined)
       updateData.totalAmount = dto.totalAmount.toString();
     if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.startMonthYear !== undefined)
+      updateData.startMonthYear = dto.startMonthYear;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
     if (dto.currency !== undefined) updateData.currency = dto.currency;
 
@@ -120,19 +135,24 @@ export class DebtsController {
   }
 
   @Patch(':id/pay-installment')
-  @ApiOperation({ summary: 'Pay an installment' })
+  @ApiOperation({ summary: 'Pay one or more installments' })
   @ApiParam({ name: 'id', description: 'Debt ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Installment paid' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Installment(s) paid' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Debt not found' })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Debt not negotiated or already paid off',
+    description: 'Debt not negotiated, already paid off, or quantity exceeds remaining',
   })
   async payInstallment(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string
+    @Param('id') id: string,
+    @Body() dto: PayInstallmentDto
   ) {
-    const debt = await this.debtsService.payInstallment(user.id, id);
+    const debt = await this.debtsService.payInstallment(
+      user.id,
+      id,
+      dto.quantity ?? 1
+    );
     return { debt };
   }
 
@@ -150,11 +170,22 @@ export class DebtsController {
     @Param('id') id: string,
     @Body() dto: NegotiateDebtDto
   ) {
-    const debt = await this.debtsService.negotiate(user.id, id, {
+    const negotiateData: {
+      totalInstallments: number;
+      installmentAmount: number;
+      dueDay: number;
+      startMonthYear?: string;
+    } = {
       totalInstallments: dto.totalInstallments,
       installmentAmount: dto.installmentAmount,
       dueDay: dto.dueDay,
-    });
+    };
+
+    if (dto.startMonthYear) {
+      negotiateData.startMonthYear = dto.startMonthYear;
+    }
+
+    const debt = await this.debtsService.negotiate(user.id, id, negotiateData);
     return { debt };
   }
 }

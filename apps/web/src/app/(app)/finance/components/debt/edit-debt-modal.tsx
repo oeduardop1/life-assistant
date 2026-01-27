@@ -48,6 +48,7 @@ export function EditDebtModal({
           name: data.name,
           creditor: data.creditor || undefined,
           totalAmount: data.totalAmount,
+          startMonthYear: data.isNegotiated ? data.startMonthYear : undefined,
           notes: data.notes || undefined,
         },
       });
@@ -80,6 +81,7 @@ export function EditDebtModal({
             totalInstallments: debt.totalInstallments || undefined,
             installmentAmount: debt.installmentAmount || undefined,
             dueDay: debt.dueDay || undefined,
+            startMonthYear: debt.startMonthYear || undefined,
             notes: debt.notes || '',
           }}
           onSubmit={handleSubmit}

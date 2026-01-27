@@ -192,6 +192,28 @@ GET /api/tracking?limit=50&offset=0
 | PATCH | `/api/finance/debts/:id/pay-installment` | Bearer | `PayInstallmentDto` | `DebtResponseDto` |
 | PATCH | `/api/finance/debts/:id/negotiate` | Bearer | `NegotiateDebtDto` | `DebtResponseDto` |
 
+**Debt DTOs:**
+```typescript
+// CreateDebtDto / UpdateDebtDto - campos adicionais:
+{
+  startMonthYear?: string;  // Mês de início das parcelas (YYYY-MM)
+}
+
+// DebtQueryDto - filtro por mês:
+{
+  monthYear?: string;  // Filtrar dívidas visíveis neste mês (YYYY-MM)
+  status?: 'active' | 'overdue' | 'paid_off' | 'settled' | 'defaulted';
+  isNegotiated?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+// PayInstallmentDto - quantidade de parcelas:
+{
+  quantity?: number;  // Quantidade de parcelas a pagar (default: 1)
+}
+```
+
 **Investments**
 | Método | Path | Auth | Request | Response |
 |--------|------|------|---------|----------|

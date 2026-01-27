@@ -24,6 +24,7 @@ function createMockDebt(
     installmentAmount: string | null;
     currentInstallment: number;
     dueDay: number | null;
+    startMonthYear: string | null;
     status: string;
     notes: string | null;
     currency: string;
@@ -42,6 +43,7 @@ function createMockDebt(
     installmentAmount: '500',
     currentInstallment: 1,
     dueDay: 10,
+    startMonthYear: '2024-01',
     status: 'active',
     notes: null,
     currency: 'BRL',
@@ -246,6 +248,39 @@ describe('DebtsRepository', () => {
 
         // Only active debts contribute to monthlyInstallmentSum
         expect(result.monthlyInstallmentSum).toBe(1000);
+      });
+
+      it('should_include_overdue_debts_in_monthly_installment_sum', async () => {
+        setupMockDebts([
+          createMockDebt({
+            installmentAmount: '1000',
+            isNegotiated: true,
+            status: 'active',
+          }),
+          createMockDebt({
+            id: 'debt-2',
+            installmentAmount: '500',
+            isNegotiated: true,
+            status: 'overdue',
+          }),
+        ]);
+
+        const result = await repository.getSummary('user-123');
+
+        // Both active and overdue debts contribute to monthlyInstallmentSum
+        expect(result.monthlyInstallmentSum).toBe(1500);
+      });
+
+      it('should_count_overdue_debts_in_total', async () => {
+        setupMockDebts([
+          createMockDebt({ status: 'active' }),
+          createMockDebt({ id: 'debt-2', status: 'overdue' }),
+          createMockDebt({ id: 'debt-3', status: 'paid_off' }),
+        ]);
+
+        const result = await repository.getSummary('user-123');
+
+        expect(result.totalDebts).toBe(3);
       });
     });
 

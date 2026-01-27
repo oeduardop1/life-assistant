@@ -105,7 +105,7 @@ export class FinanceSummaryService {
       this.billsService.sumByMonthYearAndStatus(userId, targetMonth, 'paid'),
       this.variableExpensesService.sumByMonthYear(userId, targetMonth, 'expectedAmount'),
       this.variableExpensesService.sumByMonthYear(userId, targetMonth, 'actualAmount'),
-      this.debtsService.getSummary(userId),
+      this.debtsService.getSummary(userId, targetMonth),
       this.debtsService.sumPaymentsByMonthYear(userId, targetMonth),
       this.investmentsService.getSummary(userId),
     ]);

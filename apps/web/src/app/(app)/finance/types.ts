@@ -831,7 +831,7 @@ export const expenseCategoryOptions: { value: ExpenseCategory; label: string }[]
 /**
  * Debt status options (matches backend debt_status enum)
  */
-export type DebtStatus = 'active' | 'paid_off' | 'settled' | 'defaulted';
+export type DebtStatus = 'active' | 'overdue' | 'paid_off' | 'settled' | 'defaulted';
 
 /**
  * Debt entity returned from API
@@ -847,6 +847,7 @@ export interface Debt {
   installmentAmount: number | null;
   currentInstallment: number;
   dueDay: number | null;
+  startMonthYear: string | null;
   status: DebtStatus;
   notes: string | null;
   currency: string;
@@ -865,6 +866,7 @@ export interface CreateDebtInput {
   totalInstallments?: number;
   installmentAmount?: number;
   dueDay?: number;
+  startMonthYear?: string;
   notes?: string;
   currency?: string;
 }
@@ -877,6 +879,7 @@ export interface UpdateDebtInput {
   creditor?: string;
   totalAmount?: number;
   status?: DebtStatus;
+  startMonthYear?: string;
   notes?: string;
   currency?: string;
 }
@@ -888,12 +891,14 @@ export interface NegotiateDebtInput {
   totalInstallments: number;
   installmentAmount: number;
   dueDay: number;
+  startMonthYear?: string;
 }
 
 /**
  * Debt query parameters
  */
 export interface DebtQueryParams {
+  monthYear?: string;
   status?: DebtStatus;
   isNegotiated?: boolean;
   limit?: number;
@@ -948,6 +953,7 @@ export interface DebtProgress {
  */
 export const debtStatusLabels: Record<DebtStatus, string> = {
   active: 'Ativo',
+  overdue: 'Em Atraso',
   paid_off: 'Quitado',
   settled: 'Acordado',
   defaulted: 'Inadimplente',
@@ -958,6 +964,7 @@ export const debtStatusLabels: Record<DebtStatus, string> = {
  */
 export const debtStatusColors: Record<DebtStatus, string> = {
   active: 'blue',
+  overdue: 'orange',
   paid_off: 'green',
   settled: 'purple',
   defaulted: 'red',
@@ -968,6 +975,7 @@ export const debtStatusColors: Record<DebtStatus, string> = {
  */
 export const debtStatusOptions: { value: DebtStatus; label: string }[] = [
   { value: 'active', label: 'Ativo' },
+  { value: 'overdue', label: 'Em Atraso' },
   { value: 'paid_off', label: 'Quitado' },
   { value: 'settled', label: 'Acordado' },
   { value: 'defaulted', label: 'Inadimplente' },
@@ -1014,27 +1022,50 @@ export function calculateDebtProgress(debt: Debt): DebtProgress {
  * @returns DebtTotals summary
  */
 export function calculateDebtTotals(debts: Debt[]): DebtTotals {
-  const activeDebts = debts.filter((d) => d.status === 'active');
-  const negotiatedDebts = activeDebts.filter((d) => d.isNegotiated);
+  // Active debts = what user is currently managing (active + overdue)
+  const activeDebts = debts.filter((d) => d.status === 'active' || d.status === 'overdue');
+  const negotiatedActiveDebts = activeDebts.filter((d) => d.isNegotiated);
   const pendingDebts = activeDebts.filter((d) => !d.isNegotiated);
 
-  let totalPaid = 0;
-  let monthlyInstallmentSum = 0;
+  // All negotiated debts (including paid_off) for totalPaid calculation
+  const allNegotiatedDebts = debts.filter((d) => d.isNegotiated);
 
-  for (const debt of negotiatedDebts) {
+  // Calculate total paid from ALL negotiated debts (active + paid_off)
+  // This shows the total amount the user has paid across all debts
+  let totalPaid = 0;
+  for (const debt of allNegotiatedDebts) {
     if (debt.installmentAmount && debt.totalInstallments) {
       const paidInstallments = debt.currentInstallment - 1;
       const installment = typeof debt.installmentAmount === 'string' ? parseFloat(debt.installmentAmount) : debt.installmentAmount;
       totalPaid += paidInstallments * installment;
+    }
+  }
+
+  // Monthly installment sum only from ACTIVE negotiated debts (what's due each month)
+  let monthlyInstallmentSum = 0;
+  for (const debt of negotiatedActiveDebts) {
+    if (debt.installmentAmount) {
+      const installment = typeof debt.installmentAmount === 'string' ? parseFloat(debt.installmentAmount) : debt.installmentAmount;
       monthlyInstallmentSum += installment;
     }
   }
 
+  // Total amount = sum of ACTIVE debts (what user currently owes)
   const totalAmount = activeDebts.reduce((sum, d) => {
     const amount = typeof d.totalAmount === 'string' ? parseFloat(d.totalAmount) : d.totalAmount;
     return sum + amount;
   }, 0);
-  const totalRemaining = totalAmount - totalPaid;
+
+  // Total remaining = active debt amount minus what's been paid from active debts
+  let paidFromActiveDebts = 0;
+  for (const debt of negotiatedActiveDebts) {
+    if (debt.installmentAmount && debt.totalInstallments) {
+      const paidInstallments = debt.currentInstallment - 1;
+      const installment = typeof debt.installmentAmount === 'string' ? parseFloat(debt.installmentAmount) : debt.installmentAmount;
+      paidFromActiveDebts += paidInstallments * installment;
+    }
+  }
+  const totalRemaining = totalAmount - paidFromActiveDebts;
 
   return {
     totalDebts: activeDebts.length,
@@ -1042,7 +1073,7 @@ export function calculateDebtTotals(debts: Debt[]): DebtTotals {
     totalPaid,
     totalRemaining,
     monthlyInstallmentSum,
-    negotiatedCount: negotiatedDebts.length,
+    negotiatedCount: negotiatedActiveDebts.length,
     pendingNegotiationCount: pendingDebts.length,
   };
 }
@@ -1071,6 +1102,18 @@ export function isDebtInstallmentOverdue(debt: Debt): boolean {
   }
   const dueDate = getDebtDueDateForCurrentMonth(debt.dueDay);
   return isOverdue(dueDate);
+}
+
+/**
+ * Calculate end month for a debt based on startMonthYear and totalInstallments
+ * @param startMonth - Start month in YYYY-MM format
+ * @param totalInstallments - Total number of installments
+ * @returns End month in YYYY-MM format
+ */
+export function calculateDebtEndMonth(startMonth: string, totalInstallments: number): string {
+  const [year, month] = startMonth.split('-').map(Number);
+  const endDate = new Date(year, month - 1 + totalInstallments - 1, 1);
+  return `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
 }
 
 // =============================================================================

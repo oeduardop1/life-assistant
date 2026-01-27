@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useNegotiateDebt } from '../../hooks/use-debts';
-import { formatCurrency, type Debt } from '../../types';
+import { formatCurrency, getCurrentMonth, calculateDebtEndMonth, formatMonthDisplay, type Debt } from '../../types';
+import { MonthPicker } from '../month-picker';
 
 // =============================================================================
 // Types
@@ -24,6 +25,7 @@ interface NegotiateFormData {
   totalInstallments: number;
   installmentAmount: number;
   dueDay: number;
+  startMonthYear: string;
 }
 
 // =============================================================================
@@ -56,17 +58,20 @@ export function NegotiateDebtModal({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<NegotiateFormData>({
     defaultValues: {
       totalInstallments: 12,
       installmentAmount: debt ? Math.ceil(debt.totalAmount / 12) : 0,
       dueDay: 10,
+      startMonthYear: getCurrentMonth(),
     },
   });
 
   const totalInstallments = watch('totalInstallments');
   const installmentAmount = watch('installmentAmount');
+  const startMonthYear = watch('startMonthYear');
 
   const onSubmit = async (data: NegotiateFormData) => {
     if (!debt) return;
@@ -78,6 +83,7 @@ export function NegotiateDebtModal({
           totalInstallments: data.totalInstallments,
           installmentAmount: data.installmentAmount,
           dueDay: data.dueDay,
+          startMonthYear: data.startMonthYear,
         },
       });
 
@@ -174,6 +180,20 @@ export function NegotiateDebtModal({
               <p className="text-xs text-destructive">{errors.dueDay.message}</p>
             )}
           </div>
+
+          {/* Start Month */}
+          <MonthPicker
+            value={startMonthYear}
+            onChange={(month) => setValue('startMonthYear', month)}
+            label="Mês da Primeira Parcela"
+            description={
+              totalInstallments > 0 && startMonthYear
+                ? `Última parcela: ${formatMonthDisplay(calculateDebtEndMonth(startMonthYear, totalInstallments))}`
+                : undefined
+            }
+            disabled={negotiateDebt.isPending}
+            data-testid="negotiate-form-start-month"
+          />
 
           {/* Calculated Total */}
           {totalInstallments > 0 && installmentAmount > 0 && (

@@ -12,6 +12,7 @@ import { DebtCard } from './debt-card';
 interface DebtListProps {
   debts: Debt[];
   loading?: boolean;
+  currentMonth?: string;
   onEdit: (debt: Debt) => void;
   onDelete: (debt: Debt) => void;
   onPayInstallment?: (debt: Debt) => void;
@@ -76,6 +77,7 @@ function DebtListSkeleton() {
 export function DebtList({
   debts,
   loading,
+  currentMonth,
   onEdit,
   onDelete,
   onPayInstallment,
@@ -96,6 +98,7 @@ export function DebtList({
         <DebtCard
           key={debt.id}
           debt={debt}
+          currentMonth={currentMonth}
           onEdit={onEdit}
           onDelete={onDelete}
           onPayInstallment={onPayInstallment}

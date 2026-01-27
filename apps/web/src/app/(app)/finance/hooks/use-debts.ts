@@ -24,12 +24,13 @@ import type {
  */
 export function useDebts(params: DebtQueryParams = {}) {
   const api = useAuthenticatedApi();
-  const { status, isNegotiated, limit = 50, offset = 0 } = params;
+  const { monthYear, status, isNegotiated, limit = 50, offset = 0 } = params;
 
   return useQuery({
-    queryKey: financeKeys.debtsList({ status, isNegotiated, limit, offset }),
+    queryKey: financeKeys.debtsList({ monthYear, status, isNegotiated, limit, offset }),
     queryFn: async () => {
       const searchParams = new URLSearchParams();
+      if (monthYear) searchParams.set('monthYear', monthYear);
       if (status) searchParams.set('status', status);
       if (isNegotiated !== undefined) searchParams.set('isNegotiated', String(isNegotiated));
       if (limit) searchParams.set('limit', String(limit));
@@ -39,6 +40,26 @@ export function useDebts(params: DebtQueryParams = {}) {
       const response = await api.get<DebtsListResponse>(
         `/finance/debts${query ? `?${query}` : ''}`
       );
+      return response;
+    },
+    enabled: api.isAuthenticated,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+/**
+ * Hook to fetch ALL debts without month filtering
+ * Used for global KPIs/summary that should show total debt situation
+ *
+ * @see docs/milestones/phase-2-tracker.md M2.2
+ */
+export function useAllDebts() {
+  const api = useAuthenticatedApi();
+
+  return useQuery({
+    queryKey: financeKeys.debtsList({ monthYear: undefined, limit: 100, offset: 0 }),
+    queryFn: async () => {
+      const response = await api.get<DebtsListResponse>('/finance/debts?limit=100');
       return response;
     },
     enabled: api.isAuthenticated,
@@ -129,16 +150,19 @@ export function useDeleteDebt() {
 }
 
 /**
- * Hook to pay an installment on a negotiated debt
+ * Hook to pay installment(s) on a negotiated debt
  * Increments currentInstallment and auto-closes if fully paid
+ *
+ * @param id - Debt ID
+ * @param quantity - Number of installments to pay (default: 1)
  */
 export function usePayInstallment() {
   const api = useAuthenticatedApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.patch<DebtResponse>(`/finance/debts/${id}/pay-installment`);
+    mutationFn: async ({ id, quantity = 1 }: { id: string; quantity?: number }) => {
+      const response = await api.patch<DebtResponse>(`/finance/debts/${id}/pay-installment`, { quantity });
       return response.debt;
     },
     onSuccess: () => {

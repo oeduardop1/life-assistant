@@ -3,6 +3,7 @@
 import type { Debt, NewDebt, DebtPayment } from '@life-assistant/database';
 
 export interface DebtSearchParams {
+  monthYear?: string | undefined;
   status?: string | undefined;
   isNegotiated?: boolean | undefined;
   limit?: number | undefined;
@@ -29,7 +30,7 @@ export interface DebtsRepositoryPort {
   ): Promise<Debt | null>;
   delete(userId: string, id: string): Promise<boolean>;
   countByUserId(userId: string, params: DebtSearchParams): Promise<number>;
-  payInstallment(userId: string, id: string): Promise<Debt | null>;
+  payInstallment(userId: string, id: string, quantity?: number): Promise<Debt | null>;
   negotiate(
     userId: string,
     id: string,
@@ -37,9 +38,10 @@ export interface DebtsRepositoryPort {
       totalInstallments: number;
       installmentAmount: number;
       dueDay: number;
+      startMonthYear?: string;
     }
   ): Promise<Debt | null>;
-  getSummary(userId: string): Promise<DebtSummary>;
+  getSummary(userId: string, monthYear?: string): Promise<DebtSummary>;
   recordPayment(
     userId: string,
     debtId: string,

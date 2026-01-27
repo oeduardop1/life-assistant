@@ -46,13 +46,69 @@ export class DebtsRepository implements DebtsRepositoryPort {
         );
       }
 
-      return db
+      let debts = await db
         .select()
         .from(this.db.schema.debts)
         .where(and(...conditions))
         .limit(params.limit ?? 50)
         .offset(params.offset ?? 0);
+
+      // Apply month filtering if monthYear is provided
+      if (params.monthYear) {
+        debts = this.filterDebtsByMonth(debts, params.monthYear);
+      }
+
+      return debts;
     });
+  }
+
+  /**
+   * Filter debts by month based on visibility rules:
+   * - Non-negotiated debts: always visible
+   * - Defaulted debts: always visible (alert)
+   * - Paid off/settled debts: only visible in historical months (month <= end month)
+   * - Negotiated active/overdue: visible ONLY from startMonthYear to endMonth
+   *   (no grace period - debt doesn't appear before first installment month)
+   */
+  private filterDebtsByMonth(debts: Debt[], monthYear: string): Debt[] {
+    return debts.filter((debt) => {
+      // Non-negotiated debts: always visible
+      if (!debt.isNegotiated) return true;
+
+      // Defaulted debts: always visible
+      if (debt.status === 'defaulted') return true;
+
+      // No startMonthYear means legacy data - always visible
+      if (!debt.startMonthYear) return true;
+
+      const endMonth = this.calculateEndMonth(
+        debt.startMonthYear,
+        debt.totalInstallments ?? 1
+      );
+
+      // Paid off/settled debts: only historical months
+      if (debt.status === 'paid_off' || debt.status === 'settled') {
+        return monthYear <= endMonth;
+      }
+
+      // Active/overdue debts: visible ONLY from startMonthYear to endMonth
+      // No grace period - debt doesn't appear before first installment month
+      return debt.startMonthYear <= monthYear && monthYear <= endMonth;
+    });
+  }
+
+  /**
+   * Calculate the end month for a debt based on start month and total installments
+   */
+  private calculateEndMonth(
+    startMonth: string,
+    totalInstallments: number
+  ): string {
+    const parts = startMonth.split('-').map(Number);
+    const year = parts[0] ?? 2026;
+    const month = parts[1] ?? 1;
+    const endDate = new Date(year, month - 1 + totalInstallments - 1, 1);
+    return `${String(endDate.getFullYear())}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
   }
 
   async findById(userId: string, id: string): Promise<Debt | null> {
@@ -136,7 +192,11 @@ export class DebtsRepository implements DebtsRepositoryPort {
     });
   }
 
-  async payInstallment(userId: string, id: string): Promise<Debt | null> {
+  async payInstallment(
+    userId: string,
+    id: string,
+    quantity = 1
+  ): Promise<Debt | null> {
     return this.db.withUserId(userId, async (db) => {
       // First, get the current debt to check installment status
       const [currentDebt] = await db
@@ -154,12 +214,24 @@ export class DebtsRepository implements DebtsRepositoryPort {
         return null;
       }
 
-      const newInstallment = currentDebt.currentInstallment + 1;
       const totalInstallments = currentDebt.totalInstallments ?? 0;
 
+      // Calculate new installment number (capped at totalInstallments + 1)
+      const newInstallment = Math.min(
+        currentDebt.currentInstallment + quantity,
+        totalInstallments + 1
+      );
+
       // Check if debt is fully paid
-      const newStatus: DebtStatus =
-        newInstallment > totalInstallments ? 'paid_off' : 'active';
+      // If overdue and paying, return to active unless fully paid
+      let newStatus: DebtStatus;
+      if (newInstallment > totalInstallments) {
+        newStatus = 'paid_off';
+      } else if (currentDebt.status === 'overdue') {
+        newStatus = 'active';
+      } else {
+        newStatus = currentDebt.status;
+      }
 
       const [updated] = await db
         .update(this.db.schema.debts)
@@ -176,18 +248,25 @@ export class DebtsRepository implements DebtsRepositoryPort {
         )
         .returning();
 
-      // Record the payment in debt_payments for month-aware tracking
+      // Record the payments in debt_payments for month-aware tracking
       if (updated && currentDebt.installmentAmount) {
         const now = new Date();
         const monthYear = `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        await db.insert(this.db.schema.debtPayments).values({
-          userId,
-          debtId: id,
-          installmentNumber: currentDebt.currentInstallment,
-          amount: currentDebt.installmentAmount,
-          monthYear,
-          paidAt: now,
-        });
+
+        // Record each payment individually
+        for (let i = 0; i < quantity; i++) {
+          const installmentNumber = currentDebt.currentInstallment + i;
+          if (installmentNumber <= totalInstallments) {
+            await db.insert(this.db.schema.debtPayments).values({
+              userId,
+              debtId: id,
+              installmentNumber,
+              amount: currentDebt.installmentAmount,
+              monthYear,
+              paidAt: now,
+            });
+          }
+        }
       }
 
       return updated ?? null;
@@ -201,9 +280,16 @@ export class DebtsRepository implements DebtsRepositoryPort {
       totalInstallments: number;
       installmentAmount: number;
       dueDay: number;
+      startMonthYear?: string;
     }
   ): Promise<Debt | null> {
     return this.db.withUserId(userId, async (db) => {
+      // Default startMonthYear to current month if not provided
+      const now = new Date();
+      const startMonthYear =
+        data.startMonthYear ??
+        `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
       const [updated] = await db
         .update(this.db.schema.debts)
         .set({
@@ -211,6 +297,7 @@ export class DebtsRepository implements DebtsRepositoryPort {
           totalInstallments: data.totalInstallments,
           installmentAmount: data.installmentAmount.toString(),
           dueDay: data.dueDay,
+          startMonthYear,
           currentInstallment: 1,
           updatedAt: new Date(),
         })
@@ -226,7 +313,7 @@ export class DebtsRepository implements DebtsRepositoryPort {
     });
   }
 
-  async getSummary(userId: string): Promise<DebtSummary> {
+  async getSummary(userId: string, monthYear?: string): Promise<DebtSummary> {
     return this.db.withUserId(userId, async (db) => {
       const debts = await db
         .select()
@@ -235,19 +322,36 @@ export class DebtsRepository implements DebtsRepositoryPort {
 
       let totalAmount = 0;
       let totalPaid = 0;
+      let paidFromActiveDebts = 0;
       let negotiatedCount = 0;
       let monthlyInstallmentSum = 0;
 
       for (const debt of debts) {
-        totalAmount += parseFloat(debt.totalAmount);
+        const isActive = debt.status === 'active' || debt.status === 'overdue';
+
+        // Only count active debts in totalAmount
+        if (isActive) {
+          totalAmount += parseFloat(debt.totalAmount);
+        }
 
         if (debt.isNegotiated && debt.installmentAmount) {
-          negotiatedCount++;
           const paidInstallments = debt.currentInstallment - 1;
-          totalPaid += paidInstallments * parseFloat(debt.installmentAmount);
+          const paidAmount = paidInstallments * parseFloat(debt.installmentAmount);
 
-          if (debt.status === 'active') {
-            monthlyInstallmentSum += parseFloat(debt.installmentAmount);
+          // totalPaid = all payments ever made (for "Total Pago" display)
+          totalPaid += paidAmount;
+
+          if (isActive) {
+            // paidFromActiveDebts = payments from active debts only (for totalRemaining calc)
+            paidFromActiveDebts += paidAmount;
+
+            // Check if debt has installment due in the specified month
+            const hasInstallmentThisMonth = this.isDebtVisibleInMonth(debt, monthYear);
+
+            if (hasInstallmentThisMonth) {
+              negotiatedCount++;
+              monthlyInstallmentSum += parseFloat(debt.installmentAmount);
+            }
           }
         }
       }
@@ -256,11 +360,37 @@ export class DebtsRepository implements DebtsRepositoryPort {
         totalDebts: debts.length,
         totalAmount,
         totalPaid,
-        totalRemaining: totalAmount - totalPaid,
+        // totalRemaining = what user currently owes (active debts only)
+        totalRemaining: totalAmount - paidFromActiveDebts,
         negotiatedCount,
         monthlyInstallmentSum,
       };
     });
+  }
+
+  /**
+   * Check if a debt has an installment due in the specified month
+   */
+  private isDebtVisibleInMonth(
+    debt: { startMonthYear: string | null; totalInstallments: number | null; isNegotiated: boolean },
+    monthYear?: string
+  ): boolean {
+    // If no month specified, include all debts
+    if (!monthYear) return true;
+
+    // Non-negotiated debts are always visible
+    if (!debt.isNegotiated) return true;
+
+    // No startMonthYear means legacy data - always visible
+    if (!debt.startMonthYear) return true;
+
+    const endMonth = this.calculateEndMonth(
+      debt.startMonthYear,
+      debt.totalInstallments ?? 1
+    );
+
+    // Debt is visible if monthYear is within [startMonthYear, endMonth]
+    return debt.startMonthYear <= monthYear && monthYear <= endMonth;
   }
 
   async recordPayment(

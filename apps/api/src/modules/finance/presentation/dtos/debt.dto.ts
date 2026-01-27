@@ -7,13 +7,16 @@ import {
   IsNumber,
   IsBoolean,
   IsOptional,
+  IsInt,
   Min,
   Max,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum DebtStatusDto {
   ACTIVE = 'active',
+  OVERDUE = 'overdue',
   PAID_OFF = 'paid_off',
   SETTLED = 'settled',
   DEFAULTED = 'defaulted',
@@ -71,6 +74,17 @@ export class CreateDebtDto {
   @Max(31)
   dueDay?: number;
 
+  @ApiPropertyOptional({
+    example: '2026-01',
+    description: 'Start month for installments (YYYY-MM, required if negotiated)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, {
+    message: 'startMonthYear must be in YYYY-MM format',
+  })
+  startMonthYear?: string;
+
   @ApiPropertyOptional({ description: 'Additional notes' })
   @IsOptional()
   @IsString()
@@ -104,6 +118,17 @@ export class UpdateDebtDto {
   @IsEnum(DebtStatusDto)
   status?: DebtStatusDto;
 
+  @ApiPropertyOptional({
+    example: '2026-01',
+    description: 'Start month for installments (YYYY-MM)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, {
+    message: 'startMonthYear must be in YYYY-MM format',
+  })
+  startMonthYear?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -131,4 +156,28 @@ export class NegotiateDebtDto {
   @Min(1)
   @Max(31)
   dueDay: number;
+
+  @ApiPropertyOptional({
+    example: '2026-01',
+    description: 'Start month for installments (YYYY-MM, defaults to current month)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, {
+    message: 'startMonthYear must be in YYYY-MM format',
+  })
+  startMonthYear?: string;
+}
+
+export class PayInstallmentDto {
+  @ApiPropertyOptional({
+    example: 1,
+    default: 1,
+    description: 'Number of installments to pay at once (default: 1)',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  quantity?: number;
 }

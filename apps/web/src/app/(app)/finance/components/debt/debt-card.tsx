@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   MoreHorizontal,
   Pencil,
@@ -8,6 +9,7 @@ import {
   CheckCircle2,
   Handshake,
   AlertCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +38,7 @@ import { DebtStats } from './debt-stats';
 
 interface DebtCardProps {
   debt: Debt;
+  currentMonth?: string;
   onEdit: (debt: Debt) => void;
   onDelete: (debt: Debt) => void;
   onPayInstallment?: (debt: Debt) => void;
@@ -63,6 +66,7 @@ const badgeColorClasses: Record<string, string> = {
 
 const statusIcons: Record<string, typeof CreditCard> = {
   active: CreditCard,
+  overdue: AlertCircle,
   paid_off: CheckCircle2,
   settled: Handshake,
   defaulted: AlertCircle,
@@ -79,27 +83,48 @@ const statusIcons: Record<string, typeof CreditCard> = {
  */
 export function DebtCard({
   debt,
+  currentMonth: _currentMonth, // Kept for potential future use
   onEdit,
   onDelete,
   onPayInstallment,
   onNegotiate,
   isPayingInstallment,
 }: DebtCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const statusColor = debtStatusColors[debt.status] || 'gray';
   const StatusIcon = statusIcons[debt.status] || CreditCard;
   const isPaidOff = debt.status === 'paid_off';
   const isActive = debt.status === 'active';
-  const canPayInstallment = isActive && debt.isNegotiated && onPayInstallment;
+  const isOverdue = debt.status === 'overdue';
+  const canPayInstallment = (isActive || isOverdue) && debt.isNegotiated && onPayInstallment;
   const canNegotiate = isActive && !debt.isNegotiated && onNegotiate;
 
   const progress = calculateDebtProgress(debt);
+  const hasDetails = debt.isNegotiated && debt.totalInstallments && debt.installmentAmount;
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't toggle if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[role="menuitem"]')) {
+      return;
+    }
+    if (hasDetails) {
+      setIsExpanded(!isExpanded);
+    }
+  };
 
   return (
     <Card
-      className={cn(isPaidOff && 'opacity-75')}
+      className={cn(
+        isPaidOff && 'opacity-75',
+        hasDetails && 'cursor-pointer hover:bg-accent/50 transition-colors'
+      )}
       data-testid="debt-card"
+      onClick={handleCardClick}
     >
       <CardContent className="p-4">
+        {/* Header - Always Visible */}
         <div className="flex items-start justify-between gap-4">
           {/* Left: Icon + Info */}
           <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -152,28 +177,18 @@ export function DebtCard({
                     Pendente de Negociação
                   </Badge>
                 )}
-              </div>
 
-              {/* Negotiated Debt: Progress and Stats */}
-              {debt.isNegotiated && debt.totalInstallments && debt.installmentAmount && (
-                <div className="mt-3 space-y-3">
-                  <DebtProgressBar
-                    currentInstallment={debt.currentInstallment}
-                    totalInstallments={debt.totalInstallments}
-                    showLabel
-                    size="md"
-                  />
-                  <DebtStats
-                    progress={progress}
-                    installmentAmount={debt.installmentAmount}
-                    dueDay={debt.dueDay}
-                  />
-                </div>
-              )}
+                {/* Summary info when collapsed */}
+                {hasDetails && !isExpanded && (
+                  <span className="text-xs text-muted-foreground">
+                    {progress.paidInstallments}/{debt.totalInstallments} parcelas
+                  </span>
+                )}
+              </div>
 
               {/* Non-negotiated Debt: Total Amount Info */}
               {!debt.isNegotiated && (
-                <div className="mt-3">
+                <div className="mt-2">
                   <p className="text-xs text-muted-foreground">
                     Valor total da dívida pendente de negociação
                   </p>
@@ -183,7 +198,7 @@ export function DebtCard({
           </div>
 
           {/* Right: Values + Actions */}
-          <div className="flex items-start gap-3 shrink-0">
+          <div className="flex items-start gap-2 shrink-0">
             {/* Values */}
             <div className="text-right">
               <p
@@ -212,6 +227,18 @@ export function DebtCard({
                 </p>
               )}
             </div>
+
+            {/* Expand/Collapse Indicator */}
+            {hasDetails && (
+              <div className="flex items-center h-8">
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 text-muted-foreground transition-transform duration-200',
+                    isExpanded && 'rotate-180'
+                  )}
+                />
+              </div>
+            )}
 
             {/* Actions */}
             <DropdownMenu>
@@ -275,6 +302,32 @@ export function DebtCard({
             </DropdownMenu>
           </div>
         </div>
+
+        {/* Expandable Details - Progress and Stats */}
+        {hasDetails && (
+          <div
+            className={cn(
+              'grid transition-all duration-200 ease-in-out',
+              isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0'
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-3 pt-3 border-t">
+                <DebtProgressBar
+                  currentInstallment={debt.currentInstallment}
+                  totalInstallments={debt.totalInstallments!}
+                  showLabel
+                  size="md"
+                />
+                <DebtStats
+                  progress={progress}
+                  installmentAmount={debt.installmentAmount!}
+                  dueDay={debt.dueDay}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

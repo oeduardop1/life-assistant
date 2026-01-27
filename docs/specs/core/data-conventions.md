@@ -324,7 +324,7 @@ export const incomeFrequencyEnum = pgEnum('income_frequency', [
 ]);
 
 export const debtStatusEnum = pgEnum('debt_status', [
-  'active', 'paid_off', 'settled', 'defaulted'
+  'active', 'overdue', 'paid_off', 'settled', 'defaulted'
 ]);
 
 export const investmentTypeEnum = pgEnum('investment_type', [
@@ -1607,20 +1607,27 @@ export const debts = pgTable('debts', {
   totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
   installmentAmount: decimal('installment_amount', { precision: 12, scale: 2 }),
   totalInstallments: integer('total_installments'),
-  paidInstallments: integer('paid_installments').default(0),
+  currentInstallment: integer('current_installment').notNull().default(1),  // Parcela atual (1 = primeira a pagar)
 
-  interestRate: decimal('interest_rate', { precision: 5, scale: 2 }),
-  dueDay: integer('due_day'),
-  startDate: date('start_date'),
+  dueDay: integer('due_day'),  // Dia do mês para vencimento (1-31)
+  startMonthYear: varchar('start_month_year', { length: 7 }),  // Mês de início (YYYY-MM)
 
   isNegotiated: boolean('is_negotiated').notNull().default(false),
-  status: debtStatusEnum('status').notNull().default('active'),
+  status: debtStatusEnum('status').notNull().default('active'),  // active, overdue, paid_off, settled, defaulted
 
-  deletedAt: timestamp('deleted_at'),
+  notes: text('notes'),
+  currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 ```
+
+**Regras de negócio:**
+- Se `isNegotiated=true`: campos `totalInstallments`, `installmentAmount`, `dueDay`, `startMonthYear` são obrigatórios
+- Se `isNegotiated=false`: campos de parcelas são opcionais (dívida aguardando negociação)
+- `status='overdue'`: detectado quando `currentInstallment < parcelas esperadas pelo tempo decorrido`
+- Período de visibilidade: de `startMonthYear` até `startMonthYear + (totalInstallments - 1) meses`
 
 ### 16.4 Investments
 

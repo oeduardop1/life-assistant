@@ -84,7 +84,8 @@ O módulo financeiro permite ao usuário gerenciar suas finanças pessoais atrav
 | installmentAmount | Condicional | Valor da parcela mensal (obrigatório se negotiated) |
 | currentInstallment | Condicional | Parcela atual (1 = primeira a pagar) |
 | dueDay | Condicional | Dia de vencimento da parcela |
-| status | ✅ | `active`, `paid_off`, `settled`, `defaulted` |
+| startMonthYear | Condicional | Mês de início das parcelas (YYYY-MM, obrigatório se negotiated) |
+| status | ✅ | `active`, `overdue`, `paid_off`, `settled`, `defaulted` |
 | notes | ❌ | Contexto sobre a dívida/negociação |
 
 **Regras:**
@@ -205,14 +206,26 @@ Criação com isNegotiated=false:
 
 Criação com isNegotiated=true:
   negotiated (active) ─── pagar_parcela() ───→ partially_paid
-                                                    │
-  partially_paid ─── pagar_parcela() (última) ─────→ paid_off
+                │                                   │
+                │                   partially_paid ─── pagar_parcela() (última) ─────→ paid_off
+                │
+                └── parcelas atrasadas ───→ overdue ─── pagar_parcelas_atrasadas() ───→ active
+                                               │
+                                               └── pagar_parcela() (última) ───→ paid_off
 ```
+
+**Status `overdue`:**
+- Detectado quando `currentInstallment < parcelas esperadas pelo tempo decorrido`
+- Cálculo: `expectedPaidInstallments = min(meses desde startMonthYear, totalInstallments)`
+- Se `actualPaidInstallments < expectedPaidInstallments` → status = `overdue`
+- Ao pagar parcelas atrasadas, volta para `active` (ou `paid_off` se última)
 
 ### 3.5 Debt Payment Flow
 
-- Ao pagar parcela: `currentInstallment++`
+- Ao pagar parcela(s): `currentInstallment += quantity` (default: 1)
 - Se `currentInstallment > totalInstallments`: `status = 'paid_off'`
+- Se `status = 'overdue'` e parcelas atrasadas são pagas: `status = 'active'`
+- Permite pagar múltiplas parcelas de uma vez (ex: pagar 3 parcelas atrasadas)
 
 **Cálculos de Progresso (por dívida):**
 - Parcelas pagas: `currentInstallment - 1`
@@ -220,6 +233,32 @@ Criação com isNegotiated=true:
 - Progresso (%): `((currentInstallment - 1) / totalInstallments) × 100`
 - Valor pago: `(currentInstallment - 1) × installmentAmount`
 - Valor restante: `totalAmount - valorPago`
+
+### 3.6 Visibilidade de Dívidas por Mês
+
+Dívidas são filtradas por mês baseado em seu tipo e período de vigência.
+
+> **Nota (2026-01-27):** Seguindo padrão da indústria (Mobills, YNAB, Organizze), dívidas só aparecem nos meses onde há parcela a vencer. Não existe conceito de "carência" visível - a dívida simplesmente não aparece antes do mês de início.
+
+| Tipo | Condição | Visibilidade no Calendário |
+|------|----------|---------------------------|
+| **Não Negociada** | `isNegotiated=false` | TODOS os meses (até resolver) |
+| **Antes do Início** | `isNegotiated=true` E `currentMonth < startMonthYear` | **Não aparece** (padrão da indústria) |
+| **Negociada Ativa** | `isNegotiated=true` E `status=active` | De `startMonthYear` até `endMonth` |
+| **Com Atraso** | `status=overdue` | No período + alerta vermelho |
+| **Em Default** | `status=defaulted` | TODOS os meses (alerta perpétuo) |
+| **Quitada** | `status=paid_off/settled` | Apenas histórico (meses passados) |
+
+**Cálculo do período:**
+- `endMonth = startMonthYear + (totalInstallments - 1) meses`
+- Dívida visível APENAS de `startMonthYear` até `endMonth`
+
+**Exemplos:**
+- Dívida de 10 parcelas com `startMonthYear='2026-02'`:
+  - `endMonth = 2026-11` (fevereiro a novembro)
+  - Janeiro/2026: **não aparece**
+  - Fevereiro a Novembro/2026: visível
+  - Dezembro/2026+: não aparece
 
 ---
 
@@ -272,12 +311,24 @@ Criação com isNegotiated=true:
 
 **Horário:** Diário às 00:30 UTC
 
-**Processo:**
+**Processo para Bills:**
 1. Buscar bills com `status = pending` e `dueDay < dia_atual`
 2. Atualizar status para `overdue`
-3. Buscar debt installments pendentes e vencidas
-4. Atualizar status para `overdue`
-5. Criar alerta de contas vencidas para próxima conversa
+3. Criar alerta de contas vencidas para próxima conversa
+
+**Processo para Debts:**
+1. Buscar dívidas com `isNegotiated=true` e `status=active`
+2. Para cada dívida com `startMonthYear` definido:
+   - Calcular `monthsDiff = meses entre startMonthYear e mês atual`
+   - Calcular `expectedPaidInstallments = min(monthsDiff + 1, totalInstallments)`
+   - Calcular `actualPaidInstallments = currentInstallment - 1`
+   - Se `actualPaidInstallments < expectedPaidInstallments`:
+     - Atualizar `status = 'overdue'`
+3. Criar alerta de parcelas vencidas para próxima conversa
+
+**Detecção sob demanda:**
+- O status `overdue` também é verificado ao listar dívidas por mês
+- Endpoint `GET /finance/debts?monthYear=YYYY-MM` executa verificação
 
 ---
 
@@ -443,15 +494,23 @@ Criação com isNegotiated=true:
 
 {
   name: 'get_debt_progress',
-  description: 'Retorna progresso de pagamento das dívidas negociadas. Inclui parcelas pagas, restantes e percentual de conclusão.',
+  description: 'Retorna progresso de pagamento das dívidas. Filtra por mês se monthYear fornecido. Inclui parcelas pagas, restantes e percentual de conclusão.',
   parameters: {
-    debtId?: string,
+    debtId?: string,     // UUID específico ou todas
+    monthYear?: string,  // Filtrar dívidas visíveis neste mês (YYYY-MM)
   },
   requiresConfirmation: false,
   inputExamples: [
     {},
     { debtId: '123e4567-e89b-12d3-a456-426614174000' },
+    { monthYear: '2026-01' },
   ],
+  // Comportamento com monthYear:
+  // - Se fornecido, aplica regras de visibilidade (seção 3.6)
+  // - Dívidas não negociadas: sempre retornadas
+  // - Dívidas quitadas: apenas se mês <= mês de quitação
+  // - Dívidas negociadas: apenas se mês está no período (startMonthYear a endMonth)
+  //
   // Retorno esperado:
   // interface DebtProgressResponse {
   //   debts: Array<{
@@ -467,13 +526,16 @@ Criação com isNegotiated=true:
   //     totalRemaining: number;
   //     percentComplete: number;
   //     nextDueDate?: string;
+  //     startMonthYear?: string;  // Mês de início das parcelas
   //     isNegotiated: boolean;
+  //     status: 'active' | 'overdue' | 'paid_off' | 'settled' | 'defaulted';
   //   }>;
   //   summary: {
   //     totalDebts: number;
   //     totalPaid: number;
   //     totalRemaining: number;
   //     averageProgress: number;
+  //     overdueCount: number;  // Quantidade de dívidas em atraso
   //   };
   // }
 }
@@ -883,4 +945,4 @@ CREATE POLICY "user_access" ON incomes
 
 ---
 
-*Última atualização: 26 Janeiro 2026*
+*Última atualização: 27 Janeiro 2026*

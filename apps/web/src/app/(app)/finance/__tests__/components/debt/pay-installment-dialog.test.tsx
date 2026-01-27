@@ -40,6 +40,7 @@ const mockDebtNegotiated: Debt = {
   installmentAmount: 500,
   currentInstallment: 13,
   dueDay: 15,
+  startMonthYear: '2026-01',
   status: 'active',
   notes: null,
   currency: 'BRL',
@@ -162,7 +163,9 @@ describe('PayInstallmentDialog', () => {
       { wrapper: createWrapper() }
     );
 
-    expect(screen.getByText(/Esta é a última parcela!/)).toBeInTheDocument();
+    // When remainingInstallments=1 and quantity=1, shows plural ("Estas são as últimas parcelas!")
+    // because quantity === remainingInstallments (paying all remaining)
+    expect(screen.getByText(/Estas são as últimas parcelas!/)).toBeInTheDocument();
   });
 
   it('should_not_show_last_installment_message_for_regular_installment', () => {
@@ -175,7 +178,7 @@ describe('PayInstallmentDialog', () => {
       { wrapper: createWrapper() }
     );
 
-    expect(screen.queryByText(/Esta é a última parcela!/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/última[s]? parcela[s]?!/)).not.toBeInTheDocument();
   });
 
   it('should_call_mutateAsync_on_confirm', async () => {
@@ -194,7 +197,7 @@ describe('PayInstallmentDialog', () => {
 
     await user.click(screen.getByTestId('pay-installment-confirm'));
 
-    expect(mockMutateAsync).toHaveBeenCalledWith('debt-1');
+    expect(mockMutateAsync).toHaveBeenCalledWith({ id: 'debt-1', quantity: 1 });
   });
 
   it('should_close_dialog_on_success', async () => {

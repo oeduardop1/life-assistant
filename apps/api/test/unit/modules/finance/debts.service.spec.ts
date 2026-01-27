@@ -17,6 +17,7 @@ function createMockDebt(overrides: Partial<Debt> = {}): Debt {
     installmentAmount: '750',
     currentInstallment: 5,
     dueDay: 15,
+    startMonthYear: '2024-01',
     status: 'active',
     notes: null,
     createdAt: new Date('2024-01-01'),
@@ -318,7 +319,7 @@ describe('DebtsService', () => {
 
       expect(result).toEqual(paidDebt);
       expect(result.currentInstallment).toBe(6);
-      expect(mockRepository.payInstallment).toHaveBeenCalledWith('user-123', 'debt-123');
+      expect(mockRepository.payInstallment).toHaveBeenCalledWith('user-123', 'debt-123', 1);
     });
 
     it('should_throw_NotFoundException_when_debt_not_found', async () => {
@@ -364,6 +365,46 @@ describe('DebtsService', () => {
         service.payInstallment('user-123', 'debt-123')
       ).rejects.toThrow('Debt is already paid off');
     });
+
+    it('should_pay_multiple_installments_at_once', async () => {
+      const existingDebt = createMockDebt({
+        isNegotiated: true,
+        status: 'active',
+        currentInstallment: 3,
+        totalInstallments: 12,
+      });
+      const paidDebt = createMockDebt({
+        currentInstallment: 6,
+      });
+
+      mockRepository.findById.mockResolvedValue(existingDebt);
+      mockRepository.payInstallment.mockResolvedValue(paidDebt);
+
+      const result = await service.payInstallment('user-123', 'debt-123', 3);
+
+      expect(result.currentInstallment).toBe(6);
+      expect(mockRepository.payInstallment).toHaveBeenCalledWith('user-123', 'debt-123', 3);
+    });
+
+    it('should_allow_paying_overdue_debt', async () => {
+      const overdueDebt = createMockDebt({
+        isNegotiated: true,
+        status: 'overdue',
+        currentInstallment: 2,
+      });
+      const paidDebt = createMockDebt({
+        currentInstallment: 3,
+        status: 'active',
+      });
+
+      mockRepository.findById.mockResolvedValue(overdueDebt);
+      mockRepository.payInstallment.mockResolvedValue(paidDebt);
+
+      const result = await service.payInstallment('user-123', 'debt-123', 1);
+
+      expect(result).toEqual(paidDebt);
+      expect(mockRepository.payInstallment).toHaveBeenCalledWith('user-123', 'debt-123', 1);
+    });
   });
 
   describe('negotiate', () => {
@@ -397,6 +438,43 @@ describe('DebtsService', () => {
         totalInstallments: 24,
         installmentAmount: 500,
         dueDay: 20,
+      });
+    });
+
+    it('should_negotiate_debt_with_startMonthYear', async () => {
+      const existingDebt = createMockDebt({
+        isNegotiated: false,
+        totalInstallments: null,
+        installmentAmount: null,
+        dueDay: null,
+        startMonthYear: null,
+      });
+      const negotiatedDebt = createMockDebt({
+        isNegotiated: true,
+        totalInstallments: 12,
+        installmentAmount: '400',
+        dueDay: 15,
+        startMonthYear: '2026-03',
+        currentInstallment: 1,
+      });
+
+      mockRepository.findById.mockResolvedValue(existingDebt);
+      mockRepository.negotiate.mockResolvedValue(negotiatedDebt);
+
+      const result = await service.negotiate('user-123', 'debt-123', {
+        totalInstallments: 12,
+        installmentAmount: 400,
+        dueDay: 15,
+        startMonthYear: '2026-03',
+      });
+
+      expect(result).toEqual(negotiatedDebt);
+      expect(result.startMonthYear).toBe('2026-03');
+      expect(mockRepository.negotiate).toHaveBeenCalledWith('user-123', 'debt-123', {
+        totalInstallments: 12,
+        installmentAmount: 400,
+        dueDay: 15,
+        startMonthYear: '2026-03',
       });
     });
 

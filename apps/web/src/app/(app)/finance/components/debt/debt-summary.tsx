@@ -106,7 +106,7 @@ export function DebtSummary({ totals, loading }: DebtSummaryProps) {
     {
       title: 'Total Pago',
       value: formatCurrency(totals.totalPaid),
-      subtitle: 'Parcelas quitadas',
+      subtitle: 'Parcelas e dívidas quitadas',
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-500/10',

@@ -67,6 +67,7 @@ const mockDebtNegotiated: Debt = {
   installmentAmount: 1200,
   currentInstallment: 13, // 12 already paid
   dueDay: 15,
+  startMonthYear: '2025-01',
   status: 'active',
   notes: null,
   currency: 'BRL',
@@ -85,6 +86,7 @@ const mockDebtPending: Debt = {
   installmentAmount: null,
   currentInstallment: 1,
   dueDay: null,
+  startMonthYear: null,
   status: 'active',
   notes: 'Pendente de negociação',
   currency: 'BRL',
@@ -103,6 +105,7 @@ const mockDebtPaidOff: Debt = {
   installmentAmount: 550,
   currentInstallment: 7,
   dueDay: 10,
+  startMonthYear: '2025-06',
   status: 'paid_off',
   notes: null,
   currency: 'BRL',
@@ -375,11 +378,27 @@ describe('usePayInstallment', () => {
     const { result } = renderHook(() => usePayInstallment(), { wrapper });
 
     await act(async () => {
-      const returned = await result.current.mutateAsync('debt-1');
+      const returned = await result.current.mutateAsync({ id: 'debt-1' });
       expect(returned).toEqual(paidDebt);
     });
 
-    expect(mockPatch).toHaveBeenCalledWith('/finance/debts/debt-1/pay-installment');
+    expect(mockPatch).toHaveBeenCalledWith('/finance/debts/debt-1/pay-installment', { quantity: 1 });
+  });
+
+  it('should_pay_multiple_installments_at_once', async () => {
+    const paidDebt = { ...mockDebtNegotiated, currentInstallment: 16 };
+    const response: DebtResponse = { debt: paidDebt };
+    mockPatch.mockResolvedValue(response);
+
+    const wrapper = createWrapper();
+    const { result } = renderHook(() => usePayInstallment(), { wrapper });
+
+    await act(async () => {
+      const returned = await result.current.mutateAsync({ id: 'debt-1', quantity: 3 });
+      expect(returned).toEqual(paidDebt);
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith('/finance/debts/debt-1/pay-installment', { quantity: 3 });
   });
 
   it('should_mark_as_paid_off_when_last_installment', async () => {
@@ -400,7 +419,7 @@ describe('usePayInstallment', () => {
     const { result } = renderHook(() => usePayInstallment(), { wrapper });
 
     await act(async () => {
-      const returned = await result.current.mutateAsync('debt-1');
+      const returned = await result.current.mutateAsync({ id: 'debt-1' });
       expect(returned.status).toBe('paid_off');
     });
   });

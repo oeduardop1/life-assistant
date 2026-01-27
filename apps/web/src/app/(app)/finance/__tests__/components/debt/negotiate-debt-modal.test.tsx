@@ -40,6 +40,7 @@ const mockDebtPending: Debt = {
   installmentAmount: null,
   currentInstallment: 1,
   dueDay: null,
+  startMonthYear: null,
   status: 'active',
   notes: null,
   currency: 'BRL',
@@ -165,11 +166,12 @@ describe('NegotiateDebtModal', () => {
 
     expect(mockMutateAsync).toHaveBeenCalledWith({
       id: 'debt-2',
-      data: {
+      data: expect.objectContaining({
         totalInstallments: 10,
         installmentAmount: 550,
         dueDay: 20,
-      },
+        // startMonthYear is set to current month by default
+      }),
     });
   });
 

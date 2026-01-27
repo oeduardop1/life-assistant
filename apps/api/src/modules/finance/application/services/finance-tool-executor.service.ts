@@ -395,108 +395,60 @@ export class FinanceToolExecutorService implements ToolExecutor {
       );
     }
 
-    const { debtId } = parseResult.data;
+    const { debtId, monthYear } = parseResult.data;
 
-    this.logger.debug(`get_debt_progress params: debtId=${debtId ?? 'all'}`);
+    this.logger.debug(
+      `get_debt_progress params: debtId=${debtId ?? 'all'}, monthYear=${monthYear ?? 'none'}`
+    );
 
     if (debtId) {
       // Get specific debt
       const debt = await this.debtsService.findById(userId, debtId);
 
-      const totalAmount = parseFloat(debt.totalAmount);
-      const installmentAmount = debt.installmentAmount
-        ? parseFloat(debt.installmentAmount)
-        : 0;
-      const paidInstallments = debt.currentInstallment;
-      const totalInstallments = debt.totalInstallments ?? 0;
-      const remainingInstallments = totalInstallments - paidInstallments;
-      const totalPaid = installmentAmount * paidInstallments;
-      const totalRemaining = totalAmount - totalPaid;
-      const percentComplete =
-        totalInstallments > 0
-          ? Math.round((paidInstallments / totalInstallments) * 100)
-          : 0;
+      const formattedDebt = this.formatDebtForResponse(debt, monthYear);
 
       return createSuccessResult(toolCall, {
-        debts: [
-          {
-            id: debt.id,
-            name: debt.name,
-            creditor: debt.creditor ?? undefined,
-            totalAmount,
-            installmentAmount,
-            totalInstallments,
-            paidInstallments,
-            remainingInstallments,
-            totalPaid,
-            totalRemaining,
-            percentComplete,
-            nextDueDate: debt.dueDay
-              ? this.getNextDueDate(debt.dueDay)
-              : undefined,
-            isNegotiated: debt.isNegotiated,
-          },
-        ],
+        debts: [formattedDebt],
         summary: {
           totalDebts: 1,
-          totalPaid,
-          totalRemaining,
-          averageProgress: percentComplete,
+          totalPaid: formattedDebt.totalPaid as number,
+          totalRemaining: formattedDebt.totalRemaining as number,
+          averageProgress: formattedDebt.percentComplete as number,
+          overdueCount: formattedDebt.status === 'overdue' ? 1 : 0,
         },
       });
     }
 
-    // Get all debts
-    const { debts } = await this.debtsService.findAll(userId, {});
+    // Get all debts (filtered by monthYear if provided)
+    const { debts } = await this.debtsService.findAll(userId, { monthYear });
 
-    const formattedDebts = debts.map((debt) => {
-      const totalAmount = parseFloat(debt.totalAmount);
-      const installmentAmount = debt.installmentAmount
-        ? parseFloat(debt.installmentAmount)
-        : 0;
-      const paidInstallments = debt.currentInstallment;
-      const totalInstallments = debt.totalInstallments ?? 0;
-      const remainingInstallments = totalInstallments - paidInstallments;
-      const totalPaid = installmentAmount * paidInstallments;
-      const totalRemaining = totalAmount - totalPaid;
-      const percentComplete =
-        totalInstallments > 0
-          ? Math.round((paidInstallments / totalInstallments) * 100)
-          : 0;
-
-      return {
-        id: debt.id,
-        name: debt.name,
-        creditor: debt.creditor ?? undefined,
-        totalAmount,
-        installmentAmount,
-        totalInstallments,
-        paidInstallments,
-        remainingInstallments,
-        totalPaid,
-        totalRemaining,
-        percentComplete,
-        nextDueDate: debt.dueDay ? this.getNextDueDate(debt.dueDay) : undefined,
-        isNegotiated: debt.isNegotiated,
-      };
-    });
+    const formattedDebts = debts.map((debt) =>
+      this.formatDebtForResponse(debt, monthYear)
+    );
 
     // Calculate summary
-    const totalPaid = formattedDebts.reduce((sum, d) => sum + d.totalPaid, 0);
+    const totalPaid = formattedDebts.reduce(
+      (sum, d) => sum + (d.totalPaid as number),
+      0
+    );
     const totalRemaining = formattedDebts.reduce(
-      (sum, d) => sum + d.totalRemaining,
+      (sum, d) => sum + (d.totalRemaining as number),
       0
     );
     const averageProgress =
       formattedDebts.length > 0
         ? Math.round(
-            formattedDebts.reduce((sum, d) => sum + d.percentComplete, 0) /
-              formattedDebts.length
+            formattedDebts.reduce(
+              (sum, d) => sum + (d.percentComplete as number),
+              0
+            ) / formattedDebts.length
           )
         : 0;
+    const overdueCount = formattedDebts.filter((d) => d.status === 'overdue')
+      .length;
 
     this.logger.log(
-      `get_debt_progress returned ${String(formattedDebts.length)} debts`
+      `get_debt_progress returned ${String(formattedDebts.length)} debts${monthYear ? ` for ${monthYear}` : ''}`
     );
 
     return createSuccessResult(toolCall, {
@@ -506,8 +458,71 @@ export class FinanceToolExecutorService implements ToolExecutor {
         totalPaid,
         totalRemaining,
         averageProgress,
+        overdueCount,
       },
     });
+  }
+
+  /**
+   * Format a debt for API response
+   */
+  private formatDebtForResponse(
+    debt: {
+      id: string;
+      name: string;
+      creditor: string | null;
+      totalAmount: string;
+      installmentAmount: string | null;
+      totalInstallments: number | null;
+      currentInstallment: number;
+      dueDay: number | null;
+      startMonthYear: string | null;
+      isNegotiated: boolean;
+      status: string;
+      createdAt: Date;
+    },
+    _monthYear?: string
+  ): Record<string, unknown> {
+    const totalAmount = parseFloat(debt.totalAmount);
+    const installmentAmount = debt.installmentAmount
+      ? parseFloat(debt.installmentAmount)
+      : 0;
+    const paidInstallments = debt.currentInstallment - 1;
+    const totalInstallments = debt.totalInstallments ?? 0;
+    const remainingInstallments = totalInstallments - paidInstallments;
+    const totalPaid = installmentAmount * paidInstallments;
+    const totalRemaining = totalAmount - totalPaid;
+    const percentComplete =
+      totalInstallments > 0
+        ? Math.round((paidInstallments / totalInstallments) * 100)
+        : 0;
+
+    const result: Record<string, unknown> = {
+      id: debt.id,
+      name: debt.name,
+      totalAmount,
+      installmentAmount,
+      totalInstallments,
+      paidInstallments,
+      remainingInstallments,
+      totalPaid,
+      totalRemaining,
+      percentComplete,
+      isNegotiated: debt.isNegotiated,
+      status: debt.status,
+    };
+
+    if (debt.creditor) {
+      result.creditor = debt.creditor;
+    }
+    if (debt.dueDay) {
+      result.nextDueDate = this.getNextDueDate(debt.dueDay);
+    }
+    if (debt.startMonthYear) {
+      result.startMonthYear = debt.startMonthYear;
+    }
+
+    return result;
   }
 
   /**

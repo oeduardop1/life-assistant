@@ -452,9 +452,9 @@ describe('FinanceToolExecutorService', () => {
               expect.objectContaining({
                 id: 'debt-123',
                 name: 'Credit Card',
-                paidInstallments: 5,
-                remainingInstallments: 15,
-                percentComplete: 25,
+                paidInstallments: 4, // currentInstallment (5) - 1
+                remainingInstallments: 16, // totalInstallments (20) - paidInstallments (4)
+                percentComplete: 20, // paidInstallments (4) / totalInstallments (20) * 100
               }),
             ]),
             summary: expect.objectContaining({

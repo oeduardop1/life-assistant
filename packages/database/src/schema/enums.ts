@@ -245,6 +245,7 @@ export const expenseCategoryEnum = pgEnum('expense_category', [
 
 export const debtStatusEnum = pgEnum('debt_status', [
   'active',
+  'overdue',
   'paid_off',
   'settled',
   'defaulted',
