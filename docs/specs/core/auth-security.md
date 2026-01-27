@@ -20,9 +20,10 @@ flowchart LR
 | Etapa | Campos | Obrigatório |
 |-------|--------|-------------|
 | 1. Perfil | Nome, Timezone | ✅ Sim |
-| 2. Áreas de foco | Selecionar 3-6 áreas (ADR-017) | ✅ Sim |
-| 3. Telegram | Conectar bot | ❌ Não |
-| 4. Tutorial | Tour interativo | ❌ Skip permitido |
+| 2. Telegram | Conectar bot | ❌ Não |
+| 3. Tutorial | Tour interativo | ❌ Skip permitido |
+
+> **Nota (2026-01-26):** Áreas são fixas (6 para todos). Perspectiva cristã configurável em `/settings/preferences`.
 
 ### 1.3 Abandoned Onboarding
 

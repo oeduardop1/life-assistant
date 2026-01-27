@@ -96,7 +96,7 @@
   - [x] Verificar valores de ExpenseCategory (13)
   - [x] Verificar arrays ALL_* para iteração
 - [x] Testes de constantes (`constants.test.ts`):
-  - [x] Verificar DEFAULT_WEIGHTS (6 áreas principais per ADR-017, valores 0.5-1.0)
+  - [x] Verificar DEFAULT_WEIGHTS (6 áreas principais per ADR-017, valor fixo 1.0 para todas as áreas)
   - [x] Verificar TRACKING_VALIDATIONS (weight, water, sleep, mood, energy)
   - [x] Verificar RATE_LIMITS (free, pro, premium)
   - [x] Verificar STORAGE_LIMITS (free, pro, premium)
@@ -581,14 +581,14 @@
 - [x] Atualizar `user.status` para 'active' ao completar
 - [x] Criar DTOs de validação com class-validator:
   - [x] `ProfileStepDto` (name: min 2 chars, timezone: valid IANA timezone)
-  - [x] `AreasStepDto` (areas: LifeArea[], min 3, max 8)
+  - [x] `AreasStepDto` — `[REMOVIDO]` Áreas são fixas (6 para todos)
   - [x] `TelegramStepDto` (telegramId?: string, skipped: boolean)
 - [x] Criar `OnboardingModule` com Clean Architecture (conforme `docs/specs/core/architecture.md` §4):
   - [x] `OnboardingController` em `presentation/controllers/`
   - [x] `OnboardingService` em `application/services/`
   - [x] DTOs em `presentation/dtos/` com barrel export
 - [x] Registrar `OnboardingModule` no `AppModule`
-- [x] Atualizar `preferences.areaWeights` ao salvar etapa de áreas (áreas não selecionadas = peso 0)
+- [x] `[REMOVIDO]` ~~Atualizar preferences.areaWeights~~ — Pesos são fixos (1.0 para todas as áreas)
 - [x] Criar job diário para limpar onboardings abandonados após 30 dias (cron via BullMQ)
 
 **Technical Debt (do M0.7):**
@@ -601,13 +601,13 @@
 - [x] Criar páginas de onboarding em `(auth)/onboarding/`:
   - [x] `/onboarding` - layout com stepper de progresso
   - [x] `/onboarding/profile` - Etapa 1: Perfil (nome, timezone) - **obrigatório**
-  - [x] `/onboarding/areas` - Etapa 2: Áreas de foco (selecionar min 3) - **obrigatório**
-  - [x] `/onboarding/telegram` - Etapa 3: Conectar Telegram - **opcional, skip permitido**
-  - [x] `/onboarding/tutorial` - Etapa 4: Tutorial interativo - **opcional, skip permitido**
+  - [x] `/onboarding/areas` — `[REMOVIDO]` Áreas são fixas (6 para todos)
+  - [x] `/onboarding/telegram` - Etapa 2: Conectar Telegram - **opcional, skip permitido**
+  - [x] `/onboarding/tutorial` - Etapa 3: Tutorial interativo - **opcional, skip permitido**
 - [x] Componentes:
   - [x] OnboardingStepper (indicador de progresso)
   - [x] ProfileForm (nome, timezone picker)
-  - [x] AreaSelector (cards das 6 áreas principais per ADR-017, min 3 selecionadas)
+  - [x] AreaSelector — `[REMOVIDO]` Áreas são fixas (6 para todos)
   - [x] TelegramConnect (QR code ou link, status de vinculação)
   - [x] TutorialCarousel (slides interativos)
   - [x] SkipButton (para etapas opcionais)
@@ -626,7 +626,7 @@
   - [x] Sincronização com API (GET status, PATCH step)
 - [x] Criar schemas Zod de validação em `lib/validations/onboarding.ts`:
   - [x] `profileStepSchema` (name: min 2, timezone: válido)
-  - [x] `areasStepSchema` (areas: min 3 items)
+  - [x] `areasStepSchema` — `[REMOVIDO]` Áreas são fixas (6 para todos)
 
 **Testes:**
 - [x] Testes unitários para validação de formulários
@@ -652,6 +652,8 @@
 - [x] Usuário só acessa app após etapas obrigatórias
 - [x] Skip funciona nas etapas opcionais
 - [x] OnboardingModule segue Clean Architecture (`docs/specs/core/architecture.md` §4)
+
+> **Nota (26 Jan 2026):** Etapa de áreas removida. Áreas são fixas (6 para todos) e pesos são iguais (1.0).
 - [x] DTOs validados com class-validator
 - [x] Middleware redireciona para onboarding quando necessário
 - [x] Callback redireciona para onboarding após verificação de email

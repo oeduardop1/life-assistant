@@ -179,9 +179,11 @@ As áreas são interconectadas. A IA identifica e destaca essas conexões:
 - "Quando você mantém o devocional diário (Espiritual) acima de 80%, seu score de bem-estar sobe"
 - "Decisões profissionais afetando tempo familiar detectadas 3x este mês"
 
-### Pesos Configuráveis
+### Pesos e Áreas
 
-O usuário pode ajustar a importância de cada área para seu contexto. Os pesos influenciam o cálculo do score geral de vida.
+Todas as 6 áreas têm importância igual (peso 1.0). As áreas são fixas e não configuráveis pelo usuário.
+
+> **Nota (2026-01-26):** Decisão de simplificar — áreas e pesos fixos. Ver ADR-017 "Atualização (2026-01-26)".
 
 ---
 
@@ -348,7 +350,7 @@ Cada área da vida recebe um **score de 0 a 10** que indica o estado atual basea
 
 ### Score Geral
 
-O **Score Geral de Vida** é uma média ponderada das áreas. Os pesos são configuráveis pelo usuário.
+O **Score Geral de Vida** é uma média simples das 6 áreas. Todas as áreas têm peso fixo 1.0 (importância igual).
 
 ### Interpretação
 
@@ -445,7 +447,7 @@ Arquivos originais mantidos para referência histórica:
 |---------|------|-----|---------|
 | Mensagens/mês | 100 | Ilimitado | Ilimitado |
 | Histórico | 30 dias | 1 ano | Ilimitado |
-| Áreas da vida | 3 | Todas | Todas |
+| Áreas da vida | Todas (6) | Todas (6) | Todas (6) |
 | Telegram/WhatsApp | ✓ | ✓ | ✓ |
 | Dashboard básico | ✓ | ✓ | ✓ |
 | Dashboard completo | - | ✓ | ✓ |

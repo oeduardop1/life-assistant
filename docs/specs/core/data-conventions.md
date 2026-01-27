@@ -392,13 +392,13 @@ import { z } from 'zod';
 export const userPreferencesSchema = z.object({
   christianPerspective: z.boolean().default(false),
 
-  // ADR-017: 6 áreas da vida
+  // ADR-017: 6 áreas da vida (pesos fixos - não configuráveis pelo usuário)
   areaWeights: z.object({
     health: z.number().min(0).max(1).default(1.0),
     finance: z.number().min(0).max(1).default(1.0),
     professional: z.number().min(0).max(1).default(1.0),
-    learning: z.number().min(0).max(1).default(0.8),
-    spiritual: z.number().min(0).max(1).default(0.5),
+    learning: z.number().min(0).max(1).default(1.0),
+    spiritual: z.number().min(0).max(1).default(1.0),
     relationships: z.number().min(0).max(1).default(1.0),
   }).default({}),
 
@@ -423,7 +423,6 @@ export const userPreferencesSchema = z.object({
 
   onboarding: z.object({
     profileComplete: z.boolean().default(false),
-    areasComplete: z.boolean().default(false),
     telegramComplete: z.boolean().default(false),
     telegramSkipped: z.boolean().default(false),
     tutorialComplete: z.boolean().default(false),
@@ -1089,8 +1088,8 @@ export async function seedDevelopment(db: Database) {
         health: 1.0,
         finance: 1.0,
         professional: 1.0,
-        learning: 0.8,
-        spiritual: 0.5,
+        learning: 1.0,
+        spiritual: 1.0,
         relationships: 1.0,
       },
     },
@@ -1309,15 +1308,15 @@ export const users = pgTable('users', {
   locale: varchar('locale', { length: 10 }).notNull().default('pt-BR'),
   currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
   
-  // Preferences (JSON) - ADR-017: 6 áreas
+  // Preferences (JSON) - ADR-017: 6 áreas (pesos fixos 1.0)
   preferences: jsonb('preferences').notNull().default({
     christianPerspective: false,
     areaWeights: {
       health: 1.0,
       finance: 1.0,
       professional: 1.0,
-      learning: 0.8,
-      spiritual: 0.5,
+      learning: 1.0,
+      spiritual: 1.0,
       relationships: 1.0,
     },
     notifications: {

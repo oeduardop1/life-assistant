@@ -1,7 +1,7 @@
 # Análise: Remoção do Step "Áreas" do Onboarding
 
-**Data:** 2026-01-22
-**Status:** Proposta de refatoração
+**Data:** 2026-01-22 (Atualizado: 2026-01-26)
+**Status:** ✅ Decisão tomada — Implementado conforme proposta
 **Motivação:** O step de seleção de áreas no onboarding não produz efeito funcional no sistema. Nenhum módulo consome os `areaWeights` para alterar comportamento. A proposta é simplificar o onboarding: todas as 6 áreas ficam disponíveis por padrão e o usuário usa o que quiser organicamente.
 
 ---
@@ -10,11 +10,11 @@
 
 ### Situação Atual
 
-O onboarding possui 4 etapas:
+O onboarding possuía 4 etapas (agora 3):
 1. **Perfil** (nome, timezone) — obrigatório
-2. **Áreas da Vida** (selecionar 3-6 áreas) — obrigatório
-3. **Telegram** (conectar bot) — opcional
-4. **Tutorial** (tour interativo) — opcional
+2. ~~**Áreas da Vida** (selecionar 3-6 áreas)~~ — **[REMOVIDO]**
+3. **Telegram** (conectar bot) — opcional (agora etapa 2)
+4. **Tutorial** (tour interativo) — opcional (agora etapa 3)
 
 ### Problema
 
@@ -30,12 +30,12 @@ Porém, **nenhuma parte do sistema consome esses pesos**:
 - Dashboard não referencia `areaWeights`
 - O Life Balance Score (M2.5) que usaria os pesos **não foi implementado**
 
-### Proposta
+### Proposta ✅ IMPLEMENTADA
 
-- Remover o step de seleção de áreas do onboarding
-- Todas as 6 áreas ficam disponíveis por padrão com pesos padrão
-- Onboarding passa a ter 3 etapas: Perfil, Telegram, Tutorial
-- Futuramente, pesos podem ser configuráveis nas Settings (quando o Life Balance Score for implementado)
+- ✅ Remover o step de seleção de áreas do onboarding
+- ✅ Todas as 6 áreas ficam disponíveis por padrão com peso fixo 1.0
+- ✅ Onboarding passa a ter 3 etapas: Perfil, Telegram, Tutorial
+- ✅ Pesos são fixos (1.0) para todas as áreas — não configuráveis
 
 ---
 
@@ -121,38 +121,34 @@ Porém, **nenhuma parte do sistema consome esses pesos**:
 
 ---
 
-## Decisões Pendentes
+## Decisões ✅ TOMADAS
 
-### 1. Defaults de `areaWeights`
+### 1. Defaults de `areaWeights` — ✅ Opção B Escolhida
 
-Com a remoção do step de seleção, os defaults do schema serão usados diretamente para todos os usuários:
+Com a remoção do step de seleção, os defaults do schema são usados diretamente para todos os usuários:
 
-| Área | Valor Atual | Opção A (manter) | Opção B (uniformizar) |
-|------|-------------|-------------------|------------------------|
-| health | 1.0 | 1.0 | 1.0 |
-| finance | 1.0 | 1.0 | 1.0 |
-| professional | 1.0 | 1.0 | 1.0 |
-| learning | **0.8** | 0.8 | **1.0** |
-| spiritual | **0.5** | 0.5 | **1.0** |
-| relationships | 1.0 | 1.0 | 1.0 |
+| Área | Valor Antigo | **Valor Atual** |
+|------|-------------|-----------------|
+| health | 1.0 | **1.0** |
+| finance | 1.0 | **1.0** |
+| professional | 1.0 | **1.0** |
+| learning | 0.8 | **1.0** |
+| spiritual | 0.5 | **1.0** |
+| relationships | 1.0 | **1.0** |
 
-- **Opção A:** Manter valores atuais — learning e spiritual teriam menos peso no futuro Life Balance Score
-- **Opção B:** Uniformizar para 1.0 — todas as áreas com importância igual, sem viés implícito
+**Decisão:** ✅ **Opção B — Uniformizar para 1.0** — todas as áreas com importância igual, sem viés implícito.
 
-### 2. Toggle de Perspectiva Cristã (M1.6)
+### 2. Toggle de Perspectiva Cristã (M1.6) — ✅ Opção B Escolhida
 
-A milestone `phase-1-counselor.md` planeja adicionar o toggle de perspectiva cristã "na etapa 2 do onboarding (junto com seleção de áreas)". Com a remoção do step:
+A milestone `phase-1-counselor.md` planejava adicionar o toggle de perspectiva cristã "na etapa 2 do onboarding (junto com seleção de áreas)". Com a remoção do step:
 
-- **Opção A:** Mover para o step de Perfil (etapa 1)
-- **Opção B:** Mover para Settings (configurado pós-onboarding)
-- **Opção C:** Criar um novo step simplificado "Preferências" no onboarding
+**Decisão:** ✅ **Opção B — Mover para Settings** (`/settings/preferences`) — configurado pós-onboarding.
 
-### 3. Plano Free com 3 áreas (`product.md` linha 1128)
+### 3. Plano Free com 3 áreas — ✅ Opção A Escolhida
 
-A tabela de planos indica que o plano Free teria limite de 3 áreas. Com a remoção do conceito de "selecionar áreas":
+A tabela de planos indicava que o plano Free teria limite de 3 áreas.
 
-- **Opção A:** Remover essa restrição — todos os planos têm todas as áreas
-- **Opção B:** Manter restrição mas implementar de forma diferente (limitar tracking/dashboard por área no plano Free)
+**Decisão:** ✅ **Opção A — Remover restrição** — todos os planos têm todas as 6 áreas disponíveis. O conceito de "selecionar áreas" foi removido do produto.
 
 ---
 

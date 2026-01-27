@@ -105,12 +105,9 @@ const financeScore = weightedAverage([
   { value: investmentsScore, weight: 0.20 },
 ]);
 
-// Life Balance Score = média ponderada das 6 áreas
-const lifeBalanceScore = weightedAverage(
-  ALL_LIFE_AREAS.map(area => ({
-    value: areaScores[area],
-    weight: userPreferences.areaWeights[area],
-  }))
+// Life Balance Score = média simples das 6 áreas (pesos fixos 1.0)
+const lifeBalanceScore = simpleAverage(
+  ALL_LIFE_AREAS.map(area => areaScores[area])
 );
 ```
 
@@ -138,7 +135,7 @@ Mantém filosofia de baixo atrito:
 
 ### Neutros
 
-- **Quantidade de áreas no onboarding**: Reduz de 3-8 para 3-6 seleções
+- **Simplicidade**: Áreas são fixas (6) e pesos são iguais (1.0), sem configuração pelo usuário
 
 ## Implementation Notes
 
@@ -210,3 +207,21 @@ export enum SubArea {
 - ADR-012: Tool Use + Memory Consolidation (arquitetura de memória)
 - M2.5: Life Balance Score implementation
 - docs/specs/domains/tracking.md: Cálculo do Life Balance Score
+
+---
+
+## Atualização (2026-01-26)
+
+### Decisões Adicionais
+
+1. **Áreas são fixas**: As 6 áreas existem sempre para todos os usuários. Não há seleção de áreas no onboarding.
+
+2. **Pesos são iguais**: Todas as áreas têm peso 1.0 (importância igual). Não há configuração de pesos pelo usuário.
+
+3. **Perspectiva cristã**: Toggle movido para `/settings/preferences`, não mais no onboarding.
+
+### Impacto
+
+- Onboarding simplificado de 4 para 3 etapas (removida etapa de seleção de áreas)
+- Life Balance Score usa média simples das 6 áreas
+- `preferences.areaWeights` mantido no schema com valores fixos 1.0 para compatibilidade futura

@@ -46,16 +46,16 @@ O módulo SaaS gerencia o ciclo de vida do usuário, desde o cadastro até a ass
 | Etapa | Campos | Obrigatório |
 |-------|--------|-------------|
 | 1. Perfil | Nome, foto | Nome sim |
-| 2. Preferências | Áreas prioritárias, perspectiva cristã | Não |
-| 3. Conexões | Telegram, Google Calendar | Não |
-| 4. Tutorial | Tour do app | Pular permitido |
+| 2. Conexões | Telegram, Google Calendar | Não |
+| 3. Tutorial | Tour do app | Pular permitido |
+
+> **Nota (2026-01-26):** Áreas são fixas (6 áreas para todos). Perspectiva cristã configurável em `/settings/preferences`.
 
 ### 3.2 Progresso
 
 ```typescript
 interface OnboardingProgress {
   profileComplete: boolean;
-  areasComplete: boolean;
   telegramComplete: boolean;
   telegramSkipped: boolean;
   tutorialComplete: boolean;
@@ -77,7 +77,6 @@ Salvo em `users.preferences.onboarding`.
 |---------|--------|
 | Mensagens/mês | 100 |
 | Histórico | 30 dias |
-| Áreas da vida | 3 |
 | Memória | Limitada |
 | Dashboard | Básico |
 | Integrações | Telegram/WhatsApp |
@@ -89,7 +88,6 @@ Salvo em `users.preferences.onboarding`.
 |---------|--------|
 | Mensagens | Ilimitado |
 | Histórico | 1 ano |
-| Áreas da vida | Todas |
 | Memória | Completa |
 | Dashboard | Completo |
 | Integrações | Todas |
@@ -117,7 +115,6 @@ const PLAN_LIMITS = {
   free: {
     messagesPerMonth: 100,
     historyDays: 30,
-    areasLimit: 3,
     hasVault: false,
     hasCrmFull: false,
     hasIntegrations: false,
@@ -127,7 +124,6 @@ const PLAN_LIMITS = {
   pro: {
     messagesPerMonth: Infinity,
     historyDays: 365,
-    areasLimit: Infinity,
     hasVault: true,
     hasCrmFull: true,
     hasIntegrations: true,
@@ -137,7 +133,6 @@ const PLAN_LIMITS = {
   premium: {
     messagesPerMonth: Infinity,
     historyDays: Infinity,
-    areasLimit: Infinity,
     hasVault: true,
     hasCrmFull: true,
     hasIntegrations: true,
@@ -146,6 +141,8 @@ const PLAN_LIMITS = {
   },
 };
 ```
+
+> **Nota (2026-01-26):** `areasLimit` removido - todas as 6 áreas estão disponíveis para todos os planos.
 
 ---
 
@@ -234,7 +231,6 @@ async function checkLimit(userId: string, feature: string): Promise<boolean> {
 |--------|----------|
 | Mensagens | "Você atingiu o limite de 100 mensagens este mês. Faça upgrade para continuar." |
 | Histórico | "Dados anteriores a 30 dias disponíveis no plano Pro." |
-| Áreas | "Adicione mais áreas com o plano Pro." |
 
 ### 7.3 Storage Limits (por plano)
 

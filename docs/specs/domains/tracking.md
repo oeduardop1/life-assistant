@@ -98,8 +98,8 @@ Pontuação 0-100 que mede o equilíbrio geral da vida baseado em 6 áreas princ
 ### 4.2 Formula
 
 ```typescript
-// lifeBalanceScore = weighted average of areaScore values
-lifeBalanceScore = Σ (areaScore × areaWeight) / Σ areaWeight
+// lifeBalanceScore = média simples das 6 áreas (pesos fixos 1.0)
+lifeBalanceScore = Σ areaScore / 6
 
 // Each areaScore = weighted average of subAreaScore values
 areaScore = Σ (subAreaScore × subAreaWeight) / Σ subAreaWeight
@@ -107,18 +107,16 @@ areaScore = Σ (subAreaScore × subAreaWeight) / Σ subAreaWeight
 
 ### 4.3 Main Areas & Weights
 
-| Área | Código | Peso Default | Sub-áreas |
-|------|--------|--------------|-----------|
-| Saúde | `health` | 1.0 | physical (50%), mental (35%), leisure (15%) |
-| Finanças | `finance` | 1.0 | budget (30%), savings (25%), debts (25%), investments (20%) |
-| Profissional | `professional` | 1.0 | career (60%), business (40%) |
-| Aprendizado | `learning` | 0.8 | formal (50%), informal (50%) |
-| Espiritual | `spiritual` | 0.5 | practice (70%), community (30%) |
-| Relacionamentos | `relationships` | 1.0 | family (40%), romantic (35%), social (25%) |
+| Área | Código | Sub-áreas |
+|------|--------|-----------|
+| Saúde | `health` | physical (50%), mental (35%), leisure (15%) |
+| Finanças | `finance` | budget (30%), savings (25%), debts (25%), investments (20%) |
+| Profissional | `professional` | career (60%), business (40%) |
+| Aprendizado | `learning` | formal (50%), informal (50%) |
+| Espiritual | `spiritual` | practice (70%), community (30%) |
+| Relacionamentos | `relationships` | family (40%), romantic (35%), social (25%) |
 
-- Cada área principal tem peso configurável (0.0 a 2.0)
-- Peso 0.0 = área ignorada no cálculo
-- Pesos de sub-áreas são fixos (não configuráveis pelo usuário)
+> **Nota (2026-01-26):** Todas as 6 áreas têm peso fixo 1.0 (importância igual). Áreas são fixas e não configuráveis pelo usuário. Pesos de sub-áreas também são fixos.
 
 ### 4.4 Area Calculations
 
@@ -460,7 +458,7 @@ CREATE POLICY "user_access" ON life_balance_history
 
 ### Life Balance Score
 - [ ] Cálculo correto por área e sub-área
-- [ ] Pesos de área configuráveis pelo usuário
+- [ ] Pesos de área fixos (1.0 para todas)
 - [ ] Histórico armazenado diariamente
 - [ ] Gráfico de evolução do score
 - [ ] Funciona com dados insuficientes (score 50)

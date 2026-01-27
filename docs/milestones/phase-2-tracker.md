@@ -932,7 +932,7 @@ _Testes:_
 **Backend — Life Balance Score:**
 - [ ] Criar serviço `ScoreCalculator`:
   - [ ] Calcular score de cada área (0-100)
-  - [ ] Aplicar pesos configuráveis
+  - [ ] Aplicar pesos fixos (1.0 para todas as áreas)
   - [ ] Calcular Life Balance Score geral
 - [ ] Implementar fórmulas por área (conforme `docs/specs/domains/tracking.md`):
   - [ ] Saúde: peso (IMC), exercício, sono, água, alimentação
@@ -1027,17 +1027,15 @@ _Testes:_
   - [ ] AreaScoreCard (score + ícone + tendência por área)
   - [ ] ScoreTrend (seta up/down com percentual de mudança)
   - [ ] ScoreHistoryChart (gráfico de linha da evolução)
-  - [ ] WeightConfigModal (ajustar pesos das áreas)
 - [ ] Exibir Life Balance Score no dashboard
 - [ ] Exibir scores por área
 - [ ] Exibir tendências (setas up/down)
 - [ ] Gráfico de evolução dos scores
-- [ ] Página `/settings/weights` para configurar pesos
 
 **Testes — Life Balance Score:**
 - [ ] Testes unitários para ScoreCalculator:
   - [ ] Cálculo correto de cada área
-  - [ ] Aplicação correta dos pesos
+  - [ ] Aplicação correta dos pesos fixos (1.0)
   - [ ] Cálculo do Life Balance Score geral
   - [ ] Comportamento com dados insuficientes (retorna 50)
 - [ ] Testes de integração:
@@ -1079,7 +1077,7 @@ _Testes:_
 
 **Definition of Done:**
 - [ ] Scores calculados corretamente
-- [ ] Pesos configuráveis pelo usuário
+- [ ] Pesos fixos (1.0) aplicados para todas as áreas
 - [ ] Histórico de scores armazenado
 - [ ] Job diário de score funcionando
 - [ ] UI exibe scores com tendências

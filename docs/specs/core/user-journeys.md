@@ -11,10 +11,9 @@
 2. Escolhe plano (ou inicia trial)
 3. Wizard de onboarding:
    a. Nome e informações básicas
-   b. Quais áreas quer focar inicialmente
-   c. Se quer perspectiva cristã habilitada
-   d. Conectar Telegram ou WhatsApp
-   e. Conectar Google Calendar (opcional)
+   b. Conectar Telegram ou WhatsApp
+   c. Conectar Google Calendar (opcional)
+   d. Tutorial interativo
 4. IA inicia conversa de conhecimento:
    - "Me conta um pouco sobre você..."
    - "Quais são suas principais prioridades agora?"

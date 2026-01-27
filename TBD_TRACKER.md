@@ -317,6 +317,8 @@ Começar com opção 5 (retornar 50) como comportamento default. Adicionar track
 **Decisão:**
 _Pendente — Comportamento atual: retorna 50 (neutro) conforme ADR-015_
 
+> **Nota (2026-01-26):** Com a decisão de pesos fixos (1.0 para todas as áreas), a área "professional" também terá peso 1.0. Ela retornará score 50 (neutro) por falta de fonte de dados, conforme ADR-015 (áreas sem dados retornam 50 sem penalização).
+
 **Implementação:**
 _Pendente — Definir após validação do Life Balance Score com as 5 áreas que têm dados_
 
@@ -639,5 +641,5 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 
 ---
 
-*Última atualização: 21 Janeiro 2026*
-*Revisão: Adicionado TBD-207 para fonte de dados da área "professional" no Life Balance Score*
+*Última atualização: 26 Janeiro 2026*
+*Revisão: Adicionada nota sobre pesos fixos (1.0) no TBD-207*

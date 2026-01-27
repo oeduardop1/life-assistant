@@ -42,12 +42,13 @@ apps/web/src/app/
 /verify-email
 /onboarding
 /onboarding/profile
-/onboarding/areas
 /onboarding/telegram
 /onboarding/tutorial
 /callback
 /callback-recovery
 ```
+
+> **Nota (2026-01-26):** `/onboarding/areas` removido - áreas são fixas (6 para todos).
 
 **App**
 ```
@@ -74,7 +75,7 @@ apps/web/src/app/
 | `/tracking` | Registro manual por modal; captura conversacional ocorre via chat |
 | `/finance/*` | CRUD financeiro por formulários; sem IA inline no UI atual |
 | `/dashboard` | Widgets e visualizações (ver `domains/dashboard.md`) |
-| `/onboarding/*` | Wizard com validação por etapa (ver `lib/validations/onboarding.ts`) |
+| `/onboarding/*` | Wizard com 3 etapas: perfil, telegram, tutorial (ver `lib/validations/onboarding.ts`) |
 
 ---
 
@@ -180,8 +181,7 @@ Tokens CSS são definidos via Tailwind v4 CSS‑first:
 - **Onboarding / Perfil** — `apps/web/src/components/onboarding/profile-form.tsx`  
   Zod: `profileStepSchema` (`apps/web/src/lib/validations/onboarding.ts`)  
   Regras: `name` min 2/max 100; `timezone` formato IANA.
-- **Onboarding / Áreas** — `apps/web/src/components/onboarding/areas-form.tsx`  
-  Zod: `areasStepSchema` (min 3, max 6 áreas).
+- **Onboarding / Áreas** — `[REMOVIDO]` Áreas são fixas (6 para todos). Etapa removida do wizard.
 - **Memory / Add Item** — `apps/web/src/app/(app)/memory/components/add-item-modal.tsx`  
   Regras inline: `type` obrigatório; `content` obrigatório.
 - **Memory / Edit Item** — `apps/web/src/app/(app)/memory/components/edit-item-modal.tsx`  
