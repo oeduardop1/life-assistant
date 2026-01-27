@@ -164,7 +164,7 @@ export function ExpenseDistributionChart({
             className="flex items-center justify-center text-muted-foreground"
             style={{ height }}
           >
-            Registre despesas para ver a distribuição
+            Marque contas como pagas ou registre valores reais para ver a distribuição
           </div>
         </CardContent>
       </Card>
