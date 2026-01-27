@@ -1,7 +1,7 @@
 // apps/api/src/modules/finance/infrastructure/repositories/bills.repository.ts
 
 import { Injectable } from '@nestjs/common';
-import { eq, and, sql, count, gt, isNotNull } from '@life-assistant/database';
+import { eq, and, sql, count, gt, isNotNull, ne } from '@life-assistant/database';
 import { DatabaseService } from '../../../../database/database.service';
 import type { Bill, NewBill, BillStatus } from '@life-assistant/database';
 import type {
@@ -32,7 +32,10 @@ export class BillsRepository implements BillsRepositoryPort {
     params: BillSearchParams
   ): Promise<Bill[]> {
     return this.db.withUserId(userId, async (db) => {
-      const conditions = [eq(this.db.schema.bills.userId, userId)];
+      const conditions = [
+        eq(this.db.schema.bills.userId, userId),
+        ne(this.db.schema.bills.status, 'canceled'),
+      ];
 
       if (params.monthYear) {
         conditions.push(eq(this.db.schema.bills.monthYear, params.monthYear));
@@ -43,6 +46,8 @@ export class BillsRepository implements BillsRepositoryPort {
         );
       }
       if (params.status) {
+        // Remove the default 'canceled' filter when a specific status is requested
+        conditions.splice(1, 1);
         conditions.push(
           eq(this.db.schema.bills.status, params.status as BillStatus)
         );
@@ -121,12 +126,17 @@ export class BillsRepository implements BillsRepositoryPort {
     params: BillSearchParams
   ): Promise<number> {
     return this.db.withUserId(userId, async (db) => {
-      const conditions = [eq(this.db.schema.bills.userId, userId)];
+      const conditions = [
+        eq(this.db.schema.bills.userId, userId),
+        ne(this.db.schema.bills.status, 'canceled'),
+      ];
 
       if (params.monthYear) {
         conditions.push(eq(this.db.schema.bills.monthYear, params.monthYear));
       }
       if (params.status) {
+        // Remove the default 'canceled' filter when a specific status is requested
+        conditions.splice(1, 1);
         conditions.push(
           eq(this.db.schema.bills.status, params.status as BillStatus)
         );
@@ -193,7 +203,8 @@ export class BillsRepository implements BillsRepositoryPort {
         .where(
           and(
             eq(this.db.schema.bills.userId, userId),
-            eq(this.db.schema.bills.monthYear, monthYear)
+            eq(this.db.schema.bills.monthYear, monthYear),
+            ne(this.db.schema.bills.status, 'canceled')
           )
         );
 
@@ -266,6 +277,9 @@ export class BillsRepository implements BillsRepositoryPort {
     userId: string,
     monthYear: string
   ): Promise<Bill[]> {
+    // NOTE: Do NOT filter by status here!
+    // Canceled items must still propagate to create future months.
+    // The 'canceled' status only hides the item from display, not from recurrence chain.
     return this.db.withUserId(userId, async (db) => {
       return db
         .select()
