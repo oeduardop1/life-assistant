@@ -12,7 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Label } from '@/components/ui/label';
 import type { RecurringScope } from '../types';
 
 // =============================================================================
@@ -107,9 +106,9 @@ export function RecurringScopeDialog({
                 className="mt-0.5 h-4 w-4 accent-primary"
               />
               <div className="flex flex-col gap-0.5">
-                <Label className="cursor-pointer font-medium">
+                <span className="cursor-pointer font-medium text-sm">
                   {option.label}
-                </Label>
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {option.description}
                 </span>
