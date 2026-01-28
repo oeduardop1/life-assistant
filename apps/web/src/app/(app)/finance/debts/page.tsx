@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { AlertCircle, RefreshCw, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDebts, useAllDebts } from '../hooks/use-debts';
@@ -14,6 +14,7 @@ import {
   DeleteDebtDialog,
   NegotiateDebtModal,
   PayInstallmentDialog,
+  DebtLedgerDrawer,
 } from '../components/debt';
 import { DebtHeader } from '../components/debt/debt-header';
 import { DebtEmptyState } from '../components/debt/debt-empty-states';
@@ -163,7 +164,6 @@ export default function DebtsPage() {
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<DebtStatusFilter>('all');
-  const [showAllDebts, setShowAllDebts] = useState(false);
 
   // Celebration dismissal state (reset when month changes)
   const [dismissCelebration, setDismissCelebration] = useState(false);
@@ -189,15 +189,12 @@ export default function DebtsPage() {
     refetch: refetchMonth,
   } = useDebts({ monthYear: currentMonth });
 
-  // Choose which data to show in the list based on toggle
+  // List shows month-filtered debts
   const listDebts = useMemo(
-    () =>
-      showAllDebts
-        ? (allDebtsData?.debts ?? [])
-        : (monthDebtsData?.debts ?? []),
-    [showAllDebts, allDebtsData?.debts, monthDebtsData?.debts]
+    () => monthDebtsData?.debts ?? [],
+    [monthDebtsData?.debts]
   );
-  const isLoading = showAllDebts ? isLoadingAll : isLoadingMonth;
+  const isLoading = isLoadingMonth;
   const isError = isErrorAll || isErrorMonth;
 
   const refetch = () => {
@@ -293,6 +290,9 @@ export default function DebtsPage() {
 
   // Focus mode state
   const [focusModeOpen, setFocusModeOpen] = useState(false);
+
+  // Ledger drawer state
+  const [ledgerOpen, setLedgerOpen] = useState(false);
 
   // Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -391,9 +391,8 @@ export default function DebtsPage() {
         filterCounts={filterCounts}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
-        showAllDebts={showAllDebts}
-        onShowAllDebtsChange={setShowAllDebts}
         onAddClick={() => setCreateModalOpen(true)}
+        onOpenLedger={() => setLedgerOpen(true)}
         loading={isLoadingAll}
         simulatorTrigger={
           totals.totalRemaining > 0 && totals.monthlyInstallmentSum > 0 ? (
@@ -549,6 +548,14 @@ export default function DebtsPage() {
         debt={payingDebt}
         open={!!payingDebt}
         onOpenChange={(open) => !open && setPayingDebt(null)}
+      />
+
+      {/* Debt Ledger Drawer */}
+      <DebtLedgerDrawer
+        open={ledgerOpen}
+        onOpenChange={setLedgerOpen}
+        debts={allDebtsData?.debts ?? []}
+        loading={isLoadingAll}
       />
     </div>
   );

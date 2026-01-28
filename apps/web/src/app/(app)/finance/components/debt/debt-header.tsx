@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, List } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -29,11 +29,11 @@ interface DebtHeaderProps {
   onStatusFilterChange: (filter: DebtStatusFilter) => void;
   onAddClick: () => void;
   filterCounts: FilterCounts;
-  showAllDebts?: boolean;
-  onShowAllDebtsChange?: (value: boolean) => void;
   loading?: boolean;
   /** Optional simulator trigger element (e.g., DebtSimulator wrapping a button) */
   simulatorTrigger?: ReactNode;
+  /** Callback to open the debt ledger drawer */
+  onOpenLedger?: () => void;
 }
 
 // =============================================================================
@@ -157,10 +157,9 @@ export function DebtHeader({
   onStatusFilterChange,
   onAddClick,
   filterCounts,
-  showAllDebts: _showAllDebts,
-  onShowAllDebtsChange: _onShowAllDebtsChange,
   loading,
   simulatorTrigger,
+  onOpenLedger,
 }: DebtHeaderProps) {
   if (loading) {
     return <HeaderSkeleton />;
@@ -191,6 +190,17 @@ export function DebtHeader({
         <h1 className="text-2xl font-bold tracking-tight">Dívidas</h1>
         <div className="flex items-center gap-2">
           {simulatorTrigger}
+          {onOpenLedger && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenLedger}
+              data-testid="open-ledger-button"
+            >
+              <List className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Ver Todas</span>
+            </Button>
+          )}
           <Button onClick={onAddClick} data-testid="add-debt-button">
             <Plus className="h-4 w-4 mr-2" />
             Nova Dívida

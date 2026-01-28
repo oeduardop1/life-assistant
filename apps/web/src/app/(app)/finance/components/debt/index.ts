@@ -23,6 +23,7 @@ export { DebtEmptyState, SectionEmptyState } from './debt-empty-states';
 export { DebtSimulator } from './debt-simulator';
 export { DebtFocusMode, FocusModeTrigger } from './debt-focus-mode';
 export { DebtPaymentHistory } from './debt-payment-history';
+export { DebtLedgerDrawer } from './debt-ledger-drawer';
 
 // Mobile Components
 export {
