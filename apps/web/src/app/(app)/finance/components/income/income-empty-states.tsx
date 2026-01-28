@@ -172,8 +172,7 @@ function getStateConfig(
         description: totalReceived
           ? `Você recebeu ${formatCurrency(totalReceived)} este mês. Continue assim!`
           : 'Você recebeu todas as suas rendas previstas. Isso é ótimo!',
-        actionLabel: 'Ver Detalhes',
-        secondaryActionLabel: 'Adicionar Nova Renda',
+        actionLabel: 'Adicionar Nova Renda',
         showCelebration: true,
       };
 

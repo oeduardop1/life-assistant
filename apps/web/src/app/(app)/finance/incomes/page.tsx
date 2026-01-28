@@ -209,13 +209,9 @@ export default function IncomesPage() {
     } else if (emptyStateType === 'filter-empty') {
       setStatusFilter('all');
     } else if (emptyStateType === 'all-received') {
-      // Dismiss celebration and show the income list
-      setDismissCelebration(true);
+      // Open create modal to add new income
+      setCreateModalOpen(true);
     }
-  };
-
-  const handleEmptyStateSecondaryAction = () => {
-    setCreateModalOpen(true);
   };
 
   return (
@@ -247,9 +243,6 @@ export default function IncomesPage() {
           filterName={filterLabels[statusFilter]}
           totalReceived={totals.totalActual}
           onAction={handleEmptyStateAction}
-          onSecondaryAction={
-            emptyStateType === 'all-received' ? handleEmptyStateSecondaryAction : undefined
-          }
         />
       )}
 
