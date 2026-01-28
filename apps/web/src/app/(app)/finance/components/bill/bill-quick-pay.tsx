@@ -393,7 +393,7 @@ interface QuickPayTriggerProps {
 }
 
 /**
- * QuickPayTrigger - Compact button to enter quick pay mode
+ * QuickPayTrigger - Visually prominent shortcut to pay all bills
  */
 export function QuickPayTrigger({
   pendingAmount,
@@ -407,27 +407,34 @@ export function QuickPayTrigger({
     <button
       onClick={onClick}
       className={cn(
-        'group flex items-center gap-3 px-3 py-2 rounded-lg w-full',
-        'bg-foreground/5 hover:bg-foreground/10 border border-foreground/10',
+        'group relative inline-flex items-center gap-3 pl-2.5 pr-3 py-2 rounded-lg',
+        'bg-gradient-to-r from-primary/10 via-primary/5 to-transparent',
+        'border border-primary/20 hover:border-primary/40',
+        'hover:from-primary/15 hover:via-primary/10',
         'transition-all cursor-pointer',
         className
       )}
     >
-      <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center shrink-0">
-        <Target className="h-4 w-4" />
+      {/* Icon with accent background */}
+      <div className="w-7 h-7 rounded-md bg-primary/15 flex items-center justify-center shrink-0">
+        <Target className="h-3.5 w-3.5 text-primary" />
       </div>
-      <div className="flex-1 text-left min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Pagar Contas</span>
-          <span className="text-xs text-muted-foreground">
-            {pendingCount} {pendingCount === 1 ? 'pendente' : 'pendentes'}
-          </span>
-        </div>
+
+      {/* Title + Count */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm font-medium">Pagar Contas</span>
+        <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-medium tabular-nums">
+          {pendingCount}
+        </span>
       </div>
-      <span className="text-sm font-semibold tabular-nums shrink-0">
+
+      {/* Amount - emphasized */}
+      <span className="text-sm font-bold tabular-nums text-primary">
         {formatCurrency(pendingAmount)}
       </span>
-      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+
+      {/* Arrow */}
+      <ChevronRight className="h-4 w-4 text-primary/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
     </button>
   );
 }

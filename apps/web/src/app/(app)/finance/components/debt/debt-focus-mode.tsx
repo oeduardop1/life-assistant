@@ -365,7 +365,7 @@ interface FocusModeTriggerProps {
 }
 
 /**
- * FocusModeTrigger - Button to enter focus mode
+ * FocusModeTrigger - Visually prominent shortcut to pay all installments
  */
 export function FocusModeTrigger({
   pendingAmount,
@@ -376,33 +376,37 @@ export function FocusModeTrigger({
   if (pendingCount === 0) return null;
 
   return (
-    <motion.button
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+    <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-xl',
-        'bg-foreground/5 hover:bg-foreground/10 border border-foreground/10',
-        'transition-colors cursor-pointer',
+        'group relative inline-flex items-center gap-3 pl-2.5 pr-3 py-2 rounded-lg',
+        'bg-gradient-to-r from-primary/10 via-primary/5 to-transparent',
+        'border border-primary/20 hover:border-primary/40',
+        'hover:from-primary/15 hover:via-primary/10',
+        'transition-all cursor-pointer',
         className
       )}
     >
-      <div className="p-2 rounded-lg bg-foreground/5">
-        <Target className="h-4 w-4" />
+      {/* Icon with accent background */}
+      <div className="w-7 h-7 rounded-md bg-primary/15 flex items-center justify-center shrink-0">
+        <Target className="h-3.5 w-3.5 text-primary" />
       </div>
-      <div className="flex-1 text-left">
-        <p className="text-sm font-medium">Modo Foco</p>
-        <p className="text-xs text-muted-foreground">
-          {pendingCount} {pendingCount === 1 ? 'parcela pendente' : 'parcelas pendentes'}
-        </p>
+
+      {/* Title + Count */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm font-medium">Pagar Parcelas</span>
+        <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-medium tabular-nums">
+          {pendingCount}
+        </span>
       </div>
-      <div className="text-right">
-        <p className="font-semibold tabular-nums">{formatCurrency(pendingAmount)}</p>
-        <p className="text-xs text-muted-foreground">este mês</p>
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-    </motion.button>
+
+      {/* Amount - emphasized */}
+      <span className="text-sm font-bold tabular-nums text-primary">
+        {formatCurrency(pendingAmount)}
+      </span>
+
+      {/* Arrow */}
+      <ChevronRight className="h-4 w-4 text-primary/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+    </button>
   );
 }
