@@ -128,8 +128,7 @@ function getStateConfig(
         description: totalPaid
           ? `Você pagou ${formatCurrency(totalPaid)} este mês. Continue assim!`
           : 'Você pagou todas as suas contas deste mês. Isso é ótimo!',
-        actionLabel: 'Ver Histórico',
-        secondaryActionLabel: 'Adicionar Nova Conta',
+        actionLabel: 'Adicionar Nova Conta',
         showCelebration: true,
       };
 

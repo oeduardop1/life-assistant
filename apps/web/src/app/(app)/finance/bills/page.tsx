@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -71,6 +71,14 @@ export default function BillsPage() {
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<BillStatusFilter>('all');
+
+  // Celebration dismissal state (reset when month changes)
+  const [dismissCelebration, setDismissCelebration] = useState(false);
+
+  // Reset celebration dismissal when month changes
+  useEffect(() => {
+    setDismissCelebration(false);
+  }, [currentMonth]);
 
   // Data fetching
   const { data, isLoading, isError, refetch } = useBills({ monthYear: currentMonth });
@@ -191,7 +199,15 @@ export default function BillsPage() {
     if (allBills.length === 0) return 'no-bills';
     if (statusFilter === 'overdue' && filterCounts.overdue === 0) return 'no-overdue';
     if (statusFilter !== 'all' && filteredBills.length === 0) return 'filter-empty';
-    if (pendingCount === 0 && totals.paidCount > 0) return 'all-paid';
+    // Show celebration when all bills are paid and filter is 'all'
+    if (
+      statusFilter === 'all' &&
+      pendingCount === 0 &&
+      totals.paidCount > 0 &&
+      !dismissCelebration
+    ) {
+      return 'all-paid';
+    }
     return null;
   };
 
@@ -212,8 +228,8 @@ export default function BillsPage() {
 
   // Determine content to render
   const emptyStateType = getEmptyStateType();
-  const showEmptyState = !isLoading && emptyStateType !== null &&
-    (emptyStateType !== 'all-paid' || statusFilter === 'pending');
+  const showEmptyState = !isLoading && emptyStateType !== null;
+  const showList = filteredBills.length > 0 && !isLoading && emptyStateType !== 'all-paid';
 
   return (
     <div className="space-y-6" data-testid="bills-page">
@@ -253,28 +269,24 @@ export default function BillsPage() {
         />
       )}
 
-      {/* Empty State or List */}
-      {showEmptyState ? (
+      {/* Empty State */}
+      {showEmptyState && (
         <BillEmptyState
           type={emptyStateType!}
           filterName={getFilterName()}
           totalPaid={totals.paid}
           onAction={() => {
-            if (emptyStateType === 'no-bills') {
+            if (emptyStateType === 'no-bills' || emptyStateType === 'all-paid') {
               setCreateModalOpen(true);
-            } else if (emptyStateType === 'all-paid') {
-              // View history or do nothing
             } else {
               setStatusFilter('all');
             }
           }}
-          onSecondaryAction={
-            emptyStateType === 'all-paid'
-              ? () => setCreateModalOpen(true)
-              : undefined
-          }
         />
-      ) : (
+      )}
+
+      {/* Bill List */}
+      {showList && (
         <BillList
           bills={filteredBills}
           loading={isLoading}
