@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, RefreshCw, Target } from 'lucide-react';
+import { AlertCircle, RefreshCw, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDebts, useAllDebts } from '../hooks/use-debts';
 import { useFinanceContext } from '../context/finance-context';
@@ -376,6 +376,16 @@ export default function DebtsPage() {
         onShowAllDebtsChange={setShowAllDebts}
         onAddClick={() => setCreateModalOpen(true)}
         loading={isLoadingAll}
+        simulatorTrigger={
+          totals.totalRemaining > 0 && totals.monthlyInstallmentSum > 0 ? (
+            <DebtSimulator totals={totals}>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Calculator className="h-4 w-4" />
+                <span className="hidden sm:inline">Simular</span>
+              </Button>
+            </DebtSimulator>
+          ) : undefined
+        }
       />
 
       {/* Summary with Progress - Only show when there's debt data */}
@@ -396,15 +406,6 @@ export default function DebtsPage() {
         />
       )}
 
-      {/* Simulator Link */}
-      {totals.totalRemaining > 0 && totals.monthlyInstallmentSum > 0 && (
-        <DebtSimulator totals={totals}>
-          <Button variant="outline" className="w-full gap-2">
-            <Target className="h-4 w-4" />
-            Simular Quitação Antecipada
-          </Button>
-        </DebtSimulator>
-      )}
 
       {/* Content: List or Empty State */}
       <AnimatePresence mode="wait">

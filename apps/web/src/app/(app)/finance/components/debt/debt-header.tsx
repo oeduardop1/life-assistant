@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,8 @@ interface DebtHeaderProps {
   showAllDebts?: boolean;
   onShowAllDebtsChange?: (value: boolean) => void;
   loading?: boolean;
+  /** Optional simulator trigger element (e.g., DebtSimulator wrapping a button) */
+  simulatorTrigger?: ReactNode;
 }
 
 // =============================================================================
@@ -157,6 +160,7 @@ export function DebtHeader({
   showAllDebts: _showAllDebts,
   onShowAllDebtsChange: _onShowAllDebtsChange,
   loading,
+  simulatorTrigger,
 }: DebtHeaderProps) {
   if (loading) {
     return <HeaderSkeleton />;
@@ -185,10 +189,13 @@ export function DebtHeader({
       {/* Title Row */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Dívidas</h1>
-        <Button onClick={onAddClick} data-testid="add-debt-button">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Dívida
-        </Button>
+        <div className="flex items-center gap-2">
+          {simulatorTrigger}
+          <Button onClick={onAddClick} data-testid="add-debt-button">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Dívida
+          </Button>
+        </div>
       </div>
 
       {/* Metrics Row */}
