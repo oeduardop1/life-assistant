@@ -229,7 +229,9 @@ export default function BillsPage() {
   // Determine content to render
   const emptyStateType = getEmptyStateType();
   const showEmptyState = !isLoading && emptyStateType !== null;
-  const showList = filteredBills.length > 0 && !isLoading && emptyStateType !== 'all-paid';
+  // Show list even during celebration (all-paid), but not for other empty states
+  const showList = filteredBills.length > 0 && !isLoading &&
+    (emptyStateType === null || emptyStateType === 'all-paid');
 
   return (
     <div className="space-y-6" data-testid="bills-page">
