@@ -85,6 +85,19 @@ export interface FinanceSummaryResponse {
   summary: FinanceSummary;
 }
 
+/**
+ * Response from GET /finance/summary/history
+ */
+export interface MonthlyEvolutionResponse {
+  data: MonthlyDataPoint[];
+  meta: {
+    startMonth: string;
+    endMonth: string;
+    monthsRequested: number;
+    monthsReturned: number;
+  };
+}
+
 // =============================================================================
 // Dashboard Types
 // =============================================================================
@@ -829,6 +842,25 @@ export const expenseCategoryOptions: { value: ExpenseCategory; label: string }[]
 // =============================================================================
 
 /**
+ * Debt payoff projection
+ * Calculated based on payment history velocity
+ */
+export interface DebtProjection {
+  estimatedPayoffMonthYear: string | null;
+  remainingMonths: number;
+  avgPaymentsPerMonth: number;
+  isRegularPayment: boolean;
+  message: string;
+}
+
+/**
+ * Response from GET /finance/debts/:id/projection
+ */
+export interface DebtProjectionResponse {
+  projection: DebtProjection;
+}
+
+/**
  * Debt status options (matches backend debt_status enum)
  */
 export type DebtStatus = 'active' | 'overdue' | 'paid_off' | 'settled' | 'defaulted';
@@ -853,6 +885,8 @@ export interface Debt {
   currency: string;
   createdAt: string;
   updatedAt: string;
+  /** Payoff projection (only present for negotiated debts with payments) */
+  projection?: DebtProjection;
 }
 
 /**
@@ -942,6 +976,73 @@ export interface DebtProgress {
   progressPercent: number;
   paidAmount: number;
   remainingAmount: number;
+}
+
+/**
+ * Individual debt payment record
+ */
+export interface DebtPayment {
+  id: string;
+  debtId: string;
+  installmentNumber: number;
+  amount: number;
+  monthYear: string; // Month the installment belongs to (YYYY-MM)
+  paidAt: string; // When it was actually paid
+  paidEarly: boolean; // true if paidAt month < monthYear
+}
+
+/**
+ * Response from GET /finance/debts/:id/payments
+ */
+export interface DebtPaymentHistoryResponse {
+  payments: DebtPayment[];
+  summary: {
+    totalPayments: number;
+    totalAmount: number;
+    paidEarlyCount: number;
+  };
+  debt: {
+    id: string;
+    name: string;
+    totalInstallments: number | null;
+    paidInstallments: number;
+  };
+}
+
+/**
+ * Upcoming installment status
+ */
+export type UpcomingInstallmentStatus = 'pending' | 'paid' | 'paid_early' | 'overdue';
+
+/**
+ * Individual upcoming installment
+ */
+export interface UpcomingInstallmentItem {
+  debtId: string;
+  debtName: string;
+  creditor: string | null;
+  installmentNumber: number;
+  totalInstallments: number;
+  amount: number;
+  dueDay: number;
+  belongsToMonthYear: string;
+  status: UpcomingInstallmentStatus;
+  paidAt: string | null;
+  paidInMonth: string | null;
+}
+
+/**
+ * Response from GET /finance/debts/upcoming-installments
+ */
+export interface UpcomingInstallmentsResponse {
+  installments: UpcomingInstallmentItem[];
+  summary: {
+    totalAmount: number;
+    pendingCount: number;
+    paidCount: number;
+    paidEarlyCount: number;
+    overdueCount: number;
+  };
 }
 
 // =============================================================================

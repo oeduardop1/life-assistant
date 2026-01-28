@@ -297,6 +297,20 @@ _Dívidas - Filtro por Mês e Status Overdue:_
 - [x] Atualizar tool `get_debt_progress` com parâmetro `monthYear`
 - [x] Atualizar tool executor para filtrar dívidas por mês
 
+_Dívidas - Pagamento Antecipado e Visualizações (2026-01-27):_
+- [x] Fix semântica de `debt_payments.monthYear`: agora representa "para qual mês é a parcela" (não "quando foi pago")
+- [x] Implementar `calculateInstallmentMonth()` helper no repository
+- [x] Migration para recalcular monthYear de pagamentos existentes (0004_fix_debt_payments_month_year.sql)
+- [x] Histórico de pagamentos: `GET /finance/debts/:id/payments` com paidEarly indicator
+- [x] AI tool `get_debt_payment_history` para consultar histórico
+- [x] Calendário de vencimentos: `GET /finance/debts/upcoming-installments?monthYear=YYYY-MM`
+- [x] AI tool `get_upcoming_installments` para parcelas do mês com status (pending/paid/paid_early/overdue)
+- [x] Projeção de quitação: `calculateProjection()` no service com velocidade de pagamento
+- [x] Endpoint `GET /finance/debts/:id/projection` para projeção individual
+- [x] Enriquecer `get_debt_progress` com dados de projeção
+- [x] Frontend: hooks `useDebtPaymentHistory`, `useUpcomingInstallments`, `useDebtProjection`
+- [x] Frontend: types `DebtProjection`, `DebtPaymentHistoryResponse`, `UpcomingInstallmentsResponse`
+
 _Frontend - Dívidas (Filtro por Mês):_
 - [x] Integrar página `/finance/debts` com `useFinanceContext` para usar `currentMonth`
 - [x] Criar componente `MonthPicker` para formulário de dívidas

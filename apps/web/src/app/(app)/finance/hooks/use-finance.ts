@@ -2,7 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useAuthenticatedApi } from '@/hooks/use-authenticated-api';
-import type { FinanceSummary, FinanceSummaryResponse } from '../types';
+import type {
+  FinanceSummary,
+  FinanceSummaryResponse,
+  MonthlyEvolutionResponse,
+} from '../types';
 
 // =============================================================================
 // Query Keys (Query Key Factory Pattern)
@@ -11,6 +15,8 @@ import type { FinanceSummary, FinanceSummaryResponse } from '../types';
 export const financeKeys = {
   all: ['finance'] as const,
   summary: (monthYear: string) => [...financeKeys.all, 'summary', monthYear] as const,
+  evolution: (endMonth: string, months: number) =>
+    [...financeKeys.all, 'evolution', endMonth, months] as const,
   incomes: () => [...financeKeys.all, 'incomes'] as const,
   incomesList: (params: Record<string, unknown>) => [...financeKeys.incomes(), params] as const,
   bills: () => [...financeKeys.all, 'bills'] as const,
@@ -45,6 +51,33 @@ export function useFinanceSummary(monthYear: string) {
       return response.summary;
     },
     enabled: api.isAuthenticated && !!monthYear,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+/**
+ * Hook to fetch monthly evolution history (last N months)
+ *
+ * @param endMonth - End month in YYYY-MM format (defaults to current month)
+ * @param months - Number of months to retrieve (default 6)
+ */
+export function useMonthlyEvolution(endMonth?: string, months = 6) {
+  const api = useAuthenticatedApi();
+  const targetMonth = endMonth ?? new Date().toISOString().slice(0, 7);
+
+  return useQuery({
+    queryKey: financeKeys.evolution(targetMonth, months),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (endMonth) params.set('endMonth', endMonth);
+      params.set('months', String(months));
+
+      const response = await api.get<MonthlyEvolutionResponse>(
+        `/finance/summary/history?${params.toString()}`
+      );
+      return response;
+    },
+    enabled: api.isAuthenticated,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }

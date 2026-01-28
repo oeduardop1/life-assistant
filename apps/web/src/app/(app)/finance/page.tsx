@@ -4,7 +4,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFinanceContext } from './context/finance-context';
-import { useFinanceSummary, useHasFinanceData } from './hooks/use-finance';
+import { useFinanceSummary, useHasFinanceData, useMonthlyEvolution } from './hooks/use-finance';
 import { FinanceKPICard, FinanceKPICardsGrid } from './components/finance-kpi-card';
 import { BudgetVsRealChart } from './components/budget-vs-real-chart';
 import { ExpenseDistributionChart } from './components/expense-distribution-chart';
@@ -267,6 +267,7 @@ export default function FinanceDashboardPage() {
   const { currentMonth } = useFinanceContext();
   const { data: summary, isLoading, isError, refetch } = useFinanceSummary(currentMonth);
   const { hasData } = useHasFinanceData(currentMonth);
+  const { data: evolutionData, isLoading: isEvolutionLoading } = useMonthlyEvolution(currentMonth, 6);
 
   const categoryBreakdown: CategoryBreakdown[] = summary
     ? [
@@ -276,7 +277,7 @@ export default function FinanceDashboardPage() {
       ]
     : [];
 
-  const monthlyEvolution: MonthlyDataPoint[] = []; // Will be populated from API in future
+  const monthlyEvolution: MonthlyDataPoint[] = evolutionData?.data ?? [];
 
   if (isError) {
     return <ErrorState onRetry={() => refetch()} />;
@@ -301,7 +302,7 @@ export default function FinanceDashboardPage() {
 
       {/* Charts */}
       <ChartsSection
-        loading={isLoading}
+        loading={isLoading || isEvolutionLoading}
         categoryBreakdown={categoryBreakdown}
         monthlyEvolution={monthlyEvolution}
       />

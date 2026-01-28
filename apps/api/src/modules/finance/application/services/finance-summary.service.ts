@@ -58,6 +58,24 @@ export interface FinanceSummary {
   };
 }
 
+export interface MonthlyEvolutionDataPoint {
+  monthYear: string;
+  monthLabel: string;
+  income: number;
+  expenses: number;
+  balance: number;
+}
+
+export interface MonthlyEvolutionResult {
+  data: MonthlyEvolutionDataPoint[];
+  meta: {
+    startMonth: string;
+    endMonth: string;
+    monthsRequested: number;
+    monthsReturned: number;
+  };
+}
+
 @Injectable()
 export class FinanceSummaryService {
   constructor(
@@ -166,5 +184,105 @@ export class FinanceSummaryService {
 
     this.logger.log(`Finance summary calculated for ${targetMonth}`);
     return summary;
+  }
+
+  /**
+   * Get monthly evolution history for the last N months
+   *
+   * @param userId - User ID
+   * @param endMonth - End month in YYYY-MM format (defaults to current month)
+   * @param monthsCount - Number of months to fetch (1-12, defaults to 6)
+   * @returns Monthly evolution data with income, expenses, and balance for each month
+   */
+  async getHistoricalSummary(
+    userId: string,
+    endMonth?: string,
+    monthsCount = 6
+  ): Promise<MonthlyEvolutionResult> {
+    const end = endMonth ?? new Date().toISOString().slice(0, 7);
+    const months = this.generateMonthRange(end, monthsCount);
+
+    const startMonth = months[0] ?? end;
+    const endMonthResult = months[months.length - 1] ?? end;
+
+    this.logger.log(
+      `Getting historical summary for user ${userId}, months ${startMonth} to ${endMonthResult}`
+    );
+
+    // Fetch summaries in parallel for all months
+    const summaries = await Promise.all(
+      months.map((month) => this.getSummary(userId, month))
+    );
+
+    // Transform to evolution format
+    const data: MonthlyEvolutionDataPoint[] = [];
+    for (let i = 0; i < summaries.length; i++) {
+      const summary = summaries[i];
+      const monthYear = months[i];
+      if (summary && monthYear) {
+        data.push({
+          monthYear,
+          monthLabel: this.formatMonthLabel(monthYear),
+          income: summary.totalIncomeActual,
+          expenses: summary.totalSpent,
+          balance: summary.balance,
+        });
+      }
+    }
+
+    return {
+      data,
+      meta: {
+        startMonth,
+        endMonth: endMonthResult,
+        monthsRequested: monthsCount,
+        monthsReturned: data.length,
+      },
+    };
+  }
+
+  /**
+   * Generate array of month strings from end month going back N months
+   * @returns Array in chronological order (oldest first)
+   */
+  private generateMonthRange(endMonth: string, count: number): string[] {
+    const parts = endMonth.split('-');
+    const yearStr = parts[0] ?? '2024';
+    const monthStr = parts[1] ?? '01';
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const months: string[] = [];
+
+    for (let i = count - 1; i >= 0; i--) {
+      const date = new Date(year, month - 1 - i, 1);
+      const fullYear = date.getFullYear();
+      const monthNum = date.getMonth() + 1;
+      months.push(`${String(fullYear)}-${String(monthNum).padStart(2, '0')}`);
+    }
+    return months;
+  }
+
+  /**
+   * Format month year to short Portuguese label (e.g., "Jan", "Fev")
+   */
+  private formatMonthLabel(monthYear: string): string {
+    const labels = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+    const parts = monthYear.split('-');
+    const monthStr = parts[1] ?? '01';
+    const monthIndex = parseInt(monthStr, 10) - 1;
+    return labels[monthIndex] ?? 'Jan';
   }
 }

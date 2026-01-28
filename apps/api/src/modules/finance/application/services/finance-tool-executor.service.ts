@@ -19,6 +19,8 @@ import {
   markBillPaidParamsSchema,
   createExpenseParamsSchema,
   getDebtProgressParamsSchema,
+  getDebtPaymentHistoryParamsSchema,
+  getUpcomingInstallmentsParamsSchema,
 } from '@life-assistant/ai';
 import { FinanceSummaryService } from './finance-summary.service';
 import { BillsService } from './bills.service';
@@ -85,6 +87,12 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
         case 'get_debt_progress':
           return await this.executeGetDebtProgress(toolCall, userId);
+
+        case 'get_debt_payment_history':
+          return await this.executeGetDebtPaymentHistory(toolCall, userId);
+
+        case 'get_upcoming_installments':
+          return await this.executeGetUpcomingInstallments(toolCall, userId);
 
         default:
           return createErrorResult(
@@ -381,6 +389,7 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
   /**
    * Execute get_debt_progress tool
+   * Now includes projection data for estimating payoff dates
    */
   private async executeGetDebtProgress(
     toolCall: ToolCall,
@@ -404,8 +413,17 @@ export class FinanceToolExecutorService implements ToolExecutor {
     if (debtId) {
       // Get specific debt
       const debt = await this.debtsService.findById(userId, debtId);
-
       const formattedDebt = this.formatDebtForResponse(debt, monthYear);
+
+      // Add projection for the specific debt
+      const projection = await this.debtsService.calculateProjection(userId, debtId);
+      formattedDebt.projection = {
+        estimatedPayoffMonthYear: projection.estimatedPayoffMonthYear,
+        remainingMonths: projection.remainingMonths,
+        avgPaymentsPerMonth: projection.paymentVelocity.avgPaymentsPerMonth,
+        isRegularPayment: projection.paymentVelocity.isRegular,
+        message: projection.message,
+      };
 
       return createSuccessResult(toolCall, {
         debts: [formattedDebt],
@@ -422,8 +440,31 @@ export class FinanceToolExecutorService implements ToolExecutor {
     // Get all debts (filtered by monthYear if provided)
     const { debts } = await this.debtsService.findAll(userId, { monthYear });
 
-    const formattedDebts = debts.map((debt) =>
-      this.formatDebtForResponse(debt, monthYear)
+    // Format debts and add projections (only for negotiated debts)
+    const formattedDebts = await Promise.all(
+      debts.map(async (debt) => {
+        const formatted = this.formatDebtForResponse(debt, monthYear);
+
+        // Only calculate projection for negotiated debts with installments
+        if (debt.isNegotiated && debt.totalInstallments && debt.status !== 'paid_off') {
+          try {
+            const projection = await this.debtsService.calculateProjection(userId, debt.id);
+            formatted.projection = {
+              estimatedPayoffMonthYear: projection.estimatedPayoffMonthYear,
+              remainingMonths: projection.remainingMonths,
+              avgPaymentsPerMonth: projection.paymentVelocity.avgPaymentsPerMonth,
+              isRegularPayment: projection.paymentVelocity.isRegular,
+              message: projection.message,
+            };
+          } catch (error) {
+            this.logger.warn(
+              `Failed to calculate projection for debt ${debt.id}: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+        }
+
+        return formatted;
+      })
     );
 
     // Calculate summary
@@ -460,6 +501,104 @@ export class FinanceToolExecutorService implements ToolExecutor {
         averageProgress,
         overdueCount,
       },
+    });
+  }
+
+  /**
+   * Execute get_debt_payment_history tool
+   */
+  private async executeGetDebtPaymentHistory(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = getDebtPaymentHistoryParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { debtId, limit } = parseResult.data;
+
+    this.logger.debug(
+      `get_debt_payment_history params: debtId=${debtId}, limit=${String(limit ?? 50)}`
+    );
+
+    const result = await this.debtsService.getPaymentHistory(userId, debtId, {
+      limit: limit ?? 50,
+    });
+
+    // Format payments for AI response
+    const formattedPayments = result.payments.map((payment) => ({
+      installmentNumber: payment.installmentNumber,
+      amount: parseFloat(payment.amount),
+      belongsToMonthYear: payment.monthYear,
+      paidAt: payment.paidAt.toISOString(),
+      paidEarly: payment.paidEarly,
+    }));
+
+    this.logger.log(
+      `get_debt_payment_history returned ${String(result.payments.length)} payments for debt ${debtId}`
+    );
+
+    return createSuccessResult(toolCall, {
+      payments: formattedPayments,
+      summary: result.summary,
+      debt: result.debt,
+    });
+  }
+
+  /**
+   * Execute get_upcoming_installments tool
+   */
+  private async executeGetUpcomingInstallments(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = getUpcomingInstallmentsParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { monthYear } = parseResult.data;
+
+    this.logger.debug(
+      `get_upcoming_installments params: monthYear=${monthYear ?? 'current'}`
+    );
+
+    const result = await this.debtsService.getUpcomingInstallments(userId, monthYear);
+
+    // Format installments for AI response
+    const formattedInstallments = result.installments.map((inst) => ({
+      debtId: inst.debtId,
+      debtName: inst.debtName,
+      creditor: inst.creditor,
+      installmentNumber: inst.installmentNumber,
+      totalInstallments: inst.totalInstallments,
+      amount: inst.amount,
+      dueDay: inst.dueDay,
+      belongsToMonthYear: inst.belongsToMonthYear,
+      status: inst.status,
+      paidAt: inst.paidAt?.toISOString() ?? null,
+      paidInMonth: inst.paidInMonth,
+    }));
+
+    const targetMonth = monthYear ?? new Date().toISOString().slice(0, 7);
+
+    this.logger.log(
+      `get_upcoming_installments returned ${String(result.installments.length)} installments for ${targetMonth}`
+    );
+
+    return createSuccessResult(toolCall, {
+      installments: formattedInstallments,
+      summary: result.summary,
+      monthYear: targetMonth,
     });
   }
 

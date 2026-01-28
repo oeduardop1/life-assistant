@@ -535,7 +535,7 @@ describe('DebtsService', () => {
       const result = await service.getSummary('user-123');
 
       expect(result).toEqual(mockSummary);
-      expect(mockRepository.getSummary).toHaveBeenCalledWith('user-123');
+      expect(mockRepository.getSummary).toHaveBeenCalledWith('user-123', undefined);
     });
   });
 

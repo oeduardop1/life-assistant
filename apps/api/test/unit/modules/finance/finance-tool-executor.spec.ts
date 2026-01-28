@@ -69,6 +69,7 @@ describe('FinanceToolExecutorService', () => {
   let mockDebtsService: {
     findAll: ReturnType<typeof vi.fn>;
     findById: ReturnType<typeof vi.fn>;
+    calculateProjection: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -91,6 +92,7 @@ describe('FinanceToolExecutorService', () => {
     mockDebtsService = {
       findAll: vi.fn(),
       findById: vi.fn(),
+      calculateProjection: vi.fn(),
     };
 
     financeToolExecutor = new FinanceToolExecutorService(
@@ -436,6 +438,12 @@ describe('FinanceToolExecutorService', () => {
 
       it('should return progress for all debts', async () => {
         mockDebtsService.findAll.mockResolvedValue({ debts: [mockDebt], total: 1 });
+        mockDebtsService.calculateProjection.mockResolvedValue({
+          estimatedPayoffMonthYear: '2027-05',
+          remainingMonths: 16,
+          paymentVelocity: { avgPaymentsPerMonth: 1, isRegular: true },
+          message: 'No ritmo atual, você quita em Maio/2027 (16 meses).',
+        });
 
         const toolCall = createMockToolCall({
           name: 'get_debt_progress',
@@ -455,6 +463,10 @@ describe('FinanceToolExecutorService', () => {
                 paidInstallments: 4, // currentInstallment (5) - 1
                 remainingInstallments: 16, // totalInstallments (20) - paidInstallments (4)
                 percentComplete: 20, // paidInstallments (4) / totalInstallments (20) * 100
+                projection: expect.objectContaining({
+                  estimatedPayoffMonthYear: '2027-05',
+                  remainingMonths: 16,
+                }),
               }),
             ]),
             summary: expect.objectContaining({
@@ -466,6 +478,12 @@ describe('FinanceToolExecutorService', () => {
 
       it('should return progress for specific debt', async () => {
         mockDebtsService.findById.mockResolvedValue(mockDebt);
+        mockDebtsService.calculateProjection.mockResolvedValue({
+          estimatedPayoffMonthYear: '2027-05',
+          remainingMonths: 16,
+          paymentVelocity: { avgPaymentsPerMonth: 1, isRegular: true },
+          message: 'No ritmo atual, você quita em Maio/2027 (16 meses).',
+        });
 
         const toolCall = createMockToolCall({
           name: 'get_debt_progress',
@@ -475,12 +493,17 @@ describe('FinanceToolExecutorService', () => {
         await financeToolExecutor.execute(toolCall, { userId: 'user-123' });
 
         expect(mockDebtsService.findById).toHaveBeenCalledWith('user-123', 'debt-123');
+        expect(mockDebtsService.calculateProjection).toHaveBeenCalledWith('user-123', 'debt-123');
         expect(createSuccessResult).toHaveBeenCalledWith(
           toolCall,
           expect.objectContaining({
             debts: expect.arrayContaining([
               expect.objectContaining({
                 id: 'debt-123',
+                projection: expect.objectContaining({
+                  estimatedPayoffMonthYear: '2027-05',
+                  remainingMonths: 16,
+                }),
               }),
             ]),
           })

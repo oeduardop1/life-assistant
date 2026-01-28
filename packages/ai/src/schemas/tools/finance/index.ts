@@ -62,6 +62,18 @@ export {
   type GetDebtProgressParams,
 } from './get-debt-progress.tool.js';
 
+export {
+  getDebtPaymentHistoryTool,
+  getDebtPaymentHistoryParamsSchema,
+  type GetDebtPaymentHistoryParams,
+} from './get-debt-payment-history.tool.js';
+
+export {
+  getUpcomingInstallmentsTool,
+  getUpcomingInstallmentsParamsSchema,
+  type GetUpcomingInstallmentsParams,
+} from './get-upcoming-installments.tool.js';
+
 // Convenience arrays for finance tools
 import { getFinanceSummaryTool } from './get-finance-summary.tool.js';
 import { getPendingBillsTool } from './get-pending-bills.tool.js';
@@ -72,6 +84,8 @@ import { getInvestmentsTool } from './get-investments.tool.js';
 import { markBillPaidTool } from './mark-bill-paid.tool.js';
 import { createExpenseTool } from './create-expense.tool.js';
 import { getDebtProgressTool } from './get-debt-progress.tool.js';
+import { getDebtPaymentHistoryTool } from './get-debt-payment-history.tool.js';
+import { getUpcomingInstallmentsTool } from './get-upcoming-installments.tool.js';
 import type { ToolDefinition } from '../../../ports/llm.port.js';
 
 /**
@@ -87,6 +101,8 @@ export const financeTools: ToolDefinition[] = [
   markBillPaidTool,
   createExpenseTool,
   getDebtProgressTool,
+  getDebtPaymentHistoryTool,
+  getUpcomingInstallmentsTool,
 ];
 
 /**
@@ -100,6 +116,8 @@ export const financeReadTools: ToolDefinition[] = [
   getIncomesTool,
   getInvestmentsTool,
   getDebtProgressTool,
+  getDebtPaymentHistoryTool,
+  getUpcomingInstallmentsTool,
 ];
 
 /**

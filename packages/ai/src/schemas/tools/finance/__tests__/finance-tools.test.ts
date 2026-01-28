@@ -24,6 +24,10 @@ import {
   createExpenseParamsSchema,
   getDebtProgressTool,
   getDebtProgressParamsSchema,
+  getDebtPaymentHistoryTool,
+  getDebtPaymentHistoryParamsSchema,
+  getUpcomingInstallmentsTool,
+  getUpcomingInstallmentsParamsSchema,
   financeTools,
   financeReadTools,
   financeWriteTools,
@@ -463,13 +467,114 @@ describe('Finance Tool Definitions', () => {
     });
   });
 
-  describe('Tool arrays', () => {
-    it('should have 9 total finance tools', () => {
-      expect(financeTools.length).toBe(9);
+  describe('get_debt_payment_history', () => {
+    it('should have correct tool name', () => {
+      expect(getDebtPaymentHistoryTool.name).toBe('get_debt_payment_history');
     });
 
-    it('should have 7 READ tools', () => {
-      expect(financeReadTools.length).toBe(7);
+    it('should have a non-empty description', () => {
+      expect(getDebtPaymentHistoryTool.description).toBeTruthy();
+      expect(getDebtPaymentHistoryTool.description.length).toBeGreaterThan(10);
+    });
+
+    it('should not require confirmation (READ tool)', () => {
+      expect(getDebtPaymentHistoryTool.requiresConfirmation).toBe(false);
+    });
+
+    it('should have input examples', () => {
+      expect(getDebtPaymentHistoryTool.inputExamples).toBeDefined();
+      expect(getDebtPaymentHistoryTool.inputExamples?.length).toBeGreaterThan(0);
+    });
+
+    describe('parameter validation', () => {
+      const validUuid = '123e4567-e89b-12d3-a456-426614174000';
+
+      it('should require debtId as UUID', () => {
+        expect(() => getDebtPaymentHistoryParamsSchema.parse({ debtId: validUuid })).not.toThrow();
+      });
+
+      it('should reject non-UUID debtId', () => {
+        expect(() => getDebtPaymentHistoryParamsSchema.parse({ debtId: 'not-a-uuid' })).toThrow();
+      });
+
+      it('should reject missing debtId', () => {
+        expect(() => getDebtPaymentHistoryParamsSchema.parse({})).toThrow();
+      });
+
+      it('should accept optional limit', () => {
+        expect(() =>
+          getDebtPaymentHistoryParamsSchema.parse({ debtId: validUuid, limit: 10 })
+        ).not.toThrow();
+      });
+
+      it('should reject limit over 100', () => {
+        expect(() =>
+          getDebtPaymentHistoryParamsSchema.parse({ debtId: validUuid, limit: 101 })
+        ).toThrow();
+      });
+
+      it('should reject limit under 1', () => {
+        expect(() =>
+          getDebtPaymentHistoryParamsSchema.parse({ debtId: validUuid, limit: 0 })
+        ).toThrow();
+      });
+    });
+  });
+
+  describe('get_upcoming_installments', () => {
+    it('should have correct tool name', () => {
+      expect(getUpcomingInstallmentsTool.name).toBe('get_upcoming_installments');
+    });
+
+    it('should have a non-empty description', () => {
+      expect(getUpcomingInstallmentsTool.description).toBeTruthy();
+      expect(getUpcomingInstallmentsTool.description.length).toBeGreaterThan(10);
+    });
+
+    it('should not require confirmation (READ tool)', () => {
+      expect(getUpcomingInstallmentsTool.requiresConfirmation).toBe(false);
+    });
+
+    it('should have input examples', () => {
+      expect(getUpcomingInstallmentsTool.inputExamples).toBeDefined();
+      expect(getUpcomingInstallmentsTool.inputExamples?.length).toBeGreaterThan(0);
+    });
+
+    describe('parameter validation', () => {
+      it('should accept empty object (defaults to current month)', () => {
+        expect(() => getUpcomingInstallmentsParamsSchema.parse({})).not.toThrow();
+      });
+
+      it('should accept valid monthYear format', () => {
+        expect(() =>
+          getUpcomingInstallmentsParamsSchema.parse({ monthYear: '2026-03' })
+        ).not.toThrow();
+        expect(() =>
+          getUpcomingInstallmentsParamsSchema.parse({ monthYear: '2026-12' })
+        ).not.toThrow();
+      });
+
+      it('should reject invalid monthYear format', () => {
+        expect(() =>
+          getUpcomingInstallmentsParamsSchema.parse({ monthYear: '2026-1' })
+        ).toThrow();
+        expect(() =>
+          getUpcomingInstallmentsParamsSchema.parse({ monthYear: '2026-13' })
+        ).toThrow();
+        expect(() =>
+          getUpcomingInstallmentsParamsSchema.parse({ monthYear: 'invalid' })
+        ).toThrow();
+      });
+    });
+  });
+
+  describe('Tool arrays', () => {
+    it('should have 11 total finance tools', () => {
+      expect(financeTools.length).toBe(11);
+    });
+
+    it('should have 9 READ tools', () => {
+      expect(financeReadTools.length).toBe(9);
       financeReadTools.forEach((tool) => {
         expect(tool.requiresConfirmation).toBe(false);
       });
@@ -491,6 +596,8 @@ describe('Finance Tool Definitions', () => {
       expect(readToolNames).toContain('get_incomes');
       expect(readToolNames).toContain('get_investments');
       expect(readToolNames).toContain('get_debt_progress');
+      expect(readToolNames).toContain('get_debt_payment_history');
+      expect(readToolNames).toContain('get_upcoming_installments');
     });
 
     it('should have correct tools in WRITE array', () => {

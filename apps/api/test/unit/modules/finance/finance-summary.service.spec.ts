@@ -427,6 +427,120 @@ describe('FinanceSummaryService', () => {
       });
     });
 
+    describe('getHistoricalSummary', () => {
+      it('should_return_6_months_by_default', async () => {
+        // Setup mocks for 6 parallel calls
+        for (let i = 0; i < 6; i++) {
+          setupDefaultMocks({ incomeActual: 5000, expensesActual: 3000 });
+        }
+
+        const result = await service.getHistoricalSummary('user-123', '2024-06');
+
+        expect(result.data).toHaveLength(6);
+        expect(result.meta.monthsRequested).toBe(6);
+        expect(result.meta.monthsReturned).toBe(6);
+      });
+
+      it('should_respect_months_parameter', async () => {
+        // Setup mocks for 3 calls
+        for (let i = 0; i < 3; i++) {
+          setupDefaultMocks({ incomeActual: 5000 });
+        }
+
+        const result = await service.getHistoricalSummary('user-123', '2024-06', 3);
+
+        expect(result.data).toHaveLength(3);
+        expect(result.meta.monthsRequested).toBe(3);
+        expect(result.meta.monthsReturned).toBe(3);
+      });
+
+      it('should_return_months_in_chronological_order', async () => {
+        // Setup mocks for 3 calls
+        for (let i = 0; i < 3; i++) {
+          setupDefaultMocks();
+        }
+
+        const result = await service.getHistoricalSummary('user-123', '2024-06', 3);
+
+        expect(result.data[0].monthYear).toBe('2024-04');
+        expect(result.data[1].monthYear).toBe('2024-05');
+        expect(result.data[2].monthYear).toBe('2024-06');
+        expect(result.meta.startMonth).toBe('2024-04');
+        expect(result.meta.endMonth).toBe('2024-06');
+      });
+
+      it('should_format_month_labels_in_portuguese', async () => {
+        // Setup mocks for 3 calls
+        for (let i = 0; i < 3; i++) {
+          setupDefaultMocks();
+        }
+
+        const result = await service.getHistoricalSummary('user-123', '2024-03', 3);
+
+        expect(result.data[0].monthLabel).toBe('Jan');
+        expect(result.data[1].monthLabel).toBe('Fev');
+        expect(result.data[2].monthLabel).toBe('Mar');
+      });
+
+      it('should_map_income_expenses_balance_correctly', async () => {
+        // Setup mocks - 1 call with specific values
+        setupDefaultMocks({
+          incomeActual: 10000,
+          paidBillsAmount: 3000,
+          expensesActual: 2000,
+          debtPaymentsThisMonth: 500,
+        });
+
+        const result = await service.getHistoricalSummary('user-123', '2024-01', 1);
+
+        expect(result.data[0].income).toBe(10000);
+        expect(result.data[0].expenses).toBe(5500); // totalSpent = 3000 + 2000 + 500
+        expect(result.data[0].balance).toBe(4500); // 10000 - 5500
+      });
+
+      it('should_include_correct_meta_information', async () => {
+        // Setup mocks for 4 calls
+        for (let i = 0; i < 4; i++) {
+          setupDefaultMocks();
+        }
+
+        const result = await service.getHistoricalSummary('user-123', '2024-12', 4);
+
+        expect(result.meta).toEqual({
+          startMonth: '2024-09',
+          endMonth: '2024-12',
+          monthsRequested: 4,
+          monthsReturned: 4,
+        });
+      });
+
+      it('should_handle_year_boundary_correctly', async () => {
+        // Setup mocks for 3 calls
+        for (let i = 0; i < 3; i++) {
+          setupDefaultMocks();
+        }
+
+        const result = await service.getHistoricalSummary('user-123', '2024-02', 3);
+
+        expect(result.data[0].monthYear).toBe('2023-12');
+        expect(result.data[1].monthYear).toBe('2024-01');
+        expect(result.data[2].monthYear).toBe('2024-02');
+      });
+
+      it('should_default_to_current_month_when_endMonth_not_provided', async () => {
+        // Setup mocks for 6 calls
+        for (let i = 0; i < 6; i++) {
+          setupDefaultMocks();
+        }
+
+        const currentMonth = new Date().toISOString().slice(0, 7);
+
+        const result = await service.getHistoricalSummary('user-123');
+
+        expect(result.meta.endMonth).toBe(currentMonth);
+      });
+    });
+
     describe('month handling', () => {
       it('should_use_provided_month_year', async () => {
         setupDefaultMocks();

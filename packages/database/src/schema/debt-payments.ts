@@ -30,7 +30,10 @@ export const debtPayments = pgTable(
     // Amount paid
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
 
-    // Month context (YYYY-MM format)
+    // Month the installment belongs to (YYYY-MM format)
+    // This is the scheduled month for the installment, NOT when it was paid.
+    // Example: Installment 3 of a debt starting 2026-02 has monthYear='2026-04'
+    // Use paidAt to know when the payment was actually made.
     monthYear: varchar('month_year', { length: 7 }).notNull(),
 
     // When the payment was made

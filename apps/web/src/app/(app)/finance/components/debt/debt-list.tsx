@@ -12,7 +12,7 @@ import { DebtCard } from './debt-card';
 interface DebtListProps {
   debts: Debt[];
   loading?: boolean;
-  currentMonth?: string;
+  currentMonth: string;
   onEdit: (debt: Debt) => void;
   onDelete: (debt: Debt) => void;
   onPayInstallment?: (debt: Debt) => void;

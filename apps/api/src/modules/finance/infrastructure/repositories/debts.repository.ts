@@ -8,6 +8,9 @@ import type {
   DebtsRepositoryPort,
   DebtSearchParams,
   DebtSummary,
+  DebtPaymentWithEarly,
+  UpcomingInstallment,
+  UpcomingInstallmentStatus,
 } from '../../domain/ports/debts.repository.port';
 
 @Injectable()
@@ -109,6 +112,22 @@ export class DebtsRepository implements DebtsRepositoryPort {
     const month = parts[1] ?? 1;
     const endDate = new Date(year, month - 1 + totalInstallments - 1, 1);
     return `${String(endDate.getFullYear())}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  /**
+   * Calculate which month an installment belongs to based on startMonthYear and installmentNumber
+   * Example: startMonthYear='2026-02', installmentNumber=3 → '2026-04' (April)
+   */
+  private calculateInstallmentMonth(
+    startMonthYear: string,
+    installmentNumber: number
+  ): string {
+    const parts = startMonthYear.split('-').map(Number);
+    const year = parts[0] ?? 2026;
+    const month = parts[1] ?? 1;
+    // installmentNumber is 1-based, so installment 1 = startMonth, installment 2 = startMonth + 1, etc.
+    const targetDate = new Date(year, month - 1 + (installmentNumber - 1), 1);
+    return `${String(targetDate.getFullYear())}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
   }
 
   async findById(userId: string, id: string): Promise<Debt | null> {
@@ -249,21 +268,26 @@ export class DebtsRepository implements DebtsRepositoryPort {
         .returning();
 
       // Record the payments in debt_payments for month-aware tracking
-      if (updated && currentDebt.installmentAmount) {
+      if (updated && currentDebt.installmentAmount && currentDebt.startMonthYear) {
         const now = new Date();
-        const monthYear = `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
         // Record each payment individually
         for (let i = 0; i < quantity; i++) {
           const installmentNumber = currentDebt.currentInstallment + i;
           if (installmentNumber <= totalInstallments) {
+            // Calculate the month this installment belongs to (not when it was paid)
+            const belongsToMonthYear = this.calculateInstallmentMonth(
+              currentDebt.startMonthYear,
+              installmentNumber
+            );
+
             await db.insert(this.db.schema.debtPayments).values({
               userId,
               debtId: id,
               installmentNumber,
               amount: currentDebt.installmentAmount,
-              monthYear,
-              paidAt: now,
+              monthYear: belongsToMonthYear, // Month the installment belongs to
+              paidAt: now, // When it was actually paid
             });
           }
         }
@@ -436,5 +460,177 @@ export class DebtsRepository implements DebtsRepositoryPort {
 
       return parseFloat(result?.sum ?? '0');
     });
+  }
+
+  async getPaymentHistory(
+    userId: string,
+    debtId: string,
+    params?: { limit?: number; offset?: number }
+  ): Promise<DebtPaymentWithEarly[]> {
+    return this.db.withUserId(userId, async (db) => {
+      const payments = await db
+        .select()
+        .from(this.db.schema.debtPayments)
+        .where(
+          and(
+            eq(this.db.schema.debtPayments.userId, userId),
+            eq(this.db.schema.debtPayments.debtId, debtId)
+          )
+        )
+        .orderBy(this.db.schema.debtPayments.installmentNumber)
+        .limit(params?.limit ?? 100)
+        .offset(params?.offset ?? 0);
+
+      // Calculate paidEarly for each payment
+      // A payment is "early" if paidAt month < monthYear (the installment's scheduled month)
+      return payments.map((payment) => {
+        const paidAtMonth = `${String(payment.paidAt.getFullYear())}-${String(payment.paidAt.getMonth() + 1).padStart(2, '0')}`;
+        const paidEarly = paidAtMonth < payment.monthYear;
+
+        return {
+          ...payment,
+          paidEarly,
+        };
+      });
+    });
+  }
+
+  async getUpcomingInstallments(
+    userId: string,
+    monthYear: string
+  ): Promise<UpcomingInstallment[]> {
+    return this.db.withUserId(userId, async (db) => {
+      // Get all active/overdue negotiated debts that have installments in this month
+      const debts = await db
+        .select()
+        .from(this.db.schema.debts)
+        .where(
+          and(
+            eq(this.db.schema.debts.userId, userId),
+            eq(this.db.schema.debts.isNegotiated, true)
+          )
+        );
+
+      // Filter to debts that have an installment in this month
+      const debtsWithInstallmentsThisMonth = debts.filter((debt) => {
+        if (!debt.startMonthYear || !debt.totalInstallments) return false;
+
+        // Check if this month falls within the debt's installment range
+        const endMonth = this.calculateEndMonth(
+          debt.startMonthYear,
+          debt.totalInstallments
+        );
+
+        return debt.startMonthYear <= monthYear && monthYear <= endMonth;
+      });
+
+      // Get all payments for the target month to check what's already paid
+      const payments = await db
+        .select()
+        .from(this.db.schema.debtPayments)
+        .where(
+          and(
+            eq(this.db.schema.debtPayments.userId, userId),
+            eq(this.db.schema.debtPayments.monthYear, monthYear)
+          )
+        );
+
+      // Create a map of debtId -> payment for quick lookup
+      const paymentsByDebtId = new Map<string, typeof payments[0]>();
+      for (const payment of payments) {
+        paymentsByDebtId.set(payment.debtId, payment);
+      }
+
+      // Calculate the current date for overdue checking
+      const now = new Date();
+      const currentMonth = `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const currentDay = now.getDate();
+
+      // Build the installments array
+      const installments: UpcomingInstallment[] = [];
+
+      for (const debt of debtsWithInstallmentsThisMonth) {
+        if (!debt.startMonthYear || !debt.totalInstallments || !debt.installmentAmount) {
+          continue;
+        }
+
+        // Calculate which installment number this month corresponds to
+        const installmentNumber = this.calculateInstallmentNumberForMonth(
+          debt.startMonthYear,
+          monthYear
+        );
+
+        // Skip if installment number is out of range
+        if (installmentNumber < 1 || installmentNumber > debt.totalInstallments) {
+          continue;
+        }
+
+        const payment = paymentsByDebtId.get(debt.id);
+        let status: UpcomingInstallmentStatus;
+        let paidAt: Date | null = null;
+        let paidInMonth: string | null = null;
+
+        if (payment) {
+          // This installment was paid
+          paidAt = payment.paidAt;
+          paidInMonth = `${String(paidAt.getFullYear())}-${String(paidAt.getMonth() + 1).padStart(2, '0')}`;
+
+          if (paidInMonth < monthYear) {
+            status = 'paid_early';
+          } else {
+            status = 'paid';
+          }
+        } else {
+          // Not paid yet - check if overdue
+          const isOverdue =
+            monthYear < currentMonth ||
+            (monthYear === currentMonth && debt.dueDay !== null && currentDay > debt.dueDay);
+
+          status = isOverdue ? 'overdue' : 'pending';
+        }
+
+        installments.push({
+          debtId: debt.id,
+          debtName: debt.name,
+          creditor: debt.creditor,
+          installmentNumber,
+          totalInstallments: debt.totalInstallments,
+          amount: parseFloat(debt.installmentAmount),
+          dueDay: debt.dueDay ?? 1,
+          belongsToMonthYear: monthYear,
+          status,
+          paidAt,
+          paidInMonth,
+        });
+      }
+
+      // Sort by due day
+      installments.sort((a, b) => a.dueDay - b.dueDay);
+
+      return installments;
+    });
+  }
+
+  /**
+   * Calculate which installment number corresponds to a given month
+   * Example: startMonthYear='2026-02', targetMonth='2026-04' → installment 3
+   */
+  private calculateInstallmentNumberForMonth(
+    startMonthYear: string,
+    targetMonth: string
+  ): number {
+    const startParts = startMonthYear.split('-').map(Number);
+    const targetParts = targetMonth.split('-').map(Number);
+
+    const startYear = startParts[0] ?? 2026;
+    const startMonth = startParts[1] ?? 1;
+    const targetYear = targetParts[0] ?? 2026;
+    const targetMonthNum = targetParts[1] ?? 1;
+
+    const monthsDiff =
+      (targetYear - startYear) * 12 + (targetMonthNum - startMonth);
+
+    // Installment number is 1-based
+    return monthsDiff + 1;
   }
 }

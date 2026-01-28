@@ -137,3 +137,41 @@ export class FinanceSummaryQueryDto {
   @Matches(/^\d{4}-\d{2}$/, { message: 'monthYear must be in YYYY-MM format' })
   monthYear?: string;
 }
+
+export class FinanceHistoryQueryDto {
+  @ApiPropertyOptional({
+    example: '2026-01',
+    description: 'End month for history (defaults to current month)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}$/, { message: 'endMonth must be in YYYY-MM format' })
+  endMonth?: string;
+
+  @ApiPropertyOptional({
+    example: 6,
+    description: 'Number of months to retrieve (1-12, defaults to 6)',
+    default: 6,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  @Max(12)
+  months?: number = 6;
+}
+
+export class DebtPaymentHistoryQueryDto extends BaseQueryDto {
+  // Inherits limit and offset from BaseQueryDto
+}
+
+export class UpcomingInstallmentsQueryDto {
+  @ApiPropertyOptional({
+    example: '2026-03',
+    description: 'Month to get installments for (defaults to current month)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}$/, { message: 'monthYear must be in YYYY-MM format' })
+  monthYear?: string;
+}

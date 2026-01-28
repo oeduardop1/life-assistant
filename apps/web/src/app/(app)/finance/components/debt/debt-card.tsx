@@ -10,6 +10,8 @@ import {
   Handshake,
   AlertCircle,
   ChevronDown,
+  Zap,
+  Clock,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,8 +29,11 @@ import {
   debtStatusLabels,
   debtStatusColors,
   calculateDebtProgress,
+  formatMonthDisplay,
   type Debt,
+  type UpcomingInstallmentStatus,
 } from '../../types';
+import { useDebtProjection, useUpcomingInstallments } from '../../hooks/use-debts';
 import { DebtProgressBar } from './debt-progress-bar';
 import { DebtStats } from './debt-stats';
 
@@ -38,13 +43,47 @@ import { DebtStats } from './debt-stats';
 
 interface DebtCardProps {
   debt: Debt;
-  currentMonth?: string;
+  currentMonth: string;
   onEdit: (debt: Debt) => void;
   onDelete: (debt: Debt) => void;
   onPayInstallment?: (debt: Debt) => void;
   onNegotiate?: (debt: Debt) => void;
   isPayingInstallment?: boolean;
 }
+
+// =============================================================================
+// Installment Status Config
+// =============================================================================
+
+const installmentStatusConfig: Record<
+  UpcomingInstallmentStatus,
+  {
+    label: string;
+    icon: typeof CheckCircle2;
+    badgeClass: string;
+  }
+> = {
+  paid: {
+    label: 'Pago',
+    icon: CheckCircle2,
+    badgeClass: 'bg-green-500/10 text-green-700 border-green-200',
+  },
+  paid_early: {
+    label: 'Antecipado',
+    icon: Zap,
+    badgeClass: 'bg-blue-500/10 text-blue-700 border-blue-200',
+  },
+  pending: {
+    label: 'Pendente',
+    icon: Clock,
+    badgeClass: 'bg-orange-500/10 text-orange-700 border-orange-200',
+  },
+  overdue: {
+    label: 'Vencido',
+    icon: AlertCircle,
+    badgeClass: 'bg-red-500/10 text-red-700 border-red-200',
+  },
+};
 
 // =============================================================================
 // Badge Color Map
@@ -83,7 +122,7 @@ const statusIcons: Record<string, typeof CreditCard> = {
  */
 export function DebtCard({
   debt,
-  currentMonth: _currentMonth, // Kept for potential future use
+  currentMonth,
   onEdit,
   onDelete,
   onPayInstallment,
@@ -91,6 +130,20 @@ export function DebtCard({
   isPayingInstallment,
 }: DebtCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Fetch projection when card is expanded (lazy loading)
+  // Once expanded, keep fetching to maintain cache
+  const { data: projection } = useDebtProjection(
+    isExpanded && debt.isNegotiated ? debt.id : undefined
+  );
+
+  // Fetch upcoming installments for the current month to get this debt's installment status
+  const { data: upcomingData } = useUpcomingInstallments(currentMonth);
+
+  // Find this debt's installment status for the current month
+  const currentInstallment = upcomingData?.installments.find(
+    (inst) => inst.debtId === debt.id
+  );
 
   const statusColor = debtStatusColors[debt.status] || 'gray';
   const StatusIcon = statusIcons[debt.status] || CreditCard;
@@ -102,6 +155,12 @@ export function DebtCard({
 
   const progress = calculateDebtProgress(debt);
   const hasDetails = debt.isNegotiated && debt.totalInstallments && debt.installmentAmount;
+
+  // Get installment status config if available
+  const installmentStatus = currentInstallment
+    ? installmentStatusConfig[currentInstallment.status]
+    : null;
+  const InstallmentStatusIcon = installmentStatus?.icon;
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't toggle if clicking on interactive elements
@@ -175,6 +234,18 @@ export function DebtCard({
                   >
                     <AlertCircle className="h-3 w-3 mr-1" />
                     Pendente de Negociação
+                  </Badge>
+                )}
+
+                {/* Current month installment status */}
+                {debt.isNegotiated && installmentStatus && InstallmentStatusIcon && (
+                  <Badge
+                    variant="outline"
+                    className={cn('text-xs', installmentStatus.badgeClass)}
+                    data-testid="debt-installment-status-badge"
+                  >
+                    <InstallmentStatusIcon className="h-3 w-3 mr-1" />
+                    {formatMonthDisplay(currentMonth)}: {installmentStatus.label}
                   </Badge>
                 )}
 
@@ -313,6 +384,57 @@ export function DebtCard({
           >
             <div className="overflow-hidden">
               <div className="space-y-3 pt-3 border-t">
+                {/* Current Month Installment Info */}
+                {currentInstallment && (
+                  <div
+                    className={cn(
+                      'flex items-center justify-between p-2 rounded-md',
+                      installmentStatus?.badgeClass
+                    )}
+                    data-testid="debt-current-installment-info"
+                  >
+                    <div className="flex items-center gap-2">
+                      {InstallmentStatusIcon && (
+                        <InstallmentStatusIcon className="h-4 w-4" />
+                      )}
+                      <span className="text-sm font-medium">
+                        Parcela de {formatMonthDisplay(currentMonth)}
+                      </span>
+                    </div>
+                    <div className="text-right text-sm">
+                      {currentInstallment.status === 'paid' && currentInstallment.paidAt && (
+                        <span>
+                          Pago em{' '}
+                          {new Date(currentInstallment.paidAt).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short',
+                          })}
+                        </span>
+                      )}
+                      {currentInstallment.status === 'paid_early' && currentInstallment.paidAt && (
+                        <span>
+                          Pago antecipadamente em{' '}
+                          {new Date(currentInstallment.paidAt).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short',
+                          })}
+                          {currentInstallment.paidInMonth && (
+                            <span className="text-xs opacity-75">
+                              {' '}({formatMonthDisplay(currentInstallment.paidInMonth)})
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {currentInstallment.status === 'pending' && (
+                        <span>Vence dia {currentInstallment.dueDay}</span>
+                      )}
+                      {currentInstallment.status === 'overdue' && (
+                        <span>Venceu dia {currentInstallment.dueDay}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <DebtProgressBar
                   currentInstallment={debt.currentInstallment}
                   totalInstallments={debt.totalInstallments!}
@@ -323,6 +445,7 @@ export function DebtCard({
                   progress={progress}
                   installmentAmount={debt.installmentAmount!}
                   dueDay={debt.dueDay}
+                  projection={projection ?? debt.projection}
                 />
               </div>
             </div>

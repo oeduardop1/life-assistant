@@ -10,7 +10,7 @@ import {
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../../../common/types/request.types';
 import { FinanceSummaryService } from '../../application/services/finance-summary.service';
-import { FinanceSummaryQueryDto } from '../dtos/query.dto';
+import { FinanceSummaryQueryDto, FinanceHistoryQueryDto } from '../dtos/query.dto';
 
 @ApiTags('Finance - Summary')
 @ApiBearerAuth()
@@ -36,5 +36,26 @@ export class FinanceSummaryController {
       query.monthYear
     );
     return { summary };
+  }
+
+  @Get('history')
+  @ApiOperation({
+    summary: 'Get monthly evolution history',
+    description:
+      'Returns income, expenses, and balance for the last N months (default 6)',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Monthly evolution data',
+  })
+  async getHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: FinanceHistoryQueryDto
+  ) {
+    return this.financeSummaryService.getHistoricalSummary(
+      user.id,
+      query.endMonth,
+      query.months
+    );
   }
 }

@@ -342,7 +342,9 @@ Dívidas são filtradas por mês baseado em seu tipo e período de vigência.
 | `mark_bill_paid` | Marca conta como paga | ✅ |
 | `get_expenses` | Lista despesas variaveis do periodo | ❌ |
 | `create_expense` | Registra despesa variável | ✅ |
-| `get_debt_progress` | Progresso de pagamento das dívidas | ❌ |
+| `get_debt_progress` | Progresso de pagamento das dívidas (inclui projeção de quitação) | ❌ |
+| `get_debt_payment_history` | Histórico de pagamentos de uma dívida | ❌ |
+| `get_upcoming_installments` | Calendário de parcelas do mês com status | ❌ |
 | `get_incomes` | Lista rendas do mês | ❌ |
 | `get_investments` | Lista investimentos | ❌ |
 
@@ -494,7 +496,7 @@ Dívidas são filtradas por mês baseado em seu tipo e período de vigência.
 
 {
   name: 'get_debt_progress',
-  description: 'Retorna progresso de pagamento das dívidas. Filtra por mês se monthYear fornecido. Inclui parcelas pagas, restantes e percentual de conclusão.',
+  description: 'Retorna progresso de pagamento das dívidas. Filtra por mês se monthYear fornecido. Inclui parcelas pagas, restantes, percentual de conclusão e projeção de quitação.',
   parameters: {
     debtId?: string,     // UUID específico ou todas
     monthYear?: string,  // Filtrar dívidas visíveis neste mês (YYYY-MM)
@@ -529,6 +531,13 @@ Dívidas são filtradas por mês baseado em seu tipo e período de vigência.
   //     startMonthYear?: string;  // Mês de início das parcelas
   //     isNegotiated: boolean;
   //     status: 'active' | 'overdue' | 'paid_off' | 'settled' | 'defaulted';
+  //     projection?: {                    // Projeção de quitação (só para dívidas negociadas)
+  //       estimatedPayoffMonthYear: string | null;  // Ex: '2027-05'
+  //       remainingMonths: number;
+  //       avgPaymentsPerMonth: number;
+  //       isRegularPayment: boolean;
+  //       message: string;  // "No ritmo atual, você quita em Maio/2027 (16 meses)."
+  //     };
   //   }>;
   //   summary: {
   //     totalDebts: number;
@@ -536,6 +545,78 @@ Dívidas são filtradas por mês baseado em seu tipo e período de vigência.
   //     totalRemaining: number;
   //     averageProgress: number;
   //     overdueCount: number;  // Quantidade de dívidas em atraso
+  //   };
+  // }
+}
+
+{
+  name: 'get_debt_payment_history',
+  description: 'Retorna histórico de pagamentos de uma dívida. Inclui data de pagamento, parcela paga e se foi antecipado. Use quando perguntarem sobre pagamentos já feitos ou parcelas pagas.',
+  parameters: {
+    debtId: string,     // UUID da dívida (obrigatório)
+    limit?: number,     // Limite de registros (1-100, default: 50)
+  },
+  requiresConfirmation: false,
+  inputExamples: [
+    { debtId: '123e4567-e89b-12d3-a456-426614174000' },
+    { debtId: '123e4567-e89b-12d3-a456-426614174000', limit: 10 },
+  ],
+  // Retorno esperado:
+  // interface DebtPaymentHistoryResponse {
+  //   payments: Array<{
+  //     id: string;
+  //     installmentNumber: number;
+  //     amount: number;
+  //     monthYear: string;         // Para qual mês era a parcela
+  //     paidAt: string;            // Quando foi pago (ISO date)
+  //     paidEarly: boolean;        // true se pago antecipadamente
+  //   }>;
+  //   summary: {
+  //     totalPayments: number;
+  //     totalAmount: number;
+  //     paidEarlyCount: number;
+  //   };
+  //   debt: {
+  //     id: string;
+  //     name: string;
+  //     totalInstallments: number | null;
+  //     paidInstallments: number;
+  //   };
+  // }
+}
+
+{
+  name: 'get_upcoming_installments',
+  description: 'Retorna parcelas de dívidas para um mês específico com status (pendente, paga, paga antecipadamente, vencida). Use quando perguntarem sobre vencimentos ou parcelas do mês.',
+  parameters: {
+    monthYear?: string,  // Mês para consulta (YYYY-MM). Se omitido, usa mês atual.
+  },
+  requiresConfirmation: false,
+  inputExamples: [
+    {},
+    { monthYear: '2026-03' },
+  ],
+  // Retorno esperado:
+  // interface UpcomingInstallmentsResponse {
+  //   installments: Array<{
+  //     debtId: string;
+  //     debtName: string;
+  //     creditor: string | null;
+  //     installmentNumber: number;
+  //     totalInstallments: number;
+  //     amount: number;
+  //     dueDay: number;
+  //     belongsToMonthYear: string;   // Mês da parcela
+  //     status: 'pending' | 'paid' | 'paid_early' | 'overdue';
+  //     paidAt: string | null;        // Se já foi pago
+  //     paidInMonth: string | null;   // Em qual mês foi pago
+  //   }>;
+  //   summary: {
+  //     totalAmount: number;
+  //     pendingCount: number;
+  //     paidCount: number;
+  //     paidEarlyCount: number;
+  //     overdueCount: number;
   //   };
   // }
 }
@@ -800,9 +881,13 @@ export const debtPayments = pgTable('debt_payments', {
   // Payment details
   installmentNumber: integer('installment_number').notNull(),
   amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+
+  // IMPORTANTE: monthYear representa "para qual mês é a parcela" (não "quando foi pago")
+  // Isso permite registrar pagamentos antecipados corretamente
+  // Exemplo: parcela de março paga em fevereiro → monthYear='2026-03', paidAt='2026-02-15'
   monthYear: varchar('month_year', { length: 7 }).notNull(),
 
-  // Timestamps
+  // paidAt representa "quando o pagamento foi feito"
   paidAt: timestamp('paid_at', { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -814,6 +899,20 @@ export const debtPayments = pgTable('debt_payments', {
 export type DebtPayment = typeof debtPayments.$inferSelect;
 export type NewDebtPayment = typeof debtPayments.$inferInsert;
 ```
+
+**Semântica de `monthYear` vs `paidAt` (2026-01-27):**
+
+| Campo | Significado | Exemplo |
+|-------|-------------|---------|
+| `monthYear` | Para qual mês a parcela pertence | `'2026-03'` (parcela de março) |
+| `paidAt` | Quando o pagamento foi realizado | `'2026-02-15T10:30:00Z'` (pago em fevereiro) |
+| `paidEarly` | Calculado: `paidAt.month < monthYear` | `true` (pago antecipadamente) |
+
+**Cálculo de `monthYear` ao pagar parcela:**
+```typescript
+// belongsToMonthYear = startMonthYear + (installmentNumber - 1) meses
+// Exemplo: startMonthYear='2026-02', installmentNumber=3 → '2026-04'
+calculateInstallmentMonth(startMonthYear: string, installmentNumber: number): string
 
 #### Investments
 
@@ -907,6 +1006,82 @@ CREATE POLICY "user_access" ON incomes
 }
 ```
 
+### Debt-Specific Endpoints (2026-01-27)
+
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `GET /finance/debts/:id/payments` | GET | Histórico de pagamentos da dívida |
+| `GET /finance/debts/:id/projection` | GET | Projeção de quitação da dívida |
+| `GET /finance/debts/upcoming-installments` | GET | Calendário de parcelas do mês |
+
+**GET /finance/debts/:id/payments**
+```typescript
+// Query params:
+{ limit?: number; offset?: number }
+
+// Response:
+{
+  payments: Array<{
+    id: string;
+    installmentNumber: number;
+    amount: number;
+    monthYear: string;         // Para qual mês era a parcela
+    paidAt: string;            // Quando foi pago
+    paidEarly: boolean;        // Calculado: paidAt.month < monthYear
+  }>;
+  summary: {
+    totalPayments: number;
+    totalAmount: number;
+    paidEarlyCount: number;
+  };
+  debt: { id, name, totalInstallments, paidInstallments };
+}
+```
+
+**GET /finance/debts/:id/projection**
+```typescript
+// Response:
+{
+  projection: {
+    estimatedPayoffMonthYear: string | null;  // Ex: '2027-05'
+    remainingMonths: number;
+    avgPaymentsPerMonth: number;
+    isRegularPayment: boolean;
+    message: string;  // "No ritmo atual, você quita em Maio/2027 (16 meses)."
+  }
+}
+```
+
+**GET /finance/debts/upcoming-installments**
+```typescript
+// Query params:
+{ monthYear?: string }  // YYYY-MM, default: mês atual
+
+// Response:
+{
+  installments: Array<{
+    debtId: string;
+    debtName: string;
+    creditor: string | null;
+    installmentNumber: number;
+    totalInstallments: number;
+    amount: number;
+    dueDay: number;
+    belongsToMonthYear: string;
+    status: 'pending' | 'paid' | 'paid_early' | 'overdue';
+    paidAt: string | null;
+    paidInMonth: string | null;
+  }>;
+  summary: {
+    totalAmount: number;
+    pendingCount: number;
+    paidCount: number;
+    paidEarlyCount: number;
+    overdueCount: number;
+  };
+}
+```
+
 ---
 
 ## 11. Definition of Done
@@ -935,13 +1110,17 @@ CREATE POLICY "user_access" ON incomes
 - [ ] get_pending_bills lista contas pendentes/vencidas
 - [ ] mark_bill_paid marca conta como paga
 - [ ] create_expense cria despesa variável
-- [ ] get_debt_progress retorna progresso de dívidas
+- [x] get_debt_progress retorna progresso de dívidas (com projeção de quitação)
+- [x] get_debt_payment_history retorna histórico de pagamentos
+- [x] get_upcoming_installments retorna calendário de parcelas do mês
 
 ### Business Rules
 - [ ] Dívidas não negociadas excluídas de Total Orçado
 - [ ] Dívidas não negociadas incluídas em Total de Dívidas
-- [ ] Pagamento de parcela incrementa currentInstallment
-- [ ] Última parcela altera status para paid_off
+- [x] Pagamento de parcela incrementa currentInstallment
+- [x] Última parcela altera status para paid_off
+- [x] debt_payments.monthYear representa "para qual mês é a parcela" (não "quando foi pago")
+- [x] Pagamentos antecipados são identificados por paidEarly (paidAt.month < monthYear)
 
 ---
 

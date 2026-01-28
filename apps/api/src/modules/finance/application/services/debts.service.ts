@@ -13,6 +13,9 @@ import {
   type DebtsRepositoryPort,
   type DebtSearchParams,
   type DebtSummary,
+  type DebtPaymentHistoryResult,
+  type UpcomingInstallmentsResult,
+  type DebtProjection,
 } from '../../domain/ports/debts.repository.port';
 
 @Injectable()
@@ -198,5 +201,242 @@ export class DebtsService {
     monthYear: string
   ): Promise<number> {
     return this.repository.sumPaymentsByMonthYear(userId, monthYear);
+  }
+
+  async getPaymentHistory(
+    userId: string,
+    debtId: string,
+    params?: { limit?: number; offset?: number }
+  ): Promise<DebtPaymentHistoryResult> {
+    this.logger.log(`Getting payment history for debt ${debtId}`);
+
+    // First get the debt to include in the response
+    const debt = await this.repository.findById(userId, debtId);
+    if (!debt) {
+      throw new NotFoundException(`Debt with id ${debtId} not found`);
+    }
+
+    const payments = await this.repository.getPaymentHistory(
+      userId,
+      debtId,
+      params
+    );
+
+    // Calculate summary
+    const totalAmount = payments.reduce(
+      (sum, p) => sum + parseFloat(p.amount),
+      0
+    );
+    const paidEarlyCount = payments.filter((p) => p.paidEarly).length;
+
+    return {
+      payments,
+      summary: {
+        totalPayments: payments.length,
+        totalAmount,
+        paidEarlyCount,
+      },
+      debt: {
+        id: debt.id,
+        name: debt.name,
+        totalInstallments: debt.totalInstallments,
+        paidInstallments: debt.currentInstallment - 1,
+      },
+    };
+  }
+
+  async getUpcomingInstallments(
+    userId: string,
+    monthYear?: string
+  ): Promise<UpcomingInstallmentsResult> {
+    // Default to current month if not specified
+    const targetMonth =
+      monthYear ??
+      `${String(new Date().getFullYear())}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+    this.logger.log(`Getting upcoming installments for ${targetMonth}`);
+
+    const installments = await this.repository.getUpcomingInstallments(
+      userId,
+      targetMonth
+    );
+
+    // Calculate summary
+    const totalAmount = installments.reduce((sum, i) => sum + i.amount, 0);
+    const pendingCount = installments.filter((i) => i.status === 'pending').length;
+    const paidCount = installments.filter((i) => i.status === 'paid').length;
+    const paidEarlyCount = installments.filter((i) => i.status === 'paid_early').length;
+    const overdueCount = installments.filter((i) => i.status === 'overdue').length;
+
+    return {
+      installments,
+      summary: {
+        totalAmount,
+        pendingCount,
+        paidCount,
+        paidEarlyCount,
+        overdueCount,
+      },
+    };
+  }
+
+  /**
+   * Calculate payoff projection for a debt based on payment history.
+   * Analyzes payment velocity (how many payments per month) to estimate
+   * when the debt will be fully paid off.
+   *
+   * @param userId - User ID
+   * @param debtId - Debt ID
+   * @returns Projection including estimated payoff date, remaining months, and velocity
+   */
+  async calculateProjection(
+    userId: string,
+    debtId: string
+  ): Promise<DebtProjection> {
+    const debt = await this.repository.findById(userId, debtId);
+    if (!debt) {
+      throw new NotFoundException(`Debt with id ${debtId} not found`);
+    }
+
+    // If debt is already paid off or not negotiated, return appropriate message
+    if (debt.status === 'paid_off') {
+      return {
+        estimatedPayoffMonthYear: null,
+        remainingMonths: 0,
+        paymentVelocity: { avgPaymentsPerMonth: 0, isRegular: true },
+        message: 'Dívida já quitada.',
+      };
+    }
+
+    if (!debt.isNegotiated || !debt.totalInstallments) {
+      return {
+        estimatedPayoffMonthYear: null,
+        remainingMonths: 0,
+        paymentVelocity: { avgPaymentsPerMonth: 0, isRegular: false },
+        message: 'Dívida não negociada - não é possível calcular projeção.',
+      };
+    }
+
+    const paidInstallments = debt.currentInstallment - 1;
+    const remainingInstallments = debt.totalInstallments - paidInstallments;
+
+    // If no payments yet, use startMonthYear to estimate (1 payment per month)
+    if (paidInstallments === 0) {
+      const startDate = debt.startMonthYear
+        ? new Date(debt.startMonthYear + '-01')
+        : new Date();
+      const payoffDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth() + remainingInstallments - 1,
+        1
+      );
+      const payoffMonthYear = `${String(payoffDate.getFullYear())}-${String(payoffDate.getMonth() + 1).padStart(2, '0')}`;
+
+      return {
+        estimatedPayoffMonthYear: payoffMonthYear,
+        remainingMonths: remainingInstallments,
+        paymentVelocity: { avgPaymentsPerMonth: 1, isRegular: true },
+        message: this.formatProjectionMessage(payoffMonthYear, remainingInstallments),
+      };
+    }
+
+    // Get payment history to calculate velocity
+    const payments = await this.repository.getPaymentHistory(userId, debtId);
+
+    if (payments.length === 0) {
+      return {
+        estimatedPayoffMonthYear: null,
+        remainingMonths: remainingInstallments,
+        paymentVelocity: { avgPaymentsPerMonth: 0, isRegular: false },
+        message: 'Sem histórico de pagamentos para calcular projeção.',
+      };
+    }
+
+    // Group payments by month (when they were actually made, not which month they belong to)
+    const paymentsByMonth = new Map<string, number>();
+    for (const payment of payments) {
+      const paidMonth = `${String(payment.paidAt.getFullYear())}-${String(payment.paidAt.getMonth() + 1).padStart(2, '0')}`;
+      paymentsByMonth.set(paidMonth, (paymentsByMonth.get(paidMonth) ?? 0) + 1);
+    }
+
+    // Calculate average payments per month
+    const months = Array.from(paymentsByMonth.keys()).sort();
+    const firstPaymentMonth = months[0] ?? '';
+    const lastPaymentMonth = months[months.length - 1] ?? '';
+
+    // Calculate months elapsed
+    const firstDate = new Date(`${firstPaymentMonth}-01`);
+    const lastDate = new Date(`${lastPaymentMonth}-01`);
+    const monthsElapsed =
+      (lastDate.getFullYear() - firstDate.getFullYear()) * 12 +
+      (lastDate.getMonth() - firstDate.getMonth()) +
+      1;
+
+    const avgPaymentsPerMonth = paidInstallments / monthsElapsed;
+
+    // Check if payments are regular (variation < 20%)
+    const paymentsPerMonth = Array.from(paymentsByMonth.values());
+    const avgPerMonth =
+      paymentsPerMonth.reduce((a, b) => a + b, 0) / paymentsPerMonth.length;
+    const variance =
+      paymentsPerMonth.reduce(
+        (sum, val) => sum + Math.pow(val - avgPerMonth, 2),
+        0
+      ) / paymentsPerMonth.length;
+    const stdDev = Math.sqrt(variance);
+    const isRegular = avgPerMonth > 0 ? stdDev / avgPerMonth < 0.3 : true;
+
+    // Estimate payoff date
+    if (avgPaymentsPerMonth <= 0) {
+      return {
+        estimatedPayoffMonthYear: null,
+        remainingMonths: remainingInstallments,
+        paymentVelocity: { avgPaymentsPerMonth: 0, isRegular: false },
+        message: 'Velocidade de pagamento muito baixa para estimar quitação.',
+      };
+    }
+
+    const remainingMonths = Math.ceil(remainingInstallments / avgPaymentsPerMonth);
+    const now = new Date();
+    const payoffDate = new Date(
+      now.getFullYear(),
+      now.getMonth() + remainingMonths,
+      1
+    );
+    const payoffMonthYear = `${String(payoffDate.getFullYear())}-${String(payoffDate.getMonth() + 1).padStart(2, '0')}`;
+
+    return {
+      estimatedPayoffMonthYear: payoffMonthYear,
+      remainingMonths,
+      paymentVelocity: {
+        avgPaymentsPerMonth: Math.round(avgPaymentsPerMonth * 100) / 100,
+        isRegular,
+      },
+      message: this.formatProjectionMessage(payoffMonthYear, remainingMonths, avgPaymentsPerMonth),
+    };
+  }
+
+  /**
+   * Format projection message in Portuguese
+   */
+  private formatProjectionMessage(
+    payoffMonthYear: string,
+    remainingMonths: number,
+    avgPaymentsPerMonth?: number
+  ): string {
+    const parts = payoffMonthYear.split('-').map(Number);
+    const year = parts[0] ?? new Date().getFullYear();
+    const month = parts[1] ?? 1;
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+    ];
+    const monthName = monthNames[month - 1] ?? 'Janeiro';
+
+    if (avgPaymentsPerMonth && avgPaymentsPerMonth > 1.2) {
+      return `Pagando ~${String(Math.round(avgPaymentsPerMonth))} parcelas/mês, você quita em ${monthName}/${String(year)} (${String(remainingMonths)} meses).`;
+    }
+
+    return `No ritmo atual, você quita em ${monthName}/${String(year)} (${String(remainingMonths)} meses).`;
   }
 }

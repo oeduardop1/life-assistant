@@ -5,6 +5,16 @@ import { DebtCard } from '../../../components/debt/debt-card';
 import type { Debt } from '../../../types';
 
 // =============================================================================
+// Mocks
+// =============================================================================
+
+// Mock the hooks that require providers
+vi.mock('../../../hooks/use-debts', () => ({
+  useDebtProjection: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpcomingInstallments: vi.fn(() => ({ data: null, isLoading: false })),
+}));
+
+// =============================================================================
 // Test Data
 // =============================================================================
 
@@ -62,6 +72,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -75,6 +86,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -87,6 +99,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtPaidOff}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -99,6 +112,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtPending}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -112,6 +126,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -124,6 +139,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -136,6 +152,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -148,6 +165,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -163,6 +181,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -175,6 +194,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtPending}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -191,6 +211,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={onEdit}
         onDelete={vi.fn()}
       />
@@ -210,6 +231,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={onDelete}
       />
@@ -229,6 +251,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onPayInstallment={onPayInstallment}
@@ -248,6 +271,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtNegotiated}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onPayInstallment={onPayInstallment}
@@ -268,6 +292,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtPending}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onNegotiate={onNegotiate}
@@ -287,6 +312,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtPending}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onNegotiate={onNegotiate}
@@ -304,6 +330,7 @@ describe('DebtCard', () => {
     render(
       <DebtCard
         debt={mockDebtPaidOff}
+        currentMonth="2026-01"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />

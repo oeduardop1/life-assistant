@@ -28,7 +28,11 @@ import {
   NegotiateDebtDto,
   PayInstallmentDto,
 } from '../dtos/debt.dto';
-import { DebtQueryDto } from '../dtos/query.dto';
+import {
+  DebtQueryDto,
+  DebtPaymentHistoryQueryDto,
+  UpcomingInstallmentsQueryDto,
+} from '../dtos/query.dto';
 
 @ApiTags('Finance - Debts')
 @ApiBearerAuth()
@@ -82,6 +86,27 @@ export class DebtsController {
     return { debts, total };
   }
 
+  @Get('upcoming-installments')
+  @ApiOperation({
+    summary: 'Get upcoming installments for a month',
+    description:
+      'Returns all debt installments due in a specific month with their payment status',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Upcoming installments returned',
+  })
+  async getUpcomingInstallments(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: UpcomingInstallmentsQueryDto
+  ) {
+    const result = await this.debtsService.getUpcomingInstallments(
+      user.id,
+      query.monthYear
+    );
+    return result;
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get debt by ID' })
   @ApiParam({ name: 'id', description: 'Debt ID' })
@@ -93,6 +118,51 @@ export class DebtsController {
   ) {
     const debt = await this.debtsService.findById(user.id, id);
     return { debt };
+  }
+
+  @Get(':id/payments')
+  @ApiOperation({ summary: 'Get payment history for a debt' })
+  @ApiParam({ name: 'id', description: 'Debt ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Payment history returned',
+  })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Debt not found' })
+  async getPaymentHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query() query: DebtPaymentHistoryQueryDto
+  ) {
+    const params: { limit?: number; offset?: number } = {};
+    if (query.limit !== undefined) params.limit = query.limit;
+    if (query.offset !== undefined) params.offset = query.offset;
+
+    const result = await this.debtsService.getPaymentHistory(
+      user.id,
+      id,
+      Object.keys(params).length > 0 ? params : undefined
+    );
+    return result;
+  }
+
+  @Get(':id/projection')
+  @ApiOperation({
+    summary: 'Get payoff projection for a debt',
+    description:
+      'Calculates estimated payoff date based on payment history velocity',
+  })
+  @ApiParam({ name: 'id', description: 'Debt ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Projection calculated',
+  })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Debt not found' })
+  async getProjection(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string
+  ) {
+    const projection = await this.debtsService.calculateProjection(user.id, id);
+    return { projection };
   }
 
   @Patch(':id')

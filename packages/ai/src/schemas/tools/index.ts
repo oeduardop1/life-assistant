@@ -104,6 +104,12 @@ export {
   getDebtProgressTool,
   getDebtProgressParamsSchema,
   type GetDebtProgressParams,
+  getDebtPaymentHistoryTool,
+  getDebtPaymentHistoryParamsSchema,
+  type GetDebtPaymentHistoryParams,
+  getUpcomingInstallmentsTool,
+  getUpcomingInstallmentsParamsSchema,
+  type GetUpcomingInstallmentsParams,
   financeTools,
   financeReadTools,
   financeWriteTools,
@@ -140,12 +146,14 @@ import {
   markBillPaidTool,
   createExpenseTool,
   getDebtProgressTool,
+  getDebtPaymentHistoryTool,
+  getUpcomingInstallmentsTool,
 } from './finance/index.js';
 import type { ToolDefinition } from '../../ports/llm.port.js';
 
 /**
  * All available tools.
- * READ tools: search_knowledge, get_tracking_history, get_person, analyze_context, get_finance_summary, get_pending_bills, get_bills, get_expenses, get_incomes, get_investments, get_debt_progress
+ * READ tools: search_knowledge, get_tracking_history, get_person, analyze_context, get_finance_summary, get_pending_bills, get_bills, get_expenses, get_incomes, get_investments, get_debt_progress, get_debt_payment_history, get_upcoming_installments
  * WRITE tools: record_metric, update_metric, delete_metric, add_knowledge, create_reminder, update_person, mark_bill_paid, create_expense
  *
  * Note: delete_metrics (batch) was removed - LLM hallucinates entry IDs.
@@ -176,6 +184,8 @@ export const allTools: ToolDefinition[] = [
   markBillPaidTool,
   createExpenseTool,
   getDebtProgressTool,
+  getDebtPaymentHistoryTool,
+  getUpcomingInstallmentsTool,
 ];
 
 /**
@@ -194,6 +204,8 @@ export const readTools: ToolDefinition[] = [
   getIncomesTool,
   getInvestmentsTool,
   getDebtProgressTool,
+  getDebtPaymentHistoryTool,
+  getUpcomingInstallmentsTool,
 ];
 
 /**
