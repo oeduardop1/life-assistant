@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IncomeCard } from '../../../components/income/income-card';
 import type { Income } from '../../../types';
@@ -44,24 +44,28 @@ describe('IncomeCard', () => {
     );
 
     expect(screen.getByTestId('income-name')).toHaveTextContent('Salário Mensal');
-    expect(screen.getByTestId('income-type-badge')).toHaveTextContent('Salário');
+    expect(screen.getByText('Salário')).toBeInTheDocument();
   });
 
-  it('should_display_recurring_badge_when_recurring', () => {
+  it('should_display_recurring_indicator_when_recurring', () => {
     render(
       <IncomeCard income={mockIncome} onEdit={vi.fn()} onDelete={vi.fn()} />
     );
 
-    expect(screen.getByTestId('income-recurring-badge')).toBeInTheDocument();
-    expect(screen.getByText('Recorrente')).toBeInTheDocument();
+    // The new component uses RefreshCw icon for recurring indicator
+    const card = screen.getByTestId('income-card');
+    expect(within(card).getByText('Salário Mensal')).toBeInTheDocument();
+    // Check for the refresh icon (recurring indicator)
+    expect(card.querySelector('svg.lucide-refresh-cw')).toBeInTheDocument();
   });
 
-  it('should_not_display_recurring_badge_when_not_recurring', () => {
+  it('should_not_display_recurring_indicator_when_not_recurring', () => {
     render(
       <IncomeCard income={mockIncomeNoActual} onEdit={vi.fn()} onDelete={vi.fn()} />
     );
 
-    expect(screen.queryByTestId('income-recurring-badge')).not.toBeInTheDocument();
+    const card = screen.getByTestId('income-card');
+    expect(card.querySelector('svg.lucide-refresh-cw')).not.toBeInTheDocument();
   });
 
   it('should_show_expected_and_actual_amounts', () => {
@@ -81,32 +85,26 @@ describe('IncomeCard', () => {
     expect(screen.queryByTestId('income-actual')).not.toBeInTheDocument();
   });
 
-  it('should_show_variance_when_actual_exists', () => {
-    const incomeWithVariance: Income = {
-      ...mockIncome,
-      expectedAmount: 5000,
-      actualAmount: 5500, // +10% variance
-    };
-
+  it('should_show_register_value_button_when_no_actual', () => {
+    const onRegisterValue = vi.fn();
     render(
-      <IncomeCard income={incomeWithVariance} onEdit={vi.fn()} onDelete={vi.fn()} />
+      <IncomeCard
+        income={mockIncomeNoActual}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onRegisterValue={onRegisterValue}
+      />
     );
 
-    expect(screen.getByTestId('income-variance')).toHaveTextContent('+10.0%');
+    expect(screen.getByText('Registrar Valor')).toBeInTheDocument();
   });
 
-  it('should_show_negative_variance_correctly', () => {
-    const incomeWithNegativeVariance: Income = {
-      ...mockIncome,
-      expectedAmount: 5000,
-      actualAmount: 4000, // -20% variance
-    };
-
+  it('should_show_received_status_when_actual_exists', () => {
     render(
-      <IncomeCard income={incomeWithNegativeVariance} onEdit={vi.fn()} onDelete={vi.fn()} />
+      <IncomeCard income={mockIncome} onEdit={vi.fn()} onDelete={vi.fn()} />
     );
 
-    expect(screen.getByTestId('income-variance')).toHaveTextContent('-20.0%');
+    expect(screen.getByText('Recebido')).toBeInTheDocument();
   });
 
   it('should_call_onEdit_when_edit_clicked', async () => {

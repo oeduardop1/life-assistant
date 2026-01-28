@@ -1,0 +1,479 @@
+'use client';
+
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+
+// =============================================================================
+// Animation Variants
+// =============================================================================
+
+export const fadeInUp: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
+
+export const fadeIn: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.3 },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.2 },
+  },
+};
+
+export const scaleIn: Variants = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 25,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: { duration: 0.15 },
+  },
+};
+
+export const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+export const staggerItem: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+};
+
+// =============================================================================
+// Animated Container Components
+// =============================================================================
+
+interface AnimatedContainerProps {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}
+
+/**
+ * FadeInUp - Animates children with a fade in and slide up effect
+ */
+export function FadeInUp({ children, className, delay = 0 }: AnimatedContainerProps) {
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      variants={fadeInUp}
+      transition={{ delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * ScaleIn - Animates children with a scale and fade effect
+ */
+export function ScaleIn({ children, className, delay = 0 }: AnimatedContainerProps) {
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      variants={scaleIn}
+      transition={{ delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * StaggerList - Container for staggered list animations
+ */
+interface StaggerListProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function StaggerList({ children, className }: StaggerListProps) {
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * StaggerItem - Individual item in a staggered list
+ */
+export function StaggerItem({ children, className }: StaggerListProps) {
+  return (
+    <motion.div variants={staggerItem} className={className}>
+      {children}
+    </motion.div>
+  );
+}
+
+// =============================================================================
+// Progress Bar Animation
+// =============================================================================
+
+interface AnimatedProgressBarProps {
+  value: number;
+  max?: number;
+  className?: string;
+  barClassName?: string;
+  showLabel?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  color?: 'default' | 'success' | 'warning' | 'danger';
+}
+
+const sizeClasses = {
+  sm: 'h-1.5',
+  md: 'h-2.5',
+  lg: 'h-4',
+};
+
+const colorClasses = {
+  default: 'bg-foreground',
+  success: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  danger: 'bg-destructive',
+};
+
+/**
+ * AnimatedProgressBar - Progress bar with smooth animation
+ */
+export function AnimatedProgressBar({
+  value,
+  max = 100,
+  className,
+  barClassName,
+  showLabel = false,
+  size = 'md',
+  color = 'default',
+}: AnimatedProgressBarProps) {
+  const percent = Math.min(100, Math.max(0, (value / max) * 100));
+
+  return (
+    <div className={cn('w-full', className)}>
+      <div
+        className={cn(
+          'relative w-full bg-muted rounded-full overflow-hidden',
+          sizeClasses[size]
+        )}
+      >
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percent}%` }}
+          transition={{
+            duration: 0.8,
+            ease: [0.4, 0, 0.2, 1],
+            delay: 0.2,
+          }}
+          className={cn(
+            'absolute inset-y-0 left-0 rounded-full',
+            colorClasses[color],
+            barClassName
+          )}
+        />
+      </div>
+      {showLabel && (
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-xs text-muted-foreground mt-1 block text-right"
+        >
+          {Math.round(percent)}%
+        </motion.span>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// Card Hover Effect
+// =============================================================================
+
+interface HoverCardProps {
+  children: ReactNode;
+  className?: string;
+}
+
+/**
+ * HoverCard - Card with subtle hover scale effect
+ */
+export function HoverCard({ children, className }: HoverCardProps) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.01, y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// =============================================================================
+// Shimmer Skeleton
+// =============================================================================
+
+interface ShimmerSkeletonProps {
+  className?: string;
+  variant?: 'text' | 'circular' | 'rectangular';
+  width?: string | number;
+  height?: string | number;
+}
+
+/**
+ * ShimmerSkeleton - Skeleton loading state with shimmer animation
+ */
+export function ShimmerSkeleton({
+  className,
+  variant = 'rectangular',
+  width,
+  height,
+}: ShimmerSkeletonProps) {
+  const variantClasses = {
+    text: 'rounded',
+    circular: 'rounded-full',
+    rectangular: 'rounded-lg',
+  };
+
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden bg-muted',
+        variantClasses[variant],
+        className
+      )}
+      style={{ width, height }}
+    >
+      <motion.div
+        className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-foreground/5 to-transparent"
+        animate={{ translateX: ['−100%', '100%'] }}
+        transition={{
+          duration: 1.5,
+          repeat: Infinity,
+          ease: 'linear',
+        }}
+      />
+    </div>
+  );
+}
+
+// =============================================================================
+// Expense Card Skeleton
+// =============================================================================
+
+interface ExpenseCardSkeletonProps {
+  className?: string;
+}
+
+/**
+ * ExpenseCardSkeleton - Loading skeleton for expense cards
+ */
+export function ExpenseCardSkeleton({ className }: ExpenseCardSkeletonProps) {
+  return (
+    <div
+      className={cn(
+        'p-4 rounded-xl border bg-card/50 space-y-3',
+        className
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <ShimmerSkeleton className="h-10 w-10" variant="rectangular" />
+        <div className="flex-1 space-y-2">
+          <ShimmerSkeleton className="h-4 w-3/4" />
+          <div className="flex gap-2">
+            <ShimmerSkeleton className="h-5 w-20" />
+            <ShimmerSkeleton className="h-5 w-20" />
+          </div>
+        </div>
+        <ShimmerSkeleton className="h-6 w-20" />
+      </div>
+
+      {/* Progress Bar */}
+      <div className="space-y-1">
+        <ShimmerSkeleton className="h-2 w-full" />
+        <div className="flex justify-between">
+          <ShimmerSkeleton className="h-3 w-32" />
+          <ShimmerSkeleton className="h-3 w-8" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Expense Summary Skeleton
+// =============================================================================
+
+/**
+ * ExpenseSummarySkeleton - Loading skeleton for expense summary
+ */
+export function ExpenseSummarySkeleton() {
+  return (
+    <div className="p-4 sm:p-5 rounded-xl border bg-card/50 space-y-4">
+      {/* Main Progress Bar */}
+      <div className="space-y-2">
+        <ShimmerSkeleton className="h-3 w-full" />
+        <div className="flex justify-between">
+          <ShimmerSkeleton className="h-4 w-20" />
+          <ShimmerSkeleton className="h-4 w-32" />
+        </div>
+      </div>
+
+      {/* Category Breakdown */}
+      <div className="space-y-2 pt-2">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <ShimmerSkeleton className="h-3 w-3" variant="circular" />
+            <ShimmerSkeleton className="h-3 w-20" />
+            <ShimmerSkeleton className="h-2 flex-1" />
+            <ShimmerSkeleton className="h-3 w-12" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Celebration Confetti
+// =============================================================================
+
+const CONFETTI_POSITIONS = [
+  { x: 15, y: 25 }, { x: 85, y: 35 }, { x: 45, y: 15 },
+  { x: 70, y: 80 }, { x: 25, y: 65 }, { x: 55, y: 45 },
+  { x: 10, y: 90 }, { x: 90, y: 10 }, { x: 35, y: 75 },
+  { x: 60, y: 30 }, { x: 20, y: 50 }, { x: 80, y: 60 },
+];
+
+export function CelebrationConfetti() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {CONFETTI_POSITIONS.map((pos, i) => (
+        <motion.div
+          key={i}
+          className={cn(
+            'absolute w-2 h-2 rounded-full',
+            i % 3 === 0 && 'bg-emerald-400',
+            i % 3 === 1 && 'bg-blue-400',
+            i % 3 === 2 && 'bg-amber-400'
+          )}
+          initial={{
+            x: '50%',
+            y: '50%',
+            scale: 0,
+            opacity: 1,
+          }}
+          animate={{
+            x: `${pos.x}%`,
+            y: `${pos.y}%`,
+            scale: [0, 1, 0.5],
+            opacity: [1, 1, 0],
+          }}
+          transition={{
+            duration: 2,
+            delay: i * 0.1,
+            repeat: Infinity,
+            repeatDelay: 3,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// =============================================================================
+// Loading Overlay
+// =============================================================================
+
+interface LoadingOverlayProps {
+  visible: boolean;
+  message?: string;
+}
+
+/**
+ * LoadingOverlay - Full overlay with loading indicator
+ */
+export function LoadingOverlay({ visible, message }: LoadingOverlayProps) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="flex flex-col items-center gap-3"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="w-8 h-8 border-2 border-foreground/20 border-t-foreground rounded-full"
+            />
+            {message && (
+              <span className="text-sm text-muted-foreground">{message}</span>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

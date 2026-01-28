@@ -69,46 +69,7 @@ describe('BillCard', () => {
     );
 
     expect(screen.getByTestId('bill-name')).toHaveTextContent('Aluguel');
-    expect(screen.getByTestId('bill-category-badge')).toHaveTextContent('Moradia');
-  });
-
-  it('should_display_status_badge_for_pending', () => {
-    render(
-      <BillCard
-        bill={mockBillPending}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onTogglePaid={vi.fn()}
-      />
-    );
-
-    expect(screen.getByTestId('bill-status-badge')).toHaveTextContent('Pendente');
-  });
-
-  it('should_display_status_badge_for_paid', () => {
-    render(
-      <BillCard
-        bill={mockBillPaid}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onTogglePaid={vi.fn()}
-      />
-    );
-
-    expect(screen.getByTestId('bill-status-badge')).toHaveTextContent('Pago');
-  });
-
-  it('should_display_status_badge_for_overdue', () => {
-    render(
-      <BillCard
-        bill={mockBillOverdue}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onTogglePaid={vi.fn()}
-      />
-    );
-
-    expect(screen.getByTestId('bill-status-badge')).toHaveTextContent('Vencido');
+    expect(screen.getByText('Moradia')).toBeInTheDocument();
   });
 
   it('should_display_recurring_badge_when_recurring', () => {
@@ -161,23 +122,10 @@ describe('BillCard', () => {
       />
     );
 
-    expect(screen.getByTestId('bill-due-date')).toHaveTextContent('Vencimento: 10/01/2026');
+    expect(screen.getByTestId('bill-due-date')).toHaveTextContent('10/01/2026');
   });
 
-  it('should_show_paid_at_date_when_paid', () => {
-    render(
-      <BillCard
-        bill={mockBillPaid}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onTogglePaid={vi.fn()}
-      />
-    );
-
-    expect(screen.getByTestId('bill-paid-at')).toHaveTextContent('Pago em 15/01/2026');
-  });
-
-  it('should_show_checkbox_for_non_canceled_bills', () => {
+  it('should_show_pay_button_for_pending_bill', () => {
     render(
       <BillCard
         bill={mockBillPending}
@@ -187,23 +135,39 @@ describe('BillCard', () => {
       />
     );
 
-    expect(screen.getByTestId('bill-paid-checkbox')).toBeInTheDocument();
+    expect(screen.getByTestId('bill-pay-button')).toBeInTheDocument();
+    expect(screen.getByText('Pagar')).toBeInTheDocument();
   });
 
-  it('should_not_show_checkbox_for_canceled_bills', () => {
+  it('should_show_paid_button_for_paid_bill', () => {
     render(
       <BillCard
-        bill={mockBillCanceled}
+        bill={mockBillPaid}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
       />
     );
 
-    expect(screen.queryByTestId('bill-paid-checkbox')).not.toBeInTheDocument();
+    expect(screen.getByTestId('bill-unpay-button')).toBeInTheDocument();
+    expect(screen.getByText('Pago')).toBeInTheDocument();
   });
 
-  it('should_call_onTogglePaid_when_checkbox_clicked', async () => {
+  it('should_show_urgency_badge_for_overdue', () => {
+    render(
+      <BillCard
+        bill={mockBillOverdue}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePaid={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('bill-urgency-badge')).toBeInTheDocument();
+    expect(screen.getByText('Vencida')).toBeInTheDocument();
+  });
+
+  it('should_call_onTogglePaid_when_pay_button_clicked', async () => {
     const user = userEvent.setup();
     const onTogglePaid = vi.fn();
 
@@ -216,7 +180,7 @@ describe('BillCard', () => {
       />
     );
 
-    await user.click(screen.getByTestId('bill-paid-checkbox'));
+    await user.click(screen.getByTestId('bill-pay-button'));
 
     expect(onTogglePaid).toHaveBeenCalledWith(mockBillPending);
   });
@@ -297,7 +261,21 @@ describe('BillCard', () => {
     expect(toggleAction).toHaveTextContent('Marcar como Pendente');
   });
 
-  it('should_apply_opacity_when_paid', () => {
+  it('should_disable_pay_button_when_toggling', () => {
+    render(
+      <BillCard
+        bill={mockBillPending}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePaid={vi.fn()}
+        isTogglingPaid={true}
+      />
+    );
+
+    expect(screen.getByTestId('bill-pay-button')).toBeDisabled();
+  });
+
+  it('should_apply_different_styling_when_paid', () => {
     render(
       <BillCard
         bill={mockBillPaid}
@@ -308,6 +286,20 @@ describe('BillCard', () => {
     );
 
     const card = screen.getByTestId('bill-card');
-    expect(card).toHaveClass('opacity-75');
+    expect(card).toHaveClass('bg-card/50');
+  });
+
+  it('should_apply_overdue_styling', () => {
+    render(
+      <BillCard
+        bill={mockBillOverdue}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePaid={vi.fn()}
+      />
+    );
+
+    const card = screen.getByTestId('bill-card');
+    expect(card).toHaveClass('border-destructive/30');
   });
 });

@@ -17,6 +17,7 @@ interface DebtListProps {
   onDelete: (debt: Debt) => void;
   onPayInstallment?: (debt: Debt) => void;
   onNegotiate?: (debt: Debt) => void;
+  onViewHistory?: (debt: Debt) => void;
   payingDebtId?: string;
 }
 
@@ -82,6 +83,7 @@ export function DebtList({
   onDelete,
   onPayInstallment,
   onNegotiate,
+  onViewHistory,
   payingDebtId,
 }: DebtListProps) {
   if (loading) {
@@ -103,6 +105,7 @@ export function DebtList({
           onDelete={onDelete}
           onPayInstallment={onPayInstallment}
           onNegotiate={onNegotiate}
+          onViewHistory={onViewHistory}
           isPayingInstallment={payingDebtId === debt.id}
         />
       ))}

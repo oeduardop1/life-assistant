@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, AlertCircle, RefreshCw, Receipt } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFinanceContext } from '../context/finance-context';
 import {
   useBills,
@@ -15,58 +14,19 @@ import {
 import {
   BillList,
   BillSummary,
+  BillHeader,
+  BillAlertBanner,
+  BillEmptyState,
+  BillQuickPay,
+  QuickPayTrigger,
+  FAB,
+  ScrollToTop,
   CreateBillModal,
   EditBillModal,
   DeleteBillDialog,
+  type BillStatusFilter,
 } from '../components/bill';
-import type { Bill, BillStatusFilter } from '../types';
-
-// =============================================================================
-// Empty State
-// =============================================================================
-
-interface EmptyStateProps {
-  onAddClick: () => void;
-  hasFilter: boolean;
-}
-
-function EmptyState({ onAddClick, hasFilter }: EmptyStateProps) {
-  if (hasFilter) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center py-12 text-center"
-        data-testid="bills-empty-filtered"
-      >
-        <div className="rounded-full bg-muted p-4 mb-4">
-          <Receipt className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">Nenhuma conta encontrada</h3>
-        <p className="text-muted-foreground mb-4">
-          Não há contas com o filtro selecionado.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="flex flex-col items-center justify-center py-12 text-center"
-      data-testid="bills-empty-state"
-    >
-      <div className="rounded-full bg-muted p-4 mb-4">
-        <Receipt className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-semibold mb-2">Nenhuma conta cadastrada</h3>
-      <p className="text-muted-foreground mb-4 max-w-sm">
-        Comece adicionando suas contas fixas para controlar seus gastos mensais.
-      </p>
-      <Button onClick={onAddClick}>
-        <Plus className="h-4 w-4 mr-2" />
-        Adicionar Conta
-      </Button>
-    </div>
-  );
-}
+import type { Bill } from '../types';
 
 // =============================================================================
 // Error State
@@ -98,51 +58,6 @@ function ErrorState({ onRetry }: ErrorStateProps) {
 }
 
 // =============================================================================
-// Page Header
-// =============================================================================
-
-interface PageHeaderProps {
-  statusFilter: BillStatusFilter;
-  onStatusFilterChange: (filter: BillStatusFilter) => void;
-  onAddClick: () => void;
-}
-
-function PageHeader({ statusFilter, onStatusFilterChange, onAddClick }: PageHeaderProps) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h2 className="text-xl font-semibold">Contas Fixas</h2>
-        <p className="text-sm text-muted-foreground">
-          Gerencie suas contas mensais
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        <Tabs
-          value={statusFilter}
-          onValueChange={(value: string) => onStatusFilterChange(value as BillStatusFilter)}
-        >
-          <TabsList data-testid="bill-status-filter">
-            <TabsTrigger value="all" data-testid="bill-filter-all">
-              Todas
-            </TabsTrigger>
-            <TabsTrigger value="pending" data-testid="bill-filter-pending">
-              Pendentes
-            </TabsTrigger>
-            <TabsTrigger value="paid" data-testid="bill-filter-paid">
-              Pagas
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <Button onClick={onAddClick} data-testid="add-bill-button">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Conta
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
 // Main Page Component
 // =============================================================================
 
@@ -153,7 +68,7 @@ function PageHeader({ statusFilter, onStatusFilterChange, onAddClick }: PageHead
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export default function BillsPage() {
-  const { currentMonth } = useFinanceContext();
+  const { currentMonth, goToPrevMonth, goToNextMonth } = useFinanceContext();
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<BillStatusFilter>('all');
@@ -162,20 +77,50 @@ export default function BillsPage() {
   const { data, isLoading, isError, refetch } = useBills({ monthYear: currentMonth });
   const allBills = data?.bills ?? [];
 
+  // Calculate filter counts
+  const filterCounts = useMemo(() => {
+    const counts = {
+      all: allBills.length,
+      pending: 0,
+      paid: 0,
+      overdue: 0,
+    };
+
+    for (const bill of allBills) {
+      if (bill.status === 'paid') {
+        counts.paid++;
+      } else if (bill.status === 'overdue') {
+        counts.overdue++;
+      } else if (bill.status === 'pending') {
+        counts.pending++;
+      }
+    }
+
+    return counts;
+  }, [allBills]);
+
   // Filter bills based on status
-  const filteredBills = allBills.filter((bill) => {
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'pending') return bill.status === 'pending' || bill.status === 'overdue';
-    if (statusFilter === 'paid') return bill.status === 'paid';
-    return true;
-  });
+  const filteredBills = useMemo(() => {
+    return allBills.filter((bill) => {
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'pending') return bill.status === 'pending';
+      if (statusFilter === 'paid') return bill.status === 'paid';
+      if (statusFilter === 'overdue') return bill.status === 'overdue';
+      return true;
+    });
+  }, [allBills, statusFilter]);
 
   const totals = calculateBillTotals(allBills);
+
+  // Pending amount for quick pay
+  const pendingAmount = totals.pending + totals.overdue;
+  const pendingCount = totals.pendingCount + totals.overdueCount;
 
   // Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
   const [deletingBill, setDeletingBill] = useState<Bill | null>(null);
+  const [quickPayOpen, setQuickPayOpen] = useState(false);
 
   // Toggle paid mutations
   const markPaid = useMarkBillPaid();
@@ -210,6 +155,22 @@ export default function BillsPage() {
     }
   };
 
+  const handlePayAllPending = async () => {
+    const pendingBills = allBills.filter(
+      (b) => b.status === 'pending' || b.status === 'overdue'
+    );
+
+    for (const bill of pendingBills) {
+      try {
+        await markPaid.mutateAsync({ id: bill.id, monthYear: bill.monthYear });
+      } catch {
+        toast.error(`Erro ao pagar ${bill.name}`);
+      }
+    }
+
+    toast.success(`${pendingBills.length} contas pagas com sucesso!`);
+  };
+
   const handleCreateModalOpenChange = (open: boolean) => {
     setCreateModalOpen(open);
   };
@@ -226,32 +187,96 @@ export default function BillsPage() {
     }
   };
 
+  // Get empty state type
+  const getEmptyStateType = () => {
+    if (allBills.length === 0) return 'no-bills';
+    if (statusFilter === 'overdue' && filterCounts.overdue === 0) return 'no-overdue';
+    if (statusFilter !== 'all' && filteredBills.length === 0) return 'filter-empty';
+    if (pendingCount === 0 && totals.paidCount > 0) return 'all-paid';
+    return null;
+  };
+
+  const getFilterName = () => {
+    const names: Record<BillStatusFilter, string> = {
+      all: 'Todas',
+      pending: 'Pendentes',
+      paid: 'Pagas',
+      overdue: 'Vencidas',
+    };
+    return names[statusFilter];
+  };
+
   // Error state
   if (isError) {
     return <ErrorState onRetry={() => refetch()} />;
   }
 
-  // Empty state
-  const isEmpty = !isLoading && filteredBills.length === 0;
-  const hasFilter = statusFilter !== 'all';
+  // Determine content to render
+  const emptyStateType = getEmptyStateType();
+  const showEmptyState = !isLoading && emptyStateType !== null &&
+    (emptyStateType !== 'all-paid' || statusFilter === 'pending');
 
   return (
     <div className="space-y-6" data-testid="bills-page">
-      {/* Header */}
-      <PageHeader
+      {/* Header with metrics and filters */}
+      <BillHeader
+        totals={totals}
+        currentMonth={currentMonth}
+        onPreviousMonth={goToPrevMonth}
+        onNextMonth={goToNextMonth}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         onAddClick={() => setCreateModalOpen(true)}
+        filterCounts={filterCounts}
+        loading={isLoading}
       />
 
-      {/* Summary */}
-      <BillSummary totals={totals} loading={isLoading} />
+      {/* Alert Banner for overdue/due today */}
+      {!isLoading && (
+        <BillAlertBanner
+          bills={allBills}
+          onQuickPayClick={() => setQuickPayOpen(true)}
+        />
+      )}
 
-      {/* List or Empty State */}
-      {isEmpty ? (
-        <EmptyState
-          onAddClick={() => setCreateModalOpen(true)}
-          hasFilter={hasFilter}
+      {/* Quick Pay Trigger */}
+      {!isLoading && pendingCount > 0 && statusFilter === 'all' && (
+        <QuickPayTrigger
+          pendingAmount={pendingAmount}
+          pendingCount={pendingCount}
+          onClick={() => setQuickPayOpen(true)}
+        />
+      )}
+
+      {/* Summary with progress bar */}
+      {!isLoading && allBills.length > 0 && (
+        <BillSummary
+          totals={totals}
+          bills={allBills}
+          loading={isLoading}
+        />
+      )}
+
+      {/* Empty State or List */}
+      {showEmptyState ? (
+        <BillEmptyState
+          type={emptyStateType!}
+          filterName={getFilterName()}
+          totalPaid={totals.paid}
+          onAction={() => {
+            if (emptyStateType === 'no-bills') {
+              setCreateModalOpen(true);
+            } else if (emptyStateType === 'all-paid') {
+              // View history or do nothing
+            } else {
+              setStatusFilter('all');
+            }
+          }}
+          onSecondaryAction={
+            emptyStateType === 'all-paid'
+              ? () => setCreateModalOpen(true)
+              : undefined
+          }
         />
       ) : (
         <BillList
@@ -261,6 +286,7 @@ export default function BillsPage() {
           onDelete={handleDelete}
           onTogglePaid={handleTogglePaid}
           togglingBillId={togglingBillId}
+          grouped={statusFilter === 'all'}
         />
       )}
 
@@ -282,6 +308,24 @@ export default function BillsPage() {
         open={!!deletingBill}
         onOpenChange={handleDeleteDialogOpenChange}
       />
+
+      {/* Quick Pay Mode */}
+      <BillQuickPay
+        bills={allBills}
+        currentMonth={currentMonth}
+        onPayBill={handleTogglePaid}
+        onPayAll={handlePayAllPending}
+        onClose={() => setQuickPayOpen(false)}
+        open={quickPayOpen}
+        payingBillId={togglingBillId}
+      />
+
+      {/* Mobile Components */}
+      <FAB
+        onClick={() => setCreateModalOpen(true)}
+        label="Nova Conta"
+      />
+      <ScrollToTop />
     </div>
   );
 }

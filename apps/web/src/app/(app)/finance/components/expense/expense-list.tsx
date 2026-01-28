@@ -1,9 +1,8 @@
 'use client';
 
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import type { Expense } from '../../types';
+import { formatCurrency, type Expense } from '../../types';
 import { ExpenseCard } from './expense-card';
+import { StaggerList, StaggerItem, ExpenseCardSkeleton } from './expense-animations';
 
 // =============================================================================
 // Props
@@ -14,6 +13,10 @@ interface ExpenseListProps {
   loading?: boolean;
   onEdit: (expense: Expense) => void;
   onDelete: (expense: Expense) => void;
+  onQuickUpdate?: (expense: Expense) => void;
+  showSectionHeader?: boolean;
+  sectionTitle?: string;
+  sectionIcon?: React.ReactNode;
 }
 
 // =============================================================================
@@ -24,34 +27,42 @@ function ExpenseListSkeleton() {
   return (
     <div className="space-y-3" data-testid="expense-list-loading">
       {Array.from({ length: 3 }).map((_, index) => (
-        <Card key={index}>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3 flex-1">
-                <Skeleton className="h-9 w-9 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <div className="flex gap-2">
-                    <Skeleton className="h-5 w-20" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                  <Skeleton className="h-2 w-full mt-2" />
-                  <div className="flex justify-between">
-                    <Skeleton className="h-3 w-32" />
-                    <Skeleton className="h-3 w-8" />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="text-right space-y-1">
-                  <Skeleton className="h-4 w-20" />
-                </div>
-                <Skeleton className="h-8 w-8 rounded-md" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ExpenseCardSkeleton key={index} />
       ))}
+    </div>
+  );
+}
+
+// =============================================================================
+// Section Header
+// =============================================================================
+
+interface SectionHeaderProps {
+  title: string;
+  icon?: React.ReactNode;
+  count: number;
+  total: number;
+}
+
+function SectionHeader({ title, icon, count, total }: SectionHeaderProps) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        {icon && (
+          <div className="rounded-lg bg-muted p-1.5">
+            {icon}
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <h3 className="font-medium text-sm">{title}</h3>
+          <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground tabular-nums">
+            {count}
+          </span>
+        </div>
+      </div>
+      <span className="text-sm font-medium text-muted-foreground tabular-nums">
+        {formatCurrency(total)}
+      </span>
     </div>
   );
 }
@@ -61,7 +72,13 @@ function ExpenseListSkeleton() {
 // =============================================================================
 
 /**
- * ExpenseList - Displays a list of expense items
+ * ExpenseList - Displays a list of expense items with staggered animation
+ *
+ * Features:
+ * - Optional section header with count and total
+ * - Staggered animation on list items
+ * - Improved skeleton loading states
+ * - Quick update support
  *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
@@ -70,6 +87,10 @@ export function ExpenseList({
   loading,
   onEdit,
   onDelete,
+  onQuickUpdate,
+  showSectionHeader = false,
+  sectionTitle,
+  sectionIcon,
 }: ExpenseListProps) {
   if (loading) {
     return <ExpenseListSkeleton />;
@@ -79,16 +100,37 @@ export function ExpenseList({
     return null; // Empty state is handled by parent
   }
 
+  // Calculate section total
+  const sectionTotal = expenses.reduce((sum, expense) => {
+    const actual = typeof expense.actualAmount === 'string'
+      ? parseFloat(expense.actualAmount)
+      : expense.actualAmount;
+    return sum + actual;
+  }, 0);
+
   return (
-    <div className="space-y-3" data-testid="expense-list">
-      {expenses.map((expense) => (
-        <ExpenseCard
-          key={expense.id}
-          expense={expense}
-          onEdit={onEdit}
-          onDelete={onDelete}
+    <div data-testid="expense-list">
+      {showSectionHeader && sectionTitle && (
+        <SectionHeader
+          title={sectionTitle}
+          icon={sectionIcon}
+          count={expenses.length}
+          total={sectionTotal}
         />
-      ))}
+      )}
+
+      <StaggerList className="space-y-3">
+        {expenses.map((expense) => (
+          <StaggerItem key={expense.id}>
+            <ExpenseCard
+              expense={expense}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onQuickUpdate={onQuickUpdate}
+            />
+          </StaggerItem>
+        ))}
+      </StaggerList>
     </div>
   );
 }

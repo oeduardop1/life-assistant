@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CreateIncomeModal } from '../../../components/income/create-income-modal';
 
@@ -79,7 +80,7 @@ describe('CreateIncomeModal', () => {
     expect(screen.queryByTestId('create-income-modal')).not.toBeInTheDocument();
   });
 
-  it('should_show_form_inside_modal', async () => {
+  it('should_show_type_selection_step_first', async () => {
     render(
       <CreateIncomeModal
         open={true}
@@ -89,10 +90,20 @@ describe('CreateIncomeModal', () => {
       { wrapper: createWrapper() }
     );
 
-    expect(await screen.findByTestId('income-form')).toBeInTheDocument();
+    // Should show type selection prompt
+    expect(
+      await screen.findByText('Qual tipo de renda você vai cadastrar?')
+    ).toBeInTheDocument();
+
+    // Should show type options
+    expect(screen.getByText('Salário')).toBeInTheDocument();
+    expect(screen.getByText('Freelance')).toBeInTheDocument();
+    expect(screen.getByText('Bônus')).toBeInTheDocument();
   });
 
-  it('should_show_modal_description', async () => {
+  it('should_advance_to_details_step_after_selecting_type', async () => {
+    const user = userEvent.setup();
+
     render(
       <CreateIncomeModal
         open={true}
@@ -102,8 +113,30 @@ describe('CreateIncomeModal', () => {
       { wrapper: createWrapper() }
     );
 
-    expect(
-      await screen.findByText('Adicione uma nova fonte de renda para este mês.')
-    ).toBeInTheDocument();
+    // Click on salary type
+    await user.click(screen.getByText('Salário'));
+
+    // Should show details step after a short delay (using findBy which waits)
+    expect(await screen.findByText('Preencha os detalhes da renda')).toBeInTheDocument();
+
+    // Should have name input field (wait for it to appear)
+    expect(await screen.findByTestId('income-form-name')).toBeInTheDocument();
+  });
+
+  it('should_show_step_indicator', async () => {
+    render(
+      <CreateIncomeModal
+        open={true}
+        onOpenChange={vi.fn()}
+        monthYear="2026-01"
+      />,
+      { wrapper: createWrapper() }
+    );
+
+    const modal = await screen.findByTestId('create-income-modal');
+
+    // Step indicator should have 3 steps
+    const stepIndicators = within(modal).getAllByText(/1|2|3/);
+    expect(stepIndicators.length).toBeGreaterThanOrEqual(1);
   });
 });

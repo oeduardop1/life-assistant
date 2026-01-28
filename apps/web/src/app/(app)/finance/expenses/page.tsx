@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, AlertCircle, RefreshCw, Wallet, RefreshCcw, Zap } from 'lucide-react';
+import { AlertCircle, RefreshCw, RefreshCcw, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFinanceContext } from '../context/finance-context';
 import {
@@ -14,80 +14,16 @@ import {
   CreateExpenseModal,
   EditExpenseModal,
   DeleteExpenseDialog,
+  ExpenseHeader,
+  ExpenseEmptyState,
+  ExpenseSectionEmptyState,
+  ExpenseAlertBanner,
+  ExpenseQuickUpdate,
+  FAB,
+  ScrollToTop,
+  type ExpenseStatusFilter,
 } from '../components/expense';
 import type { Expense } from '../types';
-
-// =============================================================================
-// Empty State
-// =============================================================================
-
-interface EmptyStateProps {
-  onAddClick: () => void;
-  section?: 'recurring' | 'oneTime' | 'all';
-}
-
-function EmptyState({ onAddClick, section = 'all' }: EmptyStateProps) {
-  if (section === 'recurring') {
-    return (
-      <div
-        className="flex flex-col items-center justify-center py-8 text-center"
-        data-testid="expenses-empty-recurring"
-      >
-        <div className="rounded-full bg-muted p-3 mb-3">
-          <RefreshCcw className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h4 className="text-sm font-medium mb-1">Sem despesas recorrentes</h4>
-        <p className="text-xs text-muted-foreground mb-3 max-w-xs">
-          Despesas que se repetem todo mês, como mercado ou combustível.
-        </p>
-        <Button variant="outline" size="sm" onClick={onAddClick}>
-          <Plus className="h-3 w-3 mr-1" />
-          Adicionar
-        </Button>
-      </div>
-    );
-  }
-
-  if (section === 'oneTime') {
-    return (
-      <div
-        className="flex flex-col items-center justify-center py-8 text-center"
-        data-testid="expenses-empty-onetime"
-      >
-        <div className="rounded-full bg-muted p-3 mb-3">
-          <Zap className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h4 className="text-sm font-medium mb-1">Sem despesas pontuais</h4>
-        <p className="text-xs text-muted-foreground mb-3 max-w-xs">
-          Gastos únicos deste mês, como presentes ou reparos.
-        </p>
-        <Button variant="outline" size="sm" onClick={onAddClick}>
-          <Plus className="h-3 w-3 mr-1" />
-          Adicionar
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="flex flex-col items-center justify-center py-12 text-center"
-      data-testid="expenses-empty-state"
-    >
-      <div className="rounded-full bg-muted p-4 mb-4">
-        <Wallet className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-semibold mb-2">Nenhuma despesa cadastrada</h3>
-      <p className="text-muted-foreground mb-4 max-w-sm">
-        Comece adicionando suas despesas variáveis para controlar seus gastos mensais.
-      </p>
-      <Button onClick={onAddClick}>
-        <Plus className="h-4 w-4 mr-2" />
-        Adicionar Despesa
-      </Button>
-    </div>
-  );
-}
 
 // =============================================================================
 // Error State
@@ -119,61 +55,6 @@ function ErrorState({ onRetry }: ErrorStateProps) {
 }
 
 // =============================================================================
-// Section Header
-// =============================================================================
-
-interface SectionHeaderProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  count: number;
-}
-
-function SectionHeader({ title, description, icon, count }: SectionHeaderProps) {
-  return (
-    <div className="flex items-center gap-3 mb-3">
-      <div className="rounded-lg bg-muted p-2">
-        {icon}
-      </div>
-      <div>
-        <h3 className="font-medium flex items-center gap-2">
-          {title}
-          <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-            {count}
-          </span>
-        </h3>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// Page Header
-// =============================================================================
-
-interface PageHeaderProps {
-  onAddClick: () => void;
-}
-
-function PageHeader({ onAddClick }: PageHeaderProps) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h2 className="text-xl font-semibold">Despesas Variáveis</h2>
-        <p className="text-sm text-muted-foreground">
-          Gerencie suas despesas do mês
-        </p>
-      </div>
-      <Button onClick={onAddClick} data-testid="add-expense-button">
-        <Plus className="h-4 w-4 mr-2" />
-        Nova Despesa
-      </Button>
-    </div>
-  );
-}
-
-// =============================================================================
 // Main Page Component
 // =============================================================================
 
@@ -181,21 +62,32 @@ function PageHeader({ onAddClick }: PageHeaderProps) {
  * Expenses Page
  *
  * Lists all variable expenses for the current month with CRUD operations.
- * Separated into two sections: recurring and one-time expenses.
+ * Features improved UI/UX with header metrics, filters, alerts, and quick actions.
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export default function ExpensesPage() {
-  const { currentMonth } = useFinanceContext();
+  const { currentMonth, goToPrevMonth, goToNextMonth } = useFinanceContext();
 
   // Data fetching
   const { data, isLoading, isError, refetch } = useExpenses({ monthYear: currentMonth });
-  const expenses = data?.expenses;
+  const expenses = useMemo(() => data?.expenses ?? [], [data?.expenses]);
 
-  // Separate expenses by type
-  const { allExpenses, recurringExpenses, oneTimeExpenses } = useMemo(() => {
-    const all = expenses ?? [];
+  // Status filter state
+  const [statusFilter, setStatusFilter] = useState<ExpenseStatusFilter>('all');
+
+  // Separate expenses by type and filter
+  const {
+    allExpenses,
+    recurringExpenses,
+    oneTimeExpenses,
+    overBudgetExpenses,
+    filteredExpenses,
+    filterCounts,
+  } = useMemo(() => {
+    const all = expenses;
     const recurring: Expense[] = [];
     const oneTime: Expense[] = [];
+    const overBudget: Expense[] = [];
 
     all.forEach((expense) => {
       if (expense.isRecurring) {
@@ -203,10 +95,50 @@ export default function ExpensesPage() {
       } else {
         oneTime.push(expense);
       }
+
+      // Check if over budget
+      const expected = typeof expense.expectedAmount === 'string'
+        ? parseFloat(expense.expectedAmount)
+        : expense.expectedAmount;
+      const actual = typeof expense.actualAmount === 'string'
+        ? parseFloat(expense.actualAmount)
+        : expense.actualAmount;
+      if (actual > expected && expected > 0) {
+        overBudget.push(expense);
+      }
     });
 
-    return { allExpenses: all, recurringExpenses: recurring, oneTimeExpenses: oneTime };
-  }, [expenses]);
+    // Calculate filter counts
+    const counts = {
+      all: all.length,
+      recurring: recurring.length,
+      oneTime: oneTime.length,
+      overBudget: overBudget.length,
+    };
+
+    // Apply filter
+    let filtered = all;
+    switch (statusFilter) {
+      case 'recurring':
+        filtered = recurring;
+        break;
+      case 'oneTime':
+        filtered = oneTime;
+        break;
+      case 'overBudget':
+        filtered = overBudget;
+        break;
+    }
+
+    return {
+      allExpenses: all,
+      recurringExpenses: recurring,
+      oneTimeExpenses: oneTime,
+      overBudgetExpenses: overBudget,
+      filteredExpenses: filtered,
+      filterCounts: counts,
+    };
+  }, [expenses, statusFilter]);
 
   // Calculate totals
   const totals = calculateExpenseTotals(allExpenses);
@@ -215,6 +147,7 @@ export default function ExpensesPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
+  const [quickUpdateExpense, setQuickUpdateExpense] = useState<Expense | null>(null);
 
   // Handlers
   const handleEdit = (expense: Expense) => {
@@ -223,6 +156,10 @@ export default function ExpensesPage() {
 
   const handleDelete = (expense: Expense) => {
     setDeletingExpense(expense);
+  };
+
+  const handleQuickUpdate = (expense: Expense) => {
+    setQuickUpdateExpense(expense);
   };
 
   const handleCreateModalOpenChange = (open: boolean) => {
@@ -241,6 +178,12 @@ export default function ExpensesPage() {
     }
   };
 
+  const handleQuickUpdateOpenChange = (open: boolean) => {
+    if (!open) {
+      setQuickUpdateExpense(null);
+    }
+  };
+
   // Error state
   if (isError) {
     return <ErrorState onRetry={() => refetch()} />;
@@ -249,87 +192,139 @@ export default function ExpensesPage() {
   // Check if empty
   const isEmpty = !isLoading && allExpenses.length === 0;
 
+  // Check for celebration state (all on budget and has expenses)
+  const allOnBudget = !isEmpty && overBudgetExpenses.length === 0 && totals.variance <= 0;
+
+  // Determine what to show based on filter
+  const showSplitView = statusFilter === 'all';
+  const showEmptyFilterState = filteredExpenses.length === 0 && !isLoading && !isEmpty;
+
   return (
     <div className="space-y-6" data-testid="expenses-page">
-      {/* Header */}
-      <PageHeader onAddClick={() => setCreateModalOpen(true)} />
+      {/* Header with metrics, filters, and month navigation */}
+      <ExpenseHeader
+        totals={totals}
+        currentMonth={currentMonth}
+        onPreviousMonth={goToPrevMonth}
+        onNextMonth={goToNextMonth}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        onAddClick={() => setCreateModalOpen(true)}
+        filterCounts={filterCounts}
+        loading={isLoading}
+      />
 
-      {/* Summary */}
-      <ExpenseSummary totals={totals} loading={isLoading} />
+      {/* Alert Banner (over budget or savings) */}
+      {!isLoading && !isEmpty && (
+        <ExpenseAlertBanner expenses={allExpenses} />
+      )}
+
+      {/* Summary with category breakdown */}
+      <ExpenseSummary
+        totals={totals}
+        expenses={allExpenses}
+        loading={isLoading}
+      />
 
       {/* Empty State (when no expenses at all) */}
       {isEmpty && (
-        <EmptyState
-          onAddClick={() => setCreateModalOpen(true)}
-          section="all"
+        <ExpenseEmptyState
+          type="no-expenses"
+          onAction={() => setCreateModalOpen(true)}
         />
       )}
 
-      {/* Recurring Expenses Section */}
-      {!isEmpty && (
-        <section data-testid="recurring-expenses-section">
-          <SectionHeader
-            title="Despesas Recorrentes"
-            description="Gastos que se repetem todo mês"
-            icon={<RefreshCcw className="h-4 w-4 text-muted-foreground" />}
-            count={recurringExpenses.length}
-          />
+      {/* Filter-specific empty states */}
+      {showEmptyFilterState && (
+        <>
+          {statusFilter === 'recurring' && (
+            <ExpenseEmptyState
+              type="filter-empty-recurring"
+              onAction={() => setCreateModalOpen(true)}
+              onSecondaryAction={() => setStatusFilter('all')}
+            />
+          )}
+          {statusFilter === 'oneTime' && (
+            <ExpenseEmptyState
+              type="filter-empty-onetime"
+              onAction={() => setCreateModalOpen(true)}
+              onSecondaryAction={() => setStatusFilter('all')}
+            />
+          )}
+          {statusFilter === 'overBudget' && (
+            <ExpenseEmptyState
+              type="filter-empty-overbudget"
+              onAction={() => setStatusFilter('all')}
+            />
+          )}
+        </>
+      )}
 
-          {isLoading ? (
-            <ExpenseList
-              expenses={[]}
-              loading={true}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ) : recurringExpenses.length === 0 ? (
-            <EmptyState
-              onAddClick={() => setCreateModalOpen(true)}
-              section="recurring"
-            />
-          ) : (
+      {/* Celebration state (all on budget) */}
+      {allOnBudget && statusFilter === 'all' && !isLoading && (
+        <ExpenseEmptyState
+          type="all-on-budget"
+          savings={Math.abs(totals.variance)}
+        />
+      )}
+
+      {/* Split view (All filter): Recurring and One-time sections */}
+      {showSplitView && !isEmpty && (
+        <>
+          {/* Recurring Expenses Section */}
+          <section data-testid="recurring-expenses-section">
             <ExpenseList
               expenses={recurringExpenses}
-              loading={false}
+              loading={isLoading}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onQuickUpdate={handleQuickUpdate}
+              showSectionHeader={true}
+              sectionTitle="Despesas Recorrentes"
+              sectionIcon={<RefreshCcw className="h-4 w-4 text-muted-foreground" />}
             />
-          )}
-        </section>
-      )}
+            {!isLoading && recurringExpenses.length === 0 && (
+              <ExpenseSectionEmptyState message="Nenhuma despesa recorrente este mês" />
+            )}
+          </section>
 
-      {/* One-time Expenses Section */}
-      {!isEmpty && (
-        <section data-testid="onetime-expenses-section">
-          <SectionHeader
-            title="Despesas Pontuais"
-            description="Gastos únicos deste mês"
-            icon={<Zap className="h-4 w-4 text-muted-foreground" />}
-            count={oneTimeExpenses.length}
-          />
-
-          {isLoading ? (
-            <ExpenseList
-              expenses={[]}
-              loading={true}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ) : oneTimeExpenses.length === 0 ? (
-            <EmptyState
-              onAddClick={() => setCreateModalOpen(true)}
-              section="oneTime"
-            />
-          ) : (
+          {/* One-time Expenses Section */}
+          <section data-testid="onetime-expenses-section">
             <ExpenseList
               expenses={oneTimeExpenses}
-              loading={false}
+              loading={isLoading}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onQuickUpdate={handleQuickUpdate}
+              showSectionHeader={true}
+              sectionTitle="Despesas Pontuais"
+              sectionIcon={<Zap className="h-4 w-4 text-muted-foreground" />}
             />
-          )}
+            {!isLoading && oneTimeExpenses.length === 0 && (
+              <ExpenseSectionEmptyState message="Nenhuma despesa pontual este mês" />
+            )}
+          </section>
+        </>
+      )}
+
+      {/* Filtered view (non-All filters) */}
+      {!showSplitView && !showEmptyFilterState && (
+        <section data-testid="filtered-expenses-section">
+          <ExpenseList
+            expenses={filteredExpenses}
+            loading={isLoading}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onQuickUpdate={handleQuickUpdate}
+          />
         </section>
       )}
+
+      {/* Mobile FAB */}
+      <FAB onClick={() => setCreateModalOpen(true)} label="Nova" />
+
+      {/* Scroll to Top */}
+      <ScrollToTop />
 
       {/* Modals */}
       <CreateExpenseModal
@@ -348,6 +343,12 @@ export default function ExpensesPage() {
         expense={deletingExpense}
         open={!!deletingExpense}
         onOpenChange={handleDeleteDialogOpenChange}
+      />
+
+      <ExpenseQuickUpdate
+        expense={quickUpdateExpense}
+        open={!!quickUpdateExpense}
+        onOpenChange={handleQuickUpdateOpenChange}
       />
     </div>
   );

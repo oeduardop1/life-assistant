@@ -1,47 +1,192 @@
 'use client';
 
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useState } from 'react';
+import { TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { formatCurrency, type ExpenseTotals } from '../../types';
+import {
+  formatCurrency,
+  expenseCategoryLabels,
+  expenseCategoryColors,
+  type ExpenseTotals,
+  type Expense,
+  type ExpenseCategory,
+} from '../../types';
+import { AnimatedProgressBar, ExpenseSummarySkeleton } from './expense-animations';
 
 // =============================================================================
-// Props
+// Types
 // =============================================================================
 
 interface ExpenseSummaryProps {
   totals: ExpenseTotals;
+  expenses?: Expense[];
   loading?: boolean;
 }
 
+interface CategoryBreakdown {
+  category: ExpenseCategory;
+  expected: number;
+  actual: number;
+  percent: number;
+  color: string;
+}
+
 // =============================================================================
-// Component
+// Helper Functions
+// =============================================================================
+
+function calculateCategoryBreakdown(expenses: Expense[]): CategoryBreakdown[] {
+  const categoryMap = new Map<ExpenseCategory, { expected: number; actual: number }>();
+
+  for (const expense of expenses) {
+    const expected = typeof expense.expectedAmount === 'string'
+      ? parseFloat(expense.expectedAmount)
+      : expense.expectedAmount;
+    const actual = typeof expense.actualAmount === 'string'
+      ? parseFloat(expense.actualAmount)
+      : expense.actualAmount;
+
+    const existing = categoryMap.get(expense.category) || { expected: 0, actual: 0 };
+    categoryMap.set(expense.category, {
+      expected: existing.expected + expected,
+      actual: existing.actual + actual,
+    });
+  }
+
+  const breakdown: CategoryBreakdown[] = [];
+  categoryMap.forEach((values, category) => {
+    const percent = values.expected > 0 ? (values.actual / values.expected) * 100 : 0;
+    breakdown.push({
+      category,
+      expected: values.expected,
+      actual: values.actual,
+      percent,
+      color: expenseCategoryColors[category] || 'gray',
+    });
+  });
+
+  // Sort by actual amount descending
+  breakdown.sort((a, b) => b.actual - a.actual);
+
+  return breakdown;
+}
+
+function getStatusColor(percent: number): 'success' | 'warning' | 'danger' {
+  if (percent > 100) return 'danger';
+  if (percent >= 80) return 'warning';
+  return 'success';
+}
+
+// =============================================================================
+// Category Bar Item Component
+// =============================================================================
+
+interface CategoryBarItemProps {
+  breakdown: CategoryBreakdown;
+}
+
+const colorBarClasses: Record<string, string> = {
+  orange: 'bg-orange-500',
+  blue: 'bg-blue-500',
+  purple: 'bg-purple-500',
+  red: 'bg-red-500',
+  indigo: 'bg-indigo-500',
+  pink: 'bg-pink-500',
+  yellow: 'bg-yellow-500',
+  gray: 'bg-gray-500',
+  cyan: 'bg-cyan-500',
+  green: 'bg-green-500',
+  rose: 'bg-rose-500',
+  emerald: 'bg-emerald-500',
+  slate: 'bg-slate-500',
+};
+
+const colorDotClasses: Record<string, string> = {
+  orange: 'bg-orange-500',
+  blue: 'bg-blue-500',
+  purple: 'bg-purple-500',
+  red: 'bg-red-500',
+  indigo: 'bg-indigo-500',
+  pink: 'bg-pink-500',
+  yellow: 'bg-yellow-500',
+  gray: 'bg-gray-500',
+  cyan: 'bg-cyan-500',
+  green: 'bg-green-500',
+  rose: 'bg-rose-500',
+  emerald: 'bg-emerald-500',
+  slate: 'bg-slate-500',
+};
+
+function CategoryBarItem({ breakdown }: CategoryBarItemProps) {
+  const isOverBudget = breakdown.percent > 100;
+  const displayPercent = Math.min(breakdown.percent, 100);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex items-center gap-2 text-sm"
+    >
+      <div className={cn('w-2 h-2 rounded-full shrink-0', colorDotClasses[breakdown.color])} />
+      <span className="w-24 truncate text-muted-foreground">
+        {expenseCategoryLabels[breakdown.category]}
+      </span>
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${displayPercent}%` }}
+          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
+          className={cn(
+            'h-full rounded-full',
+            isOverBudget ? 'bg-destructive' : colorBarClasses[breakdown.color]
+          )}
+        />
+      </div>
+      <span className={cn(
+        'w-16 text-right tabular-nums',
+        isOverBudget && 'text-destructive font-medium'
+      )}>
+        {formatCurrency(breakdown.actual)}
+      </span>
+      <span className={cn(
+        'w-12 text-right text-xs tabular-nums',
+        isOverBudget ? 'text-destructive' : 'text-muted-foreground'
+      )}>
+        {breakdown.percent.toFixed(0)}%
+      </span>
+    </motion.div>
+  );
+}
+
+// =============================================================================
+// Main Component
 // =============================================================================
 
 /**
- * ExpenseSummary - Displays expense totals with variance
+ * ExpenseSummary - Displays expense totals with visual progress and category breakdown
+ *
+ * Features:
+ * - Main progress bar showing overall budget usage
+ * - Expandable category breakdown with mini-bars
+ * - Color-coded status indicators
+ * - Animated transitions
  *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
-export function ExpenseSummary({ totals, loading }: ExpenseSummaryProps) {
+export function ExpenseSummary({ totals, expenses = [], loading }: ExpenseSummaryProps) {
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
   if (loading) {
-    return (
-      <Card data-testid="expense-summary-loading">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-3 gap-4">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="text-center space-y-1">
-                <Skeleton className="h-3 w-16 mx-auto" />
-                <Skeleton className="h-6 w-24 mx-auto" />
-                <Skeleton className="h-3 w-12 mx-auto" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <ExpenseSummarySkeleton />;
   }
+
+  // Calculate overall usage percentage
+  const usagePercent = totals.totalExpected > 0
+    ? (totals.totalActual / totals.totalExpected) * 100
+    : 0;
 
   // Determine variance direction and color
   const isOverBudget = totals.variance > 0;
@@ -49,10 +194,10 @@ export function ExpenseSummary({ totals, loading }: ExpenseSummaryProps) {
   const isOnBudget = totals.variance === 0;
 
   const varianceColor = isOverBudget
-    ? 'text-red-600'
+    ? 'text-destructive'
     : isUnderBudget
-    ? 'text-green-600'
-    : 'text-gray-600';
+    ? 'text-emerald-600 dark:text-emerald-500'
+    : 'text-muted-foreground';
 
   const VarianceIcon = isOverBudget
     ? TrendingUp
@@ -60,59 +205,114 @@ export function ExpenseSummary({ totals, loading }: ExpenseSummaryProps) {
     ? TrendingDown
     : Minus;
 
+  // Calculate category breakdown
+  const categoryBreakdown = calculateCategoryBreakdown(expenses);
+  const displayedCategories = showBreakdown ? categoryBreakdown : categoryBreakdown.slice(0, 3);
+
   return (
     <Card data-testid="expense-summary">
-      <CardContent className="p-4">
-        <div className="grid grid-cols-3 gap-4">
-          {/* Total Expected */}
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Total Previsto</p>
-            <p
-              className="text-lg font-semibold text-blue-600"
-              data-testid="expense-summary-expected"
-            >
-              {formatCurrency(totals.totalExpected)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {totals.count} {totals.count === 1 ? 'despesa' : 'despesas'}
-            </p>
-          </div>
+      <CardContent className="p-4 sm:p-5 space-y-4">
+        {/* Main Progress Section */}
+        <div className="space-y-3">
+          {/* Progress Bar */}
+          <AnimatedProgressBar
+            value={Math.min(usagePercent, 100)}
+            max={100}
+            size="lg"
+            color={getStatusColor(usagePercent)}
+          />
 
-          {/* Total Actual */}
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Total Real</p>
-            <p
-              className="text-lg font-semibold text-orange-600"
-              data-testid="expense-summary-actual"
-            >
-              {formatCurrency(totals.totalActual)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {totals.recurringCount} recorrentes, {totals.oneTimeCount} pontuais
-            </p>
-          </div>
-
-          {/* Variance */}
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <VarianceIcon className={cn('h-3 w-3', varianceColor)} />
-              <p className="text-xs text-muted-foreground">Variação</p>
+          {/* Stats Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {formatCurrency(totals.totalActual)}
+              </span>
+              <span className="text-xs text-muted-foreground">/</span>
+              <span className="text-sm font-medium">
+                {formatCurrency(totals.totalExpected)}
+              </span>
             </div>
-            <p
-              className={cn('text-lg font-semibold', varianceColor)}
-              data-testid="expense-summary-variance"
-            >
-              {isOverBudget && '+'}
-              {formatCurrency(Math.abs(totals.variance))}
-            </p>
-            <p className={cn('text-xs', varianceColor)}>
+            <div className="flex items-center gap-2">
+              <motion.span
+                key={usagePercent}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn(
+                  'text-lg font-semibold tabular-nums',
+                  usagePercent > 100 && 'text-destructive',
+                  usagePercent >= 80 && usagePercent <= 100 && 'text-amber-600 dark:text-amber-500',
+                  usagePercent < 80 && 'text-emerald-600 dark:text-emerald-500'
+                )}
+              >
+                {usagePercent.toFixed(0)}%
+              </motion.span>
+              <span className="text-xs text-muted-foreground">usado</span>
+            </div>
+          </div>
+
+          {/* Variance Badge */}
+          <div className="flex items-center gap-2">
+            <VarianceIcon className={cn('h-4 w-4', varianceColor)} />
+            <span className={cn('text-sm font-medium', varianceColor)}>
               {isOnBudget
                 ? 'No orçamento'
                 : isOverBudget
-                ? `${Math.abs(totals.variancePercent).toFixed(1)}% acima`
-                : `${Math.abs(totals.variancePercent).toFixed(1)}% abaixo`}
-            </p>
+                ? `+${formatCurrency(totals.variance)} acima`
+                : `${formatCurrency(Math.abs(totals.variance))} economia`}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              ({Math.abs(totals.variancePercent).toFixed(1)}%)
+            </span>
           </div>
+        </div>
+
+        {/* Category Breakdown */}
+        {categoryBreakdown.length > 0 && (
+          <div className="pt-3 border-t space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                Distribuição por Categoria
+              </h4>
+              {categoryBreakdown.length > 3 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setShowBreakdown(!showBreakdown)}
+                >
+                  {showBreakdown ? (
+                    <>
+                      <ChevronUp className="h-3 w-3 mr-1" />
+                      Menos
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3 w-3 mr-1" />
+                      Ver todas ({categoryBreakdown.length})
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+
+            <AnimatePresence mode="popLayout">
+              <div className="space-y-2">
+                {displayedCategories.map((item) => (
+                  <CategoryBarItem key={item.category} breakdown={item} />
+                ))}
+              </div>
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Quick Stats */}
+        <div className="flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
+          <span>{totals.count} despesas</span>
+          <span>•</span>
+          <span>{totals.recurringCount} recorrentes</span>
+          <span>•</span>
+          <span>{totals.oneTimeCount} pontuais</span>
         </div>
       </CardContent>
     </Card>

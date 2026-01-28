@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, AlertCircle, RefreshCw, CreditCard, Eye, Calendar } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertCircle, RefreshCw, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { useDebts, useAllDebts } from '../hooks/use-debts';
 import { useFinanceContext } from '../context/finance-context';
 import {
@@ -17,60 +15,24 @@ import {
   NegotiateDebtModal,
   PayInstallmentDialog,
 } from '../components/debt';
-import { calculateDebtTotals, formatMonthDisplay, type Debt } from '../types';
+import { DebtHeader } from '../components/debt/debt-header';
+import { DebtEmptyState } from '../components/debt/debt-empty-states';
+import { DebtSimulator } from '../components/debt/debt-simulator';
+import { DebtFocusMode, FocusModeTrigger } from '../components/debt/debt-focus-mode';
+import { FAB, ScrollToTop } from '../components/debt/debt-mobile-components';
+import { StaggerList, DebtCardSkeleton } from '../components/debt/debt-animations';
+import {
+  calculateDebtTotals,
+  formatCurrency,
+  type Debt,
+  type UpcomingInstallmentItem,
+} from '../types';
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type DebtStatusFilter = 'all' | 'active' | 'overdue' | 'paid_off';
-
-// =============================================================================
-// Empty State
-// =============================================================================
-
-interface EmptyStateProps {
-  onAddClick: () => void;
-  hasFilter: boolean;
-}
-
-function EmptyState({ onAddClick, hasFilter }: EmptyStateProps) {
-  if (hasFilter) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center py-12 text-center"
-        data-testid="debts-empty-filtered"
-      >
-        <div className="rounded-full bg-muted p-4 mb-4">
-          <CreditCard className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">Nenhuma dívida encontrada</h3>
-        <p className="text-muted-foreground mb-4">
-          Não há dívidas com o filtro selecionado.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="flex flex-col items-center justify-center py-12 text-center"
-      data-testid="debts-empty-state"
-    >
-      <div className="rounded-full bg-muted p-4 mb-4">
-        <CreditCard className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-semibold mb-2">Nenhuma dívida cadastrada</h3>
-      <p className="text-muted-foreground mb-4 max-w-sm">
-        Cadastre suas dívidas para acompanhar o progresso dos pagamentos.
-      </p>
-      <Button onClick={onAddClick}>
-        <Plus className="h-4 w-4 mr-2" />
-        Adicionar Dívida
-      </Button>
-    </div>
-  );
-}
 
 // =============================================================================
 // Error State
@@ -82,112 +44,24 @@ interface ErrorStateProps {
 
 function ErrorState({ onRetry }: ErrorStateProps) {
   return (
-    <div
-      className="flex flex-col items-center justify-center py-12 text-center"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-16 text-center"
       data-testid="debts-error-state"
     >
-      <div className="rounded-full bg-red-500/10 p-4 mb-4">
-        <AlertCircle className="h-8 w-8 text-red-500" />
+      <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mb-4">
+        <AlertCircle className="h-8 w-8 text-destructive" />
       </div>
       <h3 className="text-lg font-semibold mb-2">Erro ao carregar dívidas</h3>
-      <p className="text-muted-foreground mb-4">
-        Não foi possível carregar a lista de dívidas.
+      <p className="text-muted-foreground mb-6 max-w-sm">
+        Não foi possível carregar a lista de dívidas. Verifique sua conexão e tente novamente.
       </p>
-      <Button onClick={onRetry} variant="outline">
-        <RefreshCw className="h-4 w-4 mr-2" />
+      <Button onClick={onRetry} variant="outline" className="gap-2">
+        <RefreshCw className="h-4 w-4" />
         Tentar novamente
       </Button>
-    </div>
-  );
-}
-
-// =============================================================================
-// Page Header
-// =============================================================================
-
-interface PageHeaderProps {
-  statusFilter: DebtStatusFilter;
-  onStatusFilterChange: (filter: DebtStatusFilter) => void;
-  onAddClick: () => void;
-  showAllDebts: boolean;
-  onShowAllDebtsChange: (value: boolean) => void;
-  currentMonth: string;
-}
-
-function PageHeader({
-  statusFilter,
-  onStatusFilterChange,
-  onAddClick,
-  showAllDebts,
-  onShowAllDebtsChange,
-  currentMonth,
-}: PageHeaderProps) {
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold">Dívidas</h2>
-          <p className="text-sm text-muted-foreground">
-            Gerencie suas dívidas e financiamentos
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Tabs
-            value={statusFilter}
-            onValueChange={(value: string) => onStatusFilterChange(value as DebtStatusFilter)}
-          >
-            <TabsList data-testid="debt-status-filter">
-              <TabsTrigger value="all" data-testid="debt-filter-all">
-                Todas
-              </TabsTrigger>
-              <TabsTrigger value="active" data-testid="debt-filter-active">
-                Ativas
-              </TabsTrigger>
-              <TabsTrigger value="overdue" data-testid="debt-filter-overdue">
-                Em Atraso
-              </TabsTrigger>
-              <TabsTrigger value="paid_off" data-testid="debt-filter-paid-off">
-                Quitadas
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button onClick={onAddClick} data-testid="add-debt-button">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Dívida
-          </Button>
-        </div>
-      </div>
-
-      {/* View Toggle */}
-      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-        <div className="flex items-center gap-2 text-sm">
-          {showAllDebts ? (
-            <>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Mostrando:</span>
-              <span className="font-medium">Todas as dívidas</span>
-            </>
-          ) : (
-            <>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Mostrando dívidas de:</span>
-              <span className="font-medium">{formatMonthDisplay(currentMonth)}</span>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="show-all-debts" className="text-sm text-muted-foreground cursor-pointer">
-            Ver todas
-          </Label>
-          <Switch
-            id="show-all-debts"
-            checked={showAllDebts}
-            onCheckedChange={onShowAllDebtsChange}
-            data-testid="show-all-debts-toggle"
-          />
-        </div>
-      </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -198,15 +72,70 @@ function PageHeader({
 interface SectionHeaderProps {
   title: string;
   count: number;
+  monthlySum?: number;
+  paidCount?: number;
+  pendingCount?: number;
+  overdueCount?: number;
 }
 
-function SectionHeader({ title, count }: SectionHeaderProps) {
+function SectionHeader({
+  title,
+  count,
+  monthlySum,
+  paidCount = 0,
+  pendingCount = 0,
+  overdueCount = 0,
+}: SectionHeaderProps) {
   return (
-    <div className="flex items-center gap-2 mb-3">
-      <h3 className="text-base font-medium">{title}</h3>
-      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-        {count}
-      </span>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4"
+    >
+      <div className="flex items-center gap-3">
+        <h3 className="text-base font-semibold">{title}</h3>
+        <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full tabular-nums">
+          {count}
+        </span>
+      </div>
+      <div className="flex items-center gap-4 text-sm">
+        {monthlySum !== undefined && monthlySum > 0 && (
+          <span className="text-muted-foreground">
+            <span className="font-medium text-foreground">{formatCurrency(monthlySum)}</span>/mês
+          </span>
+        )}
+        <div className="flex items-center gap-2 text-xs">
+          {paidCount > 0 && (
+            <span className="text-emerald-600 dark:text-emerald-400">
+              {paidCount} em dia
+            </span>
+          )}
+          {pendingCount > 0 && (
+            <span className="text-amber-600 dark:text-amber-400">
+              {pendingCount} pendentes
+            </span>
+          )}
+          {overdueCount > 0 && (
+            <span className="text-destructive font-medium">
+              {overdueCount} em atraso
+            </span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// =============================================================================
+// Loading Skeleton
+// =============================================================================
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[...Array(3)].map((_, i) => (
+        <DebtCardSkeleton key={i} />
+      ))}
     </div>
   );
 }
@@ -216,28 +145,50 @@ function SectionHeader({ title, count }: SectionHeaderProps) {
 // =============================================================================
 
 /**
- * Debts Page
+ * Debts Page - Redesigned with enhanced UX
  *
- * Lists all debts with CRUD operations, pay installment, and negotiate actions.
- * Separated into negotiated and pending negotiation sections.
+ * Features:
+ * - Hero header with inline metrics
+ * - Contextual alerts for overdue/upcoming payments
+ * - Progress-focused summary
+ * - Improved card layouts with exposed CTAs
+ * - Focus mode for simplified payment flow
+ * - Mobile-optimized experience with FAB
+ *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export default function DebtsPage() {
   // Finance context - month navigation
-  const { currentMonth } = useFinanceContext();
+  const { currentMonth, goToPrevMonth, goToNextMonth } = useFinanceContext();
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<DebtStatusFilter>('all');
   const [showAllDebts, setShowAllDebts] = useState(false);
 
   // Data fetching - all debts for KPIs (global view)
-  const { data: allDebtsData, isLoading: isLoadingAll, isError: isErrorAll, refetch: refetchAll } = useAllDebts();
+  const {
+    data: allDebtsData,
+    isLoading: isLoadingAll,
+    isError: isErrorAll,
+    refetch: refetchAll,
+  } = useAllDebts();
 
   // Data fetching - month filtered debts for list (when not showing all)
-  const { data: monthDebtsData, isLoading: isLoadingMonth, isError: isErrorMonth, refetch: refetchMonth } = useDebts({ monthYear: currentMonth });
+  const {
+    data: monthDebtsData,
+    isLoading: isLoadingMonth,
+    isError: isErrorMonth,
+    refetch: refetchMonth,
+  } = useDebts({ monthYear: currentMonth });
 
   // Choose which data to show in the list based on toggle
-  const listDebts = showAllDebts ? (allDebtsData?.debts ?? []) : (monthDebtsData?.debts ?? []);
+  const listDebts = useMemo(
+    () =>
+      showAllDebts
+        ? (allDebtsData?.debts ?? [])
+        : (monthDebtsData?.debts ?? []),
+    [showAllDebts, allDebtsData?.debts, monthDebtsData?.debts]
+  );
   const isLoading = showAllDebts ? isLoadingAll : isLoadingMonth;
   const isError = isErrorAll || isErrorMonth;
 
@@ -247,21 +198,91 @@ export default function DebtsPage() {
   };
 
   // Filter debts based on status
-  const filteredDebts = listDebts.filter((debt) => {
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'active') return debt.status === 'active' || debt.status === 'overdue';
-    if (statusFilter === 'overdue') return debt.status === 'overdue';
-    if (statusFilter === 'paid_off') return debt.status === 'paid_off';
-    return true;
-  });
+  const filteredDebts = useMemo(() => {
+    return listDebts.filter((debt) => {
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'active')
+        return debt.status === 'active' || debt.status === 'overdue';
+      if (statusFilter === 'overdue') return debt.status === 'overdue';
+      if (statusFilter === 'paid_off') return debt.status === 'paid_off';
+      return true;
+    });
+  }, [listDebts, statusFilter]);
 
   // Separate negotiated and pending debts
-  const negotiatedDebts = filteredDebts.filter((debt) => debt.isNegotiated);
-  const pendingDebts = filteredDebts.filter((debt) => !debt.isNegotiated);
+  const negotiatedDebts = useMemo(
+    () => filteredDebts.filter((debt) => debt.isNegotiated),
+    [filteredDebts]
+  );
+  const pendingDebts = useMemo(
+    () => filteredDebts.filter((debt) => !debt.isNegotiated),
+    [filteredDebts]
+  );
+
+  // Calculate section stats
+  const negotiatedStats = useMemo(() => {
+    const paid = negotiatedDebts.filter((d) => d.status === 'paid_off').length;
+    const active = negotiatedDebts.filter((d) => d.status === 'active').length;
+    const overdue = negotiatedDebts.filter((d) => d.status === 'overdue').length;
+    const monthlySum = negotiatedDebts
+      .filter((d) => d.status !== 'paid_off')
+      .reduce((sum, d) => sum + (d.installmentAmount || 0), 0);
+
+    return { paid, pending: active, overdue, monthlySum };
+  }, [negotiatedDebts]);
 
   // KPIs always use ALL debts (global view)
   const allDebtsForTotals = allDebtsData?.debts ?? [];
   const totals = calculateDebtTotals(allDebtsForTotals);
+
+  // Filter counts for tabs
+  const filterCounts = useMemo(() => {
+    const all = listDebts.length;
+    const active = listDebts.filter(
+      (d) => d.status === 'active' || d.status === 'overdue'
+    ).length;
+    const overdue = listDebts.filter((d) => d.status === 'overdue').length;
+    const paid_off = listDebts.filter((d) => d.status === 'paid_off').length;
+
+    return { all, active, overdue, paid_off };
+  }, [listDebts]);
+
+  // Generate upcoming installments for alerts and focus mode
+  const upcomingInstallments = useMemo(() => {
+    const items: UpcomingInstallmentItem[] = [];
+
+    for (const debt of negotiatedDebts) {
+      if (
+        debt.status === 'paid_off' ||
+        !debt.installmentAmount ||
+        !debt.totalInstallments
+      ) {
+        continue;
+      }
+
+      const isPaid = false; // Would check actual payment status
+      const isOverdue = debt.status === 'overdue';
+
+      items.push({
+        debtId: debt.id,
+        debtName: debt.name,
+        creditor: debt.creditor || null,
+        installmentNumber: debt.currentInstallment,
+        totalInstallments: debt.totalInstallments,
+        amount: debt.installmentAmount,
+        dueDay: debt.dueDay || 10,
+        belongsToMonthYear: currentMonth,
+        status: isOverdue ? 'overdue' : isPaid ? 'paid' : 'pending',
+        paidAt: null,
+        paidInMonth: null,
+      });
+    }
+
+    return items;
+  }, [negotiatedDebts, currentMonth]);
+
+  // Focus mode state
+  const [focusModeOpen, setFocusModeOpen] = useState(false);
 
   // Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -287,32 +308,25 @@ export default function DebtsPage() {
     setPayingDebt(debt);
   };
 
-  const handleCreateModalOpenChange = (open: boolean) => {
-    setCreateModalOpen(open);
-  };
-
-  const handleEditModalOpenChange = (open: boolean) => {
-    if (!open) {
-      setEditingDebt(null);
+  const handleFocusModePayInstallment = (debtId: string) => {
+    const debt = listDebts.find((d) => d.id === debtId);
+    if (debt) {
+      setPayingDebt(debt);
     }
   };
 
-  const handleDeleteDialogOpenChange = (open: boolean) => {
-    if (!open) {
-      setDeletingDebt(null);
-    }
+  const handlePayAll = () => {
+    // Would implement batch payment
+    console.log('Pay all installments');
   };
 
-  const handleNegotiateModalOpenChange = (open: boolean) => {
-    if (!open) {
-      setNegotiatingDebt(null);
-    }
+  // Month navigation handlers
+  const handlePreviousMonth = () => {
+    goToPrevMonth();
   };
 
-  const handlePayInstallmentDialogOpenChange = (open: boolean) => {
-    if (!open) {
-      setPayingDebt(null);
-    }
+  const handleNextMonth = () => {
+    goToNextMonth();
   };
 
   // Error state
@@ -320,99 +334,233 @@ export default function DebtsPage() {
     return <ErrorState onRetry={() => refetch()} />;
   }
 
-  // Empty state
+  // Empty state logic
   const isEmpty = !isLoading && filteredDebts.length === 0;
-  const hasFilter = statusFilter !== 'all';
+  const hasNoDebtsAtAll = !isLoading && listDebts.length === 0;
+  const allPaidOff =
+    !isLoading &&
+    listDebts.length > 0 &&
+    listDebts.every((d) => d.status === 'paid_off');
+
+  // Determine empty state type
+  const getEmptyStateType = () => {
+    if (hasNoDebtsAtAll) return 'no-debts';
+    if (allPaidOff) return 'all-paid';
+    if (statusFilter === 'overdue') return 'no-overdue';
+    if (statusFilter === 'active') return 'no-active';
+    if (statusFilter === 'paid_off') return 'filter-empty';
+    return 'filter-empty';
+  };
+
+  const getFilterName = () => {
+    switch (statusFilter) {
+      case 'overdue':
+        return 'Em Atraso';
+      case 'active':
+        return 'Ativas';
+      case 'paid_off':
+        return 'Quitadas';
+      default:
+        return '';
+    }
+  };
+
+  // Pending installments for focus mode
+  const pendingInstallments = upcomingInstallments.filter(
+    (i) => i.status === 'pending' || i.status === 'overdue'
+  );
+  const pendingAmount = pendingInstallments.reduce((sum, i) => sum + i.amount, 0);
 
   return (
-    <div className="space-y-6" data-testid="debts-page">
-      {/* Header */}
-      <PageHeader
+    <div className="space-y-6 pb-24" data-testid="debts-page">
+      {/* New Header with Metrics */}
+      <DebtHeader
+        totals={totals}
+        filterCounts={filterCounts}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
-        onAddClick={() => setCreateModalOpen(true)}
+        currentMonth={currentMonth}
+        onPreviousMonth={handlePreviousMonth}
+        onNextMonth={handleNextMonth}
         showAllDebts={showAllDebts}
         onShowAllDebtsChange={setShowAllDebts}
-        currentMonth={currentMonth}
+        onAddClick={() => setCreateModalOpen(true)}
+        loading={isLoadingAll}
       />
 
-      {/* Summary - always uses global data */}
-      <DebtSummary totals={totals} loading={isLoadingAll} />
-
-      {/* List or Empty State */}
-      {isEmpty ? (
-        <EmptyState
-          onAddClick={() => setCreateModalOpen(true)}
-          hasFilter={hasFilter}
+      {/* Summary with Progress - Only show when there's debt data */}
+      {totals.totalAmount > 0 && (
+        <DebtSummary
+          totals={totals}
+          upcomingInstallments={upcomingInstallments}
+          loading={isLoadingAll}
         />
-      ) : (
-        <div className="space-y-8">
-          {/* Negotiated Debts Section */}
-          {negotiatedDebts.length > 0 && (
-            <section data-testid="negotiated-debts-section">
-              <SectionHeader
-                title="Dívidas Negociadas"
-                count={negotiatedDebts.length}
-              />
-              <DebtList
-                debts={negotiatedDebts}
-                loading={isLoading}
-                currentMonth={currentMonth}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onPayInstallment={handlePayInstallment}
-              />
-            </section>
-          )}
-
-          {/* Pending Negotiation Section */}
-          {pendingDebts.length > 0 && (
-            <section data-testid="pending-debts-section">
-              <SectionHeader
-                title="Pendentes de Negociação"
-                count={pendingDebts.length}
-              />
-              <DebtList
-                debts={pendingDebts}
-                loading={isLoading}
-                currentMonth={currentMonth}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onNegotiate={handleNegotiate}
-              />
-            </section>
-          )}
-        </div>
       )}
+
+      {/* Focus Mode Trigger */}
+      {pendingInstallments.length > 0 && (
+        <FocusModeTrigger
+          pendingAmount={pendingAmount}
+          pendingCount={pendingInstallments.length}
+          onClick={() => setFocusModeOpen(true)}
+        />
+      )}
+
+      {/* Simulator Link */}
+      {totals.totalRemaining > 0 && totals.monthlyInstallmentSum > 0 && (
+        <DebtSimulator totals={totals}>
+          <Button variant="outline" className="w-full gap-2">
+            <Target className="h-4 w-4" />
+            Simular Quitação Antecipada
+          </Button>
+        </DebtSimulator>
+      )}
+
+      {/* Content: List or Empty State */}
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <LoadingSkeleton />
+          </motion.div>
+        ) : isEmpty ? (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <DebtEmptyState
+              type={getEmptyStateType()}
+              filterName={getFilterName()}
+              totalPaid={allPaidOff ? totals.totalPaid : undefined}
+              onAction={() => {
+                if (hasNoDebtsAtAll) {
+                  setCreateModalOpen(true);
+                } else if (allPaidOff) {
+                  // "Ver Histórico" - show paid off debts
+                  setStatusFilter('paid_off');
+                } else {
+                  setStatusFilter('all');
+                }
+              }}
+              onSecondaryAction={() => {
+                if (allPaidOff) {
+                  setCreateModalOpen(true);
+                } else {
+                  setStatusFilter('all');
+                }
+              }}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-8"
+          >
+            {/* Negotiated Debts Section */}
+            {negotiatedDebts.length > 0 && (
+              <section data-testid="negotiated-debts-section">
+                <SectionHeader
+                  title="Dívidas Negociadas"
+                  count={negotiatedDebts.length}
+                  monthlySum={negotiatedStats.monthlySum}
+                  paidCount={negotiatedStats.paid}
+                  pendingCount={negotiatedStats.pending}
+                  overdueCount={negotiatedStats.overdue}
+                />
+                <StaggerList>
+                  <DebtList
+                    debts={negotiatedDebts}
+                    loading={false}
+                    currentMonth={currentMonth}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onPayInstallment={handlePayInstallment}
+                  />
+                </StaggerList>
+              </section>
+            )}
+
+            {/* Pending Negotiation Section */}
+            {pendingDebts.length > 0 && (
+              <section data-testid="pending-debts-section">
+                <SectionHeader
+                  title="Pendentes de Negociação"
+                  count={pendingDebts.length}
+                />
+                <StaggerList>
+                  <DebtList
+                    debts={pendingDebts}
+                    loading={false}
+                    currentMonth={currentMonth}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onNegotiate={handleNegotiate}
+                  />
+                </StaggerList>
+              </section>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile FAB */}
+      <div className="sm:hidden">
+        <FAB
+          onClick={() => setCreateModalOpen(true)}
+          label="Nova Dívida"
+        />
+      </div>
+
+      {/* Scroll to Top */}
+      <ScrollToTop />
+
+      {/* Focus Mode */}
+      <DebtFocusMode
+        upcomingInstallments={upcomingInstallments}
+        currentMonth={currentMonth}
+        onPayInstallment={handleFocusModePayInstallment}
+        onPayAll={handlePayAll}
+        onClose={() => setFocusModeOpen(false)}
+        open={focusModeOpen}
+      />
 
       {/* Modals and Dialogs */}
       <CreateDebtModal
         open={createModalOpen}
-        onOpenChange={handleCreateModalOpenChange}
+        onOpenChange={setCreateModalOpen}
       />
 
       <EditDebtModal
         debt={editingDebt}
         open={!!editingDebt}
-        onOpenChange={handleEditModalOpenChange}
+        onOpenChange={(open) => !open && setEditingDebt(null)}
       />
 
       <DeleteDebtDialog
         debt={deletingDebt}
         open={!!deletingDebt}
-        onOpenChange={handleDeleteDialogOpenChange}
+        onOpenChange={(open) => !open && setDeletingDebt(null)}
       />
 
       <NegotiateDebtModal
         debt={negotiatingDebt}
         open={!!negotiatingDebt}
-        onOpenChange={handleNegotiateModalOpenChange}
+        onOpenChange={(open) => !open && setNegotiatingDebt(null)}
       />
 
       <PayInstallmentDialog
         debt={payingDebt}
         open={!!payingDebt}
-        onOpenChange={handlePayInstallmentDialogOpenChange}
+        onOpenChange={(open) => !open && setPayingDebt(null)}
       />
     </div>
   );

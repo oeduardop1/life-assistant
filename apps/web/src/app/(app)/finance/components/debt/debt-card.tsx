@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   MoreHorizontal,
   Pencil,
@@ -10,12 +10,13 @@ import {
   Handshake,
   AlertCircle,
   ChevronDown,
-  Zap,
   Clock,
+  Zap,
+  History,
+  Target,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,18 +28,16 @@ import { cn } from '@/lib/utils';
 import {
   formatCurrency,
   debtStatusLabels,
-  debtStatusColors,
   calculateDebtProgress,
   formatMonthDisplay,
   type Debt,
   type UpcomingInstallmentStatus,
 } from '../../types';
 import { useDebtProjection, useUpcomingInstallments } from '../../hooks/use-debts';
-import { DebtProgressBar } from './debt-progress-bar';
-import { DebtStats } from './debt-stats';
+import { DebtPaymentHistory } from './debt-payment-history';
 
 // =============================================================================
-// Props
+// Types
 // =============================================================================
 
 interface DebtCardProps {
@@ -48,75 +47,379 @@ interface DebtCardProps {
   onDelete: (debt: Debt) => void;
   onPayInstallment?: (debt: Debt) => void;
   onNegotiate?: (debt: Debt) => void;
+  /** @deprecated History is now handled via DebtPaymentHistory drawer wrapper */
+  onViewHistory?: (debt: Debt) => void;
   isPayingInstallment?: boolean;
 }
 
 // =============================================================================
-// Installment Status Config
+// Helper Functions
 // =============================================================================
 
-const installmentStatusConfig: Record<
-  UpcomingInstallmentStatus,
-  {
-    label: string;
-    icon: typeof CheckCircle2;
-    badgeClass: string;
+function getDaysUntilDue(dueDay: number): number {
+  const today = new Date();
+  const currentDay = today.getDate();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
+  const dueDate = new Date(currentYear, currentMonth, dueDay);
+  if (dueDay < currentDay) {
+    dueDate.setMonth(dueDate.getMonth() + 1);
   }
-> = {
-  paid: {
-    label: 'Pago',
-    icon: CheckCircle2,
-    badgeClass: 'bg-green-500/10 text-green-700 border-green-200',
-  },
-  paid_early: {
-    label: 'Antecipado',
-    icon: Zap,
-    badgeClass: 'bg-blue-500/10 text-blue-700 border-blue-200',
-  },
-  pending: {
-    label: 'Pendente',
-    icon: Clock,
-    badgeClass: 'bg-orange-500/10 text-orange-700 border-orange-200',
-  },
-  overdue: {
-    label: 'Vencido',
-    icon: AlertCircle,
-    badgeClass: 'bg-red-500/10 text-red-700 border-red-200',
-  },
-};
+
+  const diffTime = dueDate.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+function getInstallmentStatusConfig(status: UpcomingInstallmentStatus) {
+  const config = {
+    paid: {
+      label: 'Pago',
+      icon: CheckCircle2,
+      className: 'text-emerald-700 dark:text-emerald-400',
+      bgClassName: 'bg-emerald-500/10',
+    },
+    paid_early: {
+      label: 'Antecipado',
+      icon: Zap,
+      className: 'text-blue-700 dark:text-blue-400',
+      bgClassName: 'bg-blue-500/10',
+    },
+    pending: {
+      label: 'Pendente',
+      icon: Clock,
+      className: 'text-amber-700 dark:text-amber-400',
+      bgClassName: 'bg-amber-500/10',
+    },
+    overdue: {
+      label: 'Vencido',
+      icon: AlertCircle,
+      className: 'text-destructive',
+      bgClassName: 'bg-destructive/10',
+    },
+  };
+  return config[status];
+}
 
 // =============================================================================
-// Badge Color Map
+// Progress Bar Component
 // =============================================================================
 
-const badgeColorClasses: Record<string, string> = {
-  green: 'bg-green-500/10 text-green-700 border-green-200',
-  blue: 'bg-blue-500/10 text-blue-700 border-blue-200',
-  purple: 'bg-purple-500/10 text-purple-700 border-purple-200',
-  orange: 'bg-orange-500/10 text-orange-700 border-orange-200',
-  yellow: 'bg-yellow-500/10 text-yellow-700 border-yellow-200',
-  red: 'bg-red-500/10 text-red-700 border-red-200',
-  gray: 'bg-gray-500/10 text-gray-700 border-gray-200',
-};
+interface MiniProgressBarProps {
+  current: number;
+  total: number;
+  className?: string;
+}
+
+function MiniProgressBar({ current, total, className }: MiniProgressBarProps) {
+  const paid = current - 1;
+  const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
+
+  const getColor = () => {
+    if (percent >= 75) return 'bg-emerald-500';
+    if (percent >= 50) return 'bg-blue-500';
+    if (percent >= 25) return 'bg-amber-500';
+    return 'bg-foreground/30';
+  };
+
+  return (
+    <div className={cn('flex items-center gap-2', className)}>
+      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percent}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className={cn('h-full rounded-full', getColor())}
+        />
+      </div>
+      <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+        {paid}/{total}
+      </span>
+    </div>
+  );
+}
 
 // =============================================================================
-// Status Icon Map
+// Status Indicator
 // =============================================================================
 
-const statusIcons: Record<string, typeof CreditCard> = {
-  active: CreditCard,
-  overdue: AlertCircle,
-  paid_off: CheckCircle2,
-  settled: Handshake,
-  defaulted: AlertCircle,
-};
+interface StatusIndicatorProps {
+  status: Debt['status'];
+  isNegotiated: boolean;
+}
+
+function StatusIndicator({ status, isNegotiated }: StatusIndicatorProps) {
+  const getStatusConfig = () => {
+    if (!isNegotiated) {
+      return {
+        color: 'border-l-amber-500',
+        icon: AlertCircle,
+        iconColor: 'text-amber-500',
+      };
+    }
+
+    switch (status) {
+      case 'active':
+        return {
+          color: 'border-l-blue-500',
+          icon: CreditCard,
+          iconColor: 'text-blue-500',
+        };
+      case 'overdue':
+        return {
+          color: 'border-l-destructive',
+          icon: AlertCircle,
+          iconColor: 'text-destructive',
+        };
+      case 'paid_off':
+        return {
+          color: 'border-l-emerald-500',
+          icon: CheckCircle2,
+          iconColor: 'text-emerald-500',
+        };
+      default:
+        return {
+          color: 'border-l-muted-foreground',
+          icon: CreditCard,
+          iconColor: 'text-muted-foreground',
+        };
+    }
+  };
+
+  const config = getStatusConfig();
+  const Icon = config.icon;
+
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-center w-10 h-10 rounded-lg',
+        'bg-muted/50'
+      )}
+    >
+      <Icon className={cn('h-5 w-5', config.iconColor)} />
+    </div>
+  );
+}
 
 // =============================================================================
-// Component
+// CTA Button
+// =============================================================================
+
+interface CTAButtonProps {
+  debt: Debt;
+  installmentStatus?: UpcomingInstallmentStatus;
+  onPayInstallment?: (debt: Debt) => void;
+  onNegotiate?: (debt: Debt) => void;
+  isPaying?: boolean;
+}
+
+function CTAButton({
+  debt,
+  installmentStatus,
+  onPayInstallment,
+  onNegotiate,
+  isPaying,
+}: CTAButtonProps) {
+  const isPaidOff = debt.status === 'paid_off';
+  const isActive = debt.status === 'active' || debt.status === 'overdue';
+
+  // Pending negotiation - show negotiate CTA
+  if (!debt.isNegotiated && isActive && onNegotiate) {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={(e) => {
+          e.stopPropagation();
+          onNegotiate(debt);
+        }}
+        className="shrink-0"
+      >
+        <Handshake className="h-4 w-4 mr-1.5" />
+        Negociar
+      </Button>
+    );
+  }
+
+  // Negotiated and active - show pay CTA
+  if (debt.isNegotiated && isActive && onPayInstallment) {
+    const isPaidThisMonth =
+      installmentStatus === 'paid' || installmentStatus === 'paid_early';
+
+    if (isPaidThisMonth) {
+      return (
+        <div className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-500">
+          <CheckCircle2 className="h-4 w-4" />
+          <span>Pago</span>
+        </div>
+      );
+    }
+
+    const isOverdue = installmentStatus === 'overdue' || debt.status === 'overdue';
+
+    return (
+      <Button
+        size="sm"
+        variant={isOverdue ? 'destructive' : 'default'}
+        onClick={(e) => {
+          e.stopPropagation();
+          onPayInstallment(debt);
+        }}
+        disabled={isPaying}
+        className="shrink-0"
+      >
+        {isOverdue ? 'Pagar Agora' : `Pagar ${formatCurrency(debt.installmentAmount!)}`}
+      </Button>
+    );
+  }
+
+  // Paid off - show status
+  if (isPaidOff) {
+    return (
+      <div className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-500">
+        <CheckCircle2 className="h-4 w-4" />
+        <span>Quitado</span>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// =============================================================================
+// Expanded Details
+// =============================================================================
+
+interface ExpandedDetailsProps {
+  debt: Debt;
+  currentMonth: string;
+  installmentStatus?: UpcomingInstallmentStatus;
+  installmentPaidAt?: string | null;
+  projection?: Debt['projection'];
+}
+
+function ExpandedDetails({
+  debt,
+  currentMonth,
+  installmentStatus,
+  installmentPaidAt,
+  projection,
+}: ExpandedDetailsProps) {
+  const progress = calculateDebtProgress(debt);
+  const statusConfig = installmentStatus
+    ? getInstallmentStatusConfig(installmentStatus)
+    : null;
+  const StatusIcon = statusConfig?.icon;
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
+      className="overflow-hidden"
+    >
+      <div className="pt-4 mt-4 border-t border-border/50 space-y-4">
+        {/* Current Month Installment Status */}
+        {debt.isNegotiated && statusConfig && StatusIcon && (
+          <div
+            className={cn(
+              'flex items-center justify-between p-3 rounded-lg',
+              statusConfig.bgClassName
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <StatusIcon className={cn('h-4 w-4', statusConfig.className)} />
+              <span className={cn('text-sm font-medium', statusConfig.className)}>
+                Parcela de {formatMonthDisplay(currentMonth)}
+              </span>
+            </div>
+            <span className="text-sm">
+              {installmentStatus === 'paid' && installmentPaidAt && (
+                <>
+                  Pago em{' '}
+                  {new Date(installmentPaidAt).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'short',
+                  })}
+                </>
+              )}
+              {installmentStatus === 'pending' && debt.dueDay && (
+                <>Vence dia {debt.dueDay}</>
+              )}
+              {installmentStatus === 'overdue' && debt.dueDay && (
+                <>Venceu dia {debt.dueDay}</>
+              )}
+            </span>
+          </div>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="space-y-0.5">
+            <span className="text-xs text-muted-foreground">Parcelas Pagas</span>
+            <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-500">
+              {progress.paidInstallments}
+            </p>
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-xs text-muted-foreground">Restantes</span>
+            <p className="text-sm font-semibold text-amber-600 dark:text-amber-500">
+              {progress.remainingInstallments}
+            </p>
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-xs text-muted-foreground">Valor Parcela</span>
+            <p className="text-sm font-semibold tabular-nums">
+              {formatCurrency(debt.installmentAmount!)}
+            </p>
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-xs text-muted-foreground">Vencimento</span>
+            <p className="text-sm font-semibold">Dia {debt.dueDay}</p>
+          </div>
+        </div>
+
+        {/* Projection */}
+        {projection && projection.message && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+            <Target className="h-4 w-4 text-blue-600 dark:text-blue-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-blue-700 dark:text-blue-400">
+              {projection.message}
+            </p>
+          </div>
+        )}
+
+        {/* View History Link - wrapped with DebtPaymentHistory drawer */}
+        {debt.isNegotiated && debt.totalInstallments && (
+          <DebtPaymentHistory debt={debt}>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <History className="h-4 w-4" />
+              Ver histórico de pagamentos
+            </button>
+          </DebtPaymentHistory>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// =============================================================================
+// Main Component
 // =============================================================================
 
 /**
- * DebtCard - Displays a single debt item with different layouts for negotiated vs pending
+ * DebtCard - Redesigned card with visible progress, exposed CTA, and clear states
+ *
+ * Features:
+ * - Progress bar always visible
+ * - Primary CTA exposed (Pay/Negotiate)
+ * - Visual states: active, overdue, paid_off, pending negotiation
+ * - Expandable details with stats and projection
+ * - Countdown to due date
  *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
@@ -131,327 +434,255 @@ export function DebtCard({
 }: DebtCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Fetch projection when card is expanded (lazy loading)
-  // Once expanded, keep fetching to maintain cache
+  // Fetch projection when expanded
   const { data: projection } = useDebtProjection(
     isExpanded && debt.isNegotiated ? debt.id : undefined
   );
 
-  // Fetch upcoming installments for the current month to get this debt's installment status
+  // Fetch current month installment status
   const { data: upcomingData } = useUpcomingInstallments(currentMonth);
-
-  // Find this debt's installment status for the current month
   const currentInstallment = upcomingData?.installments.find(
     (inst) => inst.debtId === debt.id
   );
 
-  const statusColor = debtStatusColors[debt.status] || 'gray';
-  const StatusIcon = statusIcons[debt.status] || CreditCard;
   const isPaidOff = debt.status === 'paid_off';
-  const isActive = debt.status === 'active';
   const isOverdue = debt.status === 'overdue';
-  const canPayInstallment = (isActive || isOverdue) && debt.isNegotiated && onPayInstallment;
-  const canNegotiate = isActive && !debt.isNegotiated && onNegotiate;
-
-  const progress = calculateDebtProgress(debt);
   const hasDetails = debt.isNegotiated && debt.totalInstallments && debt.installmentAmount;
+  const progress = calculateDebtProgress(debt);
 
-  // Get installment status config if available
-  const installmentStatus = currentInstallment
-    ? installmentStatusConfig[currentInstallment.status]
-    : null;
-  const InstallmentStatusIcon = installmentStatus?.icon;
+  // Get days until due
+  const daysUntil = debt.dueDay ? getDaysUntilDue(debt.dueDay) : null;
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Don't toggle if clicking on interactive elements
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('[role="menuitem"]')) {
-      return;
-    }
-    if (hasDetails) {
-      setIsExpanded(!isExpanded);
-    }
+  const handleCardClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('[role="menuitem"]')) {
+        return;
+      }
+      if (hasDetails) {
+        setIsExpanded(!isExpanded);
+      }
+    },
+    [hasDetails, isExpanded]
+  );
+
+  // Card border color based on status
+  const getBorderClass = () => {
+    if (!debt.isNegotiated) return 'border-l-4 border-l-amber-500';
+    if (isOverdue) return 'border-l-4 border-l-destructive';
+    if (isPaidOff) return 'border-l-4 border-l-emerald-500';
+    return 'border-l-4 border-l-blue-500';
   };
 
   return (
-    <Card
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
       className={cn(
-        isPaidOff && 'opacity-75',
-        hasDetails && 'cursor-pointer hover:bg-accent/50 transition-colors'
+        'group relative p-4 rounded-lg border bg-card transition-all duration-200',
+        getBorderClass(),
+        hasDetails && 'cursor-pointer hover:bg-accent/30',
+        isPaidOff && 'opacity-60'
       )}
-      data-testid="debt-card"
       onClick={handleCardClick}
+      data-testid="debt-card"
     >
-      <CardContent className="p-4">
-        {/* Header - Always Visible */}
-        <div className="flex items-start justify-between gap-4">
-          {/* Left: Icon + Info */}
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            {/* Icon */}
-            <div className={cn('rounded-lg p-2 shrink-0', `bg-${statusColor}-500/10`)}>
-              <StatusIcon className={cn('h-5 w-5', `text-${statusColor}-500`)} />
-            </div>
+      {/* Main Content */}
+      <div className="flex items-start gap-3">
+        {/* Status Icon */}
+        <StatusIndicator status={debt.status} isNegotiated={debt.isNegotiated} />
 
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              {/* Name */}
+        {/* Info */}
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Header Row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
               <h3
                 className={cn(
                   'font-medium text-sm truncate',
                   isPaidOff && 'line-through text-muted-foreground'
                 )}
-                data-testid="debt-name"
               >
                 {debt.name}
               </h3>
-
-              {/* Creditor */}
-              {debt.creditor && (
-                <p
-                  className="text-xs text-muted-foreground truncate"
-                  data-testid="debt-creditor"
-                >
-                  {debt.creditor}
-                </p>
-              )}
-
-              {/* Badges */}
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <Badge
-                  variant="outline"
-                  className={cn('text-xs', badgeColorClasses[statusColor])}
-                  data-testid="debt-status-badge"
-                >
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {debtStatusLabels[debt.status]}
-                </Badge>
-
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {debt.creditor && <span>{debt.creditor}</span>}
+                {debt.creditor && <span>·</span>}
+                <span>{debtStatusLabels[debt.status]}</span>
                 {!debt.isNegotiated && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs bg-yellow-500/10 text-yellow-700 border-yellow-200"
-                    data-testid="debt-pending-negotiation-badge"
-                  >
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    Pendente de Negociação
-                  </Badge>
-                )}
-
-                {/* Current month installment status */}
-                {debt.isNegotiated && installmentStatus && InstallmentStatusIcon && (
-                  <Badge
-                    variant="outline"
-                    className={cn('text-xs', installmentStatus.badgeClass)}
-                    data-testid="debt-installment-status-badge"
-                  >
-                    <InstallmentStatusIcon className="h-3 w-3 mr-1" />
-                    {formatMonthDisplay(currentMonth)}: {installmentStatus.label}
-                  </Badge>
-                )}
-
-                {/* Summary info when collapsed */}
-                {hasDetails && !isExpanded && (
-                  <span className="text-xs text-muted-foreground">
-                    {progress.paidInstallments}/{debt.totalInstallments} parcelas
-                  </span>
+                  <>
+                    <span>·</span>
+                    <span className="text-amber-600 dark:text-amber-500">
+                      Pendente de negociação
+                    </span>
+                  </>
                 )}
               </div>
-
-              {/* Non-negotiated Debt: Total Amount Info */}
-              {!debt.isNegotiated && (
-                <div className="mt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Valor total da dívida pendente de negociação
-                  </p>
-                </div>
-              )}
             </div>
-          </div>
 
-          {/* Right: Values + Actions */}
-          <div className="flex items-start gap-2 shrink-0">
-            {/* Values */}
-            <div className="text-right">
+            {/* Amount */}
+            <div className="text-right shrink-0">
               <p
                 className={cn(
-                  'text-sm font-medium',
+                  'text-sm font-semibold tabular-nums',
                   isPaidOff && 'line-through text-muted-foreground'
                 )}
-                data-testid="debt-total-amount"
               >
                 {formatCurrency(debt.totalAmount)}
               </p>
               {debt.isNegotiated && debt.installmentAmount && (
-                <p
-                  className="text-xs text-muted-foreground mt-0.5"
-                  data-testid="debt-installment-amount"
-                >
+                <p className="text-xs text-muted-foreground tabular-nums">
                   {formatCurrency(debt.installmentAmount)}/mês
                 </p>
               )}
+            </div>
+          </div>
+
+          {/* Progress Bar (Negotiated only) */}
+          {hasDetails && (
+            <MiniProgressBar
+              current={debt.currentInstallment}
+              total={debt.totalInstallments!}
+            />
+          )}
+
+          {/* Bottom Row: Status + CTA */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            {/* Status Info */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {debt.isNegotiated && daysUntil !== null && (
+                <>
+                  {currentInstallment?.status === 'paid' ||
+                  currentInstallment?.status === 'paid_early' ? (
+                    <span className="text-emerald-600 dark:text-emerald-500">
+                      {formatMonthDisplay(currentMonth)}: Pago
+                    </span>
+                  ) : currentInstallment?.status === 'overdue' ? (
+                    <span className="text-destructive">
+                      Vencido há {Math.abs(daysUntil)} dias
+                    </span>
+                  ) : daysUntil === 0 ? (
+                    <span className="text-amber-600 dark:text-amber-500 font-medium">
+                      Vence hoje
+                    </span>
+                  ) : daysUntil > 0 && daysUntil <= 7 ? (
+                    <span>
+                      Vence em {daysUntil} dia{daysUntil > 1 ? 's' : ''}
+                    </span>
+                  ) : (
+                    <span>Vence dia {debt.dueDay}</span>
+                  )}
+                </>
+              )}
               {debt.isNegotiated && (
-                <p
-                  className="text-xs text-green-600 mt-0.5"
-                  data-testid="debt-paid-amount"
-                >
+                <span className="text-emerald-600 dark:text-emerald-500">
                   Pago: {formatCurrency(progress.paidAmount)}
-                </p>
+                </span>
               )}
             </div>
 
-            {/* Expand/Collapse Indicator */}
-            {hasDetails && (
-              <div className="flex items-center h-8">
+            {/* CTA + Menu */}
+            <div className="flex items-center gap-2">
+              <CTAButton
+                debt={debt}
+                installmentStatus={currentInstallment?.status}
+                onPayInstallment={onPayInstallment}
+                onNegotiate={onNegotiate}
+                isPaying={isPayingInstallment}
+              />
+
+              {/* Expand Indicator */}
+              {hasDetails && (
                 <ChevronDown
                   className={cn(
                     'h-4 w-4 text-muted-foreground transition-transform duration-200',
                     isExpanded && 'rotate-180'
                   )}
                 />
-              </div>
-            )}
+              )}
 
-            {/* Actions */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  data-testid="debt-actions-trigger"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Ações</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {/* Pay Installment (only for negotiated active debts) */}
-                {canPayInstallment && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={() => onPayInstallment(debt)}
-                      disabled={isPayingInstallment}
-                      data-testid="debt-pay-installment-action"
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Pagar Parcela {debt.currentInstallment}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-
-                {/* Negotiate (only for non-negotiated active debts) */}
-                {canNegotiate && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={() => onNegotiate(debt)}
-                      data-testid="debt-negotiate-action"
-                    >
-                      <Handshake className="h-4 w-4 mr-2" />
-                      Negociar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-
-                <DropdownMenuItem
-                  onClick={() => onEdit(debt)}
-                  data-testid="debt-edit-action"
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Editar
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onDelete(debt)}
-                  className="text-destructive focus:text-destructive"
-                  data-testid="debt-delete-action"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {/* Expandable Details - Progress and Stats */}
-        {hasDetails && (
-          <div
-            className={cn(
-              'grid transition-all duration-200 ease-in-out',
-              isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0'
-            )}
-          >
-            <div className="overflow-hidden">
-              <div className="space-y-3 pt-3 border-t">
-                {/* Current Month Installment Info */}
-                {currentInstallment && (
-                  <div
-                    className={cn(
-                      'flex items-center justify-between p-2 rounded-md',
-                      installmentStatus?.badgeClass
-                    )}
-                    data-testid="debt-current-installment-info"
+              {/* Actions Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center gap-2">
-                      {InstallmentStatusIcon && (
-                        <InstallmentStatusIcon className="h-4 w-4" />
-                      )}
-                      <span className="text-sm font-medium">
-                        Parcela de {formatMonthDisplay(currentMonth)}
-                      </span>
-                    </div>
-                    <div className="text-right text-sm">
-                      {currentInstallment.status === 'paid' && currentInstallment.paidAt && (
-                        <span>
-                          Pago em{' '}
-                          {new Date(currentInstallment.paidAt).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: 'short',
-                          })}
-                        </span>
-                      )}
-                      {currentInstallment.status === 'paid_early' && currentInstallment.paidAt && (
-                        <span>
-                          Pago antecipadamente em{' '}
-                          {new Date(currentInstallment.paidAt).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: 'short',
-                          })}
-                          {currentInstallment.paidInMonth && (
-                            <span className="text-xs opacity-75">
-                              {' '}({formatMonthDisplay(currentInstallment.paidInMonth)})
-                            </span>
-                          )}
-                        </span>
-                      )}
-                      {currentInstallment.status === 'pending' && (
-                        <span>Vence dia {currentInstallment.dueDay}</span>
-                      )}
-                      {currentInstallment.status === 'overdue' && (
-                        <span>Venceu dia {currentInstallment.dueDay}</span>
-                      )}
-                    </div>
-                  </div>
-                )}
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Ações</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {debt.isNegotiated &&
+                    (debt.status === 'active' || debt.status === 'overdue') &&
+                    onPayInstallment && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => onPayInstallment(debt)}
+                          disabled={isPayingInstallment}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Pagar Parcela {debt.currentInstallment}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
 
-                <DebtProgressBar
-                  currentInstallment={debt.currentInstallment}
-                  totalInstallments={debt.totalInstallments!}
-                  showLabel
-                  size="md"
-                />
-                <DebtStats
-                  progress={progress}
-                  installmentAmount={debt.installmentAmount!}
-                  dueDay={debt.dueDay}
-                  projection={projection ?? debt.projection}
-                />
-              </div>
+                  {!debt.isNegotiated &&
+                    debt.status === 'active' &&
+                    onNegotiate && (
+                      <>
+                        <DropdownMenuItem onClick={() => onNegotiate(debt)}>
+                          <Handshake className="h-4 w-4 mr-2" />
+                          Negociar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+
+                  {debt.isNegotiated && debt.totalInstallments && (
+                    <DebtPaymentHistory debt={debt}>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <History className="h-4 w-4 mr-2" />
+                        Histórico
+                      </DropdownMenuItem>
+                    </DebtPaymentHistory>
+                  )}
+
+                  <DropdownMenuItem onClick={() => onEdit(debt)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDelete(debt)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Expanded Details */}
+      <AnimatePresence>
+        {isExpanded && hasDetails && (
+          <ExpandedDetails
+            debt={debt}
+            currentMonth={currentMonth}
+            installmentStatus={currentInstallment?.status}
+            installmentPaidAt={currentInstallment?.paidAt}
+            projection={projection ?? debt.projection}
+          />
         )}
-      </CardContent>
-    </Card>
+      </AnimatePresence>
+    </motion.div>
   );
 }
