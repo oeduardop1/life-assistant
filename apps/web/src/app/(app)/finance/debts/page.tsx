@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, RefreshCw, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -164,6 +164,14 @@ export default function DebtsPage() {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<DebtStatusFilter>('all');
   const [showAllDebts, setShowAllDebts] = useState(false);
+
+  // Celebration dismissal state (reset when month changes)
+  const [dismissCelebration, setDismissCelebration] = useState(false);
+
+  // Reset celebration dismissal when month changes
+  useEffect(() => {
+    setDismissCelebration(false);
+  }, [currentMonth]);
 
   // Data fetching - all debts for KPIs (global view)
   const {
@@ -336,14 +344,25 @@ export default function DebtsPage() {
     listDebts.every((d) => d.status === 'paid_off');
 
   // Determine empty state type
-  const getEmptyStateType = () => {
+  const getEmptyStateType = (): 'no-debts' | 'all-paid' | 'no-overdue' | 'no-active' | 'filter-empty' | null => {
     if (hasNoDebtsAtAll) return 'no-debts';
-    if (allPaidOff) return 'all-paid';
-    if (statusFilter === 'overdue') return 'no-overdue';
-    if (statusFilter === 'active') return 'no-active';
-    if (statusFilter === 'paid_off') return 'filter-empty';
-    return 'filter-empty';
+    // Show celebration when all debts are paid off and filter is 'all'
+    if (statusFilter === 'all' && allPaidOff && !dismissCelebration) {
+      return 'all-paid';
+    }
+    if (isEmpty) {
+      if (statusFilter === 'overdue') return 'no-overdue';
+      if (statusFilter === 'active') return 'no-active';
+      return 'filter-empty';
+    }
+    return null;
   };
+
+  const emptyStateType = getEmptyStateType();
+  const showEmptyState = emptyStateType !== null;
+  // Show list even during celebration (all-paid), but not for other empty states
+  const showList = filteredDebts.length > 0 && !isLoading &&
+    (emptyStateType === null || emptyStateType === 'all-paid');
 
   const getFilterName = () => {
     switch (statusFilter) {
@@ -407,48 +426,27 @@ export default function DebtsPage() {
       )}
 
 
-      {/* Content: List or Empty State */}
-      <AnimatePresence mode="wait">
-        {isLoading ? (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <LoadingSkeleton />
-          </motion.div>
-        ) : isEmpty ? (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <DebtEmptyState
-              type={getEmptyStateType()}
-              filterName={getFilterName()}
-              totalPaid={allPaidOff ? totals.totalPaid : undefined}
-              onAction={() => {
-                if (hasNoDebtsAtAll) {
-                  setCreateModalOpen(true);
-                } else if (allPaidOff) {
-                  // "Ver Histórico" - show paid off debts
-                  setStatusFilter('paid_off');
-                } else {
-                  setStatusFilter('all');
-                }
-              }}
-              onSecondaryAction={() => {
-                if (allPaidOff) {
-                  setCreateModalOpen(true);
-                } else {
-                  setStatusFilter('all');
-                }
-              }}
-            />
-          </motion.div>
-        ) : (
+      {/* Loading State */}
+      {isLoading && <LoadingSkeleton />}
+
+      {/* Empty State / Celebration */}
+      {!isLoading && showEmptyState && (
+        <DebtEmptyState
+          type={emptyStateType!}
+          filterName={getFilterName()}
+          totalPaid={emptyStateType === 'all-paid' ? totals.totalPaid : undefined}
+          onAction={() => {
+            if (emptyStateType === 'no-debts' || emptyStateType === 'all-paid') {
+              setCreateModalOpen(true);
+            } else {
+              setStatusFilter('all');
+            }
+          }}
+        />
+      )}
+
+      {/* Content: Debt List */}
+      {showList && (
           <motion.div
             key="content"
             initial={{ opacity: 0 }}
@@ -500,8 +498,7 @@ export default function DebtsPage() {
               </section>
             )}
           </motion.div>
-        )}
-      </AnimatePresence>
+      )}
 
       {/* Mobile FAB */}
       <div className="sm:hidden">
