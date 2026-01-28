@@ -163,11 +163,6 @@ export function BillHeader({
     return <HeaderSkeleton />;
   }
 
-  const progressPercent =
-    totals.total > 0
-      ? Math.round((totals.paid / totals.total) * 100)
-      : 0;
-
   const filters: { key: BillStatusFilter; label: string; isWarning?: boolean }[] = [
     { key: 'all', label: 'Todas' },
     { key: 'pending', label: 'Pendentes' },
@@ -211,23 +206,6 @@ export function BillHeader({
           subValue={`${totals.pendingCount + totals.overdueCount} ${(totals.pendingCount + totals.overdueCount) === 1 ? 'conta' : 'contas'}`}
           valueClassName={totals.overdueCount > 0 ? 'text-destructive' : 'text-amber-600 dark:text-amber-500'}
         />
-        <div className="flex flex-col">
-          <span className="text-xs text-muted-foreground uppercase tracking-wider">
-            Progresso
-          </span>
-          <div className="flex items-baseline gap-2">
-            <span
-              className={cn(
-                'text-lg font-semibold tracking-tight',
-                progressPercent >= 100 && 'text-emerald-600 dark:text-emerald-500',
-                progressPercent >= 50 && progressPercent < 100 && 'text-amber-600 dark:text-amber-500',
-                progressPercent < 50 && 'text-muted-foreground'
-              )}
-            >
-              {progressPercent}%
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Filter Tabs */}
