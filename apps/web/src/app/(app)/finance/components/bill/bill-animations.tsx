@@ -169,10 +169,21 @@ export function StaggerList({ children, className }: StaggerListProps) {
 
 /**
  * StaggerItem - Individual item in a staggered list
+ * Uses its own initial/animate to work with AnimatePresence for dynamic items
  */
 export function StaggerItem({ children, className }: StaggerListProps) {
   return (
-    <motion.div variants={staggerItem} className={className}>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 24,
+      }}
+      className={className}
+    >
       {children}
     </motion.div>
   );

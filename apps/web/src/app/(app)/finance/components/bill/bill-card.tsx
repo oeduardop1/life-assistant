@@ -350,24 +350,15 @@ export function BillCard({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {canToggle && (
+                    {canToggle && isPaid && (
                       <>
                         <DropdownMenuItem
                           onClick={() => onTogglePaid(bill)}
                           disabled={isTogglingPaid}
                           data-testid="bill-toggle-paid-action"
                         >
-                          {isPaid ? (
-                            <>
-                              <X className="h-4 w-4 mr-2" />
-                              Marcar como Pendente
-                            </>
-                          ) : (
-                            <>
-                              <Check className="h-4 w-4 mr-2" />
-                              Marcar como Pago
-                            </>
-                          )}
+                          <X className="h-4 w-4 mr-2" />
+                          Marcar como Pendente
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                       </>

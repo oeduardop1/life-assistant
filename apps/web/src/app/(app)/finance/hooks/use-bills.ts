@@ -146,8 +146,43 @@ export function useMarkBillPaid() {
       const response = await api.patch<BillResponse>(`/finance/bills/${id}/mark-paid`);
       return { bill: response.bill, monthYear };
     },
-    onSuccess: (_, variables) => {
-      // Invalidate bills list and summary
+    onMutate: async ({ id, monthYear }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: financeKeys.bills() });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueriesData<BillsListResponse>({
+        queryKey: financeKeys.bills(),
+      });
+
+      // Optimistically update the cache
+      queryClient.setQueriesData<BillsListResponse>(
+        { queryKey: financeKeys.bills() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            bills: old.bills.map((bill) =>
+              bill.id === id
+                ? { ...bill, status: 'paid' as const, paidAt: new Date().toISOString() }
+                : bill
+            ),
+          };
+        }
+      );
+
+      return { previousData, monthYear };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+    },
+    onSettled: (_, __, variables) => {
+      // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: financeKeys.bills() });
       queryClient.invalidateQueries({ queryKey: financeKeys.summary(variables.monthYear) });
     },
@@ -166,8 +201,43 @@ export function useMarkBillUnpaid() {
       const response = await api.patch<BillResponse>(`/finance/bills/${id}/mark-unpaid`);
       return { bill: response.bill, monthYear };
     },
-    onSuccess: (_, variables) => {
-      // Invalidate bills list and summary
+    onMutate: async ({ id, monthYear }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: financeKeys.bills() });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueriesData<BillsListResponse>({
+        queryKey: financeKeys.bills(),
+      });
+
+      // Optimistically update the cache
+      queryClient.setQueriesData<BillsListResponse>(
+        { queryKey: financeKeys.bills() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            bills: old.bills.map((bill) =>
+              bill.id === id
+                ? { ...bill, status: 'pending' as const, paidAt: null }
+                : bill
+            ),
+          };
+        }
+      );
+
+      return { previousData, monthYear };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+    },
+    onSettled: (_, __, variables) => {
+      // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: financeKeys.bills() });
       queryClient.invalidateQueries({ queryKey: financeKeys.summary(variables.monthYear) });
     },
