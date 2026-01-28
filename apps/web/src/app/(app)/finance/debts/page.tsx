@@ -269,7 +269,9 @@ export default function DebtsPage() {
         creditor: debt.creditor || null,
         installmentNumber: debt.currentInstallment,
         totalInstallments: debt.totalInstallments,
-        amount: debt.installmentAmount,
+        amount: typeof debt.installmentAmount === 'string'
+          ? parseFloat(debt.installmentAmount)
+          : debt.installmentAmount,
         dueDay: debt.dueDay || 10,
         belongsToMonthYear: currentMonth,
         status: isOverdue ? 'overdue' : isPaid ? 'paid' : 'pending',
