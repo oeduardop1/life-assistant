@@ -163,11 +163,6 @@ export function ExpenseHeader({
     return <HeaderSkeleton />;
   }
 
-  const usagePercent =
-    totals.totalExpected > 0
-      ? Math.round((totals.totalActual / totals.totalExpected) * 100)
-      : 0;
-
   // Determine variance display
   const isOverBudget = totals.variance > 0;
   const isUnderBudget = totals.variance < 0;
@@ -231,23 +226,6 @@ export function ExpenseHeader({
             !isOverBudget && !isUnderBudget && 'text-muted-foreground'
           )}
         />
-        <div className="flex flex-col">
-          <span className="text-xs text-muted-foreground uppercase tracking-wider">
-            Uso
-          </span>
-          <div className="flex items-baseline gap-2">
-            <span
-              className={cn(
-                'text-lg font-semibold tracking-tight',
-                usagePercent > 100 && 'text-destructive',
-                usagePercent >= 80 && usagePercent <= 100 && 'text-amber-600 dark:text-amber-500',
-                usagePercent < 80 && 'text-emerald-600 dark:text-emerald-500'
-              )}
-            >
-              {usagePercent}%
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Filter Tabs */}
