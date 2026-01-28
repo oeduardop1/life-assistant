@@ -255,8 +255,54 @@ export function usePayInstallment() {
       const response = await api.patch<DebtResponse>(`/finance/debts/${id}/pay-installment`, { quantity });
       return response.debt;
     },
-    onSuccess: () => {
-      // Invalidate debts list and all summaries
+    onMutate: async ({ id, quantity = 1 }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: financeKeys.debts() });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueriesData<DebtsListResponse>({
+        queryKey: financeKeys.debts(),
+      });
+
+      // Optimistically update the cache
+      // Note: financeKeys.debts() matches multiple query types (debts list, upcoming-installments, etc.)
+      // We only want to update DebtsListResponse queries that have a 'debts' array
+      queryClient.setQueriesData<DebtsListResponse>(
+        { queryKey: financeKeys.debts() },
+        (old) => {
+          if (!old || !('debts' in old) || !Array.isArray(old.debts)) return old;
+          return {
+            ...old,
+            debts: old.debts.map((debt) => {
+              if (debt.id !== id) return debt;
+
+              const newCurrentInstallment = debt.currentInstallment + quantity;
+              const isNowPaidOff = debt.totalInstallments
+                ? newCurrentInstallment > debt.totalInstallments
+                : false;
+
+              return {
+                ...debt,
+                currentInstallment: newCurrentInstallment,
+                status: isNowPaidOff ? ('paid_off' as const) : debt.status,
+              };
+            }),
+          };
+        }
+      );
+
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: financeKeys.debts() });
       queryClient.invalidateQueries({ queryKey: financeKeys.all });
     },

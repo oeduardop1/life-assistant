@@ -9,35 +9,39 @@ import {
   Clock,
   CreditCard,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatMonthDisplay, type UpcomingInstallmentItem } from '../../types';
+import { CelebrationConfetti } from '../bill/bill-animations';
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface DebtFocusModeProps {
-  upcomingInstallments: UpcomingInstallmentItem[];
+  installments: UpcomingInstallmentItem[];
   currentMonth: string;
-  onPayInstallment: (debtId: string) => void;
+  onPayInstallment: (installment: UpcomingInstallmentItem) => void;
   onPayAll: () => void;
   onClose: () => void;
   open: boolean;
+  payingDebtId?: string;
 }
 
 // =============================================================================
-// Installment Item Component
+// Installment Item Component (same structure as BillItem)
 // =============================================================================
 
 interface InstallmentItemProps {
   installment: UpcomingInstallmentItem;
   onPay: () => void;
   index: number;
+  isPaying?: boolean;
 }
 
-function InstallmentItem({ installment, onPay, index }: InstallmentItemProps) {
+function InstallmentItem({ installment, onPay, index, isPaying }: InstallmentItemProps) {
   const isPaid = installment.status === 'paid' || installment.status === 'paid_early';
   const isOverdue = installment.status === 'overdue';
 
@@ -49,7 +53,7 @@ function InstallmentItem({ installment, onPay, index }: InstallmentItemProps) {
       className={cn(
         'flex items-center gap-4 p-4 rounded-xl border transition-colors',
         isPaid && 'bg-emerald-500/5 border-emerald-500/20',
-        isOverdue && 'bg-destructive/5 border-destructive/20',
+        isOverdue && !isPaid && 'bg-destructive/5 border-destructive/20',
         !isPaid && !isOverdue && 'bg-card border-border hover:border-foreground/20'
       )}
     >
@@ -58,12 +62,14 @@ function InstallmentItem({ installment, onPay, index }: InstallmentItemProps) {
         className={cn(
           'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
           isPaid && 'bg-emerald-500 text-white',
-          isOverdue && 'bg-destructive text-white',
+          isOverdue && !isPaid && 'bg-destructive text-white',
           !isPaid && !isOverdue && 'bg-muted text-muted-foreground'
         )}
       >
         {isPaid ? (
           <CheckCircle2 className="h-5 w-5" />
+        ) : isOverdue ? (
+          <AlertTriangle className="h-5 w-5" />
         ) : (
           <Clock className="h-5 w-5" />
         )}
@@ -71,16 +77,19 @@ function InstallmentItem({ installment, onPay, index }: InstallmentItemProps) {
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium truncate">{installment.debtName}</p>
+        <p className={cn('font-medium truncate', isPaid && 'line-through text-muted-foreground')}>
+          {installment.debtName}
+        </p>
         <p className="text-sm text-muted-foreground">
           Parcela {installment.installmentNumber}/{installment.totalInstallments}
-          {isOverdue && ' · Vencida'}
+          {` · Venc. dia ${installment.dueDay}`}
+          {isOverdue && !isPaid && ' · Vencida'}
         </p>
       </div>
 
       {/* Amount & Action */}
       <div className="flex items-center gap-3">
-        <span className="font-semibold tabular-nums">
+        <span className={cn('font-semibold tabular-nums', isPaid && 'text-muted-foreground')}>
           {formatCurrency(installment.amount)}
         </span>
         {!isPaid && (
@@ -88,9 +97,10 @@ function InstallmentItem({ installment, onPay, index }: InstallmentItemProps) {
             size="sm"
             variant={isOverdue ? 'destructive' : 'default'}
             onClick={onPay}
+            disabled={isPaying}
             className="shrink-0"
           >
-            Pagar
+            {isPaying ? 'Pagando...' : 'Pagar'}
           </Button>
         )}
       </div>
@@ -99,7 +109,7 @@ function InstallmentItem({ installment, onPay, index }: InstallmentItemProps) {
 }
 
 // =============================================================================
-// Summary Header Component
+// Summary Header Component (same as bills)
 // =============================================================================
 
 interface SummaryHeaderProps {
@@ -159,55 +169,53 @@ function SummaryHeader({
 }
 
 // =============================================================================
-// Main Component
+// Main Component (same structure as BillQuickPay)
 // =============================================================================
 
 /**
- * DebtFocusMode - Simplified payment dashboard
+ * DebtFocusMode - Simplified payment mode for debt installments
  *
- * Features:
- * - Focus on current month's payments
- * - Quick pay buttons for each installment
- * - Progress tracking
- * - "Pay All" option
+ * Uses UpcomingInstallmentItem from the backend which has REAL payment status.
+ * Same structure as BillQuickPay.
  *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export function DebtFocusMode({
-  upcomingInstallments,
+  installments,
   currentMonth,
   onPayInstallment,
   onPayAll,
   onClose,
   open,
+  payingDebtId,
 }: DebtFocusModeProps) {
-  // Filter installments for current month
-  const monthInstallments = useMemo(() => {
-    return upcomingInstallments.filter(() => {
-      // All upcoming installments for the current month view
-      return true;
-    });
-  }, [upcomingInstallments]);
-
-  // Calculate stats
+  // Calculate stats (same logic as bills)
   const stats = useMemo(() => {
-    const paid = monthInstallments.filter(
+    const paid = installments.filter(
       (i) => i.status === 'paid' || i.status === 'paid_early'
     );
-    const pending = monthInstallments.filter(
+    const pending = installments.filter(
       (i) => i.status === 'pending' || i.status === 'overdue'
     );
 
+    const totalAmount = installments.reduce((sum, i) => sum + i.amount, 0);
+    const paidAmount = paid.reduce((sum, i) => sum + i.amount, 0);
+
+    // Sort pending by due day
+    const sortedPending = [...pending].sort((a, b) => a.dueDay - b.dueDay);
+
     return {
-      totalAmount: monthInstallments.reduce((sum, i) => sum + i.amount, 0),
-      paidAmount: paid.reduce((sum, i) => sum + i.amount, 0),
+      totalAmount,
+      paidAmount,
       paidCount: paid.length,
       pendingCount: pending.length,
-      pendingInstallments: pending,
+      pendingInstallments: sortedPending,
+      paidInstallments: paid,
     };
-  }, [monthInstallments]);
+  }, [installments]);
 
   const allPaid = stats.pendingCount === 0 && stats.paidCount > 0;
+  const pendingAmount = stats.totalAmount - stats.paidAmount;
 
   return (
     <AnimatePresence>
@@ -223,7 +231,7 @@ export function DebtFocusMode({
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <Target className="h-5 w-5" />
-                <span className="font-semibold">Modo Foco</span>
+                <span className="font-semibold">Pagar Parcelas</span>
               </div>
               <Button
                 variant="ghost"
@@ -235,7 +243,7 @@ export function DebtFocusMode({
             </div>
           </div>
 
-          <div className="p-4 space-y-6 max-w-lg mx-auto">
+          <div className="p-4 space-y-6 max-w-lg mx-auto pb-32">
             {/* Summary */}
             <SummaryHeader
               totalAmount={stats.totalAmount}
@@ -250,8 +258,9 @@ export function DebtFocusMode({
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="text-center py-8"
+                className="relative text-center py-8"
               >
+                <CelebrationConfetti />
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -266,6 +275,9 @@ export function DebtFocusMode({
                 <p className="text-muted-foreground mt-1">
                   Você pagou todas as parcelas deste mês.
                 </p>
+                <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 mt-2">
+                  {formatCurrency(stats.paidAmount)} pagos
+                </p>
               </motion.div>
             )}
 
@@ -274,17 +286,6 @@ export function DebtFocusMode({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium">Parcelas Pendentes</h3>
-                  {stats.pendingCount > 1 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onPayAll}
-                      className="gap-2"
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      Pagar Todas
-                    </Button>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -292,8 +293,9 @@ export function DebtFocusMode({
                     <InstallmentItem
                       key={`${installment.debtId}-${installment.installmentNumber}`}
                       installment={installment}
-                      onPay={() => onPayInstallment(installment.debtId)}
+                      onPay={() => onPayInstallment(installment)}
                       index={index}
+                      isPaying={payingDebtId === installment.debtId}
                     />
                   ))}
                 </div>
@@ -301,7 +303,7 @@ export function DebtFocusMode({
             )}
 
             {/* No Installments */}
-            {monthInstallments.length === 0 && (
+            {installments.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
                 <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Nenhuma parcela para este mês.</p>
@@ -316,18 +318,16 @@ export function DebtFocusMode({
                   Ver {stats.paidCount} {stats.paidCount === 1 ? 'parcela paga' : 'parcelas pagas'}
                 </summary>
                 <div className="mt-3 space-y-2 pl-6">
-                  {monthInstallments
-                    .filter((i) => i.status === 'paid' || i.status === 'paid_early')
-                    .map((installment) => (
-                      <div
-                        key={`${installment.debtId}-${installment.installmentNumber}`}
-                        className="flex items-center gap-3 py-2 text-sm text-muted-foreground"
-                      >
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        <span className="flex-1 truncate">{installment.debtName}</span>
-                        <span className="tabular-nums">{formatCurrency(installment.amount)}</span>
-                      </div>
-                    ))}
+                  {stats.paidInstallments.map((installment) => (
+                    <div
+                      key={`${installment.debtId}-${installment.installmentNumber}`}
+                      className="flex items-center gap-3 py-2 text-sm text-muted-foreground"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      <span className="flex-1 truncate">{installment.debtName}</span>
+                      <span className="tabular-nums">{formatCurrency(installment.amount)}</span>
+                    </div>
+                  ))}
                 </div>
               </details>
             )}
@@ -340,9 +340,10 @@ export function DebtFocusMode({
                 <Button
                   onClick={onPayAll}
                   className="w-full h-12 text-base gap-2"
+                  disabled={!!payingDebtId}
                 >
                   <CreditCard className="h-5 w-5" />
-                  Pagar Tudo ({formatCurrency(stats.totalAmount - stats.paidAmount)})
+                  Pagar Tudo ({formatCurrency(pendingAmount)})
                 </Button>
               </div>
             </div>
@@ -354,7 +355,7 @@ export function DebtFocusMode({
 }
 
 // =============================================================================
-// Focus Mode Trigger Button
+// Focus Mode Trigger Button (same as QuickPayTrigger)
 // =============================================================================
 
 interface FocusModeTriggerProps {

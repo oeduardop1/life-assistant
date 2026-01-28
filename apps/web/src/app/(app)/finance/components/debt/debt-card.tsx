@@ -46,8 +46,6 @@ interface DebtCardProps {
   onDelete: (debt: Debt) => void;
   onPayInstallment?: (debt: Debt) => void;
   onNegotiate?: (debt: Debt) => void;
-  /** @deprecated History is now handled via DebtPaymentHistory drawer wrapper */
-  onViewHistory?: (debt: Debt) => void;
   isPayingInstallment?: boolean;
 }
 
@@ -194,9 +192,6 @@ function SegmentedProgressBar({
     </div>
   );
 }
-
-// Keep old MiniProgressBar as alias for backwards compatibility
-const MiniProgressBar = SegmentedProgressBar;
 
 // =============================================================================
 // Status Config
@@ -369,7 +364,7 @@ function ExpandedDetails({
         {debt.isNegotiated && statusConfig && StatusIcon && (
           <div
             className={cn(
-              'flex items-center gap-3 px-2.5 py-2 rounded-md text-sm',
+              'inline-flex items-center gap-2 px-2 py-1 rounded text-sm',
               statusConfig.bgClassName
             )}
           >
@@ -418,16 +413,12 @@ function ExpandedDetails({
               {formatCurrency(debt.installmentAmount!)}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">Venc:</span>
-            <span className="font-semibold">Dia {debt.dueDay}</span>
-          </div>
         </div>
 
         {/* Projection - More subtle */}
         {projection && projection.message && (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-blue-500/5">
-            <Target className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-blue-500/5">
+            <Target className="h-3 w-3 text-blue-500 shrink-0" />
             <p className="text-xs text-blue-600 dark:text-blue-400">
               {projection.message}
             </p>
@@ -691,7 +682,7 @@ export function DebtCard({
           <div className="flex items-center gap-3">
             {/* Progress bar */}
             <div className="flex-1" data-testid="debt-progress-bar">
-              <MiniProgressBar
+              <SegmentedProgressBar
                 current={debt.currentInstallment}
                 total={debt.totalInstallments!}
               />

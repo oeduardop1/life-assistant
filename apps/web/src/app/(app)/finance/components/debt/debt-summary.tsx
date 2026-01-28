@@ -105,20 +105,48 @@ function MonthlyBreakdown({ installments, monthlySum }: MonthlyBreakdownProps) {
     .reduce((sum, i) => sum + i.amount, 0);
 
   return (
-    <div className="space-y-2">
+    <div>
+      {/* Clickable toggle area with visual feedback */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className={cn(
+          'w-full px-4 py-2.5',
+          'flex items-center justify-between',
+          'border-t border-border/50',
+          'text-sm text-muted-foreground',
+          'transition-all duration-200',
+          'hover:bg-muted/50 hover:text-foreground',
+          'group cursor-pointer',
+          isExpanded && 'bg-muted/30'
+        )}
       >
-        <span>Este mês</span>
+        <div className="flex items-center gap-2">
+          {/* Status dots preview */}
+          <div className="flex -space-x-1">
+            {paidCount > 0 && (
+              <div className="w-2.5 h-2.5 rounded-full ring-2 ring-card bg-emerald-500" />
+            )}
+            {pendingCount > 0 && (
+              <div className="w-2.5 h-2.5 rounded-full ring-2 ring-card bg-amber-500" />
+            )}
+            {overdueCount > 0 && (
+              <div className="w-2.5 h-2.5 rounded-full ring-2 ring-card bg-destructive" />
+            )}
+          </div>
+          <span className="group-hover:text-foreground transition-colors">
+            {isExpanded ? 'Ocultar este mês' : 'Ver este mês'}
+          </span>
+        </div>
         <ChevronDown
           className={cn(
-            'h-4 w-4 transition-transform',
+            'h-4 w-4 transition-transform duration-200',
+            'group-hover:text-foreground',
             isExpanded && 'rotate-180'
           )}
         />
       </button>
 
+      {/* Expandable content */}
       <motion.div
         initial={false}
         animate={{
@@ -128,7 +156,7 @@ function MonthlyBreakdown({ installments, monthlySum }: MonthlyBreakdownProps) {
         transition={{ duration: 0.2 }}
         className="overflow-hidden"
       >
-        <div className="pt-2 space-y-1.5 text-sm">
+        <div className="px-4 pb-4 pt-2 space-y-1.5 text-sm bg-muted/20">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Total do mês:</span>
             <span className="font-medium tabular-nums">
@@ -136,26 +164,29 @@ function MonthlyBreakdown({ installments, monthlySum }: MonthlyBreakdownProps) {
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              Pagas ({paidCount}):
-            </span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-muted-foreground">Pagas ({paidCount}):</span>
+            </div>
             <span className="text-emerald-600 dark:text-emerald-500 tabular-nums">
               {formatCurrency(paidAmount)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              Pendentes ({pendingCount}):
-            </span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="text-muted-foreground">Pendentes ({pendingCount}):</span>
+            </div>
             <span className="text-amber-600 dark:text-amber-500 tabular-nums">
               {formatCurrency(monthlySum - paidAmount)}
             </span>
           </div>
           {overdueCount > 0 && (
             <div className="flex justify-between">
-              <span className="text-destructive">
-                Em atraso ({overdueCount}):
-              </span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-destructive" />
+                <span className="text-destructive">Em atraso ({overdueCount}):</span>
+              </div>
               <span className="text-destructive font-medium">
                 Atenção
               </span>
@@ -231,19 +262,19 @@ export function DebtSummary({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: 0.1 }}
       className={cn(
-        'p-4 rounded-xl border bg-card/50 backdrop-blur-sm space-y-3',
+        'rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden',
         className
       )}
       data-testid="debt-summary"
     >
-      {/* Global Progress Bar */}
-      <GlobalProgressBar
-        paid={totals.totalPaid}
-        remaining={totals.totalRemaining}
-      />
+      {/* Progress Bar Section */}
+      <div className="p-4 pb-3 space-y-3">
+        {/* Global Progress Bar */}
+        <GlobalProgressBar
+          paid={totals.totalPaid}
+          remaining={totals.totalRemaining}
+        />
 
-      {/* Compact Stats Row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         {/* Projection */}
         {estimatedMonths > 0 && (
           <div className="flex items-center gap-2 text-sm">
@@ -256,13 +287,13 @@ export function DebtSummary({
             </span>
           </div>
         )}
-
-        {/* Monthly Breakdown Toggle */}
-        <MonthlyBreakdown
-          installments={upcomingInstallments}
-          monthlySum={totals.monthlyInstallmentSum}
-        />
       </div>
+
+      {/* Monthly Breakdown Toggle - has its own padding/spacing */}
+      <MonthlyBreakdown
+        installments={upcomingInstallments}
+        monthlySum={totals.monthlyInstallmentSum}
+      />
     </motion.div>
   );
 }

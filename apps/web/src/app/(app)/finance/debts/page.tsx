@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, RefreshCw, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDebts, useAllDebts } from '../hooks/use-debts';
+import { toast } from 'sonner';
+import { useDebts, useAllDebts, usePayInstallment, useUpcomingInstallments } from '../hooks/use-debts';
 import { useFinanceContext } from '../context/finance-context';
 import {
   DebtList,
@@ -165,11 +166,6 @@ export default function DebtsPage() {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<DebtStatusFilter>('all');
 
-  // Track which month celebration was dismissed for (auto-resets on month change)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [dismissedForMonth, _setDismissedForMonth] = useState<string | null>(null);
-  const dismissCelebration = dismissedForMonth === currentMonth;
-
   // Data fetching - all debts for KPIs (global view)
   const {
     data: allDebtsData,
@@ -249,44 +245,21 @@ export default function DebtsPage() {
     return { all, active, overdue, paid_off };
   }, [listDebts]);
 
-  // Generate upcoming installments for alerts and focus mode
-  const upcomingInstallments = useMemo(() => {
-    const items: UpcomingInstallmentItem[] = [];
+  // Fetch REAL upcoming installments from backend (with actual payment status)
+  const {
+    data: upcomingData,
+    isLoading: isLoadingUpcoming,
+  } = useUpcomingInstallments(currentMonth);
 
-    for (const debt of negotiatedDebts) {
-      if (
-        debt.status === 'paid_off' ||
-        !debt.installmentAmount ||
-        !debt.totalInstallments
-      ) {
-        continue;
-      }
-
-      const isPaid = false; // Would check actual payment status
-      const isOverdue = debt.status === 'overdue';
-
-      items.push({
-        debtId: debt.id,
-        debtName: debt.name,
-        creditor: debt.creditor || null,
-        installmentNumber: debt.currentInstallment,
-        totalInstallments: debt.totalInstallments,
-        amount: typeof debt.installmentAmount === 'string'
-          ? parseFloat(debt.installmentAmount)
-          : debt.installmentAmount,
-        dueDay: debt.dueDay || 10,
-        belongsToMonthYear: currentMonth,
-        status: isOverdue ? 'overdue' : isPaid ? 'paid' : 'pending',
-        paidAt: null,
-        paidInMonth: null,
-      });
-    }
-
-    return items;
-  }, [negotiatedDebts, currentMonth]);
+  // Real installments from backend with real status
+  const upcomingInstallments = upcomingData?.installments ?? [];
 
   // Focus mode state
   const [focusModeOpen, setFocusModeOpen] = useState(false);
+  const [togglingDebtId, setTogglingDebtId] = useState<string | undefined>(undefined);
+
+  // Pay installment mutation
+  const payInstallment = usePayInstallment();
 
   // Ledger drawer state
   const [ledgerOpen, setLedgerOpen] = useState(false);
@@ -315,16 +288,40 @@ export default function DebtsPage() {
     setPayingDebt(debt);
   };
 
-  const handleFocusModePayInstallment = (debtId: string) => {
-    const debt = listDebts.find((d) => d.id === debtId);
-    if (debt) {
-      setPayingDebt(debt);
+  // Handler for paying a single installment in focus mode (same pattern as bills)
+  const handleFocusModePayInstallment = async (installment: UpcomingInstallmentItem) => {
+    setTogglingDebtId(installment.debtId);
+
+    try {
+      await payInstallment.mutateAsync({ id: installment.debtId, quantity: 1 });
+      toast.success(`Parcela de ${installment.debtName} paga com sucesso!`);
+    } catch {
+      toast.error(`Erro ao pagar parcela de ${installment.debtName}`);
+    } finally {
+      setTogglingDebtId(undefined);
     }
   };
 
-  const handlePayAll = () => {
-    // Would implement batch payment
-    console.log('Pay all installments');
+  // Handler for paying all pending installments (same pattern as bills)
+  const handlePayAllPending = async () => {
+    const pendingInstallments = upcomingInstallments.filter(
+      (i) => i.status === 'pending' || i.status === 'overdue'
+    );
+
+    if (pendingInstallments.length === 0) {
+      toast.info('Não há parcelas pendentes para pagar');
+      return;
+    }
+
+    for (const installment of pendingInstallments) {
+      try {
+        await payInstallment.mutateAsync({ id: installment.debtId, quantity: 1 });
+      } catch {
+        toast.error(`Erro ao pagar ${installment.debtName}`);
+      }
+    }
+
+    toast.success(`${pendingInstallments.length} parcelas pagas com sucesso!`);
   };
 
   // Error state
@@ -344,7 +341,7 @@ export default function DebtsPage() {
   const getEmptyStateType = (): 'no-debts' | 'all-paid' | 'no-overdue' | 'no-active' | 'filter-empty' | null => {
     if (hasNoDebtsAtAll) return 'no-debts';
     // Show celebration when all debts are paid off and filter is 'all'
-    if (statusFilter === 'all' && allPaidOff && !dismissCelebration) {
+    if (statusFilter === 'all' && allPaidOff) {
       return 'all-paid';
     }
     if (isEmpty) {
@@ -374,11 +371,11 @@ export default function DebtsPage() {
     }
   };
 
-  // Pending installments for focus mode
-  const pendingInstallments = upcomingInstallments.filter(
+  // Pending installments for focus mode trigger (uses REAL data from backend)
+  const pendingInstallmentsForTrigger = upcomingInstallments.filter(
     (i) => i.status === 'pending' || i.status === 'overdue'
   );
-  const pendingAmount = pendingInstallments.reduce((sum, i) => sum + i.amount, 0);
+  const pendingAmount = pendingInstallmentsForTrigger.reduce((sum, i) => sum + i.amount, 0);
 
   return (
     <div className="space-y-6 pb-24" data-testid="debts-page">
@@ -412,15 +409,14 @@ export default function DebtsPage() {
         />
       )}
 
-      {/* Focus Mode Trigger */}
-      {pendingInstallments.length > 0 && (
+      {/* Focus Mode Trigger - same pattern as bills */}
+      {!isLoading && !isLoadingUpcoming && pendingInstallmentsForTrigger.length > 0 && statusFilter === 'all' && (
         <FocusModeTrigger
           pendingAmount={pendingAmount}
-          pendingCount={pendingInstallments.length}
+          pendingCount={pendingInstallmentsForTrigger.length}
           onClick={() => setFocusModeOpen(true)}
         />
       )}
-
 
       {/* Loading State */}
       {isLoading && <LoadingSkeleton />}
@@ -507,14 +503,15 @@ export default function DebtsPage() {
       {/* Scroll to Top */}
       <ScrollToTop />
 
-      {/* Focus Mode */}
+      {/* Focus Mode - same pattern as BillQuickPay, using REAL backend data */}
       <DebtFocusMode
-        upcomingInstallments={upcomingInstallments}
+        installments={upcomingInstallments}
         currentMonth={currentMonth}
         onPayInstallment={handleFocusModePayInstallment}
-        onPayAll={handlePayAll}
+        onPayAll={handlePayAllPending}
         onClose={() => setFocusModeOpen(false)}
         open={focusModeOpen}
+        payingDebtId={togglingDebtId}
       />
 
       {/* Modals and Dialogs */}
