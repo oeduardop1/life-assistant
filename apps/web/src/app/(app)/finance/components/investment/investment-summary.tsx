@@ -1,9 +1,15 @@
 'use client';
 
-import { PiggyBank, Target, TrendingUp, Percent } from 'lucide-react';
+import { PiggyBank, Target, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { formatCurrency, formatPercentage, type InvestmentTotals } from '../../types';
+import { type InvestmentTotals } from '../../types';
+import { CircularProgress } from './investment-progress-bar';
+import {
+  AnimatedNumber,
+  InvestmentSummarySkeleton,
+  StaggerList,
+  StaggerItem,
+} from './investment-animations';
 
 interface InvestmentSummaryProps {
   totals: InvestmentTotals;
@@ -11,95 +17,126 @@ interface InvestmentSummaryProps {
 }
 
 /**
- * Skeleton loader for summary cards
- */
-function SummarySkeleton() {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="investment-summary-loading">
-      {[...Array(4)].map((_, i) => (
-        <Card key={i}>
-          <CardContent className="p-4">
-            <Skeleton className="h-4 w-24 mb-2" />
-            <Skeleton className="h-6 w-32" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Summary KPI cards for investments
- * Shows: Total Invested, Total Goals, Monthly Contribution, Average Progress
+ * Summary section for investments with hero card and stats
  *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export function InvestmentSummary({ totals, loading }: InvestmentSummaryProps) {
   if (loading) {
-    return <SummarySkeleton />;
+    return <InvestmentSummarySkeleton />;
   }
 
-  const summaryItems = [
-    {
-      id: 'total',
-      label: 'Total Investido',
-      value: formatCurrency(totals.totalCurrentAmount),
-      icon: PiggyBank,
-      color: 'text-purple-500 bg-purple-500/10',
-      testId: 'investment-summary-total',
-    },
-    {
-      id: 'goal',
-      label: 'Total das Metas',
-      value: formatCurrency(totals.totalGoalAmount),
-      icon: Target,
-      color: 'text-blue-500 bg-blue-500/10',
-      testId: 'investment-summary-goal',
-    },
-    {
-      id: 'contribution',
-      label: 'Aporte Mensal',
-      value: formatCurrency(totals.totalMonthlyContribution),
-      icon: TrendingUp,
-      color: 'text-green-500 bg-green-500/10',
-      testId: 'investment-summary-contribution',
-    },
-    {
-      id: 'progress',
-      label: 'Progresso Médio',
-      value: formatPercentage(totals.averageProgress),
-      icon: Percent,
-      color: 'text-orange-500 bg-orange-500/10',
-      testId: 'investment-summary-progress',
-    },
-  ];
+  // Calculate average progress for circular progress
+  const hasInvestmentsWithGoals = totals.totalGoalAmount > 0;
 
   return (
-    <div
-      className="grid grid-cols-2 md:grid-cols-4 gap-4"
-      data-testid="investment-summary"
-    >
-      {summaryItems.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Card key={item.id}>
+    <StaggerList className="space-y-4" data-testid="investment-summary">
+      {/* Hero Card - Total Invested */}
+      <StaggerItem>
+        <Card className="overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="rounded-lg p-2 bg-purple-500/10">
+                <PiggyBank className="h-5 w-5 text-purple-500" />
+              </div>
+              <span className="text-sm text-muted-foreground font-medium">
+                Total Investido
+              </span>
+            </div>
+            <p
+              className="text-3xl font-bold font-mono tabular-nums tracking-tight"
+              data-testid="investment-summary-total"
+            >
+              <AnimatedNumber value={totals.totalCurrentAmount} />
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {totals.totalInvestments} investimento{totals.totalInvestments !== 1 ? 's' : ''} ativo{totals.totalInvestments !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+      </StaggerItem>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Circular Progress */}
+        <StaggerItem>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              {hasInvestmentsWithGoals ? (
+                <CircularProgress
+                  currentAmount={totals.totalCurrentAmount}
+                  goalAmount={totals.totalGoalAmount}
+                  size={80}
+                  strokeWidth={6}
+                  color="auto"
+                  showCenter
+                  centerLabel="progresso"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground">Sem metas</span>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground font-medium mb-1">
+                  Progresso Medio
+                </p>
+                <p
+                  className="text-lg font-semibold font-mono tabular-nums"
+                  data-testid="investment-summary-progress"
+                >
+                  {totals.averageProgress.toFixed(1)}%
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </StaggerItem>
+
+        {/* Total Goals */}
+        <StaggerItem>
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className={`rounded-lg p-1.5 ${item.color}`}>
-                  <Icon className="h-4 w-4" />
+                <div className="rounded-lg p-1.5 bg-blue-500/10">
+                  <Target className="h-4 w-4 text-blue-500" />
                 </div>
-                <span className="text-xs text-muted-foreground">{item.label}</span>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Total das Metas
+                </span>
               </div>
               <p
-                className="text-lg font-semibold"
-                data-testid={item.testId}
+                className="text-lg font-semibold font-mono tabular-nums"
+                data-testid="investment-summary-goal"
               >
-                {item.value}
+                <AnimatedNumber value={totals.totalGoalAmount} />
               </p>
             </CardContent>
           </Card>
-        );
-      })}
-    </div>
+        </StaggerItem>
+
+        {/* Monthly Contribution */}
+        <StaggerItem>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="rounded-lg p-1.5 bg-green-500/10">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Aporte Mensal
+                </span>
+              </div>
+              <p
+                className="text-lg font-semibold font-mono tabular-nums"
+                data-testid="investment-summary-contribution"
+              >
+                <AnimatedNumber value={totals.totalMonthlyContribution} />
+                <span className="text-sm font-normal text-muted-foreground">/mes</span>
+              </p>
+            </CardContent>
+          </Card>
+        </StaggerItem>
+      </div>
+    </StaggerList>
   );
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '../../types';
 
@@ -10,12 +9,13 @@ interface InvestmentProgressBarProps {
   currentAmount: number;
   goalAmount: number | null;
   showLabel?: boolean;
+  showMilestones?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
 
 /**
  * Progress bar for investment goal tracking
- * Shows percentage of goal achieved and optional label
+ * Shows percentage of goal achieved with optional milestone markers
  *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
@@ -23,6 +23,7 @@ export function InvestmentProgressBar({
   currentAmount,
   goalAmount,
   showLabel = false,
+  showMilestones = true,
   size = 'md',
 }: InvestmentProgressBarProps) {
   // No progress bar if no goal is set
@@ -39,20 +40,68 @@ export function InvestmentProgressBar({
     lg: 'h-3',
   };
 
+  const milestones = [25, 50, 75];
+
   return (
     <div className="space-y-1" data-testid="investment-progress-bar">
-      <Progress
-        value={progressPercent}
-        className={cn(heightClasses[size], isComplete && '[&>div]:bg-green-500')}
-        data-testid="investment-progress-value"
-      />
+      <div className="relative">
+        {/* Background track */}
+        <div
+          className={cn(
+            'w-full rounded-full bg-muted overflow-hidden',
+            heightClasses[size]
+          )}
+        >
+          {/* Animated progress fill */}
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercent}%` }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+            className={cn(
+              'h-full rounded-full transition-colors',
+              isComplete
+                ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
+                : 'bg-foreground/80'
+            )}
+            data-testid="investment-progress-value"
+          />
+        </div>
+
+        {/* Milestone markers */}
+        {showMilestones && size !== 'sm' && (
+          <div className="absolute inset-0 flex items-center pointer-events-none">
+            {milestones.map((milestone) => (
+              <div
+                key={milestone}
+                className="absolute top-1/2 -translate-y-1/2"
+                style={{ left: `${milestone}%` }}
+              >
+                <div
+                  className={cn(
+                    'w-0.5 rounded-full transition-colors',
+                    size === 'lg' ? 'h-4' : 'h-3',
+                    progressPercent >= milestone
+                      ? 'bg-background/60'
+                      : 'bg-muted-foreground/20'
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {showLabel && (
         <div className="flex justify-between text-xs text-muted-foreground">
           <span data-testid="investment-progress-percent" className="font-mono tabular-nums">
             {progressPercent.toFixed(1)}%
           </span>
           <span data-testid="investment-progress-label">
-            {isComplete ? 'Meta atingida!' : 'da meta'}
+            {isComplete ? (
+              <span className="text-emerald-500 font-medium">Meta atingida!</span>
+            ) : (
+              'da meta'
+            )}
           </span>
         </div>
       )}
@@ -175,7 +224,10 @@ export function CircularProgress({
           fill="none"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
-          className={getStrokeColor()}
+          className={cn(
+            getStrokeColor(),
+            isComplete && 'drop-shadow-[0_0_4px_rgba(16,185,129,0.5)]'
+          )}
           style={{
             strokeDasharray: circumference,
           }}
