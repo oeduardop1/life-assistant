@@ -7,12 +7,10 @@ import {
   RefreshCw,
   CheckCircle2,
   Clock,
-  TrendingUp,
-  TrendingDown,
   Briefcase,
   Laptop,
   Gift,
-  TrendingUp as TrendingUpIcon,
+  TrendingUp,
   PiggyBank,
   Heart,
   Package,
@@ -55,7 +53,7 @@ const typeIcons: Record<IncomeType, typeof Briefcase> = {
   salary: Briefcase,
   freelance: Laptop,
   bonus: Gift,
-  passive: TrendingUpIcon,
+  passive: TrendingUp,
   investment: PiggyBank,
   gift: Heart,
   other: Package,
@@ -104,68 +102,18 @@ const colorClasses: Record<string, { bg: string; text: string; border: string }>
 };
 
 // =============================================================================
-// Status Indicator Component
+// Status Config Helper
 // =============================================================================
 
-interface StatusIndicatorProps {
-  type: IncomeType;
-  isReceived: boolean;
-}
-
-function StatusIndicator({ type, isReceived }: StatusIndicatorProps) {
+function getStatusConfig(type: IncomeType, isReceived: boolean) {
   const color = incomeTypeColors[type] || 'gray';
   const colors = colorClasses[color] || colorClasses.gray;
-  const Icon = typeIcons[type] || Package;
 
-  return (
-    <div
-      className={cn(
-        'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
-        colors.bg,
-        isReceived && 'ring-1 ring-emerald-500/30'
-      )}
-    >
-      <Icon className={cn('h-5 w-5', colors.text)} />
-    </div>
-  );
-}
-
-// =============================================================================
-// Variance Badge Component
-// =============================================================================
-
-interface VarianceBadgeProps {
-  expected: number;
-  actual: number;
-}
-
-function VarianceBadge({ expected, actual }: VarianceBadgeProps) {
-  const variance = calculateVariance(expected, actual);
-
-  if (variance.value === 0) return null;
-
-  const isPositive = variance.value > 0;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={cn(
-        'flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-        isPositive ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'
-      )}
-    >
-      {isPositive ? (
-        <TrendingUp className="h-3 w-3" />
-      ) : (
-        <TrendingDown className="h-3 w-3" />
-      )}
-      <span>
-        {isPositive ? '+' : ''}
-        {variance.percentage.toFixed(1)}%
-      </span>
-    </motion.div>
-  );
+  return {
+    indicatorColor: isReceived ? 'bg-emerald-500' : colors.border.replace('border-l-', 'bg-'),
+    iconBg: colors.bg,
+    iconText: colors.text,
+  };
 }
 
 // =============================================================================
@@ -182,8 +130,8 @@ function CTAButton({ income, onRegisterValue }: CTAButtonProps) {
 
   if (isReceived) {
     return (
-      <div className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-500">
-        <CheckCircle2 className="h-4 w-4" />
+      <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-500">
+        <CheckCircle2 className="h-3 w-3" />
         <span className="font-medium">Recebido</span>
       </div>
     );
@@ -198,16 +146,16 @@ function CTAButton({ income, onRegisterValue }: CTAButtonProps) {
           e.stopPropagation();
           onRegisterValue(income);
         }}
-        className="shrink-0"
+        className="h-7 px-2.5 text-xs shrink-0"
       >
-        Registrar Valor
+        Registrar
       </Button>
     );
   }
 
   return (
-    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-      <Clock className="h-4 w-4" />
+    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <Clock className="h-3 w-3" />
       <span>Pendente</span>
     </div>
   );
@@ -218,14 +166,10 @@ function CTAButton({ income, onRegisterValue }: CTAButtonProps) {
 // =============================================================================
 
 /**
- * IncomeCard - Redesigned card with visual status, exposed CTA, and variance display
+ * IncomeCard - Compact, elegant income card matching bill/expense/debt cards
  *
- * Features:
- * - Visual status: received (green border) vs pending (default)
- * - Type-specific icons with color coding
- * - Exposed CTA for registering received value
- * - Variance badge when actual differs from expected
- * - Recurring indicator
+ * Design: Refined financial aesthetic with single-row layout
+ * Layout: icon | name+meta | amount | status/actions
  *
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
@@ -240,121 +184,136 @@ export function IncomeCard({
   const actualAmount = income.actualAmount ?? 0;
   const isReceived = income.actualAmount !== null && income.actualAmount > 0;
   const hasVariance = isReceived && actualAmount !== income.expectedAmount;
+  const variance = calculateVariance(income.expectedAmount, actualAmount);
 
-  // Determine border color based on status
-  const getBorderClass = () => {
-    if (isReceived) return 'border-l-4 border-l-emerald-500';
-    return `border-l-4 ${colors.border}`;
-  };
+  const Icon = typeIcons[income.type] || Package;
+  const statusConfig = getStatusConfig(income.type, isReceived);
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.15 }}
       className={cn(
-        'group relative p-4 rounded-lg border bg-card transition-all duration-200',
-        getBorderClass(),
-        'hover:bg-accent/30'
+        'group relative px-3 py-2.5 rounded-lg border bg-card/80 backdrop-blur-sm',
+        'transition-all duration-200',
+        'hover:bg-card hover:shadow-sm'
       )}
       data-testid="income-card"
     >
-      {/* Main Content */}
-      <div className="flex items-start gap-3">
-        {/* Status Icon */}
-        <StatusIndicator type={income.type} isReceived={isReceived} />
+      {/* Status indicator line */}
+      <div
+        className={cn(
+          'absolute left-0 top-2 bottom-2 w-0.5 rounded-full',
+          statusConfig.indicatorColor
+        )}
+      />
 
-        {/* Info */}
-        <div className="flex-1 min-w-0 space-y-1.5">
-          {/* Header Row */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium text-sm truncate" data-testid="income-name">
-                  {income.name}
-                </h3>
-                {income.isRecurring && (
-                  <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-                    <RefreshCw className="h-3 w-3" />
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                <span className={colors.text}>{incomeTypeLabels[income.type]}</span>
-                <span>·</span>
-                <span>{incomeFrequencyLabels[income.frequency]}</span>
-              </div>
-            </div>
+      <div className="flex items-center gap-3 pl-2">
+        {/* Compact Type Icon */}
+        <div
+          className={cn(
+            'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+            colors.bg
+          )}
+        >
+          <Icon className={cn('h-4 w-4', colors.text)} />
+        </div>
 
-            {/* Actions Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => e.stopPropagation()}
-                  data-testid="income-actions-trigger"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Ações</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => onEdit(income)}
-                  data-testid="income-edit-action"
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Editar
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onDelete(income)}
-                  className="text-destructive focus:text-destructive"
-                  data-testid="income-delete-action"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        {/* Name & Meta */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h3
+              className="font-medium text-sm truncate"
+              data-testid="income-name"
+            >
+              {income.name}
+            </h3>
+            {income.isRecurring && (
+              <RefreshCw className="h-3 w-3 text-blue-500 shrink-0" />
+            )}
           </div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={cn('text-xs', colors.text)}>
+              {incomeTypeLabels[income.type]}
+            </span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="text-xs text-muted-foreground">
+              {incomeFrequencyLabels[income.frequency]}
+            </span>
+          </div>
+        </div>
 
-          {/* Values Row */}
-          <div className="flex items-center justify-between gap-4 pt-1">
-            {/* Values */}
-            <div className="flex items-baseline gap-3">
-              {/* Expected */}
-              <div>
-                <span className="text-xs text-muted-foreground mr-1">Previsto:</span>
-                <span className="text-sm font-medium font-mono tabular-nums" data-testid="income-expected">
-                  {formatCurrency(income.expectedAmount)}
+        {/* Amount */}
+        <div className="text-right shrink-0">
+          {isReceived ? (
+            <div className="flex items-center gap-2">
+              <p
+                className="text-sm font-semibold font-mono tabular-nums text-emerald-600 dark:text-emerald-500"
+                data-testid="income-actual"
+              >
+                {formatCurrency(actualAmount)}
+              </p>
+              {hasVariance && variance.value !== 0 && (
+                <span
+                  className={cn(
+                    'text-xs font-medium',
+                    variance.value > 0
+                      ? 'text-emerald-600 dark:text-emerald-500'
+                      : 'text-red-600 dark:text-red-500'
+                  )}
+                >
+                  {variance.value > 0 ? '+' : ''}
+                  {variance.percentage.toFixed(0)}%
                 </span>
-              </div>
-
-              {/* Actual (if received) */}
-              {isReceived && (
-                <div>
-                  <span className="text-xs text-muted-foreground mr-1">Real:</span>
-                  <span
-                    className="text-sm font-semibold font-mono tabular-nums text-emerald-600 dark:text-emerald-500"
-                    data-testid="income-actual"
-                  >
-                    {formatCurrency(actualAmount)}
-                  </span>
-                </div>
-              )}
-
-              {/* Variance Badge */}
-              {hasVariance && (
-                <VarianceBadge expected={income.expectedAmount} actual={actualAmount} />
               )}
             </div>
+          ) : (
+            <p
+              className="text-sm font-medium font-mono tabular-nums text-muted-foreground"
+              data-testid="income-expected"
+            >
+              {formatCurrency(income.expectedAmount)}
+            </p>
+          )}
+        </div>
 
-            {/* CTA */}
-            <CTAButton income={income} onRegisterValue={onRegisterValue} />
-          </div>
+        {/* Actions */}
+        <div className="flex items-center gap-1 shrink-0">
+          <CTAButton income={income} onRegisterValue={onRegisterValue} />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+                data-testid="income-actions-trigger"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Ações</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={() => onEdit(income)}
+                data-testid="income-edit-action"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onDelete(income)}
+                className="text-destructive focus:text-destructive"
+                data-testid="income-delete-action"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </motion.div>
