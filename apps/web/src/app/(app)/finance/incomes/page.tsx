@@ -242,7 +242,7 @@ export default function IncomesPage() {
           type={emptyStateType}
           filterName={filterLabels[statusFilter]}
           totalReceived={totals.totalActual}
-          onAction={handleEmptyStateAction}
+          onAction={emptyStateType !== 'all-received' ? handleEmptyStateAction : undefined}
         />
       )}
 

@@ -277,13 +277,13 @@ export default function BillsPage() {
           type={emptyStateType!}
           filterName={getFilterName()}
           totalPaid={totals.paid}
-          onAction={() => {
-            if (emptyStateType === 'no-bills' || emptyStateType === 'all-paid') {
+          onAction={emptyStateType !== 'all-paid' ? () => {
+            if (emptyStateType === 'no-bills') {
               setCreateModalOpen(true);
             } else {
               setStatusFilter('all');
             }
-          }}
+          } : undefined}
         />
       )}
 
