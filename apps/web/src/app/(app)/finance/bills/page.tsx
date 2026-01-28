@@ -19,7 +19,6 @@ import {
   BillEmptyState,
   BillQuickPay,
   QuickPayTrigger,
-  FAB,
   ScrollToTop,
   CreateBillModal,
   EditBillModal,
@@ -318,10 +317,6 @@ export default function BillsPage() {
       />
 
       {/* Mobile Components */}
-      <FAB
-        onClick={() => setCreateModalOpen(true)}
-        label="Nova Conta"
-      />
       <ScrollToTop />
     </div>
   );
