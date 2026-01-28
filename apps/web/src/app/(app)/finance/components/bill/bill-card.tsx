@@ -321,19 +321,16 @@ export function BillCard({
                   </Button>
                 )}
 
-                {/* Paid indicator button to undo */}
-                {isPaid && canToggle && (
-                  <Button
-                    size="sm"
+                {/* Paid indicator badge (not clickable) */}
+                {isPaid && (
+                  <Badge
                     variant="outline"
-                    onClick={() => onTogglePaid(bill)}
-                    disabled={isTogglingPaid}
-                    data-testid="bill-unpay-button"
-                    className="gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/10"
+                    className="gap-1.5 px-3 py-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 bg-emerald-500/10"
+                    data-testid="bill-paid-badge"
                   >
                     <Check className="h-3.5 w-3.5" />
                     Pago
-                  </Button>
+                  </Badge>
                 )}
 
                 {/* More Actions */}
