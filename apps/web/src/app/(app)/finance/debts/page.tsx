@@ -158,8 +158,8 @@ function LoadingSkeleton() {
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export default function DebtsPage() {
-  // Finance context - month navigation
-  const { currentMonth, goToPrevMonth, goToNextMonth } = useFinanceContext();
+  // Finance context - month
+  const { currentMonth } = useFinanceContext();
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<DebtStatusFilter>('all');
@@ -320,15 +320,6 @@ export default function DebtsPage() {
     console.log('Pay all installments');
   };
 
-  // Month navigation handlers
-  const handlePreviousMonth = () => {
-    goToPrevMonth();
-  };
-
-  const handleNextMonth = () => {
-    goToNextMonth();
-  };
-
   // Error state
   if (isError) {
     return <ErrorState onRetry={() => refetch()} />;
@@ -373,15 +364,12 @@ export default function DebtsPage() {
 
   return (
     <div className="space-y-6 pb-24" data-testid="debts-page">
-      {/* New Header with Metrics */}
+      {/* Header with Metrics */}
       <DebtHeader
         totals={totals}
         filterCounts={filterCounts}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
-        currentMonth={currentMonth}
-        onPreviousMonth={handlePreviousMonth}
-        onNextMonth={handleNextMonth}
         showAllDebts={showAllDebts}
         onShowAllDebtsChange={setShowAllDebts}
         onAddClick={() => setCreateModalOpen(true)}

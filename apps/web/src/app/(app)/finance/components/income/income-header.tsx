@@ -1,10 +1,10 @@
 'use client';
 
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { formatCurrency, formatMonthDisplay } from '../../types';
+import { formatCurrency } from '../../types';
 import type { IncomeTotals } from '../../hooks/use-incomes';
 
 // =============================================================================
@@ -22,9 +22,6 @@ interface FilterCounts {
 
 interface IncomeHeaderProps {
   totals: IncomeTotals;
-  currentMonth: string;
-  onPreviousMonth: () => void;
-  onNextMonth: () => void;
   statusFilter: IncomeStatusFilter;
   onStatusFilterChange: (filter: IncomeStatusFilter) => void;
   onAddClick: () => void;
@@ -67,44 +64,6 @@ function FilterButton({ label, count, isActive, onClick }: FilterButtonProps) {
         </span>
       </span>
     </button>
-  );
-}
-
-// =============================================================================
-// Month Navigator Component
-// =============================================================================
-
-interface MonthNavigatorProps {
-  currentMonth: string;
-  onPreviousMonth: () => void;
-  onNextMonth: () => void;
-}
-
-function MonthNavigator({ currentMonth, onPreviousMonth, onNextMonth }: MonthNavigatorProps) {
-  return (
-    <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={onPreviousMonth}
-        aria-label="Mês anterior"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <span className="min-w-[120px] text-center text-sm font-medium">
-        {formatMonthDisplay(currentMonth)}
-      </span>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={onNextMonth}
-        aria-label="Próximo mês"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-    </div>
   );
 }
 
@@ -182,9 +141,6 @@ function HeaderSkeleton() {
  */
 export function IncomeHeader({
   totals,
-  currentMonth,
-  onPreviousMonth,
-  onNextMonth,
   statusFilter,
   onStatusFilterChange,
   onAddClick,
@@ -263,31 +219,21 @@ export function IncomeHeader({
         )}
       </div>
 
-      {/* Filters and Month Navigation Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Filter Tabs */}
-        <div
-          className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg"
-          role="tablist"
-          aria-label="Filtrar rendimentos por status"
-        >
-          {filters.map((filter) => (
-            <FilterButton
-              key={filter.key}
-              label={filter.label}
-              count={filterCounts[filter.key]}
-              isActive={statusFilter === filter.key}
-              onClick={() => onStatusFilterChange(filter.key)}
-            />
-          ))}
-        </div>
-
-        {/* Month Navigation */}
-        <MonthNavigator
-          currentMonth={currentMonth}
-          onPreviousMonth={onPreviousMonth}
-          onNextMonth={onNextMonth}
-        />
+      {/* Filter Tabs */}
+      <div
+        className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg w-fit"
+        role="tablist"
+        aria-label="Filtrar rendimentos por status"
+      >
+        {filters.map((filter) => (
+          <FilterButton
+            key={filter.key}
+            label={filter.label}
+            count={filterCounts[filter.key]}
+            isActive={statusFilter === filter.key}
+            onClick={() => onStatusFilterChange(filter.key)}
+          />
+        ))}
       </div>
     </motion.div>
   );

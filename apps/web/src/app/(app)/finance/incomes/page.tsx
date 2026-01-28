@@ -101,11 +101,7 @@ const filterLabels: Record<IncomeStatusFilter, string> = {
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export default function IncomesPage() {
-  const {
-    currentMonth,
-    goToPrevMonth,
-    goToNextMonth,
-  } = useFinanceContext();
+  const { currentMonth } = useFinanceContext();
 
   // Data fetching
   const { data, isLoading, isError, refetch } = useIncomes({ monthYear: currentMonth });
@@ -227,9 +223,6 @@ export default function IncomesPage() {
       {/* Header with Metrics and Filters */}
       <IncomeHeader
         totals={totals}
-        currentMonth={currentMonth}
-        onPreviousMonth={goToPrevMonth}
-        onNextMonth={goToNextMonth}
         statusFilter={statusFilter}
         onStatusFilterChange={handleFilterChange}
         onAddClick={() => setCreateModalOpen(true)}

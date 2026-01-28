@@ -66,7 +66,7 @@ function ErrorState({ onRetry }: ErrorStateProps) {
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export default function ExpensesPage() {
-  const { currentMonth, goToPrevMonth, goToNextMonth } = useFinanceContext();
+  const { currentMonth } = useFinanceContext();
 
   // Data fetching
   const { data, isLoading, isError, refetch } = useExpenses({ monthYear: currentMonth });
@@ -201,12 +201,9 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6" data-testid="expenses-page">
-      {/* Header with metrics, filters, and month navigation */}
+      {/* Header with metrics and filters */}
       <ExpenseHeader
         totals={totals}
-        currentMonth={currentMonth}
-        onPreviousMonth={goToPrevMonth}
-        onNextMonth={goToNextMonth}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         onAddClick={() => setCreateModalOpen(true)}

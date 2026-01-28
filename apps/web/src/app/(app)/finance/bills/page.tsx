@@ -68,7 +68,7 @@ function ErrorState({ onRetry }: ErrorStateProps) {
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export default function BillsPage() {
-  const { currentMonth, goToPrevMonth, goToNextMonth } = useFinanceContext();
+  const { currentMonth } = useFinanceContext();
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<BillStatusFilter>('all');
@@ -221,9 +221,6 @@ export default function BillsPage() {
       {/* Header with metrics and filters */}
       <BillHeader
         totals={totals}
-        currentMonth={currentMonth}
-        onPreviousMonth={goToPrevMonth}
-        onNextMonth={goToNextMonth}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         onAddClick={() => setCreateModalOpen(true)}
