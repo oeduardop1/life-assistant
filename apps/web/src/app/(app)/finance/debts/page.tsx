@@ -435,13 +435,13 @@ export default function DebtsPage() {
           type={emptyStateType!}
           filterName={getFilterName()}
           totalPaid={emptyStateType === 'all-paid' ? totals.totalPaid : undefined}
-          onAction={() => {
-            if (emptyStateType === 'no-debts' || emptyStateType === 'all-paid') {
+          onAction={emptyStateType !== 'all-paid' ? () => {
+            if (emptyStateType === 'no-debts') {
               setCreateModalOpen(true);
             } else {
               setStatusFilter('all');
             }
-          }}
+          } : undefined}
         />
       )}
 
