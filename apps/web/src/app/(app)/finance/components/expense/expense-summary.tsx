@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   formatCurrency,
@@ -207,114 +205,141 @@ export function ExpenseSummary({ totals, expenses = [], loading }: ExpenseSummar
 
   // Calculate category breakdown
   const categoryBreakdown = calculateCategoryBreakdown(expenses);
-  const displayedCategories = showBreakdown ? categoryBreakdown : categoryBreakdown.slice(0, 3);
 
   return (
-    <Card data-testid="expense-summary">
-      <CardContent className="p-4 sm:p-5 space-y-4">
-        {/* Main Progress Section */}
-        <div className="space-y-3">
-          {/* Progress Bar */}
-          <AnimatedProgressBar
-            value={Math.min(usagePercent, 100)}
-            max={100}
-            size="lg"
-            color={getStatusColor(usagePercent)}
-          />
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.1 }}
+      className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden"
+      data-testid="expense-summary"
+    >
+      {/* Main Progress Section */}
+      <div className="p-4 space-y-3">
+        {/* Progress Bar */}
+        <AnimatedProgressBar
+          value={Math.min(usagePercent, 100)}
+          max={100}
+          size="lg"
+          color={getStatusColor(usagePercent)}
+        />
 
-          {/* Stats Row */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {formatCurrency(totals.totalActual)}
-              </span>
-              <span className="text-xs text-muted-foreground">/</span>
-              <span className="text-sm font-medium">
-                {formatCurrency(totals.totalExpected)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <motion.span
-                key={usagePercent}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={cn(
-                  'text-lg font-semibold tabular-nums',
-                  usagePercent > 100 && 'text-destructive',
-                  usagePercent >= 80 && usagePercent <= 100 && 'text-amber-600 dark:text-amber-500',
-                  usagePercent < 80 && 'text-emerald-600 dark:text-emerald-500'
-                )}
-              >
-                {usagePercent.toFixed(0)}%
-              </motion.span>
-              <span className="text-xs text-muted-foreground">usado</span>
-            </div>
-          </div>
-
-          {/* Variance Badge */}
+        {/* Stats Row */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <VarianceIcon className={cn('h-4 w-4', varianceColor)} />
-            <span className={cn('text-sm font-medium', varianceColor)}>
-              {isOnBudget
-                ? 'No orçamento'
-                : isOverBudget
-                ? `+${formatCurrency(totals.variance)} acima`
-                : `${formatCurrency(Math.abs(totals.variance))} economia`}
+            <span className="text-sm text-muted-foreground tabular-nums">
+              {formatCurrency(totals.totalActual)}
             </span>
-            <span className="text-xs text-muted-foreground">
-              ({Math.abs(totals.variancePercent).toFixed(1)}%)
+            <span className="text-xs text-muted-foreground">/</span>
+            <span className="text-sm font-medium tabular-nums">
+              {formatCurrency(totals.totalExpected)}
             </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <motion.span
+              key={usagePercent}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={cn(
+                'text-lg font-semibold tabular-nums',
+                usagePercent > 100 && 'text-destructive',
+                usagePercent >= 80 && usagePercent <= 100 && 'text-amber-600 dark:text-amber-500',
+                usagePercent < 80 && 'text-emerald-600 dark:text-emerald-500'
+              )}
+            >
+              {usagePercent.toFixed(0)}%
+            </motion.span>
+            <span className="text-xs text-muted-foreground">usado</span>
           </div>
         </div>
 
-        {/* Category Breakdown */}
-        {categoryBreakdown.length > 0 && (
-          <div className="pt-3 border-t space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                Distribuição por Categoria
-              </h4>
-              {categoryBreakdown.length > 3 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setShowBreakdown(!showBreakdown)}
-                >
-                  {showBreakdown ? (
-                    <>
-                      <ChevronUp className="h-3 w-3 mr-1" />
-                      Menos
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-3 w-3 mr-1" />
-                      Ver todas ({categoryBreakdown.length})
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-
-            <AnimatePresence mode="popLayout">
-              <div className="space-y-2">
-                {displayedCategories.map((item) => (
-                  <CategoryBarItem key={item.category} breakdown={item} />
-                ))}
-              </div>
-            </AnimatePresence>
-          </div>
-        )}
+        {/* Variance Badge */}
+        <div className="flex items-center gap-2">
+          <VarianceIcon className={cn('h-4 w-4', varianceColor)} />
+          <span className={cn('text-sm font-medium', varianceColor)}>
+            {isOnBudget
+              ? 'No orçamento'
+              : isOverBudget
+              ? `+${formatCurrency(totals.variance)} acima`
+              : `${formatCurrency(Math.abs(totals.variance))} economia`}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            ({Math.abs(totals.variancePercent).toFixed(1)}%)
+          </span>
+        </div>
 
         {/* Quick Stats */}
-        <div className="flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
           <span>{totals.count} despesas</span>
-          <span>•</span>
+          <span className="text-muted-foreground/40">·</span>
           <span>{totals.recurringCount} recorrentes</span>
-          <span>•</span>
+          <span className="text-muted-foreground/40">·</span>
           <span>{totals.oneTimeCount} pontuais</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Category Breakdown - Clickable Toggle */}
+      {categoryBreakdown.length > 0 && (
+        <div>
+          {/* Clickable toggle area */}
+          <button
+            onClick={() => setShowBreakdown(!showBreakdown)}
+            className={cn(
+              'w-full px-4 py-2.5',
+              'flex items-center justify-between',
+              'border-t border-border/50',
+              'text-sm text-muted-foreground',
+              'transition-all duration-200',
+              'hover:bg-muted/50 hover:text-foreground',
+              'group cursor-pointer',
+              showBreakdown && 'bg-muted/30'
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-1">
+                {categoryBreakdown.slice(0, 3).map((item) => (
+                  <div
+                    key={item.category}
+                    className={cn(
+                      'w-2.5 h-2.5 rounded-full ring-2 ring-card',
+                      colorDotClasses[item.color]
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="group-hover:text-foreground transition-colors">
+                {showBreakdown ? 'Ocultar categorias' : 'Ver por categoria'}
+              </span>
+            </div>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 transition-transform duration-200',
+                'group-hover:text-foreground',
+                showBreakdown && 'rotate-180'
+              )}
+            />
+          </button>
+
+          {/* Expandable content */}
+          <AnimatePresence>
+            {showBreakdown && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-4 pb-4 pt-2 space-y-2 bg-muted/20">
+                  {categoryBreakdown.map((item) => (
+                    <CategoryBarItem key={item.category} breakdown={item} />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+    </motion.div>
   );
 }
