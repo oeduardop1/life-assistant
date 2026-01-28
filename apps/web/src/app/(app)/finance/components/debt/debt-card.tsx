@@ -21,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -365,22 +364,21 @@ function ExpandedDetails({
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className="overflow-hidden"
     >
-      <div className="pt-4 mt-4 border-t border-border/50 space-y-4">
-        {/* Current Month Installment Status */}
+      <div className="pt-3 mt-3 border-t border-border/50 space-y-3 pl-2">
+        {/* Current Month Installment Status - Compact inline */}
         {debt.isNegotiated && statusConfig && StatusIcon && (
           <div
             className={cn(
-              'flex items-center justify-between p-3 rounded-lg',
+              'flex items-center gap-3 px-2.5 py-2 rounded-md text-sm',
               statusConfig.bgClassName
             )}
           >
-            <div className="flex items-center gap-2">
-              <StatusIcon className={cn('h-4 w-4', statusConfig.className)} />
-              <span className={cn('text-sm font-medium', statusConfig.className)}>
-                Parcela de {formatMonthDisplay(currentMonth)}
-              </span>
-            </div>
-            <span className="text-sm">
+            <StatusIcon className={cn('h-3.5 w-3.5 shrink-0', statusConfig.className)} />
+            <span className={cn('font-medium', statusConfig.className)}>
+              {formatMonthDisplay(currentMonth)}
+            </span>
+            <span className="text-muted-foreground/70">·</span>
+            <span className="text-xs">
               {installmentStatus === 'paid' && installmentPaidAt && (
                 <>
                   Pago em{' '}
@@ -400,51 +398,51 @@ function ExpandedDetails({
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="space-y-0.5">
-            <span className="text-xs text-muted-foreground">Parcelas Pagas</span>
-            <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-500">
+        {/* Stats - Compact inline row */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Pagas:</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-500">
               {progress.paidInstallments}
-            </p>
+            </span>
           </div>
-          <div className="space-y-0.5">
-            <span className="text-xs text-muted-foreground">Restantes</span>
-            <p className="text-sm font-semibold text-amber-600 dark:text-amber-500">
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Restantes:</span>
+            <span className="font-semibold text-amber-600 dark:text-amber-500">
               {progress.remainingInstallments}
-            </p>
+            </span>
           </div>
-          <div className="space-y-0.5">
-            <span className="text-xs text-muted-foreground">Valor Parcela</span>
-            <p className="text-sm font-semibold tabular-nums">
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Parcela:</span>
+            <span className="font-semibold tabular-nums">
               {formatCurrency(debt.installmentAmount!)}
-            </p>
+            </span>
           </div>
-          <div className="space-y-0.5">
-            <span className="text-xs text-muted-foreground">Vencimento</span>
-            <p className="text-sm font-semibold">Dia {debt.dueDay}</p>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Venc:</span>
+            <span className="font-semibold">Dia {debt.dueDay}</span>
           </div>
         </div>
 
-        {/* Projection */}
+        {/* Projection - More subtle */}
         {projection && projection.message && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
-            <Target className="h-4 w-4 text-blue-600 dark:text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-sm text-blue-700 dark:text-blue-400">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-blue-500/5">
+            <Target className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+            <p className="text-xs text-blue-600 dark:text-blue-400">
               {projection.message}
             </p>
           </div>
         )}
 
-        {/* View History Link - wrapped with DebtPaymentHistory drawer */}
+        {/* View History Link */}
         {debt.isNegotiated && debt.totalInstallments && (
           <DebtPaymentHistory debt={debt}>
             <button
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              <History className="h-4 w-4" />
-              Ver histórico de pagamentos
+              <History className="h-3.5 w-3.5" />
+              Ver histórico
             </button>
           </DebtPaymentHistory>
         )}
@@ -662,32 +660,6 @@ export function DebtCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
-                {debt.isNegotiated &&
-                  (debt.status === 'active' || debt.status === 'overdue') &&
-                  onPayInstallment && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => onPayInstallment(debt)}
-                        disabled={isPayingInstallment}
-                        data-testid="debt-menu-pay-installment"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Pagar Parcela
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-
-                {!debt.isNegotiated && debt.status === 'active' && onNegotiate && (
-                  <>
-                    <DropdownMenuItem onClick={() => onNegotiate(debt)} data-testid="debt-menu-negotiate">
-                      <Handshake className="h-4 w-4 mr-2" />
-                      Negociar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-
                 {debt.isNegotiated && debt.totalInstallments && (
                   <DebtPaymentHistory debt={debt}>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
