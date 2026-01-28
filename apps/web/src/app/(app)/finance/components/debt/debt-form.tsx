@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,7 +63,7 @@ export function DebtForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<DebtFormData>({
     defaultValues: {
@@ -80,9 +80,9 @@ export function DebtForm({
     },
   });
 
-  const isNegotiated = watch('isNegotiated');
-  const startMonthYear = watch('startMonthYear') ?? getCurrentMonth();
-  const totalInstallments = watch('totalInstallments');
+  const isNegotiated = useWatch({ control, name: 'isNegotiated' });
+  const startMonthYear = useWatch({ control, name: 'startMonthYear' }) ?? getCurrentMonth();
+  const totalInstallments = useWatch({ control, name: 'totalInstallments' });
 
   return (
     <form

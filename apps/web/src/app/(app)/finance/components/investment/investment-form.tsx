@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Loader2, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,7 +64,7 @@ export function InvestmentForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<InvestmentFormData>({
     defaultValues: {
@@ -78,7 +78,7 @@ export function InvestmentForm({
     },
   });
 
-  const selectedType = watch('type');
+  const selectedType = useWatch({ control, name: 'type' });
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -103,7 +103,7 @@ export function InvestmentForm({
           <Input
             id="name"
             placeholder="Ex: Reserva de Emergencia, Aposentadoria..."
-            {...register('name', { required: 'Nome e obrigatorio' })}
+            {...register('name', { required: 'Nome é obrigatório' })}
             data-testid="investment-form-name"
           />
           {errors.name && (
@@ -173,7 +173,7 @@ export function InvestmentForm({
               placeholder="0,00"
               className="pl-10 font-mono"
               {...register('currentAmount', {
-                required: 'Valor atual e obrigatorio',
+                required: 'Valor atual é obrigatório',
                 valueAsNumber: true,
                 min: { value: 0, message: 'Valor deve ser positivo' },
               })}

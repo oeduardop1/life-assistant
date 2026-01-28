@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, RefreshCw, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -165,13 +165,10 @@ export default function DebtsPage() {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<DebtStatusFilter>('all');
 
-  // Celebration dismissal state (reset when month changes)
-  const [dismissCelebration, setDismissCelebration] = useState(false);
-
-  // Reset celebration dismissal when month changes
-  useEffect(() => {
-    setDismissCelebration(false);
-  }, [currentMonth]);
+  // Track which month celebration was dismissed for (auto-resets on month change)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [dismissedForMonth, _setDismissedForMonth] = useState<string | null>(null);
+  const dismissCelebration = dismissedForMonth === currentMonth;
 
   // Data fetching - all debts for KPIs (global view)
   const {

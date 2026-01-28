@@ -300,6 +300,6 @@ describe('BillCard', () => {
     );
 
     const card = screen.getByTestId('bill-card');
-    expect(card).toHaveClass('border-destructive/30');
+    expect(card).toHaveClass('border-l-destructive');
   });
 });

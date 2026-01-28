@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -72,17 +72,14 @@ export default function BillsPage() {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<BillStatusFilter>('all');
 
-  // Celebration dismissal state (reset when month changes)
-  const [dismissCelebration, setDismissCelebration] = useState(false);
-
-  // Reset celebration dismissal when month changes
-  useEffect(() => {
-    setDismissCelebration(false);
-  }, [currentMonth]);
+  // Track which month celebration was dismissed for (auto-resets on month change)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [dismissedForMonth, _setDismissedForMonth] = useState<string | null>(null);
+  const dismissCelebration = dismissedForMonth === currentMonth;
 
   // Data fetching
   const { data, isLoading, isError, refetch } = useBills({ monthYear: currentMonth });
-  const allBills = data?.bills ?? [];
+  const allBills = useMemo(() => data?.bills ?? [], [data?.bills]);
 
   // Calculate filter counts
   const filterCounts = useMemo(() => {

@@ -24,7 +24,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
   formatCurrency,
-  debtStatusLabels,
   calculateDebtProgress,
   type Debt,
 } from '../../types';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFinanceContext } from '../context/finance-context';
@@ -113,13 +113,10 @@ export default function IncomesPage() {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<IncomeStatusFilter>('all');
 
-  // Celebration dismissal state (reset when month changes)
-  const [dismissCelebration, setDismissCelebration] = useState(false);
-
-  // Reset celebration dismissal when month changes
-  useEffect(() => {
-    setDismissCelebration(false);
-  }, [currentMonth]);
+  // Track which month celebration was dismissed for (auto-resets on month change)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [dismissedForMonth, _setDismissedForMonth] = useState<string | null>(null);
+  const dismissCelebration = dismissedForMonth === currentMonth;
 
   // Filtered incomes
   const filteredIncomes = useMemo(

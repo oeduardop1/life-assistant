@@ -20,12 +20,13 @@ describe('FinanceNavTabs', () => {
   it('should_render_all_finance_tabs', () => {
     render(<FinanceNavTabs />);
 
-    expect(screen.getByText('Visão Geral')).toBeInTheDocument();
-    expect(screen.getByText('Rendas')).toBeInTheDocument();
-    expect(screen.getByText('Contas')).toBeInTheDocument();
-    expect(screen.getByText('Despesas')).toBeInTheDocument();
-    expect(screen.getByText('Dívidas')).toBeInTheDocument();
-    expect(screen.getByText('Investimentos')).toBeInTheDocument();
+    // Using testids for robust testing (component has responsive text duplication)
+    expect(screen.getByTestId('finance-tab-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('finance-tab-incomes')).toBeInTheDocument();
+    expect(screen.getByTestId('finance-tab-bills')).toBeInTheDocument();
+    expect(screen.getByTestId('finance-tab-expenses')).toBeInTheDocument();
+    expect(screen.getByTestId('finance-tab-debts')).toBeInTheDocument();
+    expect(screen.getByTestId('finance-tab-investments')).toBeInTheDocument();
   });
 
   it('should_highlight_overview_tab_when_on_finance_root', () => {

@@ -123,7 +123,7 @@ describe('InvestmentCard', () => {
       />
     );
 
-    expect(screen.getByTestId('investment-contribution')).toHaveTextContent('R$ 1.000,00/mês');
+    expect(screen.getByTestId('investment-contribution')).toHaveTextContent('R$ 1.000,00/mes');
   });
 
   it('should_not_show_monthly_contribution_when_not_defined', () => {
@@ -285,8 +285,8 @@ describe('InvestmentCard', () => {
       />
     );
 
-    await user.click(screen.getByTestId('investment-actions-trigger'));
-    const updateValueButton = await screen.findByTestId('investment-update-value-action');
+    // The quick update button is outside the dropdown menu
+    const updateValueButton = screen.getByTestId('investment-quick-update');
     await user.click(updateValueButton);
 
     expect(onUpdateValue).toHaveBeenCalledWith(mockInvestmentWithGoal);

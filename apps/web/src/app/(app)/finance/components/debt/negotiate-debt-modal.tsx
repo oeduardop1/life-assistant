@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import {
   Loader2,
@@ -125,7 +125,7 @@ function ValueComparison({
       {/* Original Value */}
       <div className="text-center">
         <p className="text-xs text-muted-foreground mb-1">Valor Original</p>
-        <p className="text-lg font-semibold tabular-nums">
+        <p className="text-lg font-semibold tabular-nums" data-testid="negotiate-debt-total">
           {formatCurrency(original)}
         </p>
       </div>
@@ -186,6 +186,7 @@ interface SliderInputProps {
   prefix?: string;
   tooltip?: string;
   formatValue?: (value: number) => string;
+  testId?: string;
 }
 
 function SliderInput({
@@ -199,11 +200,12 @@ function SliderInput({
   prefix,
   tooltip,
   formatValue,
+  testId,
 }: SliderInputProps) {
   const displayValue = formatValue ? formatValue(value) : value.toString();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid={testId}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Label className="text-sm font-medium">{label}</Label>
@@ -444,9 +446,9 @@ export function NegotiateDebtModal({
 
   const {
     handleSubmit,
-    watch,
     setValue,
     reset,
+    control,
   } = useForm<NegotiateFormData>({
     defaultValues: {
       totalInstallments: 12,
@@ -456,10 +458,10 @@ export function NegotiateDebtModal({
     },
   });
 
-  const totalInstallments = watch('totalInstallments');
-  const installmentAmount = watch('installmentAmount');
-  const dueDay = watch('dueDay');
-  const startMonthYear = watch('startMonthYear');
+  const totalInstallments = useWatch({ control, name: 'totalInstallments' });
+  const installmentAmount = useWatch({ control, name: 'installmentAmount' });
+  const dueDay = useWatch({ control, name: 'dueDay' });
+  const startMonthYear = useWatch({ control, name: 'startMonthYear' });
 
   // Reset form when debt changes
   useEffect(() => {
@@ -564,6 +566,7 @@ export function NegotiateDebtModal({
               step={1}
               suffix="x"
               tooltip="Quantidade total de parcelas para quitar a dívida"
+              testId="negotiate-form-total-installments"
             />
 
             {/* Amount Slider */}
@@ -577,10 +580,11 @@ export function NegotiateDebtModal({
               prefix="R$ "
               formatValue={(v) => v.toLocaleString('pt-BR')}
               tooltip="Valor de cada parcela mensal"
+              testId="negotiate-form-installment-amount"
             />
 
             {/* Due Day Input */}
-            <div className="space-y-2">
+            <div className="space-y-2" data-testid="negotiate-form-due-day">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">Dia de Vencimento</Label>
                 <div className="flex items-center gap-2">

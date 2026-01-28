@@ -294,6 +294,7 @@ function CTAButton({
           onNegotiate(debt);
         }}
         className="shrink-0"
+        data-testid="debt-negotiate-action"
       >
         <Handshake className="h-4 w-4 mr-1.5" />
         Negociar
@@ -327,6 +328,7 @@ function CTAButton({
         }}
         disabled={isPaying}
         className="shrink-0"
+        data-testid="debt-pay-installment-action"
       >
         {isOverdue ? 'Pagar Agora' : `Pagar ${formatCurrency(debt.installmentAmount!)}`}
       </Button>
@@ -564,17 +566,18 @@ export function DebtCard({
                   'font-medium text-sm truncate',
                   isPaidOff && 'line-through text-muted-foreground'
                 )}
+                data-testid="debt-name"
               >
                 {debt.name}
               </h3>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {debt.creditor && <span>{debt.creditor}</span>}
+                {debt.creditor && <span data-testid="debt-creditor">{debt.creditor}</span>}
                 {debt.creditor && <span>·</span>}
-                <span>{debtStatusLabels[debt.status]}</span>
+                <span data-testid="debt-status-badge">{debtStatusLabels[debt.status]}</span>
                 {!debt.isNegotiated && (
                   <>
                     <span>·</span>
-                    <span className="text-amber-600 dark:text-amber-500">
+                    <span className="text-amber-600 dark:text-amber-500" data-testid="debt-pending-badge">
                       Pendente de negociação
                     </span>
                   </>
@@ -589,11 +592,12 @@ export function DebtCard({
                   'text-sm font-semibold font-mono tabular-nums',
                   isPaidOff && 'line-through text-muted-foreground'
                 )}
+                data-testid="debt-amount"
               >
                 {formatCurrency(debt.totalAmount)}
               </p>
               {debt.isNegotiated && debt.installmentAmount && (
-                <p className="text-xs text-muted-foreground font-mono tabular-nums">
+                <p className="text-xs text-muted-foreground font-mono tabular-nums" data-testid="debt-installment-amount">
                   {formatCurrency(debt.installmentAmount)}/mês
                 </p>
               )}
@@ -602,10 +606,12 @@ export function DebtCard({
 
           {/* Progress Bar (Negotiated only) */}
           {hasDetails && (
-            <MiniProgressBar
-              current={debt.currentInstallment}
-              total={debt.totalInstallments!}
-            />
+            <div data-testid="debt-progress-bar">
+              <MiniProgressBar
+                current={debt.currentInstallment}
+                total={debt.totalInstallments!}
+              />
+            </div>
           )}
 
           {/* Bottom Row: Status + CTA */}
@@ -637,7 +643,7 @@ export function DebtCard({
                 </>
               )}
               {debt.isNegotiated && (
-                <span className="text-emerald-600 dark:text-emerald-500">
+                <span className="text-emerald-600 dark:text-emerald-500" data-testid="debt-paid-amount">
                   Pago: {formatCurrency(progress.paidAmount)}
                 </span>
               )}
@@ -671,6 +677,7 @@ export function DebtCard({
                     size="icon"
                     className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => e.stopPropagation()}
+                    data-testid="debt-actions-trigger"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                     <span className="sr-only">Ações</span>
@@ -684,6 +691,7 @@ export function DebtCard({
                         <DropdownMenuItem
                           onClick={() => onPayInstallment(debt)}
                           disabled={isPayingInstallment}
+                          data-testid="debt-menu-pay-installment"
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Pagar Parcela {debt.currentInstallment}
@@ -696,7 +704,7 @@ export function DebtCard({
                     debt.status === 'active' &&
                     onNegotiate && (
                       <>
-                        <DropdownMenuItem onClick={() => onNegotiate(debt)}>
+                        <DropdownMenuItem onClick={() => onNegotiate(debt)} data-testid="debt-menu-negotiate">
                           <Handshake className="h-4 w-4 mr-2" />
                           Negociar
                         </DropdownMenuItem>
@@ -713,13 +721,14 @@ export function DebtCard({
                     </DebtPaymentHistory>
                   )}
 
-                  <DropdownMenuItem onClick={() => onEdit(debt)}>
+                  <DropdownMenuItem onClick={() => onEdit(debt)} data-testid="debt-edit-action">
                     <Pencil className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => onDelete(debt)}
                     className="text-destructive focus:text-destructive"
+                    data-testid="debt-delete-action"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Excluir

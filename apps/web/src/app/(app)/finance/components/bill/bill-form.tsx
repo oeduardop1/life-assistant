@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,7 +60,7 @@ export function BillForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<BillFormData>({
     defaultValues: {
@@ -73,8 +73,8 @@ export function BillForm({
     },
   });
 
-  const categoryValue = watch('category');
-  const isRecurring = watch('isRecurring');
+  const categoryValue = useWatch({ control, name: 'category' });
+  const isRecurring = useWatch({ control, name: 'isRecurring' });
 
   return (
     <form

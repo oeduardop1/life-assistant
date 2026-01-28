@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,7 +63,7 @@ export function IncomeForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<IncomeFormData>({
     defaultValues: {
@@ -77,9 +77,9 @@ export function IncomeForm({
     },
   });
 
-  const typeValue = watch('type');
-  const frequencyValue = watch('frequency');
-  const isRecurring = watch('isRecurring');
+  const typeValue = useWatch({ control, name: 'type' });
+  const frequencyValue = useWatch({ control, name: 'frequency' });
+  const isRecurring = useWatch({ control, name: 'isRecurring' });
 
   return (
     <form

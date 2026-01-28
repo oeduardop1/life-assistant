@@ -450,7 +450,7 @@ export function PullToRefresh({ refreshing, onRefresh, children }: PullToRefresh
   const [pulling, setPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
 
-  const handleTouchStart = (_e: React.TouchEvent) => {
+  const handleTouchStart = () => {
     if (window.scrollY === 0) {
       setPulling(true);
     }

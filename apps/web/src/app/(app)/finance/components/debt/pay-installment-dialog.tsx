@@ -94,7 +94,7 @@ function QuantitySelector({
         animate={{ y: 0, opacity: 1 }}
         className="text-center"
       >
-        <p className="text-2xl font-semibold tabular-nums">
+        <p className="text-2xl font-semibold tabular-nums" data-testid="pay-installment-amount">
           {formatCurrency(value * installmentAmount)}
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">
@@ -383,7 +383,7 @@ function DialogContentInner({ debt, onOpenChange }: DialogContentInnerProps) {
       {/* Actions */}
       {!showSuccess && (
         <AlertDialogFooter className="gap-2 sm:gap-0">
-          <AlertDialogCancel disabled={payInstallment.isPending}>
+          <AlertDialogCancel disabled={payInstallment.isPending} data-testid="pay-installment-cancel">
             Cancelar
           </AlertDialogCancel>
           <AlertDialogAction
@@ -395,6 +395,7 @@ function DialogContentInner({ debt, onOpenChange }: DialogContentInnerProps) {
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                 : ''
             )}
+            data-testid="pay-installment-confirm"
           >
             {payInstallment.isPending && (
               <Loader2 className="h-4 w-4 animate-spin" />

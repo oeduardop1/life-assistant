@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Loader2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,7 +68,7 @@ export function ExpenseForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<ExpenseFormData>({
     defaultValues: {
@@ -81,10 +81,10 @@ export function ExpenseForm({
     },
   });
 
-  const categoryValue = watch('category');
-  const isRecurring = watch('isRecurring');
-  const expectedAmount = watch('expectedAmount');
-  const actualAmount = watch('actualAmount');
+  const categoryValue = useWatch({ control, name: 'category' });
+  const isRecurring = useWatch({ control, name: 'isRecurring' });
+  const expectedAmount = useWatch({ control, name: 'expectedAmount' });
+  const actualAmount = useWatch({ control, name: 'actualAmount' });
 
   // Calculate preview
   const usagePercent = expectedAmount > 0

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch, Control } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader2,
@@ -298,7 +298,7 @@ function InfoStep({ register, errors, onBack, onNext, isValid }: InfoStepProps) 
 interface TermsStepProps {
   register: ReturnType<typeof useForm<FormData>>['register'];
   errors: ReturnType<typeof useForm<FormData>>['formState']['errors'];
-  watch: ReturnType<typeof useForm<FormData>>['watch'];
+  control: Control<FormData>;
   setValue: ReturnType<typeof useForm<FormData>>['setValue'];
   onBack: () => void;
   onNext: () => void;
@@ -308,16 +308,16 @@ interface TermsStepProps {
 function TermsStep({
   register,
   errors,
-  watch,
+  control,
   setValue,
   onBack,
   onNext,
   isValid,
 }: TermsStepProps) {
-  const totalAmount = watch('totalAmount') || 0;
-  const totalInstallments = watch('totalInstallments') || 0;
-  const installmentAmount = watch('installmentAmount') || 0;
-  const startMonthYear = watch('startMonthYear') || getCurrentMonth();
+  const totalAmount = useWatch({ control, name: 'totalAmount' }) || 0;
+  const totalInstallments = useWatch({ control, name: 'totalInstallments' }) || 0;
+  const installmentAmount = useWatch({ control, name: 'installmentAmount' }) || 0;
+  const startMonthYear = useWatch({ control, name: 'startMonthYear' }) || getCurrentMonth();
 
   const totalWithInstallments = totalInstallments * installmentAmount;
   const difference = totalWithInstallments - totalAmount;
@@ -474,25 +474,28 @@ function TermsStep({
 // =============================================================================
 
 interface ReviewStepProps {
-  watch: ReturnType<typeof useForm<FormData>>['watch'];
+  control: Control<FormData>;
   onBack: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
 }
 
-function ReviewStep({ watch, onBack, onSubmit, isSubmitting }: ReviewStepProps) {
-  const data = watch();
+function ReviewStep({ control, onBack, onSubmit, isSubmitting }: ReviewStepProps) {
+  const data = useWatch({ control });
+  const totalInstallments = data.totalInstallments ?? 0;
+  const totalAmount = data.totalAmount ?? 0;
+
   const endMonth =
-    data.isNegotiated && data.totalInstallments > 0
+    data.isNegotiated && totalInstallments > 0
       ? calculateDebtEndMonth(
           data.startMonthYear || getCurrentMonth(),
-          data.totalInstallments
+          totalInstallments
         )
       : null;
 
   const totalWithInstallments =
-    data.isNegotiated && data.totalInstallments && data.installmentAmount
-      ? data.totalInstallments * data.installmentAmount
+    data.isNegotiated && totalInstallments && data.installmentAmount
+      ? totalInstallments * data.installmentAmount
       : 0;
 
   return (
@@ -559,7 +562,7 @@ function ReviewStep({ watch, onBack, onSubmit, isSubmitting }: ReviewStepProps) 
                   {endMonth ? formatMonthDisplay(endMonth) : '-'}
                 </p>
               </div>
-              {totalWithInstallments > data.totalAmount && (
+              {totalWithInstallments > totalAmount && (
                 <div className="col-span-2">
                   <span className="text-xs text-muted-foreground">
                     Total com Juros
@@ -646,8 +649,8 @@ export function CreateDebtModal({ open, onOpenChange }: CreateDebtModalProps) {
     mode: 'onChange',
   });
 
-  const { register, watch, setValue, formState, trigger, reset } = form;
-  const isNegotiated = watch('isNegotiated');
+  const { register, control, setValue, formState, trigger, reset, getValues } = form;
+  const isNegotiated = useWatch({ control, name: 'isNegotiated' });
 
   // Reset form when modal closes
   const handleOpenChange = useCallback(
@@ -664,7 +667,7 @@ export function CreateDebtModal({ open, onOpenChange }: CreateDebtModalProps) {
   );
 
   const handleSubmit = async () => {
-    const data = watch();
+    const data = getValues();
 
     try {
       await createDebt.mutateAsync({
@@ -779,7 +782,7 @@ export function CreateDebtModal({ open, onOpenChange }: CreateDebtModalProps) {
                 key="terms"
                 register={register}
                 errors={formState.errors}
-                watch={watch}
+                control={control}
                 setValue={setValue}
                 onBack={() => goToStep('info')}
                 onNext={() => goToStep('review')}
@@ -789,7 +792,7 @@ export function CreateDebtModal({ open, onOpenChange }: CreateDebtModalProps) {
             {step === 'review' && (
               <ReviewStep
                 key="review"
-                watch={watch}
+                control={control}
                 onBack={() => goToStep(getPrevStep())}
                 onSubmit={handleSubmit}
                 isSubmitting={createDebt.isPending}

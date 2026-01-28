@@ -259,18 +259,20 @@ export function AnimatedCard({ children, className }: AnimatedCardProps) {
 interface StaggerListProps {
   children: ReactNode;
   className?: string;
+  'data-testid'?: string;
 }
 
 /**
  * StaggerList - Container for staggered list animations
  */
-export function StaggerList({ children, className }: StaggerListProps) {
+export function StaggerList({ children, className, 'data-testid': testId }: StaggerListProps) {
   return (
     <motion.div
       initial="hidden"
       animate="visible"
       variants={staggerContainer}
       className={className}
+      data-testid={testId}
     >
       {children}
     </motion.div>
