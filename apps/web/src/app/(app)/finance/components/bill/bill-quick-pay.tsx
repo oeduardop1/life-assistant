@@ -393,7 +393,7 @@ interface QuickPayTriggerProps {
 }
 
 /**
- * QuickPayTrigger - Button to enter quick pay mode
+ * QuickPayTrigger - Compact button to enter quick pay mode
  */
 export function QuickPayTrigger({
   pendingAmount,
@@ -404,33 +404,30 @@ export function QuickPayTrigger({
   if (pendingCount === 0) return null;
 
   return (
-    <motion.button
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+    <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-xl',
+        'group flex items-center gap-3 px-3 py-2 rounded-lg w-full',
         'bg-foreground/5 hover:bg-foreground/10 border border-foreground/10',
-        'transition-colors cursor-pointer w-full',
+        'transition-all cursor-pointer',
         className
       )}
     >
-      <div className="p-2 rounded-lg bg-foreground/5">
+      <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center shrink-0">
         <Target className="h-4 w-4" />
       </div>
-      <div className="flex-1 text-left">
-        <p className="text-sm font-medium">Pagar Contas</p>
-        <p className="text-xs text-muted-foreground">
-          {pendingCount} {pendingCount === 1 ? 'conta pendente' : 'contas pendentes'}
-        </p>
+      <div className="flex-1 text-left min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Pagar Contas</span>
+          <span className="text-xs text-muted-foreground">
+            {pendingCount} {pendingCount === 1 ? 'pendente' : 'pendentes'}
+          </span>
+        </div>
       </div>
-      <div className="text-right">
-        <p className="font-semibold tabular-nums">{formatCurrency(pendingAmount)}</p>
-        <p className="text-xs text-muted-foreground">este mês</p>
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-    </motion.button>
+      <span className="text-sm font-semibold tabular-nums shrink-0">
+        {formatCurrency(pendingAmount)}
+      </span>
+      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+    </button>
   );
 }
