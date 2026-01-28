@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import { Drawer } from 'vaul';
 import {
@@ -217,19 +217,21 @@ interface FABProps {
  */
 export function FAB({ onClick, icon: Icon = Plus, label, className }: FABProps) {
   const [visible, setVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
-    const direction = latest > lastScrollY ? 'down' : 'up';
+    // Add threshold to avoid rapid toggling from elastic scroll
+    const scrollDiff = latest - lastScrollY.current;
+    const threshold = 10;
 
-    if (direction === 'down' && latest > 100) {
+    if (scrollDiff > threshold && latest > 100) {
       setVisible(false);
-    } else {
+    } else if (scrollDiff < -threshold) {
       setVisible(true);
     }
 
-    setLastScrollY(latest);
+    lastScrollY.current = latest;
   });
 
   return (
@@ -275,10 +277,16 @@ interface ScrollToTopProps {
  */
 export function ScrollToTop({ threshold = 400, className }: ScrollToTopProps) {
   const [visible, setVisible] = useState(false);
+  const lastVisible = useRef(false);
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
-    setVisible(latest > threshold);
+    // Only update state when visibility actually changes
+    const shouldBeVisible = latest > threshold;
+    if (shouldBeVisible !== lastVisible.current) {
+      lastVisible.current = shouldBeVisible;
+      setVisible(shouldBeVisible);
+    }
   });
 
   const scrollToTop = () => {
