@@ -126,20 +126,47 @@ function CategoryBreakdown({ bills, total }: CategoryBreakdownProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div>
+      {/* Clickable toggle area with visual feedback */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className={cn(
+          'w-full px-4 py-2.5',
+          'flex items-center justify-between',
+          'border-t border-border/50',
+          'text-sm text-muted-foreground',
+          'transition-all duration-200',
+          'hover:bg-muted/50 hover:text-foreground',
+          'group cursor-pointer',
+          isExpanded && 'bg-muted/30'
+        )}
       >
-        <span>Por categoria</span>
+        <div className="flex items-center gap-2">
+          <div className="flex -space-x-1">
+            {sortedCategories.slice(0, 3).map(([category]) => (
+              <div
+                key={category}
+                className={cn(
+                  'w-2.5 h-2.5 rounded-full ring-2 ring-card',
+                  categoryColors[category]
+                )}
+              />
+            ))}
+          </div>
+          <span className="group-hover:text-foreground transition-colors">
+            {isExpanded ? 'Ocultar categorias' : 'Ver por categoria'}
+          </span>
+        </div>
         <ChevronDown
           className={cn(
-            'h-4 w-4 transition-transform',
+            'h-4 w-4 transition-transform duration-200',
+            'group-hover:text-foreground',
             isExpanded && 'rotate-180'
           )}
         />
       </button>
 
+      {/* Expandable content */}
       <motion.div
         initial={false}
         animate={{
@@ -149,7 +176,7 @@ function CategoryBreakdown({ bills, total }: CategoryBreakdownProps) {
         transition={{ duration: 0.2 }}
         className="overflow-hidden"
       >
-        <div className="pt-2 space-y-2">
+        <div className="px-4 pb-4 pt-2 space-y-2 bg-muted/20">
           {sortedCategories.map(([category, amount]) => {
             const percent = total > 0 ? Math.round((amount / total) * 100) : 0;
             const Icon = categoryIcons[category];
@@ -222,18 +249,20 @@ export function BillSummary({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: 0.1 }}
       className={cn(
-        'p-4 rounded-xl border bg-card/50 backdrop-blur-sm space-y-3',
+        'rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden',
         className
       )}
       data-testid="bill-summary"
     >
       {/* Global Progress Bar */}
-      <GlobalProgressBar
-        paid={totals.paid}
-        total={totals.total}
-      />
+      <div className="p-4 pb-3">
+        <GlobalProgressBar
+          paid={totals.paid}
+          total={totals.total}
+        />
+      </div>
 
-      {/* Category Breakdown */}
+      {/* Category Breakdown - has its own padding/spacing */}
       {bills.length > 0 && (
         <CategoryBreakdown
           bills={bills}
