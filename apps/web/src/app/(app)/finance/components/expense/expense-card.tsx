@@ -174,9 +174,16 @@ export function ExpenseCard({
     ? 'bg-amber-500'
     : 'bg-emerald-500';
 
+  // Status-based border color for status strip
+  const getStatusBorderClass = () => {
+    if (isOverBudget) return 'border-l-destructive';
+    if (progressPercent >= 80) return 'border-l-amber-500';
+    return 'border-l-emerald-500';
+  };
+
   return (
     <HoverCard>
-      <Card data-testid="expense-card" className="overflow-hidden">
+      <Card data-testid="expense-card" className={cn('overflow-hidden border-l-4', getStatusBorderClass())}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-4">
             {/* Left: Icon + Info */}
@@ -248,11 +255,11 @@ export function ExpenseCard({
                     />
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>
+                    <span className="font-mono tabular-nums">
                       {formatCurrency(actualAmount)} de {formatCurrency(expectedAmount)}
                     </span>
                     <span className={cn(
-                      'tabular-nums',
+                      'font-mono tabular-nums',
                       isOverBudget && 'text-destructive font-medium',
                       !isOverBudget && progressPercent >= 80 && 'text-amber-600 dark:text-amber-500',
                       !isOverBudget && progressPercent < 80 && 'text-emerald-600 dark:text-emerald-500'

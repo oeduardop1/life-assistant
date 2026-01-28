@@ -195,6 +195,8 @@ export interface FinanceTabItem {
   id: FinanceTab;
   label: string;
   href: string;
+  /** Icon name from lucide-react */
+  icon: string;
 }
 
 // =============================================================================
@@ -202,15 +204,15 @@ export interface FinanceTabItem {
 // =============================================================================
 
 /**
- * Finance navigation tabs
+ * Finance navigation tabs with icons
  */
 export const financeTabs: FinanceTabItem[] = [
-  { id: 'overview', label: 'Visão Geral', href: '/finance' },
-  { id: 'incomes', label: 'Rendas', href: '/finance/incomes' },
-  { id: 'bills', label: 'Contas', href: '/finance/bills' },
-  { id: 'expenses', label: 'Despesas', href: '/finance/expenses' },
-  { id: 'debts', label: 'Dívidas', href: '/finance/debts' },
-  { id: 'investments', label: 'Investimentos', href: '/finance/investments' },
+  { id: 'overview', label: 'Visão Geral', href: '/finance', icon: 'LayoutDashboard' },
+  { id: 'incomes', label: 'Rendas', href: '/finance/incomes', icon: 'TrendingUp' },
+  { id: 'bills', label: 'Contas', href: '/finance/bills', icon: 'Receipt' },
+  { id: 'expenses', label: 'Despesas', href: '/finance/expenses', icon: 'ShoppingCart' },
+  { id: 'debts', label: 'Dívidas', href: '/finance/debts', icon: 'CreditCard' },
+  { id: 'investments', label: 'Investimentos', href: '/finance/investments', icon: 'PiggyBank' },
 ];
 
 /**
@@ -235,6 +237,18 @@ export const kpiBgColors: Record<FinanceKPI['color'], string> = {
   orange: 'bg-orange-500/10',
   purple: 'bg-purple-500/10',
   yellow: 'bg-yellow-500/10',
+};
+
+/**
+ * KPI left border color classes (Tailwind) - for status strip pattern
+ */
+export const kpiBorderColors: Record<FinanceKPI['color'], string> = {
+  green: 'border-l-green-500',
+  red: 'border-l-red-500',
+  blue: 'border-l-blue-500',
+  orange: 'border-l-orange-500',
+  purple: 'border-l-purple-500',
+  yellow: 'border-l-yellow-500',
 };
 
 /**

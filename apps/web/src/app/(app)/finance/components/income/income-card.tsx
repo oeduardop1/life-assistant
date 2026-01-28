@@ -328,7 +328,7 @@ export function IncomeCard({
               {/* Expected */}
               <div>
                 <span className="text-xs text-muted-foreground mr-1">Previsto:</span>
-                <span className="text-sm font-medium tabular-nums" data-testid="income-expected">
+                <span className="text-sm font-medium font-mono tabular-nums" data-testid="income-expected">
                   {formatCurrency(income.expectedAmount)}
                 </span>
               </div>
@@ -338,7 +338,7 @@ export function IncomeCard({
                 <div>
                   <span className="text-xs text-muted-foreground mr-1">Real:</span>
                   <span
-                    className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-500"
+                    className="text-sm font-semibold font-mono tabular-nums text-emerald-600 dark:text-emerald-500"
                     data-testid="income-actual"
                   >
                     {formatCurrency(actualAmount)}

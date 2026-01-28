@@ -75,6 +75,29 @@ interface KPICardsSectionProps {
   balance: number;
   totalInvested: number;
   totalDebts: number;
+  /** Previous month's balance for trend calculation */
+  previousBalance?: number;
+}
+
+/**
+ * Calculate trend based on balance comparison
+ */
+function getBalanceTrend(balance: number, previousBalance?: number): { value: number; direction: 'up' | 'down' | 'neutral' } | undefined {
+  if (previousBalance === undefined || previousBalance === 0) {
+    return undefined;
+  }
+
+  const diff = balance - previousBalance;
+  const percentChange = (diff / Math.abs(previousBalance)) * 100;
+
+  if (Math.abs(percentChange) < 0.5) {
+    return { value: 0, direction: 'neutral' };
+  }
+
+  return {
+    value: Math.abs(percentChange),
+    direction: diff > 0 ? 'up' : 'down',
+  };
 }
 
 function KPICardsSection({
@@ -85,8 +108,10 @@ function KPICardsSection({
   balance,
   totalInvested,
   totalDebts,
+  previousBalance,
 }: KPICardsSectionProps) {
   const balanceColor = getBalanceColor(balance);
+  const balanceTrend = getBalanceTrend(balance, previousBalance);
 
   return (
     <FinanceKPICardsGrid>
@@ -116,6 +141,7 @@ function KPICardsSection({
         value={balance}
         icon="Wallet"
         color={balanceColor}
+        trend={balanceTrend}
         loading={loading}
       />
       <FinanceKPICard
@@ -126,7 +152,7 @@ function KPICardsSection({
         loading={loading}
       />
       <FinanceKPICard
-        title="Total de Dívidas"
+        title="Total em Dívidas"
         value={totalDebts}
         icon="CreditCard"
         color="red"
@@ -279,6 +305,12 @@ export default function FinanceDashboardPage() {
 
   const monthlyEvolution: MonthlyDataPoint[] = evolutionData?.data ?? [];
 
+  // Get previous month's balance from evolution data for trend calculation
+  const previousMonthData = monthlyEvolution.length >= 2
+    ? monthlyEvolution[monthlyEvolution.length - 2]
+    : undefined;
+  const previousBalance = previousMonthData?.balance;
+
   if (isError) {
     return <ErrorState onRetry={() => refetch()} />;
   }
@@ -298,6 +330,7 @@ export default function FinanceDashboardPage() {
         balance={summary?.balance ?? 0}
         totalInvested={summary?.investments.totalCurrentAmount ?? 0}
         totalDebts={summary?.debts.totalRemaining ?? 0}
+        previousBalance={previousBalance}
       />
 
       {/* Charts */}

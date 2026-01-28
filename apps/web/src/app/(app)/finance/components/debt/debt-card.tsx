@@ -102,42 +102,102 @@ function getInstallmentStatusConfig(status: UpcomingInstallmentStatus) {
 }
 
 // =============================================================================
-// Progress Bar Component
+// Segmented Progress Bar Component
 // =============================================================================
 
-interface MiniProgressBarProps {
+interface SegmentedProgressBarProps {
   current: number;
   total: number;
   className?: string;
+  /** Maximum visible segments before collapsing */
+  maxSegments?: number;
 }
 
-function MiniProgressBar({ current, total, className }: MiniProgressBarProps) {
+/**
+ * SegmentedProgressBar - Visual progress indicator with individual segments
+ *
+ * Each segment represents one installment:
+ * - Filled segments = paid
+ * - Empty segments = remaining
+ * - Current segment has pulse animation
+ */
+function SegmentedProgressBar({
+  current,
+  total,
+  className,
+  maxSegments = 12,
+}: SegmentedProgressBarProps) {
   const paid = current - 1;
-  const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
+  const shouldCollapse = total > maxSegments;
 
-  const getColor = () => {
-    if (percent >= 75) return 'bg-emerald-500';
-    if (percent >= 50) return 'bg-blue-500';
-    if (percent >= 25) return 'bg-amber-500';
-    return 'bg-foreground/30';
-  };
+  // For collapsed view, show proportional progress
+  if (shouldCollapse) {
+    const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
+    const getColor = () => {
+      if (percent >= 75) return 'bg-emerald-500';
+      if (percent >= 50) return 'bg-blue-500';
+      if (percent >= 25) return 'bg-amber-500';
+      return 'bg-foreground/30';
+    };
 
+    return (
+      <div className={cn('flex items-center gap-2', className)}>
+        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${percent}%` }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className={cn('h-full rounded-full', getColor())}
+          />
+        </div>
+        <span className="text-xs text-muted-foreground font-mono tabular-nums whitespace-nowrap">
+          {paid}/{total}
+        </span>
+      </div>
+    );
+  }
+
+  // Segmented view for smaller totals
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${percent}%` }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          className={cn('h-full rounded-full', getColor())}
-        />
+      <div className="flex gap-0.5 flex-1">
+        {Array.from({ length: total }).map((_, index) => {
+          const isPaid = index < paid;
+          const isCurrent = index === paid;
+
+          return (
+            <motion.div
+              key={index}
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ duration: 0.3, delay: index * 0.03 }}
+              className={cn(
+                'flex-1 h-2 rounded-sm transition-colors',
+                isPaid && 'bg-emerald-500',
+                !isPaid && !isCurrent && 'bg-muted',
+                isCurrent && 'bg-blue-500'
+              )}
+            >
+              {isCurrent && (
+                <motion.div
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                  className="w-full h-full bg-blue-400 rounded-sm"
+                />
+              )}
+            </motion.div>
+          );
+        })}
       </div>
-      <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+      <span className="text-xs text-muted-foreground font-mono tabular-nums whitespace-nowrap">
         {paid}/{total}
       </span>
     </div>
   );
 }
+
+// Keep old MiniProgressBar as alias for backwards compatibility
+const MiniProgressBar = SegmentedProgressBar;
 
 // =============================================================================
 // Status Indicator
@@ -526,14 +586,14 @@ export function DebtCard({
             <div className="text-right shrink-0">
               <p
                 className={cn(
-                  'text-sm font-semibold tabular-nums',
+                  'text-sm font-semibold font-mono tabular-nums',
                   isPaidOff && 'line-through text-muted-foreground'
                 )}
               >
                 {formatCurrency(debt.totalAmount)}
               </p>
               {debt.isNegotiated && debt.installmentAmount && (
-                <p className="text-xs text-muted-foreground tabular-nums">
+                <p className="text-xs text-muted-foreground font-mono tabular-nums">
                   {formatCurrency(debt.installmentAmount)}/mês
                 </p>
               )}

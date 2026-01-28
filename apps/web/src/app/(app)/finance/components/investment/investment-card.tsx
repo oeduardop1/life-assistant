@@ -75,8 +75,15 @@ export function InvestmentCard({
     ? parseFloat(investment.monthlyContribution)
     : null;
 
+  // Status-based border color
+  const getStatusBorderClass = () => {
+    if (progress.progressPercent >= 100) return 'border-l-emerald-500';
+    if (progress.progressPercent >= 50) return 'border-l-blue-500';
+    return 'border-l-amber-500';
+  };
+
   return (
-    <Card data-testid="investment-card">
+    <Card data-testid="investment-card" className={cn('border-l-4', hasGoal ? getStatusBorderClass() : 'border-l-purple-500')}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           {/* Left: Icon + Info */}
@@ -167,12 +174,12 @@ export function InvestmentCard({
           <div className="flex items-start gap-3 shrink-0">
             {/* Current Value */}
             <div className="text-right">
-              <p className="text-sm font-medium" data-testid="investment-current-amount">
+              <p className="text-sm font-semibold font-mono tabular-nums" data-testid="investment-current-amount">
                 {formatCurrency(progress.currentAmount)}
               </p>
               {hasGoal && progress.remainingAmount !== null && progress.remainingAmount > 0 && (
                 <p
-                  className="text-xs text-muted-foreground mt-0.5"
+                  className="text-xs text-muted-foreground font-mono tabular-nums mt-0.5"
                   data-testid="investment-remaining"
                 >
                   Faltam {formatCurrency(progress.remainingAmount)}

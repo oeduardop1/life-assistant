@@ -184,6 +184,14 @@ export function BillCard({
   const daysUntilDue = getDaysUntilDue(bill.monthYear, bill.dueDay);
   const urgencyInfo = getUrgencyInfo(daysUntilDue, isPaid, isOverdue);
 
+  // Status-based border color
+  const getStatusBorderClass = () => {
+    if (isPaid) return 'border-l-emerald-500';
+    if (isOverdue) return 'border-l-destructive';
+    if (isCanceled) return 'border-l-muted-foreground';
+    return 'border-l-amber-500'; // pending
+  };
+
   return (
     <HoverCard>
       <motion.div
@@ -191,10 +199,14 @@ export function BillCard({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
+        whileHover={{ scale: 1.01 }}
+        transition={{ duration: 0.2 }}
         className={cn(
           'p-4 rounded-xl border bg-card transition-colors',
-          isPaid && 'bg-card/50 border-border/50',
-          isOverdue && 'border-destructive/30 bg-destructive/5'
+          'border-l-4',
+          getStatusBorderClass(),
+          isPaid && 'bg-card/50',
+          isOverdue && 'bg-destructive/5'
         )}
         data-testid="bill-card"
       >
@@ -244,7 +256,7 @@ export function BillCard({
               {/* Amount */}
               <p
                 className={cn(
-                  'text-lg font-semibold tabular-nums shrink-0',
+                  'text-lg font-semibold font-mono tabular-nums shrink-0',
                   isPaid && 'line-through text-muted-foreground'
                 )}
                 data-testid="bill-amount"
