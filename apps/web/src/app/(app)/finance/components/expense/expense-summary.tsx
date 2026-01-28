@@ -214,34 +214,43 @@ export function ExpenseSummary({ totals, expenses = [], loading }: ExpenseSummar
       className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden"
       data-testid="expense-summary"
     >
-      {/* Main Progress Section */}
-      <div className="p-4 space-y-3">
-        {/* Progress Bar */}
+      {/* Main Progress Section - Compact */}
+      <div className="p-3 space-y-2">
+        {/* Progress Bar - Thinner */}
         <AnimatedProgressBar
           value={Math.min(usagePercent, 100)}
           max={100}
-          size="lg"
+          size="md"
           color={getStatusColor(usagePercent)}
         />
 
-        {/* Stats Row */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground tabular-nums">
+        {/* Stats Row - All in one line */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-sm">
+            <span className="text-muted-foreground tabular-nums">
               {formatCurrency(totals.totalActual)}
             </span>
-            <span className="text-xs text-muted-foreground">/</span>
-            <span className="text-sm font-medium tabular-nums">
+            <span className="text-muted-foreground/50">/</span>
+            <span className="font-medium tabular-nums">
               {formatCurrency(totals.totalExpected)}
             </span>
+            <span className="text-muted-foreground/40 mx-1">·</span>
+            <VarianceIcon className={cn('h-3.5 w-3.5', varianceColor)} />
+            <span className={cn('text-xs', varianceColor)}>
+              {isOnBudget
+                ? 'No orçamento'
+                : isOverBudget
+                ? `+${formatCurrency(totals.variance)}`
+                : `-${formatCurrency(Math.abs(totals.variance))}`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <motion.span
               key={usagePercent}
-              initial={{ opacity: 0, y: 5 }}
+              initial={{ opacity: 0, y: 3 }}
               animate={{ opacity: 1, y: 0 }}
               className={cn(
-                'text-lg font-semibold tabular-nums',
+                'text-base font-semibold tabular-nums',
                 usagePercent > 100 && 'text-destructive',
                 usagePercent >= 80 && usagePercent <= 100 && 'text-amber-600 dark:text-amber-500',
                 usagePercent < 80 && 'text-emerald-600 dark:text-emerald-500'
@@ -253,23 +262,8 @@ export function ExpenseSummary({ totals, expenses = [], loading }: ExpenseSummar
           </div>
         </div>
 
-        {/* Variance Badge */}
-        <div className="flex items-center gap-2">
-          <VarianceIcon className={cn('h-4 w-4', varianceColor)} />
-          <span className={cn('text-sm font-medium', varianceColor)}>
-            {isOnBudget
-              ? 'No orçamento'
-              : isOverBudget
-              ? `+${formatCurrency(totals.variance)} acima`
-              : `${formatCurrency(Math.abs(totals.variance))} economia`}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ({Math.abs(totals.variancePercent).toFixed(1)}%)
-          </span>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
+        {/* Quick Stats - Inline */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{totals.count} despesas</span>
           <span className="text-muted-foreground/40">·</span>
           <span>{totals.recurringCount} recorrentes</span>
