@@ -119,7 +119,7 @@ describe('DebtCard', () => {
     );
 
     expect(screen.getByTestId('debt-pending-badge')).toBeInTheDocument();
-    expect(screen.getByText('Pendente de negociação')).toBeInTheDocument();
+    expect(screen.getByTestId('debt-pending-badge')).toHaveTextContent('Negociar');
   });
 
   it('should_not_display_pending_negotiation_badge_for_negotiated', () => {
@@ -242,8 +242,7 @@ describe('DebtCard', () => {
     expect(onDelete).toHaveBeenCalledWith(mockDebtNegotiated);
   });
 
-  it('should_show_pay_installment_action_for_negotiated_active', async () => {
-    const user = userEvent.setup();
+  it('should_show_pay_installment_cta_for_negotiated_active', () => {
     const onPayInstallment = vi.fn();
 
     render(
@@ -256,13 +255,12 @@ describe('DebtCard', () => {
       />
     );
 
-    await user.click(screen.getByTestId('debt-actions-trigger'));
-    const payAction = await screen.findByTestId('debt-menu-pay-installment');
-
-    expect(payAction).toHaveTextContent('Pagar Parcela 13');
+    // CTA button is shown directly, not in dropdown menu
+    const payAction = screen.getByTestId('debt-pay-installment-action');
+    expect(payAction).toHaveTextContent('Pagar R$ 1.200,00');
   });
 
-  it('should_call_onPayInstallment_when_clicked', async () => {
+  it('should_call_onPayInstallment_when_cta_clicked', async () => {
     const user = userEvent.setup();
     const onPayInstallment = vi.fn();
 
@@ -276,15 +274,14 @@ describe('DebtCard', () => {
       />
     );
 
-    await user.click(screen.getByTestId('debt-actions-trigger'));
-    const payAction = await screen.findByTestId('debt-menu-pay-installment');
+    // CTA button is shown directly, not in dropdown menu
+    const payAction = screen.getByTestId('debt-pay-installment-action');
     await user.click(payAction);
 
     expect(onPayInstallment).toHaveBeenCalledWith(mockDebtNegotiated);
   });
 
-  it('should_show_negotiate_action_for_pending', async () => {
-    const user = userEvent.setup();
+  it('should_show_negotiate_cta_for_pending', () => {
     const onNegotiate = vi.fn();
 
     render(
@@ -297,13 +294,12 @@ describe('DebtCard', () => {
       />
     );
 
-    await user.click(screen.getByTestId('debt-actions-trigger'));
-    const negotiateAction = await screen.findByTestId('debt-menu-negotiate');
-
+    // CTA button is shown directly, not in dropdown menu
+    const negotiateAction = screen.getByTestId('debt-negotiate-action');
     expect(negotiateAction).toHaveTextContent('Negociar');
   });
 
-  it('should_call_onNegotiate_when_clicked', async () => {
+  it('should_call_onNegotiate_when_cta_clicked', async () => {
     const user = userEvent.setup();
     const onNegotiate = vi.fn();
 
@@ -317,8 +313,8 @@ describe('DebtCard', () => {
       />
     );
 
-    await user.click(screen.getByTestId('debt-actions-trigger'));
-    const negotiateAction = await screen.findByTestId('debt-menu-negotiate');
+    // CTA button is shown directly, not in dropdown menu
+    const negotiateAction = screen.getByTestId('debt-negotiate-action');
     await user.click(negotiateAction);
 
     expect(onNegotiate).toHaveBeenCalledWith(mockDebtPending);

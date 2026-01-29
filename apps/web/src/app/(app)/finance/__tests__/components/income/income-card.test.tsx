@@ -68,20 +68,23 @@ describe('IncomeCard', () => {
     expect(card.querySelector('svg.lucide-refresh-cw')).not.toBeInTheDocument();
   });
 
-  it('should_show_expected_and_actual_amounts', () => {
+  it('should_show_actual_amount_when_received', () => {
     render(
       <IncomeCard income={mockIncome} onEdit={vi.fn()} onDelete={vi.fn()} />
     );
 
-    expect(screen.getByTestId('income-expected')).toHaveTextContent('R$ 5.000,00');
+    // When received, shows actual amount (not expected)
     expect(screen.getByTestId('income-actual')).toHaveTextContent('R$ 5.000,00');
+    expect(screen.queryByTestId('income-expected')).not.toBeInTheDocument();
   });
 
-  it('should_not_show_actual_when_null', () => {
+  it('should_show_expected_amount_when_not_received', () => {
     render(
       <IncomeCard income={mockIncomeNoActual} onEdit={vi.fn()} onDelete={vi.fn()} />
     );
 
+    // When not received, shows expected amount
+    expect(screen.getByTestId('income-expected')).toHaveTextContent('R$ 5.000,00');
     expect(screen.queryByTestId('income-actual')).not.toBeInTheDocument();
   });
 
@@ -96,7 +99,7 @@ describe('IncomeCard', () => {
       />
     );
 
-    expect(screen.getByText('Registrar Valor')).toBeInTheDocument();
+    expect(screen.getByText('Registrar')).toBeInTheDocument();
   });
 
   it('should_show_received_status_when_actual_exists', () => {

@@ -143,6 +143,6 @@ describe('BillSummary', () => {
     render(<BillSummary totals={mockTotals} bills={mockBills} loading={false} />);
 
     // Category breakdown is expandable
-    expect(screen.getByText('Por categoria')).toBeInTheDocument();
+    expect(screen.getByText('Ver por categoria')).toBeInTheDocument();
   });
 });
