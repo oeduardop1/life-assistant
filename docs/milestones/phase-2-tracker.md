@@ -169,7 +169,7 @@ _Módulo e Estrutura:_
   - [x] `debt_status` (active, paid_off, settled, defaulted)
   - [x] `investment_type` (emergency_fund, retirement, short_term, long_term, education, custom)
 - [x] Criar módulo `finance`:
-  - [x] `FinanceController` - CRUD de todas as entidades
+  - [x] Controllers por entidade (bills, incomes, expenses, debts, investments, finance-summary)
   - [x] `IncomeService` - gerenciar rendas
   - [x] `BillService` - gerenciar contas fixas
   - [x] `ExpenseService` - gerenciar despesas variáveis
@@ -268,8 +268,8 @@ _Filtros e Paginação:_
 _Tools para IA:_
 - [x] Implementar tool `get_finance_summary`:
   - [x] Retorna todos os KPIs do mês atual
-  - [x] Retorna lista de contas pendentes (próximas 5)
-  - [x] Retorna lista de parcelas próximas (próximas 5)
+  - [x] Retorna KPIs agregados e breakdown por categoria
+  - [x] Retorna contagens de bills (pending/paid/overdue)
   - [x] Permite IA responder "como estão minhas finanças?"
 - [x] Implementar tool `get_pending_bills`:
   - [x] Retorna contas pendentes do mês com detalhes
@@ -293,7 +293,7 @@ _Dívidas - Filtro por Mês e Status Overdue:_
 - [x] Implementar filtro de dívidas por mês no repository
 - [x] Dívida só aparece de startMonthYear até endMonth (sem grace period - padrão da indústria)
 - [ ] Implementar detecção de status overdue via job agendado (não sob demanda)
-- [ ] Permitir pagamento de múltiplas parcelas
+- [x] Permitir pagamento de múltiplas parcelas
 - [x] Atualizar tool `get_debt_progress` com parâmetro `monthYear`
 - [x] Atualizar tool executor para filtrar dívidas por mês
 
@@ -316,7 +316,7 @@ _Frontend - Dívidas (Filtro por Mês):_
 - [x] Criar componente `MonthPicker` para formulário de dívidas
 - [x] Adicionar badge overdue no DebtCard (removido badge "carência" - não é padrão da indústria)
 - [x] Atualizar hook `useDebts` para aceitar parâmetro `monthYear`
-- [ ] Atualizar `PayInstallmentDialog` para aceitar quantidade
+- [x] Atualizar `PayInstallmentDialog` para aceitar quantidade
 
 _Testes - Dívidas (Filtro por Mês):_
 - [ ] Unit: filtro por mês calcula período corretamente
@@ -347,22 +347,20 @@ _Navegação e Layout:_
 
 _Página Dashboard `/finance` (Visão Geral):_
 - [x] Criar página `/finance/page.tsx`
-- [x] KPI Cards Grid (8 cards):
+- [x] KPI Cards Grid (6 cards):
   - [x] Renda do Mês (TrendingUp, green)
   - [x] Total Orçado (Target, blue)
   - [x] Total Gasto (ShoppingCart, orange)
   - [x] Saldo (Wallet, green/red baseado em positivo/negativo)
   - [x] Total Investido (PiggyBank, purple)
   - [x] Total de Dívidas (CreditCard, red)
-  - [x] Parcela Mensal Total (Calendar, yellow)
-  - [x] Total Já Pago (CheckCircle, green)
 - [x] Gráficos (Recharts):
   - [x] Orçado vs Real (BarChart lado a lado por categoria)
   - [x] Distribuição de Gastos (PieChart por categoria)
   - [x] Evolução Mensal (LineChart últimos 6 meses)
 - [x] Listas Resumidas:
-  - [x] Contas pendentes (próximas 5)
-  - [x] Parcelas próximas (próximas 5)
+  - [x] Resumo de contas pendentes (contagem + total)
+  - [x] Resumo de parcelas (contagem de dívidas ativas + total mensal)
 - [x] Estados: Loading (Skeleton), Empty (EmptyState), Error (AlertCircle + retry)
 
 _Página Rendas `/finance/incomes`:_
@@ -592,12 +590,12 @@ _Testes Unitários Backend - Tools:_
 - [x] Tool get_debt_progress: retorna progresso detalhado
 
 _Testes de Integração - Endpoints:_
-- [ ] CRUD de todas as entidades (incomes, bills, expenses, debts, investments)
-- [ ] Endpoint mark-paid: atualiza status e paidAt
-- [ ] Endpoint pay-installment: incrementa e faz auto-quitação
-- [ ] Endpoint negotiate: preenche parcelas e atualiza isNegotiated
-- [ ] Endpoint update-value: atualiza currentAmount do investimento
-- [ ] Endpoint summary: retorna todos os KPIs
+- [x] CRUD de todas as entidades (incomes, bills, expenses, debts, investments) — via mocks inline
+- [x] Endpoint mark-paid: atualiza status e paidAt — testado em finance-business-rules.integration.spec.ts
+- [x] Endpoint pay-installment: incrementa e faz auto-quitação — testado em finance-business-rules.integration.spec.ts
+- [x] Endpoint negotiate: preenche parcelas e atualiza isNegotiated — testado em finance-business-rules.integration.spec.ts
+- [x] Endpoint update-value: atualiza currentAmount do investimento
+- [x] Endpoint summary: retorna todos os KPIs — testado em finance-filters-pagination.integration.spec.ts
 
 _Testes de Integração - Filtros e Paginação:_
 - [x] Filtro por monthYear funciona
@@ -628,9 +626,9 @@ _Testes de Integração - Regras de Negócio:_
 - [x] Negociar dívida → verificar que ENTRA no total orçado
 
 _Testes de Componente Frontend:_
-- [ ] Component: FinanceKPICard (valor, label, ícone, cor, trend)
-- [ ] Component: MonthSelector (navegação, callbacks)
-- [ ] Component: FinanceNavTabs (tabs ativas, navegação)
+- [x] Component: FinanceKPICard (valor, label, ícone, cor, trend)
+- [x] Component: MonthSelector (navegação, callbacks)
+- [x] Component: FinanceNavTabs (tabs ativas, navegação)
 - [x] Component: BillCard (checkbox, status badge, ações)
 - [x] Component: BillList (listagem, skeleton)
 - [x] Component: BillSummary (grid de totais)
@@ -651,9 +649,9 @@ _Testes de Componente Frontend:_
 - [x] Component: UpdateValueModal (atualizar valor)
 - [x] Component: DeleteInvestmentDialog (confirmação)
 - [ ] Component: ProgressBar (genérico, variações)
-- [ ] Component: BudgetVsRealChart (dados, loading, empty)
-- [ ] Component: ExpenseDistributionChart (dados, loading, empty)
-- [ ] Component: MonthlyEvolutionChart (dados, loading, empty)
+- [x] Component: BudgetVsRealChart (dados, loading, empty)
+- [x] Component: ExpenseDistributionChart (dados, loading, empty)
+- [x] Component: MonthlyEvolutionChart (dados, loading, empty)
 
 _Testes de Hooks Frontend:_
 - [x] Hook: useIncomes (fetch, create, update, delete)
@@ -685,7 +683,7 @@ _Navegação e Layout:_
 - [x] Layout compartilhado renderiza em todas as páginas do finance
 
 _Funcionalidades CRUD:_
-- [x] Dashboard Finance exibe KPIs (8 cards) e gráficos (3 tipos)
+- [x] Dashboard Finance exibe KPIs (6 cards) e gráficos (3 tipos)
 - [x] CRUD de rendas funciona (criar, editar, excluir)
 - [x] CRUD de contas fixas funciona (com checkbox pago)
 - [x] CRUD de despesas variáveis funciona (recorrentes + pontuais)
@@ -696,7 +694,7 @@ _Endpoints de Ação:_
 - [x] `mark-paid` / `mark-unpaid` funcionam para bills
 - [x] `pay-installment` funciona com auto-quitação
 - [x] `negotiate` funciona para converter dívida pendente
-- [ ] `update-value` funciona para investimentos
+- [x] `update-value` funciona para investimentos
 
 _Recorrências e Automações:_
 - [x] Lazy generation cria bills, expenses, incomes sob demanda ao navegar meses
@@ -726,7 +724,7 @@ _Finance Tools Enhancement (AI Detail Access):_
 - [x] Nova tool `get_investments` (listar investimentos com progresso)
 - [x] Melhorar prompt de finanças no context-builder
 - [x] Atualizar ai.md, product.md, system.md com novas tools
-- [x] Testes unitários para novas tools
+- [ ] Testes unitários para novas tools (get_bills, get_expenses, get_incomes, get_investments, get_debt_payment_history, get_upcoming_installments) — apenas 5/11 testadas
 
 _Dívidas não negociadas:_
 - [x] Podem ser criadas (apenas valor total, sem parcelas)
@@ -815,6 +813,16 @@ _Testes:_
 - Testes: 6 arquivos de teste (1 hook + 5 component tests): use-debts.test.tsx (14), debt-card.test.tsx (17), debt-progress-bar.test.tsx (8), debt-stats.test.tsx (10), negotiate-debt-modal.test.tsx (7), pay-installment-dialog.test.tsx (13) - Total 69 testes de debt
 - E2E: finance-debts.spec.ts criado (9 grupos de testes: CRUD, negotiate, pay-installment, filters, summary, full workflow)
 - Fluxo de dívida: pendente → negociar (preencher parcelas) → pagar parcelas → auto-quitação ao pagar última
+
+**Notas (2026-01-28 - Auditoria de Tasks):**
+- Auditoria completa comparando código implementado vs marcações no tracker
+- Pagamento de múltiplas parcelas: já estava implementado (backend + frontend + testes)
+- Testes de componentes: FinanceKPICard, MonthSelector, FinanceNavTabs, charts já existiam
+- Testes de integração: usam mocks inline (controllers mockados no próprio teste)
+- Dashboard: corrigido de 8 para 6 KPI cards (reflete implementação atual)
+- Listas resumidas: corrigido para "contagens" (não lista de itens individuais)
+- get_finance_summary: corrigido para refletir retorno atual (KPIs/breakdown)
+- Tools: 6 das 11 tools ainda sem testes unitários (get_bills, get_expenses, get_incomes, get_investments, get_debt_payment_history, get_upcoming_installments)
 
 ---
 
