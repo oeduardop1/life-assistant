@@ -343,6 +343,7 @@ O **Score Geral de Vida** é uma média simples das 6 áreas. Todas as áreas t�
 | [dashboard.md](domains/dashboard.md) | M2.x | Widgets, visualizações, Life Balance Score |
 | [reports.md](domains/reports.md) | M2.x | Morning summary, relatórios periódicos |
 | [saas.md](domains/saas.md) | M3.x | Registro, planos, billing, suporte |
+| [settings.md](domains/settings.md) | M0.11+ | Perfil, segurança, integrações, preferências |
 
 ### Integrations (APIs Externas)
 
