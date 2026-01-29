@@ -70,7 +70,6 @@ A IA conhece profundamente o usuário: seu passado, presente, objetivos futuros,
 3. **Visão Holística** — Todas as áreas da vida conectadas e visíveis
 4. **Transparência** — Você vê o que a IA sabe sobre você e pode corrigir
 5. **Rastreabilidade** — Todo número e insight é explicável e rastreável
-6. **Histórico de Decisões** — Acompanhamento de decisões importantes com follow-up e aprendizado
 
 ### North Star
 
@@ -94,9 +93,6 @@ A IA opera em três modos que compartilham a mesma memória e contexto.
 - Identifica padrões de comportamento e decisões passadas
 - Aplica princípios bíblicos quando relevante (se habilitado)
 - Nunca decide pelo usuário; ilumina a decisão
-- **Oferece salvar decisões importantes** para acompanhamento futuro (ADR-016)
-- **Consulta histórico de decisões** similares para contextualizar conselhos
-- **Agenda follow-up** automático para avaliar resultados (30 dias default)
 
 **Exemplos de uso:**
 - "Me ajuda a decidir se aceito essa proposta de emprego"
@@ -236,7 +232,6 @@ Todas as 6 áreas têm importância igual (peso 1.0). As áreas são fixas e nã
 | **Memória** | O que a IA sabe sobre você (fatos, preferências, insights) |
 | **Áreas** | Dashboard detalhado por área da vida |
 | **Tracking** | Registro manual e visualização de métricas |
-| **Decisões** | Histórico de decisões importantes com follow-up e aprendizados |
 | **Pessoas** | CRM pessoal (contatos, relacionamentos) |
 | **Vault** | Informações pessoais seguras |
 | **Relatórios** | Semanais, mensais, trimestrais, anuais |

@@ -40,10 +40,6 @@ describe('Migrations Integration Tests', () => {
         'life_balance_history',
         'notes',
         'note_links',
-        'decisions',
-        'decision_options',
-        'decision_criteria',
-        'decision_scores',
         'people',
         'person_notes',
         'person_interactions',
@@ -81,7 +77,6 @@ describe('Migrations Integration Tests', () => {
 
       const expectedEnums = [
         'conversation_type',
-        'decision_status',
         'exercise_intensity',
         'exercise_type',
         'expense_category',

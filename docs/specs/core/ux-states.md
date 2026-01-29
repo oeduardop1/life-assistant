@@ -20,7 +20,6 @@ Estados exibidos quando não há dados para mostrar. Devem ser amigáveis e guia
 | Sem metas | "Defina objetivos para acompanhar seu progresso" | "Criar primeira meta" | `Target` |
 | Sem hábitos | "Hábitos consistentes transformam a vida" | "Criar primeiro hábito" | `Repeat` |
 | Sem notas | "Suas notas e reflexões aparecerão aqui" | "Criar nota" | `FileText` |
-| Sem decisões | "Decisões importantes serão registradas aqui" | "Ver como funciona" | `GitBranch` |
 | Vault vazio | "Suas informações sensíveis ficarão seguras aqui" | "Adicionar primeiro item" | `Lock` |
 | Sem investimentos | "Acompanhe seus investimentos em um só lugar" | "Adicionar investimento" | `TrendingUp` |
 | Sem dívidas | "Ótimo! Você não tem dívidas cadastradas" | - | `PartyPopper` |

@@ -54,7 +54,7 @@ pnpm test:e2e         # E2E tests
 | **Domains** | Finance (M2.2) | `docs/specs/domains/finance.md` |
 | | Memory (ADR-012) | `docs/specs/domains/memory.md` |
 | | Tracking (ADR-015/017) | `docs/specs/domains/tracking.md` |
-| | Decisions, People, Vault | `docs/specs/domains/*.md` |
+| | People, Vault | `docs/specs/domains/*.md` |
 | | Goals, Habits, Notifications, Chat | `docs/specs/domains/*.md` |
 | **Integrations** | Telegram, Google Calendar, Stripe | `docs/specs/integrations/*.md` |
 | | Supabase Auth, Gemini, Cloudflare R2 | `docs/specs/integrations/*.md` |

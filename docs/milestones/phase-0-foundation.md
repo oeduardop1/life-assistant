@@ -63,7 +63,6 @@
 - [x] Criar tipos base conforme `docs/specs/core/data-conventions.md`:
   - [x] `LifeArea` enum (6 áreas principais + SubArea per ADR-017)
   - [x] `TrackingType` enum
-  - [x] `DecisionStatus` enum
   - [x] `UserStatus` enum
   - [x] `ConversationType` enum
   - [x] `VaultItemType` enum
@@ -90,7 +89,6 @@
   - [x] Verificar valores de LifeArea (6)
   - [x] Verificar valores de TrackingType (11)
   - [x] Verificar valores de ConversationType (4)
-  - [x] Verificar valores de DecisionStatus (7)
   - [x] Verificar valores de VaultItemType (5)
   - [x] Verificar valores de VaultCategory (6)
   - [x] Verificar valores de ExpenseCategory (13)
@@ -138,7 +136,7 @@
 
 **Notas:**
 - **06 Jan 2026:** Milestone concluído com sucesso
-- 8 enums criados: UserStatus, LifeArea, TrackingType, ConversationType, DecisionStatus, VaultItemType, VaultCategory, ExpenseCategory
+- 7 enums criados: UserStatus, LifeArea, TrackingType, ConversationType, VaultItemType, VaultCategory, ExpenseCategory
 - Constantes: DEFAULT_WEIGHTS, TRACKING_VALIDATIONS, RATE_LIMITS, STORAGE_LIMITS, SYSTEM_DEFAULTS, DATA_RETENTION_DAYS
 - Utilitários: formatCurrency, formatDate (com date-fns-tz), normalizeText, sleep, retry
 - 77 testes com 100% coverage (statements, branches, functions, lines)
@@ -243,7 +241,6 @@
   - [x] **Core:** users
   - [x] **Chat:** conversations, messages
   - [x] **Tracking:** tracking_entries, life_balance_history
-  - [x] **Decisions:** decisions, decision_options, decision_criteria, decision_scores
   - [x] **Notes:** notes, note_links
   - [x] **People:** people, person_notes, person_interactions
   - [x] **Vault:** vault_items

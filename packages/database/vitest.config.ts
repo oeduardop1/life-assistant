@@ -28,7 +28,6 @@ export default defineConfig({
         'src/schema/budgets.ts',
         'src/schema/calendar.ts',
         'src/schema/conversations.ts',
-        'src/schema/decisions.ts',
         'src/schema/exports.ts',
         'src/schema/goals.ts',
         'src/schema/habit-freezes.ts',
