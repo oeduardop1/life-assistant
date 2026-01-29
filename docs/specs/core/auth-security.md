@@ -353,7 +353,65 @@ interface AuditLog {
 
 ---
 
-## 8. Security Rules (Non-Negotiable)
+## 8. Alteração de Credenciais
+
+### 8.1 Alteração de Nome
+
+- Não requer re-autenticação
+- Atualiza `user_metadata.name` (Supabase Auth) + `users.name` (database)
+- Validação: 2-100 caracteres
+
+### 8.2 Alteração de Email
+
+**Fluxo:**
+1. Usuário insere novo email + senha atual
+2. Backend verifica senha via Supabase signIn
+3. Se válido:
+   - Envia notificação de segurança ao email **antigo**
+   - Supabase envia link de confirmação ao email **novo**
+4. Usuário clica no link → email atualizado
+
+**Email de notificação (antigo):**
+- Assunto: "Solicitação de alteração de email"
+- Conteúdo: Informar sobre a solicitação + link para alterar senha se não foi o usuário
+
+### 8.3 Alteração de Senha
+
+**Requisitos (NIST 2024/2025):**
+
+| Requisito | Valor |
+|-----------|-------|
+| Comprimento mínimo | 8 caracteres |
+| Comprimento máximo | 72 caracteres (limite bcrypt) |
+| Complexidade | NÃO exigir maiúscula/número/símbolo |
+| Feedback | Medidor de força em tempo real (zxcvbn) |
+
+**Fluxo:**
+1. Usuário insere senha atual + nova senha
+2. Frontend mostra medidor de força em tempo real
+3. Backend verifica senha atual via Supabase signIn
+4. Se válido: atualiza senha
+5. Registra no audit log
+
+**Medidor de força (zxcvbn):**
+
+| Score | Label | Cor |
+|-------|-------|-----|
+| 0-1 | Muito fraca | Vermelho |
+| 2 | Fraca | Laranja |
+| 3 | Boa | Amarelo |
+| 4 | Forte | Verde |
+
+### 8.4 Segurança
+
+- **Re-autenticação:** Alteração de email e senha requerem senha atual
+- **Rate limiting:** Aplicar limite de tentativas nos endpoints
+- **Audit log:** Registrar todas as alterações de credenciais
+- **Notificação:** Email antigo sempre notificado em alterações de email
+
+---
+
+## 9. Security Rules (Non-Negotiable)
 
 - ❌ Nunca logar secrets (keys, tokens, senhas)
 - ❌ Nunca expor stack traces ao usuário
@@ -365,7 +423,7 @@ interface AuditLog {
 
 ---
 
-## 9. LGPD Compliance
+## 10. LGPD Compliance
 
 ### 9.1 Privacy Principles
 
@@ -530,7 +588,7 @@ export type NewExportRequest = typeof exportRequests.$inferInsert;
 
 ---
 
-## 10. Definition of Done
+## 11. Definition of Done
 
 ### Authentication
 - [ ] Signup email/senha funciona
@@ -551,4 +609,4 @@ export type NewExportRequest = typeof exportRequests.$inferInsert;
 
 ---
 
-*Última atualização: 26 Janeiro 2026*
+*Última atualização: 29 Janeiro 2026*

@@ -769,3 +769,60 @@ Durante desenvolvimento, foram identificados problemas de gerenciamento de dados
 - Novos IDs para tracking: 0008 (weight), 0009 (water), 0010 (mood)
 - Teardown usa regex `/^test-\d+@example\.com$/` para identificar usuários dinâmicos
 - Usuários fixos (`test@example.com`, `onboarding@example.com`) preservados para performance
+
+---
+
+## 🔴 M0.11 - Settings Base
+
+**Objetivo:** Criar página de configurações base para gerenciamento de perfil do usuário.
+
+**Dependências:** M0.7 (Auth), M0.8 (Onboarding)
+
+### Backend
+
+- [ ] Criar módulo `settings` em `apps/api/src/modules/settings/`
+- [ ] Implementar `SettingsController` com endpoints:
+  - [ ] `PATCH /api/settings/profile` - Atualizar nome
+  - [ ] `PATCH /api/settings/email` - Solicitar alteração de email
+  - [ ] `PATCH /api/settings/password` - Alterar senha
+- [ ] Implementar `SettingsService` com lógica de negócio
+- [ ] Criar DTOs com class-validator
+- [ ] Adicionar métodos no `SupabaseAuthAdapter`:
+  - [ ] `verifyPassword(email, password)` - Verificar senha atual
+  - [ ] `updateEmail(userId, newEmail)` - Iniciar fluxo de alteração
+  - [ ] `updateUserMetadata(userId, metadata)` - Atualizar nome
+- [ ] Implementar envio de email de notificação ao email antigo (segurança)
+- [ ] Aplicar RateLimitGuard nos endpoints
+- [ ] Testes unitários do SettingsService
+- [ ] Testes de integração dos endpoints
+
+### Frontend
+
+- [ ] Criar página `/settings` com layout de Tabs (Perfil, Segurança)
+- [ ] Implementar `ProfileSection` (Card):
+  - [ ] Form com campo de nome
+  - [ ] Validação Zod (2-100 chars)
+  - [ ] Feedback com toast
+- [ ] Implementar `EmailSection` (Card):
+  - [ ] Display do email atual
+  - [ ] Form com novo email + senha atual
+  - [ ] Mensagem sobre verificação
+- [ ] Implementar `PasswordSection` (Card):
+  - [ ] Form com senha atual + nova senha
+  - [ ] Toggle mostrar/ocultar senha
+  - [ ] Integrar zxcvbn-ts para medidor de força
+- [ ] Implementar `PasswordStrengthMeter`:
+  - [ ] Barra visual com cores (vermelho→verde)
+  - [ ] Feedback textual (Muito fraca→Forte)
+- [ ] Criar schemas Zod em `lib/validations/settings.ts`
+- [ ] Testes unitários dos componentes
+
+### Critérios de Aceite
+
+- [ ] Usuário pode atualizar nome com feedback visual
+- [ ] Alteração de email envia link de verificação + notificação ao email antigo
+- [ ] Alteração de senha requer senha atual válida
+- [ ] Medidor de força funciona em tempo real
+- [ ] Dark/light mode funcionando corretamente
+- [ ] Mobile responsivo
+- [ ] Todos os testes passando

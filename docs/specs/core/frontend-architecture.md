@@ -62,6 +62,7 @@ apps/web/src/app/
 /finance/expenses
 /finance/debts
 /finance/investments
+/settings
 ```
 
 > **Observação:** não há rotas API (BFF) em `app/api/*` hoje.
