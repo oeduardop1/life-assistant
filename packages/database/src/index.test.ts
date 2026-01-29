@@ -117,7 +117,7 @@ describe('index exports', () => {
 
     it('should export defaultUserPreferences', () => {
       expect(defaultUserPreferences).toBeDefined();
-      expect(defaultUserPreferences.christianPerspective).toBe(false);
+      expect(defaultUserPreferences.areaWeights).toBeDefined();
     });
 
     it('should export parseUserPreferences', () => {

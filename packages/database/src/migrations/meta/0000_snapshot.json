@@ -1,5 +1,5 @@
 {
-  "id": "5d1cc861-6532-439a-a7bb-f5db4d3c4dde",
+  "id": "05be9531-dfa6-4ba8-b0d3-c6c88217e66d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -71,7 +71,7 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'{\"christianPerspective\":false,\"areaWeights\":{\"health\":1,\"finance\":1,\"professional\":1,\"learning\":0.8,\"spiritual\":0.5,\"relationships\":1},\"notifications\":{\"pushEnabled\":true,\"telegramEnabled\":false,\"emailEnabled\":true,\"quietHoursEnabled\":true,\"quietHoursStart\":\"22:00\",\"quietHoursEnd\":\"08:00\",\"morningSummary\":true,\"morningSummaryTime\":\"07:00\",\"weeklyReport\":true,\"monthlyReport\":true},\"tracking\":{\"waterGoal\":2000,\"sleepGoal\":8,\"exerciseGoalWeekly\":150},\"onboarding\":{\"profileComplete\":false,\"areasComplete\":false,\"telegramComplete\":false,\"telegramSkipped\":false,\"tutorialComplete\":false,\"tutorialSkipped\":false}}'::jsonb"
+          "default": "'{\"areaWeights\":{\"health\":1,\"finance\":1,\"professional\":1,\"learning\":1,\"spiritual\":1,\"relationships\":1},\"notifications\":{\"pushEnabled\":true,\"telegramEnabled\":false,\"emailEnabled\":true,\"quietHoursEnabled\":true,\"quietHoursStart\":\"22:00\",\"quietHoursEnd\":\"08:00\",\"morningSummary\":true,\"morningSummaryTime\":\"07:00\",\"weeklyReport\":true,\"monthlyReport\":true},\"tracking\":{\"waterGoal\":2000,\"sleepGoal\":8,\"exerciseGoalWeekly\":150},\"onboarding\":{\"profileComplete\":false,\"telegramComplete\":false,\"telegramSkipped\":false,\"tutorialComplete\":false,\"tutorialSkipped\":false}}'::jsonb"
         },
         "plan": {
           "name": "plan",
@@ -3001,6 +3001,12 @@
           "notNull": true,
           "default": true
         },
+        "recurring_group_id": {
+          "name": "recurring_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "month_year": {
           "name": "month_year",
           "type": "varchar(7)",
@@ -3013,6 +3019,14 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'BRL'"
+        },
+        "status": {
+          "name": "status",
+          "type": "income_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
         },
         "created_at": {
           "name": "created_at",
@@ -3095,6 +3109,42 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "incomes_user_recurring_group_idx": {
+          "name": "incomes_user_recurring_group_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "recurring_group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "incomes_status_idx": {
+          "name": "incomes_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3113,7 +3163,17 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "incomes_user_recurring_group_month_year_unique": {
+          "name": "incomes_user_recurring_group_month_year_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "recurring_group_id",
+            "month_year"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -3180,6 +3240,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "recurring_group_id": {
+          "name": "recurring_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "month_year": {
           "name": "month_year",
@@ -3290,6 +3356,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "bills_user_recurring_group_idx": {
+          "name": "bills_user_recurring_group_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "recurring_group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3308,7 +3395,17 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "bills_user_recurring_group_month_year_unique": {
+          "name": "bills_user_recurring_group_month_year_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "recurring_group_id",
+            "month_year"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -3363,6 +3460,12 @@
           "notNull": true,
           "default": false
         },
+        "recurring_group_id": {
+          "name": "recurring_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "month_year": {
           "name": "month_year",
           "type": "varchar(7)",
@@ -3375,6 +3478,14 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'BRL'"
+        },
+        "status": {
+          "name": "status",
+          "type": "expense_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
         },
         "created_at": {
           "name": "created_at",
@@ -3457,6 +3568,42 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "variable_expenses_user_recurring_group_idx": {
+          "name": "variable_expenses_user_recurring_group_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "recurring_group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "variable_expenses_status_idx": {
+          "name": "variable_expenses_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3475,7 +3622,17 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "variable_expenses_user_recurring_group_month_year_unique": {
+          "name": "variable_expenses_user_recurring_group_month_year_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "recurring_group_id",
+            "month_year"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -3544,6 +3701,12 @@
         "due_day": {
           "name": "due_day",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "start_month_year": {
+          "name": "start_month_year",
+          "type": "varchar(7)",
           "primaryKey": false,
           "notNull": false
         },
@@ -4428,13 +4591,6 @@
           "notNull": false,
           "default": "'[]'::jsonb"
         },
-        "christian_perspective": {
-          "name": "christian_perspective",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
         "version": {
           "name": "version",
           "type": "integer",
@@ -4941,6 +5097,7 @@
       "schema": "public",
       "values": [
         "active",
+        "overdue",
         "paid_off",
         "settled",
         "defaulted"
@@ -4983,6 +5140,14 @@
         "gifts",
         "investments",
         "other"
+      ]
+    },
+    "public.expense_status": {
+      "name": "expense_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "excluded"
       ]
     },
     "public.export_status": {
@@ -5034,6 +5199,14 @@
         "weekly",
         "annual",
         "irregular"
+      ]
+    },
+    "public.income_status": {
+      "name": "income_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "excluded"
       ]
     },
     "public.income_type": {

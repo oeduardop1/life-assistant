@@ -462,41 +462,6 @@ Solução: reformular prompt para detectar "mudanças de estado atual" + UI togg
 
 ---
 
-## M1.7 — Perspectiva Cristã 🔴
-
-**Objetivo:** Implementar feature opt-in de perspectiva cristã no chat.
-
-**Referências:** `docs/specs/domains/spiritual.md`, `docs/specs/core/ai-personality.md` §5
-
-**Tasks:**
-
-**Backend:**
-- [ ] Adicionar configuração `christianPerspective: boolean` no user_settings
-- [ ] Implementar system prompt de perspectiva cristã (conforme `docs/specs/core/ai-personality.md` §5)
-- [ ] Integrar com chat: aplicar prompt quando habilitado
-
-**Frontend:**
-- [ ] Criar toggle nas configurações do usuário (`/settings/preferences`)
-- [ ] Adicionar seção "Perspectiva Cristã" com explicação
-- [ ] Componente ToggleWithDescription para o setting
-
-> **Nota (2026-01-26):** Toggle de perspectiva cristã movido para `/settings/preferences`. Etapa de áreas removida do onboarding.
-
-**Testes:**
-- [ ] Teste unitário: prompt correto é aplicado quando habilitado
-- [ ] Teste unitário: prompt cristão NÃO é aplicado quando desabilitado
-- [ ] Teste de integração: resposta da IA inclui perspectiva bíblica (quando habilitado)
-- [ ] Teste de integração: resposta da IA NÃO menciona religião (quando desabilitado)
-- [ ] Teste E2E: toggle de configuração em Settings persiste corretamente
-
-**Definition of Done:**
-- [ ] Usuário pode habilitar/desabilitar perspectiva cristã em `/settings/preferences`
-- [ ] IA integra princípios bíblicos naturalmente quando habilitado
-- [ ] Nunca menciona aspectos religiosos quando desabilitado
-- [ ] Testes passam
-
----
-
 ## M1.8 — Guardrails de Segurança 🔴
 
 **Objetivo:** Implementar guardrails para tópicos sensíveis.

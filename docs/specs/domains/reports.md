@@ -63,8 +63,7 @@ Via job `morning-summary`:
 3. Buscar aniversários
 4. Calcular métricas de ontem
 5. Gerar mensagem motivacional (LLM)
-6. Adicionar versículo (se perspectiva cristã)
-7. Enviar por canais configurados
+6. Enviar por canais configurados
 
 ---
 

@@ -10,19 +10,6 @@ O módulo Espiritual permite acompanhar práticas espirituais de forma não-intr
 
 **Filosofia (ADR-015):** Não há "streak obrigatório". O sistema celebra consistência quando existe, mas não penaliza ausência de registros.
 
-### Opt-in (Perspectiva Cristã)
-
-A perspectiva cristã é **opt-in** nas configurações:
-- **Desabilitado** — IA não menciona aspectos religiosos
-- **Habilitado** — IA integra princípios bíblicos quando relevante
-
-### Exemplos de Aplicação
-
-- Decisão financeira: usar princípios de prudência e planejamento
-- Conflito profissional: resposta calma e reconciliação
-- Sobrecarga de trabalho: descanso e equilíbrio
-- Ansiedade com o futuro: esperança e gratidão
-
 ---
 
 ## 2. Devotional Tracking
@@ -240,7 +227,6 @@ O versículo do dia considera:
 - Contexto atual do usuário (Memória)
 - Desafios mencionados recentemente
 - Preferências de livros/temas
-- Perspectiva cristã habilitada
 
 ### 11.2 Entrega
 

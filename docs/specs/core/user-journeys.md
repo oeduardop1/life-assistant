@@ -115,21 +115,15 @@
    - Filhos teriam que trocar de escola
    - Distância da família estendida
 
-5. Se perspectiva cristã habilitada:
-   "Provérbios 15:22 diz que 'os planos fracassam por falta
-    de conselho, mas são bem-sucedidos quando há muitos
-    conselheiros.' Você já conversou com as pessoas importantes
-    sobre isso? O que seu cônjuge pensa?"
-
-6. IA oferece próximos passos:
+5. IA oferece próximos passos:
    - "Posso montar uma lista de perguntas para fazer à empresa?"
    - "Quer que eu resuma os pontos principais para você pensar?"
 
-7. Usuário decide e comunica: "Decidi recusar"
+6. Usuário decide e comunica: "Decidi recusar"
    → IA registra a conclusão com todo o contexto
    → Fatos e aprendizados salvos na Memória
 
-8. Após 3 meses, IA faz check-in:
+7. Após 3 meses, IA faz check-in:
    "Faz 3 meses que você recusou a proposta da empresa X.
     Como está se sentindo sobre essa escolha?"
    → Usuário responde, IA registra aprendizados

@@ -1,7 +1,0 @@
-CREATE TYPE "public"."expense_status" AS ENUM('active', 'excluded');--> statement-breakpoint
-CREATE TYPE "public"."income_status" AS ENUM('active', 'excluded');--> statement-breakpoint
-ALTER TABLE "users" ALTER COLUMN "preferences" SET DEFAULT '{"christianPerspective":false,"areaWeights":{"health":1,"finance":1,"professional":1,"learning":1,"spiritual":1,"relationships":1},"notifications":{"pushEnabled":true,"telegramEnabled":false,"emailEnabled":true,"quietHoursEnabled":true,"quietHoursStart":"22:00","quietHoursEnd":"08:00","morningSummary":true,"morningSummaryTime":"07:00","weeklyReport":true,"monthlyReport":true},"tracking":{"waterGoal":2000,"sleepGoal":8,"exerciseGoalWeekly":150},"onboarding":{"profileComplete":false,"telegramComplete":false,"telegramSkipped":false,"tutorialComplete":false,"tutorialSkipped":false}}'::jsonb;--> statement-breakpoint
-ALTER TABLE "incomes" ADD COLUMN "status" "income_status" DEFAULT 'active' NOT NULL;--> statement-breakpoint
-ALTER TABLE "variable_expenses" ADD COLUMN "status" "expense_status" DEFAULT 'active' NOT NULL;--> statement-breakpoint
-CREATE INDEX "incomes_status_idx" ON "incomes" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "variable_expenses_status_idx" ON "variable_expenses" USING btree ("status");

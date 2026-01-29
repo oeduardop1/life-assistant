@@ -52,7 +52,6 @@ function createMockUserMemory(
     values: ['Value 1'],
     communicationStyle: 'direct',
     feedbackPreferences: 'constructive',
-    christianPerspective: false,
     version: 1,
     lastConsolidatedAt: null,
     createdAt: new Date('2024-01-01'),

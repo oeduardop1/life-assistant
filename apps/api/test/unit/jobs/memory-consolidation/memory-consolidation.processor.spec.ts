@@ -30,7 +30,6 @@ function createMockUserMemory(overrides: Partial<UserMemory> = {}): UserMemory {
     learnedPatterns: [],
     communicationStyle: null,
     feedbackPreferences: null,
-    christianPerspective: false,
     version: 1,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),

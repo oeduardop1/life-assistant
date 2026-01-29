@@ -89,7 +89,6 @@ export interface UserMemory {
   values: string[];
   communicationStyle: string | null;
   feedbackPreferences: string | null;
-  christianPerspective: boolean;
   version: number;
   lastConsolidatedAt: string | null;
   createdAt: string;

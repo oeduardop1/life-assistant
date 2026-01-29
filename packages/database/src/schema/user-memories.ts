@@ -9,7 +9,6 @@ import {
   timestamp,
   jsonb,
   integer,
-  boolean,
   unique,
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
@@ -51,9 +50,6 @@ export const userMemories = pgTable(
 
     // Learned patterns with confidence tracking
     learnedPatterns: jsonb('learned_patterns').$type<LearnedPattern[]>().default([]),
-
-    // Settings
-    christianPerspective: boolean('christian_perspective').default(false),
 
     // Versioning for optimistic locking
     version: integer('version').notNull().default(1),

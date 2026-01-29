@@ -99,7 +99,6 @@ const mockUserMemory = {
   values: [],
   communicationStyle: null,
   feedbackPreferences: null,
-  christianPerspective: false,
   learnedPatterns: [
     {
       pattern: 'Fica ansioso antes de reuniões importantes',

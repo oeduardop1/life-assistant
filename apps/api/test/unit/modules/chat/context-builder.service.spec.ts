@@ -88,7 +88,6 @@ describe('ContextBuilderService', () => {
         topOfMind: [],
         values: [],
         learnedPatterns: [],
-        christianPerspective: false,
         version: 1,
         createdAt: new Date(),
         updatedAt: new Date(),

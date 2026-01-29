@@ -73,7 +73,7 @@ describe('Seed Data Integration Tests', () => {
 
       const prefs = users[0].preferences as Record<string, unknown>;
       expect(prefs).toBeDefined();
-      expect(prefs.christianPerspective).toBe(false);
+      expect(prefs.areaWeights).toBeDefined();
     });
   });
 

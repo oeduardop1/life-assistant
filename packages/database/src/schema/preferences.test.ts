@@ -15,7 +15,6 @@ describe('preferences', () => {
   describe('userPreferencesSchema', () => {
     it('should parse empty object to defaults', () => {
       const result = userPreferencesSchema.parse({});
-      expect(result.christianPerspective).toBe(false);
       expect(result.areaWeights.health).toBe(1.0);
       expect(result.notifications.pushEnabled).toBe(true);
       expect(result.tracking.waterGoal).toBe(2000);
@@ -24,7 +23,6 @@ describe('preferences', () => {
     it('should parse valid preferences', () => {
       // ADR-017: Updated to 6 main areas
       const input = {
-        christianPerspective: true,
         areaWeights: {
           health: 0.9,
           finance: 0.8,
@@ -38,7 +36,6 @@ describe('preferences', () => {
         },
       };
       const result = userPreferencesSchema.parse(input);
-      expect(result.christianPerspective).toBe(true);
       expect(result.areaWeights.health).toBe(0.9);
       expect(result.areaWeights.finance).toBe(0.8);
       expect(result.areaWeights.professional).toBe(1.0); // default
@@ -94,7 +91,6 @@ describe('preferences', () => {
   describe('defaultUserPreferences', () => {
     // ADR-017: 6 fixed areas with equal weights (1.0)
     it('should have correct default values', () => {
-      expect(defaultUserPreferences.christianPerspective).toBe(false);
       expect(defaultUserPreferences.areaWeights.health).toBe(1.0);
       expect(defaultUserPreferences.areaWeights.finance).toBe(1.0);
       expect(defaultUserPreferences.areaWeights.professional).toBe(1.0);
@@ -131,9 +127,9 @@ describe('preferences', () => {
   describe('parseUserPreferences', () => {
     it('should parse valid preferences', () => {
       const result = parseUserPreferences({
-        christianPerspective: true,
+        tracking: { waterGoal: 2500 },
       });
-      expect(result.christianPerspective).toBe(true);
+      expect(result.tracking.waterGoal).toBe(2500);
     });
 
     it('should throw on invalid input', () => {
@@ -153,9 +149,9 @@ describe('preferences', () => {
   describe('validatePartialPreferences', () => {
     it('should validate partial updates', () => {
       const result = validatePartialPreferences({
-        christianPerspective: true,
+        tracking: { waterGoal: 2500 },
       });
-      expect(result.christianPerspective).toBe(true);
+      expect(result.tracking?.waterGoal).toBe(2500);
       expect(result.areaWeights).toBeUndefined();
     });
 
@@ -174,7 +170,7 @@ describe('preferences', () => {
 
     it('should return PartialUserPreferences type', () => {
       const result: PartialUserPreferences = validatePartialPreferences({
-        christianPerspective: false,
+        tracking: { waterGoal: 2500 },
       });
       expect(result).toBeDefined();
     });
@@ -183,9 +179,9 @@ describe('preferences', () => {
   describe('safeParseUserPreferences', () => {
     it('should return parsed data on valid input', () => {
       const result = safeParseUserPreferences({
-        christianPerspective: true,
+        tracking: { waterGoal: 2500 },
       });
-      expect(result.christianPerspective).toBe(true);
+      expect(result.tracking.waterGoal).toBe(2500);
     });
 
     it('should return defaults on invalid input', () => {

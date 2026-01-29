@@ -10,8 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  *
  * Redirects to the appropriate step based on current progress:
  * - If no progress: /onboarding/profile
- * - If profile complete: /onboarding/areas
- * - If areas complete: /onboarding/telegram
+ * - If profile complete: /onboarding/telegram
  * - If telegram complete: /onboarding/tutorial
  * - If all complete: /dashboard
  *

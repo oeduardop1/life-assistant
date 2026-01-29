@@ -390,8 +390,6 @@ const total = acc + parseFloat(row.amount); // 0 + 100 = 100
 import { z } from 'zod';
 
 export const userPreferencesSchema = z.object({
-  christianPerspective: z.boolean().default(false),
-
   // ADR-017: 6 áreas da vida (pesos fixos - não configuráveis pelo usuário)
   areaWeights: z.object({
     health: z.number().min(0).max(1).default(1.0),
@@ -1083,7 +1081,6 @@ export async function seedDevelopment(db: Database) {
     onboardingCompletedAt: new Date(),
     timezone: 'America/Sao_Paulo',
     preferences: {
-      christianPerspective: false,
       areaWeights: {
         health: 1.0,
         finance: 1.0,
@@ -1164,7 +1161,6 @@ export async function seedDevelopment(db: Database) {
     currentChallenges: ['Falta de tempo', 'Sedentarismo'],
     topOfMind: ['Preparar apresentação sexta'],
     communicationStyle: 'direct',
-    christianPerspective: false,
   });
 
   await db.insert(knowledgeItems).values([
@@ -1310,7 +1306,6 @@ export const users = pgTable('users', {
   
   // Preferences (JSON) - ADR-017: 6 áreas (pesos fixos 1.0)
   preferences: jsonb('preferences').notNull().default({
-    christianPerspective: false,
     areaWeights: {
       health: 1.0,
       finance: 1.0,

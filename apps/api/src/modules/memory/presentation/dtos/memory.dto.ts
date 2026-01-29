@@ -114,9 +114,6 @@ export class UserMemoryResponseDto {
   @ApiPropertyOptional({ example: 'Prefere feedback construtivo' })
   feedbackPreferences?: string | null;
 
-  @ApiProperty({ example: false })
-  christianPerspective!: boolean;
-
   @ApiProperty({ example: 1 })
   version!: number;
 

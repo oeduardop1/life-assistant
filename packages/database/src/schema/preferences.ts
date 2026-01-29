@@ -5,9 +5,6 @@ import { z } from 'zod';
 
 // Schema Zod for runtime validation
 export const userPreferencesSchema = z.object({
-  // Christian perspective enabled
-  christianPerspective: z.boolean().default(false),
-
   // Life area weights (0.0 to 2.0) - 6 fixed areas with equal weights (ADR-017)
   areaWeights: z
     .object({

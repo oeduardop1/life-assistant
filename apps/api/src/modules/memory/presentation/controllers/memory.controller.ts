@@ -325,7 +325,6 @@ export class MemoryController {
       values,
       communicationStyle: memory.communicationStyle,
       feedbackPreferences: memory.feedbackPreferences,
-      christianPerspective: memory.christianPerspective ?? false,
       version: memory.version,
       lastConsolidatedAt: memory.lastConsolidatedAt,
       createdAt: memory.createdAt,

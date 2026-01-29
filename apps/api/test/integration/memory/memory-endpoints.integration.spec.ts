@@ -54,7 +54,6 @@ const mockUserMemory = {
   values: ['Family', 'Growth'],
   communicationStyle: 'direct',
   feedbackPreferences: 'direct',
-  christianPerspective: false,
   version: 1,
   lastConsolidatedAt: null,
   createdAt: new Date('2024-01-01'),

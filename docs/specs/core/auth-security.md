@@ -23,7 +23,7 @@ flowchart LR
 | 2. Telegram | Conectar bot | ❌ Não |
 | 3. Tutorial | Tour interativo | ❌ Skip permitido |
 
-> **Nota (2026-01-26):** Áreas são fixas (6 para todos). Perspectiva cristã configurável em `/settings/preferences`.
+> **Nota (2026-01-26):** Áreas são fixas (6 para todos).
 
 ### 1.3 Abandoned Onboarding
 
@@ -76,7 +76,6 @@ onboarding_complete: boolean  // false até completar todas etapas obrigatórias
 | Timezone | `America/Sao_Paulo` | ✅ Sim |
 | Idioma | `pt-BR` | ✅ Sim |
 | Moeda | `BRL` | ✅ Sim |
-| Perspectiva cristã | `false` | ✅ Sim |
 
 ### 1.7 Localization Rules
 

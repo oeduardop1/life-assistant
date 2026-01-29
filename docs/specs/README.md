@@ -67,11 +67,10 @@ A IA conhece profundamente o usuário: seu passado, presente, objetivos futuros,
 
 1. **Memória Persistente** — A IA lembra de TUDO sobre o usuário
 2. **Zero Atrito** — Interação natural por chat (Telegram/WhatsApp) e dashboard (Web)
-3. **Perspectiva Cristã** — Princípios bíblicos integrados ao aconselhamento (opcional)
-4. **Visão Holística** — Todas as áreas da vida conectadas e visíveis
-5. **Transparência** — Você vê o que a IA sabe sobre você e pode corrigir
-6. **Rastreabilidade** — Todo número e insight é explicável e rastreável
-7. **Histórico de Decisões** — Acompanhamento de decisões importantes com follow-up e aprendizado
+3. **Visão Holística** — Todas as áreas da vida conectadas e visíveis
+4. **Transparência** — Você vê o que a IA sabe sobre você e pode corrigir
+5. **Rastreabilidade** — Todo número e insight é explicável e rastreável
+6. **Histórico de Decisões** — Acompanhamento de decisões importantes com follow-up e aprendizado
 
 ### North Star
 
@@ -210,18 +209,6 @@ Todas as 6 áreas têm importância igual (peso 1.0). As áreas são fixas e nã
 - Informações fragmentadas em vários apps
 - Não consegue ver padrões na própria vida
 
-### Persona Secundária: Cristão Praticante
-
-**Perfil adicional:**
-- Quer integrar fé e vida prática
-- Valoriza princípios bíblicos nas decisões
-- Quer crescer espiritualmente de forma consistente
-
-**Jobs-to-be-done adicionais:**
-- "Quero princípios bíblicos integrados ao meu dia a dia"
-- "Quero manter consistência no devocional"
-- "Quero que minha fé influencie minhas decisões"
-
 ### Segmentos de Mercado
 
 | Segmento | Características | Features Prioritárias |
@@ -229,7 +216,6 @@ Todas as 6 áreas têm importância igual (peso 1.0). As áreas são fixas e nã
 | **Empreendedor** | Foco em negócio, múltiplos projetos | Métricas de empresa, clientes, financeiro |
 | **CLT Executivo** | Carreira corporativa, família | Agenda, decisões de carreira, família |
 | **Estudante/Jovem** | Aprendizado, início de carreira | Estudos, hábitos, metas |
-| **Cristão** | Integração fé-vida | Devocional, perspectiva bíblica |
 
 ---
 
@@ -289,52 +275,6 @@ Todas as 6 áreas têm importância igual (peso 1.0). As áreas são fixas e nã
 - Lembretes configurados
 - Check-ins proativos da IA
 - Celebração de conquistas
-
----
-
-## Perspectiva Cristã
-
-### Configuração
-
-A perspectiva cristã é **opt-in** nas configurações:
-- **Desabilitado** — IA não menciona aspectos religiosos
-- **Habilitado** — IA integra princípios bíblicos quando relevante
-
-**Quando habilitado, aplica-se em:**
-- Momentos de dificuldade
-- Celebração de conquistas (gratidão)
-
-### Como a IA Aplica
-
-A IA não apenas cita versículos, mas aplica sabedoria bíblica contextualmente:
-- Traz o **princípio**, não só o versículo
-- **Contextualiza** para a situação específica
-- **Nunca impõe**; oferece perspectiva
-- Respeita a **liberdade de decisão** do usuário
-- Não é "pregação", é sabedoria aplicada
-
-### Exemplos de Aplicação
-
-**Decisão financeira:**
-> "Você está considerando esse investimento de alto risco com todo seu capital. Provérbios 21:5 fala que 'os planos bem pensados levam à prosperidade, mas a pressa leva à pobreza'. Talvez valha diversificar e ir aos poucos?"
-
-**Conflito profissional:**
-> "Antes de responder ao email do Fulano, lembra de Provérbios 15:1: 'a resposta calma desvia a fúria'. Como você poderia abordar isso de forma que resolva sem escalar?"
-
-**Sobrecarga de trabalho:**
-> "Você mencionou trabalhar até tarde pela terceira vez essa semana. Até Jesus se retirava para descansar (Marcos 6:31). Seu corpo e família precisam de você presente e inteiro."
-
-**Ansiedade com o futuro:**
-> "Entendo a preocupação com essa incerteza. Filipenses 4:6-7 nos lembra de apresentar nossos pedidos a Deus com gratidão. Isso não significa ignorar o problema, mas não carregar o peso sozinho."
-
-### Features Espirituais
-
-- Tracking de devocional com streak
-- Plano de leitura bíblica
-- Reflexões espirituais (integradas à Memória)
-- Registro de orações (pedidos e respostas)
-- Dízimos e ofertas
-- Frequência na igreja
 
 ---
 
@@ -526,7 +466,6 @@ Arquivos originais mantidos para referência histórica:
 | **Tracking** | Registro sistemático de métricas ao longo do tempo |
 | **PR (Personal Record)** | Recorde pessoal em exercício físico |
 | **Check-in Proativo** | Quando a IA inicia conversa para verificar status |
-| **Perspectiva Cristã** | Feature opcional que integra princípios bíblicos |
 | **Decision Follow-up** | Acompanhamento automático de decisões (ADR-016) |
 | **Morning Summary** | Resumo matinal enviado pela IA com agenda e alertas |
 | **Life Balance Score** | Score agregado que representa o equilíbrio geral da vida |

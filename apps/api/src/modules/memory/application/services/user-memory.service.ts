@@ -44,7 +44,6 @@ export class UserMemoryService {
         topOfMind: [],
         values: [],
         learnedPatterns: [],
-        christianPerspective: false,
       });
     }
 
@@ -140,13 +139,6 @@ export class UserMemoryService {
     }
     if (commParts.length > 0) {
       sections.push(`## Comunicação\n${commParts.join('\n')}`);
-    }
-
-    // Christian perspective
-    if (memory.christianPerspective) {
-      sections.push(
-        `## Preferências\n- Incluir perspectiva cristã quando relevante`
-      );
     }
 
     const text = sections.length > 0 ? sections.join('\n\n') : '';

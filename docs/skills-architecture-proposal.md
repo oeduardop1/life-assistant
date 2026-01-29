@@ -6,6 +6,7 @@
 > **Status:** Proposta (não implementado)
 > **Inspiração:** Claude Code Skills System + Claude Code Subagents
 > **Referência atual:** `docs/specs/ai.md`, `docs/specs/engineering.md` §8, `ADR-012`
+> **Decisões de Design:** Seção 15 (baseada em pesquisa de padrões da indústria 2025-2026)
 
 ---
 
@@ -217,11 +218,20 @@ interface SkillDefinition {
   description: string;
 
   /**
-   * Palavras-chave para detecção rápida (heurística, zero-cost).
-   * Se qualquer pattern for encontrado na mensagem, a skill é candidata.
-   * Matching é case-insensitive e usa includes().
+   * Patterns regex para detecção rápida (heurística, zero-cost).
+   * Usa word boundaries (\b) para evitar falsos positivos.
+   * Matching é case-insensitive.
+   *
+   * @see Seção 15.2 - Decisão sobre falsos positivos
    */
-  triggerPatterns: string[];
+  triggerPatterns: RegExp[];
+
+  /**
+   * Patterns de exclusão (opcional).
+   * Se qualquer excludePattern der match, a skill NÃO é ativada.
+   * Útil para desambiguar: "gastei tempo" não deve ativar finance.
+   */
+  excludePatterns?: RegExp[];
 
   /**
    * Tools disponíveis quando esta skill está ativa.
@@ -249,13 +259,6 @@ interface SkillDefinition {
    * undefined = usa default do provider.
    */
   temperature?: number;
-
-  /**
-   * Preferência do usuário necessária para ativar esta skill.
-   * Ex: 'christian_perspective' — só ativa se o usuário habilitou nas settings.
-   * undefined = sempre disponível.
-   */
-  requiresUserPreference?: string;
 
   /**
    * Prioridade de ativação (menor = maior prioridade).
@@ -303,11 +306,25 @@ const financeSkill: SkillDefinition = {
   name: 'finance',
   description: 'Domínio financeiro: gastos, receitas, contas, dívidas, investimentos, orçamento, parcelas, boletos e planejamento financeiro.',
   triggerPatterns: [
-    'gast', 'conta', 'dívida', 'divida', 'salário', 'salario',
-    'invest', 'orçamento', 'orcamento', 'pagu', 'paguei',
-    'boleto', 'parcela', 'finance', 'dinheiro', 'real', 'reais',
-    'cartão', 'cartao', 'fatura', 'débito', 'credito',
-    'economiz', 'poupar', 'poupança', 'renda',
+    /\bgast(o|ei|ou|ar|ando|os)\b/i,           // gasto, gastei, gastou, gastar
+    /\bconta(s)?\s+(fixa|pagar|pendente)/i,    // conta fixa, conta pagar
+    /\bdívida/i, /\bdivida/i,                  // dívida (sempre finance)
+    /\bsalário/i, /\bsalario/i,                // salário
+    /\binvest/i,                               // investir, investimento
+    /\borçamento/i, /\borcamento/i,            // orçamento
+    /\bpagu?ei\b/i,                            // paguei, pago
+    /\bboleto/i, /\bparcela/i,                 // boleto, parcela
+    /\bdinheiro\b/i,                           // dinheiro
+    /R\$\s*\d/,                                // R$ 50, R$ 100
+    /\bcartão/i, /\bcartao/i,                  // cartão
+    /\bfatura/i,                               // fatura
+    /\beconomiz/i, /\bpoupar/i, /\bpoupança/i, // economizar, poupar
+    /\brenda\b/i,                              // renda
+  ],
+  excludePatterns: [
+    /\bgast(o|ar)\s+(tempo|energia|horas)/i,   // "gastei tempo" → não é finance
+    /\bconta(r|ou|ndo|va)\b/i,                 // "contou uma história" → não é finance
+    /\brenda\s+(se|os|as)\b/i,                 // "renda-se" → não é finance
   ],
   tools: [
     'get_finance_summary',
@@ -342,13 +359,20 @@ const healthSkill: SkillDefinition = {
   name: 'health',
   description: 'Domínio de saúde: peso, exercícios, sono, hidratação, humor, energia, alimentação, hábitos de saúde e bem-estar físico/mental.',
   triggerPatterns: [
-    'peso', 'exerc', 'acade', 'musculação', 'treino', 'trein',
-    'sono', 'dormi', 'dormir', 'insônia',
-    'água', 'agua', 'litro',
-    'humor', 'energia', 'cansad', 'dispost',
-    'dieta', 'aliment', 'comer', 'comida',
-    'saúde', 'saude', 'médic', 'medic',
-    'caminh', 'corr', 'yoga', 'alongamento',
+    /\bpeso\b/i, /\bpes(ei|ou|ar)\b/i,         // peso, pesei
+    /\bexerc/i, /\bacademia/i,                 // exercício, academia
+    /\bmusculação/i, /\btrein/i,               // treino
+    /\bsono\b/i, /\bdormi/i, /\binsônia/i,     // sono, dormir
+    /\b\d+\s*(ml|litro)/i,                     // 500ml, 2 litros
+    /\bágua\b/i, /\bagua\b/i,                  // água
+    /\bhumor\b/i, /\benergia\b/i,              // humor, energia
+    /\bcansad/i, /\bdispost/i,                 // cansado, disposto
+    /\bdieta\b/i, /\baliment/i,                // dieta, alimentação
+    /\bcomer\b/i, /\bcomida\b/i,               // comer, comida
+    /\bsaúde\b/i, /\bsaude\b/i,                // saúde
+    /\bmédic/i, /\bmedic/i,                    // médico
+    /\bcaminh/i, /\bcorr(er|i|eu)\b/i,         // caminhada, correr
+    /\byoga\b/i, /\balongamento/i,             // yoga
   ],
   tools: [
     'record_metric',
@@ -382,17 +406,21 @@ const counselorSkill: SkillDefinition = {
   name: 'counselor',
   description: 'Modo conselheira: reflexão, decisões difíceis, apoio emocional, desabafos, conflitos, ansiedade, incertezas e autoconhecimento.',
   triggerPatterns: [
-    'conselho', 'não sei o que fazer', 'nao sei o que fazer',
-    'preciso desabafar', 'desabaf',
-    'confus', 'indecis', 'dilema',
-    'ansied', 'ansios', 'preocupad',
-    'trist', 'chorand', 'deprimid',
-    'decid', 'decisão', 'decisao',
-    'conflito', 'briga', 'discuss',
-    'frustr', 'raiva', 'irritad',
-    'medo', 'insegur', 'incert',
-    'sozinho', 'solidão', 'solidao',
-    'me ajuda a pensar', 'o que você acha',
+    /\bconselho/i,                             // conselho
+    /não sei o que fazer/i,                    // frase completa
+    /preciso desabafar/i, /\bdesabaf/i,        // desabafar
+    /\bconfus/i, /\bindecis/i, /\bdilema/i,    // confuso, indeciso
+    /\bansie?d/i, /\bansios/i,                 // ansiedade, ansioso
+    /\bpreocupad/i,                            // preocupado
+    /\btrist/i, /\bchorand/i,                  // triste, chorando
+    /\bdeprimid/i,                             // deprimido
+    /\bdecis/i,                                // decisão, decidir
+    /\bconflito/i, /\bbriga/i,                 // conflito, briga
+    /\bfrustr/i, /\braiva\b/i, /\birritad/i,   // frustrado, raiva
+    /\bmedo\b/i, /\binsegur/i,                 // medo, inseguro
+    /\bsozinho/i, /\bsolidão/i,                // sozinho, solidão
+    /me ajuda a pensar/i,                      // frase completa
+    /o que você acha/i,                        // pedindo opinião
   ],
   tools: [
     // Counselor não precisa de tracking/finance tools
@@ -426,13 +454,19 @@ const relationshipsSkill: SkillDefinition = {
   name: 'relationships',
   description: 'Domínio de relacionamentos: família, amigos, namoro, casamento, colegas de trabalho, CRM pessoal e dinâmicas interpessoais.',
   triggerPatterns: [
-    'namor', 'namorad', 'casament', 'esposa', 'esposo', 'marid',
-    'família', 'familia', 'pai', 'mãe', 'mae', 'irmã', 'irma',
-    'amig', 'amizade', 'colega',
-    'relacion', 'término', 'termino', 'separaç',
-    'filho', 'filha', 'criança',
-    'sogr', 'cunhad', 'parente',
-    'chefe', 'gestor',
+    /\bnamor/i, /\bnamorad/i,                  // namoro, namorada
+    /\bcasament/i, /\besposa?\b/i,             // casamento, esposo/a
+    /\bmarid/i,                                // marido
+    /\bfamília/i, /\bfamilia/i,                // família
+    /\b(meu|minha)\s+(pai|mãe|mae)\b/i,        // meu pai, minha mãe
+    /\birmã/i, /\birmao/i,                     // irmã, irmão
+    /\bamig/i, /\bamizade/i,                   // amigo, amizade
+    /\bcolega/i,                               // colega
+    /\brelacion/i,                             // relacionamento
+    /\btérmino/i, /\btermino/i, /\bseparaç/i,  // término, separação
+    /\bfilho/i, /\bfilha/i,                    // filho, filha
+    /\bsogr/i, /\bcunhad/i,                    // sogro, cunhado
+    /\bparente/i,                              // parente
   ],
   tools: [
     'get_person',
@@ -464,15 +498,24 @@ const professionalSkill: SkillDefinition = {
   name: 'professional',
   description: 'Domínio profissional: carreira, trabalho, emprego, promoção, demissão, projetos, produtividade, metas profissionais e desenvolvimento.',
   triggerPatterns: [
-    'trabalh', 'emprego', 'carreira',
-    'promoção', 'promoc', 'demiss',
-    'projeto', 'prazo', 'deadline',
-    'reunião', 'reuniao', 'apresent',
-    'curriculo', 'currículo', 'entrevista',
-    'salário', 'salario', 'aumento',
-    'chefe', 'gestor', 'equipe', 'time',
-    'produtiv', 'foco', 'procrastin',
-    'freelanc', 'negócio', 'negocio', 'empreend',
+    /\btrabalh/i,                              // trabalho, trabalhando
+    /\bemprego\b/i, /\bcarreira\b/i,           // emprego, carreira
+    /\bpromoção/i, /\bpromoc/i,                // promoção
+    /\bdemiss/i,                               // demissão
+    /\bprojeto/i,                              // projeto
+    /\bprazo\b/i, /\bdeadline\b/i,             // prazo, deadline
+    /\breunião/i, /\breuniao/i,                // reunião
+    /\bapresentaç/i,                           // apresentação
+    /\bcurrículo/i, /\bcurriculo/i,            // currículo
+    /\bentrevista/i,                           // entrevista
+    /\baumento\b/i,                            // aumento (salarial)
+    /\b(meu|minha)\s+(chefe|gestor)/i,         // meu chefe, minha gestora
+    /\bequipe\b/i, /\btime\b/i,                // equipe, time
+    /\bprodutiv/i,                             // produtividade
+    /\bfoco\b/i, /\bprocrastin/i,              // foco, procrastinar
+    /\bfreelanc/i,                             // freelancer
+    /\bnegócio/i, /\bnegocio/i,                // negócio
+    /\bempreend/i,                             // empreendedor
   ],
   tools: [
     // Usa base tools + pode cruzar com finance (salário) ou relationships (colegas)
@@ -495,51 +538,13 @@ const professionalSkill: SkillDefinition = {
 };
 ```
 
-#### Spiritual Skill
-
-```typescript
-const spiritualSkill: SkillDefinition = {
-  name: 'spiritual',
-  description: 'Domínio espiritual: fé, oração, gratidão, propósito, valores, igreja, comunidade de fé e perspectiva cristã.',
-  triggerPatterns: [
-    'oraç', 'orar', 'deus', 'jesus', 'bíblia', 'biblia',
-    'igreja', 'culto', 'fé',
-    'gratidão', 'gratidao', 'agradeç',
-    'propósito', 'proposito', 'sentido da vida',
-    'espiritual', 'alma', 'paz interior',
-    'versículo', 'versiculo', 'salmo',
-  ],
-  tools: [
-    // Usa apenas base tools
-  ],
-  promptExtension: `## Skill: Espiritual
-- Integre princípios e valores cristãos naturalmente
-- Referencie versículos bíblicos quando relevante e apropriado
-- Encoraje práticas espirituais (oração, gratidão, meditação bíblica)
-- Conecte desafios com perspectiva de fé
-- Tom esperançoso e encorajador
-- NÃO force referências religiosas
-- NÃO seja pregador ou moralizante
-- Equilibre fé com ação prática`,
-  tone: {
-    style: 'hopeful',
-    emojiLevel: 'minimal',
-    responseLength: 'moderate',
-    formality: 'careful-informal',
-  },
-  temperature: 0.6,
-  requiresUserPreference: 'christian_perspective', // Só se o usuário ativou
-  priority: 5,
-};
-```
-
 #### General Skill (fallback)
 
 ```typescript
 const generalSkill: SkillDefinition = {
   name: 'general',
   description: 'Fallback para conversas casuais, saudações, perguntas gerais ou tópicos que não se encaixam em nenhuma skill específica.',
-  triggerPatterns: [], // Nunca ativada por trigger — é o fallback
+  triggerPatterns: [], // Nunca ativada por trigger — é o fallback (RegExp[] vazio)
   tools: [], // Apenas base tools
   promptExtension: '', // Sem extensão adicional
   tone: {
@@ -603,54 +608,90 @@ A diferença de accuracy (85% → 95%) não justifica o custo de uma LLM call ex
 
 ### 5.3 Inércia de Skill (Continuidade Conversacional)
 
+> **Decisão de Design:** Inércia é **derivada do histórico**, não armazenada.
+> Ver Seção 15.4 para justificativa baseada em padrões da indústria.
+
+A skill ativa é derivada das últimas N mensagens do usuário em cada request.
+Isso elimina a necessidade de armazenar estado adicional (zero storage).
+
 ```typescript
 /**
- * Quando uma skill está ativa na conversa, ela permanece ativa
- * até que outra skill seja detectada ou a conversa mude de assunto.
+ * Deriva skills ativas do histórico de mensagens.
+ * Não há estado persistido — tudo é calculado on-the-fly.
  *
- * Isso evita "flickering" entre skills em conversas longas sobre um tema.
+ * @see Seção 15.4 - Decisão: Storage de ConversationSkillState
  */
-interface ConversationSkillState {
-  activeSkills: string[];      // Skills atualmente ativas
-  lastDetectedAt: number;      // Timestamp da última detecção
-  messagesSinceDetection: number; // Mensagens desde última ativação
+function deriveActiveSkills(
+  currentMessage: string,
+  recentUserMessages: string[],  // Últimas 5 mensagens do usuário
+  maxSkills: number = 2          // Limite de skills simultâneas
+): SkillDefinition[] {
+  // 1. Tentar detectar skills na mensagem atual
+  const currentSkills = detectSkills(currentMessage);
+
+  if (currentSkills.length > 0) {
+    return currentSkills.slice(0, maxSkills);
+  }
+
+  // 2. Se não detectou (ex: "sim", "ok"), usar contexto recente
+  const contextSkills = recentUserMessages
+    .flatMap(msg => detectSkills(msg));
+
+  if (contextSkills.length > 0) {
+    // Retornar as mais frequentes
+    return getMostFrequent(contextSkills, maxSkills);
+  }
+
+  // 3. Fallback: general
+  return [generalSkill];
 }
 
-// Regra de inércia:
-// - Skill permanece ativa por até 5 mensagens sem re-detecção
-// - Se nova skill é detectada, substitui ou combina
-// - Se nenhuma skill detectada por 5 msgs, volta para 'general'
-const SKILL_INERTIA_MESSAGES = 5;
+// Configuração de inércia
+const SKILL_CONTEXT_MESSAGES = 5;  // Quantas mensagens olhar para trás
 ```
+
+**Por que derivar ao invés de armazenar:**
+
+| Aspecto | Armazenar (Redis) | Derivar (histórico) |
+|---------|------------------|---------------------|
+| Latência | +1 RTT por request | Zero adicional |
+| Complexidade | Gerenciar TTL, invalidação | Cálculo simples |
+| Consistência | Pode dessincronizar | Sempre consistente |
+| Debug | Precisa inspecionar Redis | Basta ver mensagens |
 
 ### 5.4 Multi-Skill Activation
 
-O sistema permite múltiplas skills ativas simultaneamente. Isso é o diferencial principal:
+> **Decisão de Design:** Máximo **2 skills simultâneas** (dominante + secundária).
+> Ver Seção 15.3 para justificativa baseada em padrões da indústria.
+
+O sistema permite até 2 skills ativas simultaneamente. Isso equilibra contexto cruzado com simplicidade:
 
 **Exemplo real — Stress financeiro:**
 ```
 Usuário: "Estou perdendo o sono porque não consigo pagar as parcelas"
 ```
 
-Detecção:
-1. "sono" → triggers `health`
-2. "pagar", "parcelas" → triggers `finance`
-3. "perdendo o sono" + contexto emocional → `counselor` (via inércia ou padrão)
+Detecção (triggers encontrados):
+1. "sono" → triggers `health` (priority 4)
+2. "pagar", "parcelas" → triggers `finance` (priority 3)
+3. "perdendo o sono" sugere stress → `counselor` também seria candidato (priority 2)
 
-Skills ativas: `[counselor, finance, health]` (ordenadas por priority)
+**Com limite de 2 skills:** `[counselor, finance]` (as 2 com menor priority number)
+
+> **Nota:** `health` é descartado pois excede o limite. Porém, as base tools
+> (`analyze_context`) ainda permitem detectar conexões com saúde.
 
 **Composição do prompt:**
 ```
 [Base Prompt - ~1.500 tokens]
-[Counselor Extension - ~350 tokens]
-[Finance Extension - ~300 tokens]
-[Health Extension - ~300 tokens]
+[Counselor Extension - ~350 tokens]  ← skill dominante (priority 2)
+[Finance Extension - ~300 tokens]    ← skill secundária (priority 3)
 [User Memory - ~500-800 tokens]
 
-Tools disponíveis: base (3) + finance (5) + health (4) = 12 tools (~5.500 tokens)
+Tools disponíveis: base (3) + finance (5) = 8 tools (~4.000 tokens)
 ```
 
-**Total: ~8.000 tokens** (vs ~10.000 atuais com TODAS as tools)
+**Total: ~6.500 tokens** (vs ~10.000 atuais com TODAS as tools)
 
 E mais importante: as instruções são **relevantes** para o contexto, não genéricas.
 
@@ -927,7 +968,6 @@ packages/ai/src/
 │       ├── counselor.skill.ts
 │       ├── relationships.skill.ts
 │       ├── professional.skill.ts
-│       ├── spiritual.skill.ts
 │       └── general.skill.ts
 ├── schemas/tools/                  # (inalterado)
 ├── services/
@@ -945,59 +985,84 @@ packages/ai/src/
  * Detecta skills relevantes baseado na mensagem do usuário e contexto.
  *
  * Estratégia em 2 camadas:
- * 1. Heurística: triggerPatterns (zero-cost, <1ms)
- * 2. Inércia: manter skill da conversa se nenhuma nova detectada
+ * 1. Heurística: triggerPatterns com regex (zero-cost, <1ms)
+ * 2. Inércia: derivar do histórico recente se nenhuma nova detectada
+ *
+ * @see Seção 15 para decisões de design
  */
 export class SkillDetectorService {
   private readonly skills: SkillDefinition[];
+  private readonly maxSimultaneousSkills = 2; // Decisão 15.3
 
   /**
    * Detecta skills para uma mensagem.
    *
    * @param message - Mensagem do usuário
-   * @param conversationState - Estado atual de skills da conversa (inércia)
-   * @param userPreferences - Preferências do usuário (ex: christian_perspective)
-   * @returns Skills ativas ordenadas por prioridade
+   * @param recentUserMessages - Últimas N mensagens do usuário (para inércia)
+   * @returns Skills ativas ordenadas por prioridade (máximo 2)
    */
   detect(
     message: string,
-    conversationState?: ConversationSkillState,
-    userPreferences?: Record<string, boolean>
+    recentUserMessages: string[] = []
   ): SkillDefinition[] {
-    // Camada 1: Heurística
+    // Camada 1: Heurística na mensagem atual
     const candidates = this.matchTriggerPatterns(message);
 
-    // Filtrar por preferências do usuário
-    const filtered = candidates.filter(skill =>
-      !skill.requiresUserPreference ||
-      userPreferences?.[skill.requiresUserPreference]
-    );
-
-    // Se encontrou matches: usar
-    if (filtered.length > 0) {
-      return this.sortByPriority(filtered);
+    if (candidates.length > 0) {
+      return this.sortByPriority(candidates)
+        .slice(0, this.maxSimultaneousSkills);
     }
 
-    // Camada 2: Inércia (manter skill anterior se < 5 mensagens)
-    if (conversationState && conversationState.messagesSinceDetection < SKILL_INERTIA_MESSAGES) {
-      return conversationState.activeSkills
-        .map(name => this.skills.find(s => s.name === name))
-        .filter(Boolean) as SkillDefinition[];
+    // Camada 2: Inércia — derivar do histórico recente
+    const contextCandidates = recentUserMessages
+      .flatMap(msg => this.matchTriggerPatterns(msg));
+
+    if (contextCandidates.length > 0) {
+      return this.getMostFrequent(contextCandidates, this.maxSimultaneousSkills);
     }
 
     // Fallback: general
     return [this.skills.find(s => s.name === 'general')!];
   }
 
+  /**
+   * Matching com regex e word boundaries.
+   * Também verifica excludePatterns para evitar falsos positivos.
+   */
   private matchTriggerPatterns(message: string): SkillDefinition[] {
-    const lowerMessage = message.toLowerCase();
-    return this.skills.filter(skill =>
-      skill.triggerPatterns.some(pattern => lowerMessage.includes(pattern))
-    );
+    return this.skills.filter(skill => {
+      // Verificar se algum trigger dá match
+      const hasMatch = skill.triggerPatterns.some(pattern => pattern.test(message));
+      if (!hasMatch) return false;
+
+      // Verificar exclusões (se definidas)
+      if (skill.excludePatterns?.length) {
+        const isExcluded = skill.excludePatterns.some(pattern => pattern.test(message));
+        if (isExcluded) return false;
+      }
+
+      return true;
+    });
   }
 
   private sortByPriority(skills: SkillDefinition[]): SkillDefinition[] {
     return [...skills].sort((a, b) => (a.priority ?? 5) - (b.priority ?? 5));
+  }
+
+  private getMostFrequent(skills: SkillDefinition[], limit: number): SkillDefinition[] {
+    const counts = new Map<string, { skill: SkillDefinition; count: number }>();
+    for (const skill of skills) {
+      const existing = counts.get(skill.name);
+      if (existing) {
+        existing.count++;
+      } else {
+        counts.set(skill.name, { skill, count: 1 });
+      }
+    }
+    return [...counts.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit)
+      .map(entry => entry.skill);
   }
 }
 ```
@@ -1007,6 +1072,8 @@ export class SkillDetectorService {
 ```typescript
 /**
  * Compõe o contexto final (prompt + tools + config) baseado nas skills ativas.
+ *
+ * @see Seção 15.5 para regras de combinação de ToneConfig
  */
 export class SkillComposerService {
   private readonly allToolDefinitions: Map<string, ToolDefinition>;
@@ -1045,11 +1112,47 @@ export class SkillComposerService {
       ? Math.min(...temperatures)
       : undefined;
 
-    // 5. Determinar tone (skill com menor priority number domina)
-    const dominantSkill = activeSkills[0]; // Já ordenadas por priority
-    const tone = dominantSkill?.tone;
+    // 5. Combinar tone configs (Decisão 15.5)
+    const tone = this.combineTones(activeSkills.map(s => s.tone));
 
     return { tools, promptExtension, temperature, tone };
+  }
+
+  /**
+   * Combina ToneConfig de múltiplas skills.
+   * - style: skill dominante (primeira, já ordenada por priority)
+   * - emojiLevel: mínimo (mais restritivo)
+   * - responseLength: máximo (mais elaborado)
+   * - formality: skill dominante
+   *
+   * @see Seção 15.5 - Decisão de Combinação de ToneConfig
+   */
+  private combineTones(tones: ToneConfig[]): ToneConfig | undefined {
+    if (tones.length === 0) return undefined;
+    if (tones.length === 1) return tones[0];
+
+    const dominantTone = tones[0]!;
+
+    // Mapeamentos para comparação
+    const emojiLevels = { 'none': 0, 'minimal': 1, 'moderate': 2 };
+    const responseLengths = { 'concise': 0, 'moderate': 1, 'elaborated': 2 };
+
+    // Calcular mínimo de emojiLevel
+    const minEmojiValue = Math.min(...tones.map(t => emojiLevels[t.emojiLevel]));
+    const minEmojiLevel = Object.entries(emojiLevels)
+      .find(([_, v]) => v === minEmojiValue)?.[0] as ToneConfig['emojiLevel'];
+
+    // Calcular máximo de responseLength
+    const maxLengthValue = Math.max(...tones.map(t => responseLengths[t.responseLength]));
+    const maxResponseLength = Object.entries(responseLengths)
+      .find(([_, v]) => v === maxLengthValue)?.[0] as ToneConfig['responseLength'];
+
+    return {
+      style: dominantTone.style,               // Dominante
+      emojiLevel: minEmojiLevel,               // Mínimo
+      responseLength: maxResponseLength,       // Máximo
+      formality: dominantTone.formality,       // Dominante
+    };
   }
 }
 
@@ -1125,17 +1228,19 @@ private async processStreamResponse(
 
   // === NOVO: Detectar skills ===
   const lastUserMessage = recentMessages.findLast(m => m.role === 'user')?.content ?? '';
-  const conversationSkillState = await this.getConversationSkillState(conversationId);
-  const userPreferences = await this.getUserPreferences(userId);
+
+  // Coletar últimas N mensagens do usuário para inércia (derivada, não stored)
+  const recentUserMessages = recentMessages
+    .filter(m => m.role === 'user')
+    .slice(-5)  // SKILL_CONTEXT_MESSAGES
+    .map(m => m.content);
 
   const activeSkills = this.skillDetector.detect(
     lastUserMessage,
-    conversationSkillState,
-    userPreferences
+    recentUserMessages  // Inércia derivada do histórico
   );
 
-  // Atualizar estado de skills da conversa
-  await this.updateConversationSkillState(conversationId, activeSkills);
+  // Não há estado para atualizar — tudo é derivado
 
   // === EVOLUÍDO: buildSystemPrompt agora recebe skills ===
   const systemPrompt = await this.contextBuilder.buildSystemPrompt(
@@ -1222,7 +1327,7 @@ private async processStreamResponse(
 | `allowed-tools` (restrição) | Tools por skill (extensão) | Base tools sempre disponíveis |
 | `model` override por skill | `temperature` override | Trocar model é caro; temperature é suficiente |
 | User invocation (`/skill`) | Auto-detection por trigger | Produto consumer, não developer |
-| `disable-model-invocation` | `requiresUserPreference` | Mesmo conceito, naming diferente |
+| `disable-model-invocation` | Não implementado | Todas skills são sempre disponíveis |
 | Hooks (PreToolUse/PostToolUse) | Não implementado | Confirmation system já cobre o caso de uso |
 
 ### 12.2 O que NÃO se aplica
@@ -1238,54 +1343,7 @@ private async processStreamResponse(
 
 ---
 
-## 13) Plano de Migração
-
-### 13.1 Fases
-
-**Fase 0: Preparação (sem mudança funcional)**
-- Criar estrutura `packages/ai/src/skills/`
-- Definir tipos (`SkillDefinition`, `ToneConfig`, `ConversationSkillState`)
-- Implementar `SkillDetectorService` e `SkillComposerService`
-- Testes unitários para detecção e composição
-- Feature flag: `SKILLS_ENABLED=false`
-
-**Fase 1: Refactor do Base Prompt**
-- Extrair instruções tool-specific do `buildBasePrompt()` para skill definitions
-- Reduzir base prompt para instruções universais (~800 tokens)
-- Manter backward compat: quando skills desabilitado, usa prompt monolítico
-
-**Fase 2: Integração com ChatService**
-- Adicionar detecção de skills no `processStreamResponse()`
-- Filtrar tools baseado em skills ativas
-- Injetar temperature por skill
-- Feature flag: `SKILLS_ENABLED=true` para A/B test
-
-**Fase 3: Mapping de Conversation.type**
-- Migrar `type: 'counselor'` para skill detection automática
-- Remover switch no `ContextBuilderService`
-- Deprecar `type` field (manter para backward compat)
-
-**Fase 4: Observabilidade**
-- Logar skills ativas por request (Sentry breadcrumbs)
-- Dashboard de distribuição de skills
-- Alertar quando skill accuracy cair (via tool call success rate)
-
-### 13.2 Feature Flag
-
-```typescript
-// .env
-SKILLS_ENABLED=false  // Fase 0-1
-SKILLS_ENABLED=true   // Fase 2+
-
-// chat.service.ts
-const activeSkills = this.config.get('SKILLS_ENABLED')
-  ? this.skillDetector.detect(lastUserMessage, ...)
-  : [this.allSkillsFallback]; // Simula comportamento atual (todas as tools)
-```
-
----
-
-## 14) Referências
+## 13) Referências
 
 | Fonte | Link/Path | Uso neste documento |
 |-------|-----------|---------------------|
@@ -1300,3 +1358,187 @@ const activeSkills = this.config.get('SKILLS_ENABLED')
 | Claude Code Subagents | https://code.claude.com/docs/en/sub-agents | Análise comparativa |
 | Phase 2 Milestones | `docs/milestones/phase-2-tracker.md` | Projeção de crescimento de tools |
 | Phase 3 Milestones | `docs/milestones/phase-3-assistant.md` | Tools futuras planejadas |
+
+---
+
+## 15) Decisões de Design
+
+> **Contexto:** Durante a análise desta proposta, foram identificadas decisões de design que precisavam de definição. As decisões abaixo foram tomadas com base em pesquisa de padrões da indústria (2025-2026).
+
+### 15.1 Confirmação Pendente + Mudança de Skill
+
+**Decisão:** Durante confirmação pendente, **bloquear detecção de skills**.
+
+**Padrão da indústria:** O LangGraph implementa o padrão `interrupt()` que bloqueia transições de estado até receber input humano.
+
+```python
+# LangGraph - Human-in-the-loop pattern
+def approval_node(state):
+    approval = interrupt(value={"question": "Approve?"})
+    # Workflow PARA até receber resposta
+```
+
+**Justificativa:** O sistema de confirmação (ADR-015) já usa este padrão implicitamente. Durante uma confirmação pendente, a skill que gerou a tool call permanece ativa até confirmação/rejeição.
+
+**Fontes:**
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
+- [State Machine Based Human-Bot Conversation](https://pmc.ncbi.nlm.nih.gov/articles/PMC7266438/)
+
+---
+
+### 15.2 Falsos Positivos em Triggers
+
+**Decisão:** Usar **regex com word boundaries** + **lista de exclusões**.
+
+**Padrão da indústria:** Abordagem híbrida combina pattern matching rápido com regras de exclusão.
+
+> *"Modern approaches use hybrid systems that combine quick pattern matching with embedding-based classification. If pattern matching has confidence > 0.9, it returns that result."* — [Label Your Data](https://labelyourdata.com/articles/machine-learning/intent-classification)
+
+**Implementação:**
+
+```typescript
+// Antes (falso positivo: "gastei tempo pensando")
+triggerPatterns: ['gast', ...]
+
+// Depois (word boundary evita falsos positivos)
+triggerPatterns: [/\bgast(o|ei|ou)\b/i, ...],
+excludePatterns: [/\bgast(o|ar)\s+(tempo|energia)/i, ...]
+```
+
+**Casos de exclusão implementados:**
+| Padrão | Exclusão | Motivo |
+|--------|----------|--------|
+| `gast*` | `gastei tempo/energia` | Não é contexto financeiro |
+| `conta*` | `contou/contando/contava` | Verbo "contar história" |
+| `renda*` | `renda-se` | Verbo "render-se" |
+
+**Fontes:**
+- [Intent Classification 2025](https://labelyourdata.com/articles/machine-learning/intent-classification)
+- [Rasa NLU - Intent Classification](https://rasa.com/blog/rasa-nlu-in-depth-part-1-intent-classification/)
+
+---
+
+### 15.3 Limite de Skills Simultâneas
+
+**Decisão:** Máximo **2 skills** simultâneas (dominante + secundária).
+
+**Padrão da indústria:** Frameworks recomendam começar simples e evitar complexidade prematura.
+
+> *"Start simple: Do not build a nested loop system on day one. Start with a sequential chain, debug it, and then add complexity."* — [Google ADK](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/)
+
+> *"An alternative approach is splitting large agents into smaller, specialized ones."* — [IBM](https://www.ibm.com/think/tutorials/llm-agent-orchestration-with-langchain-and-granite)
+
+**Justificativa:**
+| Limite | Prós | Contras |
+|--------|------|---------|
+| 1 skill | Simples | Perde contexto cruzado |
+| **2 skills** | Equilíbrio, cobre 90% casos | Alguma complexidade |
+| 3+ skills | Flexível | Prompt explosion, difícil debug |
+
+**Fontes:**
+- [Google ADK Multi-agent Patterns](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/)
+- [IBM LLM Agent Orchestration](https://www.ibm.com/think/tutorials/llm-agent-orchestration-with-langchain-and-granite)
+- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/multi_agent/)
+
+---
+
+### 15.4 Storage de ConversationSkillState
+
+**Decisão:** **Derivar do histórico** (últimas 5 mensagens do usuário), não armazenar.
+
+**Padrão da indústria:** Tendência é stateless com derivação para simplicidade.
+
+> *"If you're skimming: stateless is simpler but forgets everything; stateful remembers but costs you in complexity."* — [Tacnode](https://tacnode.io/post/stateful-vs-stateless-ai-agents-practical-architecture-guide-for-developers)
+
+> *"Most 'chatbots with memory' are actually stateful agents under the hood. The server stores past messages and feeds them back into an otherwise stateless model."*
+
+**Comparação:**
+| Aspecto | Redis (stored) | Histórico (derived) |
+|---------|----------------|---------------------|
+| Latência | +1 RTT | Zero adicional |
+| Consistência | Pode dessincronizar | Sempre correto |
+| Complexidade | TTL, invalidação | Cálculo simples |
+| Debug | Inspecionar Redis | Ver mensagens |
+
+**Implementação:**
+```typescript
+const recentUserMessages = messages
+  .filter(m => m.role === 'user')
+  .slice(-5)
+  .map(m => m.content);
+
+const activeSkills = detector.detect(lastMessage, recentUserMessages);
+```
+
+**Fontes:**
+- [Tacnode - Stateless vs Stateful Agents](https://tacnode.io/post/stateful-vs-stateless-ai-agents-practical-architecture-guide-for-developers)
+- [LangGraph & Redis](https://redis.io/blog/langgraph-redis-build-smarter-ai-agents-with-memory-persistence/)
+- [Temporal - Persistent Chatbot](https://temporal.io/blog/building-a-persistent-conversational-ai-chatbot-with-temporal)
+
+---
+
+### 15.5 Combinação de ToneConfig
+
+**Decisão:** Skill dominante (menor priority) define **style**. Outros atributos usam regras de merge.
+
+**Padrão da indústria:** Layered prompting com hierarquia clara.
+
+> *"Layered prompting blends role framing, structured reasoning, and format constraints into a single instruction set. This reduces ambiguity."* — [Garrett Landers](https://garrettlanders.com/prompt-engineering-guide-2025/)
+
+> *"Overemphasis on style or tone can occasionally lead to incorrect or vague responses."* — [Latitude](https://latitude-blog.ghost.io/blog/10-examples-of-tone-adjusted-prompts-for-llms/)
+
+**Regras de merge:**
+| Atributo | Regra | Exemplo |
+|----------|-------|---------|
+| `style` | Skill dominante | counselor (reflective) + finance → reflective |
+| `emojiLevel` | Mínimo | moderate + none → none |
+| `responseLength` | Máximo | concise + elaborated → elaborated |
+| `formality` | Dominante | informal + careful-informal → careful-informal |
+
+**Fontes:**
+- [Learn Prompting - Role Prompting](https://learnprompting.org/docs/advanced/zero_shot/role_prompting)
+- [Brim Labs - LLM Personas](https://brimlabs.ai/blog/llm-personas-how-system-prompts-influence-style-tone-and-intent/)
+
+---
+
+### 15.6 Skill Detection para Continuações
+
+**Decisão:** **Inércia derivada** — se nenhuma skill detectada na mensagem atual, buscar nas últimas 3 mensagens do usuário.
+
+**Padrão da indústria:** Context carryover com `last_active_agent`.
+
+```python
+# LangGraph - Multi-agent com inércia
+class MultiAgentState(MessagesState):
+    last_active_agent: str  # Mantém contexto
+
+def human_node(state):
+    user_input = interrupt("Ready")
+    active_agent = state["last_active_agent"]  # Inércia
+    return Command(goto=active_agent)
+```
+
+**Cenário:**
+```
+1. Usuário: "Quanto gastei esse mês?" → finance
+2. IA: "Você gastou R$ 2.500. Quer ver o breakdown?"
+3. Usuário: "sim" → Nenhum trigger, usa inércia → finance
+```
+
+**Fontes:**
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
+- [CHI 2025 - Proactive Conversational Agents](https://dl.acm.org/doi/10.1145/3706598.3713760)
+- [Master of Code - Conversational AI Trends](https://masterofcode.com/blog/conversational-ai-trends)
+
+---
+
+### Resumo das Decisões
+
+| # | Decisão | Escolha | Padrão Base |
+|---|---------|---------|-------------|
+| 1 | Confirmação + skill | Bloquear | LangGraph interrupt |
+| 2 | Falsos positivos | Regex + exclusões | Hybrid NLU |
+| 3 | Limite skills | Máximo 2 | Google ADK |
+| 4 | Storage state | Derivar histórico | Stateless pattern |
+| 5 | Combinação tone | Dominante + merge | Layered prompting |
+| 6 | Continuações | Inércia derivada | last_active_agent |

@@ -231,7 +231,6 @@ async function ensureUserExists(user: TestUser, label: string): Promise<void> {
  * ADR-017: 6 fixed areas with equal weights (1.0)
  */
 const DEFAULT_PREFERENCES = {
-  christianPerspective: false,
   areaWeights: {
     health: 1,
     finance: 1,
@@ -457,7 +456,7 @@ async function loginAndSaveAuthState(
     await page.click('[data-testid="login-submit"]');
 
     // Wait for successful redirect (could be dashboard or onboarding or any subpath)
-    // Use a more flexible pattern to catch /onboarding/profile, /onboarding/areas, etc.
+    // Use a flexible pattern to catch /onboarding/profile, /onboarding/telegram, etc.
     try {
       await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15000 });
     } catch {

@@ -49,7 +49,7 @@ O módulo SaaS gerencia o ciclo de vida do usuário, desde o cadastro até a ass
 | 2. Conexões | Telegram, Google Calendar | Não |
 | 3. Tutorial | Tour do app | Pular permitido |
 
-> **Nota (2026-01-26):** Áreas são fixas (6 áreas para todos). Perspectiva cristã configurável em `/settings/preferences`.
+> **Nota (2026-01-26):** Áreas são fixas (6 áreas para todos).
 
 ### 3.2 Progresso
 
@@ -335,7 +335,6 @@ interface SupportTicket {
 | Empreendedor | Profissional, Financeiro | Dashboard executivo |
 | CLT | Carreira, Família | Work-life balance |
 | Estudante | Aprendizado, Metas | Tracking de estudos |
-| Cristão | Espiritual, Família | Perspectiva bíblica |
 
 ### 11.2 Aplicação
 

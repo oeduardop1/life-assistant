@@ -21,7 +21,6 @@ function createMockUserMemory(
     learnedPatterns: [],
     communicationStyle: null,
     feedbackPreferences: null,
-    christianPerspective: false,
     version: 1,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
@@ -81,7 +80,6 @@ describe('UserMemoryService', () => {
         topOfMind: [],
         values: [],
         learnedPatterns: [],
-        christianPerspective: false,
       });
     });
   });
@@ -239,17 +237,6 @@ describe('UserMemoryService', () => {
       // Count occurrences of "- Pattern"
       const patternMatches = result.text.match(/- Pattern \d/g);
       expect(patternMatches).toHaveLength(5);
-    });
-
-    it('should_include_christian_perspective_when_enabled', () => {
-      const memory = createMockUserMemory({
-        christianPerspective: true,
-      });
-
-      const result = userMemoryService.formatForPrompt(memory);
-
-      expect(result.text).toContain('## Preferências');
-      expect(result.text).toContain('perspectiva cristã');
     });
 
     it('should_include_communication_style_when_present', () => {
