@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -53,11 +54,13 @@ export function MessageArea({
   }
 
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="flex-1 bg-chat-bg">
       <div className="flex flex-col" data-testid="chat-message-area">
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
+        <AnimatePresence mode="popLayout">
+          {messages.map((message) => (
+            <MessageBubble key={message.id} message={message} />
+          ))}
+        </AnimatePresence>
 
         {/* Thinking indicator - before first chunk arrives */}
         {isStreaming && !streamingContent && <ThinkingIndicator />}

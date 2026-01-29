@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Bot, Loader2, AlertCircle } from 'lucide-react';
+import { User, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MarkdownContent } from './markdown-content';
+import { AriaAvatar } from './aria-avatar';
+import { AnimatedMessage, ThinkingDots } from './chat-animations';
 import type { Message } from '../types';
 
 interface UseTypewriterResult {
@@ -57,57 +59,58 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
   return (
-    <div
+    <AnimatedMessage
+      messageKey={message.id}
+      isUser={isUser}
       className={cn(
         'flex gap-3 p-4',
         isUser ? 'flex-row-reverse' : 'flex-row'
       )}
-      data-testid={`chat-message-${message.id}`}
-      data-role={message.role}
     >
-      {/* Avatar */}
       <div
-        className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
-        )}
+        className="contents"
+        data-testid={`chat-message-${message.id}`}
+        data-role={message.role}
       >
+        {/* Avatar */}
         {isUser ? (
-          <User className="h-4 w-4" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-chat-user-bg">
+            <User className="h-4 w-4 text-chat-user-foreground" />
+          </div>
         ) : (
-          <Bot className="h-4 w-4" />
+          <AriaAvatar size="md" />
         )}
-      </div>
 
-      {/* Message content */}
-      <div
-        className={cn(
-          'flex max-w-[80%] flex-col gap-1',
-          isUser ? 'items-end' : 'items-start'
-        )}
-      >
+        {/* Message content */}
         <div
           className={cn(
-            'rounded-2xl px-4 py-2',
-            isUser
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted'
+            'flex max-w-[80%] flex-col gap-1 group',
+            isUser ? 'items-end' : 'items-start'
           )}
         >
-          {isUser ? (
-            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-          ) : (
-            <MarkdownContent content={message.content} className="text-sm" />
-          )}
+          <div
+            className={cn(
+              'rounded-2xl px-4 py-2',
+              isUser
+                ? 'bg-chat-user-bg text-chat-user-foreground rounded-br-md'
+                : 'bg-chat-accent-soft text-foreground rounded-bl-md'
+            )}
+          >
+            {isUser ? (
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            ) : (
+              <MarkdownContent content={message.content} className="text-sm" />
+            )}
+          </div>
+          <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+            {new Date(message.createdAt).toLocaleTimeString('pt-BR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {new Date(message.createdAt).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </span>
       </div>
-    </div>
+    </AnimatedMessage>
   );
 }
 
@@ -146,32 +149,36 @@ export function StreamingMessage({ content, onComplete }: StreamingMessageProps)
   }, [isComplete, onComplete]);
 
   return (
-    <div
-      className="flex gap-3 p-4 animate-in fade-in-0 duration-300"
-      data-testid="chat-streaming-message"
-      ref={scrollRef}
+    <AnimatedMessage
+      messageKey="streaming"
+      isUser={false}
+      className="flex gap-3 p-4"
     >
-      {/* Avatar */}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-        <Bot className="h-4 w-4" />
-      </div>
+      <div
+        className="contents"
+        data-testid="chat-streaming-message"
+        ref={scrollRef}
+      >
+        {/* Avatar */}
+        <AriaAvatar size="md" isThinking={!isComplete} />
 
-      {/* Message content */}
-      <div className="flex max-w-[80%] flex-col gap-1">
-        <div className="rounded-2xl px-4 py-2 bg-muted">
-          <div className="text-sm">
-            <MarkdownContent
-              content={displayedContent}
-              isStreaming={!isComplete}
-              className="text-sm"
-            />
-            {!isComplete && (
-              <span className="inline-block w-2 h-4 ml-1 bg-foreground/50 animate-pulse" />
-            )}
+        {/* Message content */}
+        <div className="flex max-w-[80%] flex-col gap-1">
+          <div className="rounded-2xl rounded-bl-md px-4 py-2 bg-chat-accent-soft">
+            <div className="text-sm">
+              <MarkdownContent
+                content={displayedContent}
+                isStreaming={!isComplete}
+                className="text-sm"
+              />
+              {!isComplete && (
+                <span className="inline-block w-0.5 h-4 ml-0.5 bg-chat-accent rounded-full animate-pulse" />
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AnimatedMessage>
   );
 }
 
@@ -182,25 +189,26 @@ export function StreamingMessage({ content, onComplete }: StreamingMessageProps)
  */
 export function ThinkingIndicator() {
   return (
-    <div
-      className="flex gap-3 p-4 animate-in fade-in-0 duration-300"
-      data-testid="chat-thinking-indicator"
+    <AnimatedMessage
+      messageKey="thinking"
+      isUser={false}
+      className="flex gap-3 p-4"
     >
-      {/* Avatar */}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-        <Bot className="h-4 w-4" />
-      </div>
+      <div className="contents" data-testid="chat-thinking-indicator">
+        {/* Avatar */}
+        <AriaAvatar size="md" isThinking />
 
-      {/* Thinking indicator */}
-      <div className="flex max-w-[80%] flex-col gap-1">
-        <div className="rounded-2xl px-4 py-2 bg-muted">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Pensando...</span>
+        {/* Thinking indicator */}
+        <div className="flex max-w-[80%] flex-col gap-1">
+          <div className="rounded-2xl rounded-bl-md px-4 py-2 bg-chat-accent-soft">
+            <div className="flex items-center gap-3">
+              <ThinkingDots />
+              <span className="text-sm text-muted-foreground">Pensando...</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AnimatedMessage>
   );
 }
 
