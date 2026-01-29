@@ -333,7 +333,6 @@ O **Score Geral de Vida** é uma média simples das 6 áreas. Todas as áreas t�
 | [memory.md](domains/memory.md) | M1.7 | Knowledge Items, Memory Consolidation (ADR-012) |
 | [notes.md](domains/notes.md) | M1.x | Notas estruturadas, resumos e relatórios |
 | [tracking.md](domains/tracking.md) | M1.3 | Life Balance Score, métricas (ADR-015, ADR-017) |
-| [decisions.md](domains/decisions.md) | M1.11 | Suporte a decisões, follow-up (ADR-016) |
 | [people.md](domains/people.md) | M1.6 | CRM pessoal, relacionamentos |
 | [vault.md](domains/vault.md) | M1.8 | Informações sensíveis, criptografia |
 | [goals-habits.md](domains/goals-habits.md) | M1.9 | Metas, hábitos, streaks |
@@ -466,7 +465,6 @@ Arquivos originais mantidos para referência histórica:
 | **Tracking** | Registro sistemático de métricas ao longo do tempo |
 | **PR (Personal Record)** | Recorde pessoal em exercício físico |
 | **Check-in Proativo** | Quando a IA inicia conversa para verificar status |
-| **Decision Follow-up** | Acompanhamento automático de decisões (ADR-016) |
 | **Morning Summary** | Resumo matinal enviado pela IA com agenda e alertas |
 | **Life Balance Score** | Score agregado que representa o equilíbrio geral da vida |
 
@@ -512,9 +510,9 @@ Arquivos originais mantidos para referência histórica:
 |-----|--------|--------|
 | ADR-012 | Tool Use + Memory Consolidation | IA usa tools ao invés de RAG para buscar dados |
 | ADR-015 | Low-Friction Tracking | Tracking opcional, sistema funciona sem métricas |
-| ADR-016 | Decision Support | Suporte a decisões importantes com follow-up |
+| ADR-016 | Decisions via Knowledge Items | Decisões salvas via add_knowledge (sem módulo dedicado) |
 | ADR-017 | Life Areas | 6 áreas principais, 17 sub-áreas |
 
 ---
 
-*Última atualização: 26 Janeiro 2026*
+*Última atualização: 29 Janeiro 2026*

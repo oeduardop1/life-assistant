@@ -639,7 +639,6 @@ Qualquer alteração manual em dados sensíveis exige:
 | `morning-summary` | Resumo da manhã | Alta |
 | `weekly-report` | Relatório semanal | Média |
 | `memory-consolidation` | Consolidar memória do usuário (ADR-012) | Média |
-| `decision-followup` | Verificar decisões com follow-up pendente (ADR-016) | Média |
 | `sync-calendar` | Sync Google Calendar | Média |
 | `proactive-checkin` | Check-ins proativos | Baixa |
 | `notifications` | Envio de notificações | Alta |
@@ -1147,7 +1146,7 @@ export class HealthController {
 | ADR-009 | Supabase CLI para desenvolvimento local | Accepted |
 | ADR-012 | Tool Use + Memory Consolidation (não RAG) | Accepted |
 | ADR-015 | Low-friction tracking philosophy | Accepted |
-| ADR-016 | Decision Support system | Accepted |
+| ADR-016 | Decisions via Knowledge Items | Accepted |
 | ADR-017 | Life Areas structure | Accepted |
 
 > **Nota:** Apesar do ADR-005, o real-time **atual** de chat usa SSE. Socket.io permanece planejado.

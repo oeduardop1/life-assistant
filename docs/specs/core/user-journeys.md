@@ -120,14 +120,14 @@
    - "Quer que eu resuma os pontos principais para você pensar?"
 
 6. Usuário decide e comunica: "Decidi recusar"
-   → IA registra a conclusão com todo o contexto
+   → IA salva via add_knowledge: "[DECISÃO] Título: Recusar proposta empresa X.
+      Escolha: Recusar. Motivo: Priorizar família e estabilidade atual."
    → Fatos e aprendizados salvos na Memória
 
-7. Após 3 meses, IA faz check-in:
-   "Faz 3 meses que você recusou a proposta da empresa X.
-    Como está se sentindo sobre essa escolha?"
-   → Usuário responde, IA registra aprendizados
-   → Conhecimento atualizado na Memória
+7. Quando usuário quiser refletir, inicia nova conversa:
+   "Como você está em relação àquela decisão da empresa X?"
+   → IA busca contexto via search_knowledge
+   → Conexões feitas naturalmente
 ```
 
 ---
@@ -274,10 +274,10 @@ Quer registrar algo mais sobre essa semana?
 
 ### Decision Support (ADR-016)
 
-- Decisões importantes são salvas para acompanhamento
-- Follow-up automático após período definido
-- Learning loop melhora conselhos futuros
+- Decisões importantes são salvas via `add_knowledge` com formato consistente
+- Usuário pode iniciar conversa para refletir sobre decisões passadas
+- IA consulta histórico via `search_knowledge` e faz conexões naturalmente
 
 ---
 
-*Última atualização: 25 Janeiro 2026*
+*Última atualização: 29 Janeiro 2026*

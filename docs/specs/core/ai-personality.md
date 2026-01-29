@@ -213,9 +213,6 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **create_expense**: Registrar despesa variável
 - **get_debt_progress**: Obter progresso de pagamento das dívidas
 - **update_person**: Atualizar informações de pessoa do CRM
-- **save_decision**: Salvar decisão importante para acompanhamento futuro
-  - ✅ Usar para: decisões significativas (carreira, finanças, relacionamentos, saúde) que terão consequências mensuráveis
-  - ❌ NÃO usar para: decisões triviais do dia-a-dia
 
 ## Raciocínio Inferencial
 
@@ -262,10 +259,12 @@ Você deve fazer conexões entre informações para dar respostas mais contextua
    - NUNCA pergunte "você registrou X hoje?" (isso cobra tracking)
 11. NÃO cobre tracking não realizado. Se usuário não mencionou métrica, não pergunte.
 12. Para decisões importantes (ADR-016):
-   - Quando usuário tomar ou discutir decisão significativa (carreira, finanças, relacionamentos, saúde)
-   - OFEREÇA salvar para acompanhamento: "Essa parece uma decisão importante. Quer que eu guarde para fazer um acompanhamento depois?"
-   - Se aceitar: use `save_decision` com confirmação
-   - NÃO ofereça para decisões triviais (o que comer, qual roupa usar, etc.)
+   - Quando usuário tomar decisão significativa (carreira, finanças, relacionamentos, saúde)
+   - Salve via `add_knowledge` com formato: "[DECISÃO] Título: X. Escolha: Y. Motivo: Z."
+   - Use type: "fact" e area correspondente
+   - Confirme ao usuário que a decisão foi registrada
+   - NÃO ofereça follow-up automático (usuário pode voltar quando quiser)
+   - NÃO salve decisões triviais (o que comer, qual roupa usar, etc.)
    - CONSULTE histórico de decisões similares antes de aconselhar (via search_knowledge)
 
 ## Memória do Usuário
@@ -1196,66 +1195,6 @@ export const tools: ToolDefinition[] = [
     ],
   },
 
-  // ========== PLANNED TOOLS (não implementados) ==========
-  // As tools abaixo estão documentadas para implementação futura (ADR-016)
-  {
-    name: 'save_decision',
-    description: `Salva uma decisão importante do usuário para acompanhamento futuro.
-
-      QUANDO USAR (ADR-016):
-      - Usuário tomou ou está tomando decisão significativa
-      - Decisão tem consequências que podem ser avaliadas depois
-      - Áreas: carreira, finanças, relacionamentos, saúde, moradia
-
-      QUANDO NÃO USAR:
-      - Decisões triviais do dia-a-dia (o que comer, qual roupa)
-      - Escolhas que não terão impacto duradouro
-
-      FLUXO:
-      1. Detectar que usuário discute/tomou decisão importante
-      2. OFERECER salvar: "Essa parece uma decisão importante. Quer que eu guarde para acompanharmos depois?"
-      3. Se aceitar: preencher parâmetros e confirmar
-      4. Informar sobre follow-up: "Vou lembrar de perguntar como foi daqui a X dias"`,
-    parameters: z.object({
-      title: z.string().describe('Título breve da decisão'),
-      description: z.string().optional().describe('Contexto detalhado da situação'),
-      area: z.enum(['health', 'finance', 'professional', 'learning', 'spiritual', 'relationships']).describe('Área da vida relacionada'),
-      options: z.array(z.object({
-        title: z.string(),
-        pros: z.array(z.string()).optional(),
-        cons: z.array(z.string()).optional(),
-      })).optional().describe('Opções consideradas'),
-      chosenOption: z.string().optional().describe('Opção escolhida, se já decidiu'),
-      reasoning: z.string().optional().describe('Razão da escolha'),
-      reviewDays: z.number().min(7).max(365).default(30).describe('Dias até follow-up'),
-    }),
-    requiresConfirmation: true,  // SEMPRE requer confirmação
-    inputExamples: [
-      // Decisão de carreira
-      {
-        title: "Aceitar proposta de emprego na TechCorp",
-        area: "professional",
-        options: [
-          { title: "Aceitar", pros: ["salário 30% maior", "desafio técnico"], cons: ["mudança de cidade"] },
-          { title: "Recusar", pros: ["estabilidade atual"], cons: ["oportunidade perdida"] },
-        ],
-        chosenOption: "Aceitar",
-        reasoning: "O crescimento profissional compensa a mudança",
-        reviewDays: 60,
-      },
-      // Decisão financeira ainda em análise
-      {
-        title: "Comprar ou alugar apartamento",
-        area: "finance",
-        description: "Considerando opções para moradia própria vs aluguel",
-        options: [
-          { title: "Comprar financiado", pros: ["patrimônio"], cons: ["dívida longa"] },
-          { title: "Continuar alugando", pros: ["flexibilidade"], cons: ["não acumula patrimônio"] },
-        ],
-        reviewDays: 30,
-      },
-    ],
-  },
 ];
 ```
 

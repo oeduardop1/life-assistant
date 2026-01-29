@@ -115,17 +115,9 @@ erDiagram
     goals ||--o{ tracking_entries : updates
     people ||--o{ person_notes : has
     people ||--o{ person_interactions : has
-
-    %% Planned tables (ADR-016 - Decision Support)
-    %% users ||--o{ decisions : has
-    %% decisions ||--o{ decision_options : has
-    %% decisions ||--o{ decision_criteria : has
-    %% decision_options ||--o{ decision_scores : has
-    %% decision_criteria ||--o{ decision_scores : evaluates
 ```
 
 **Planned Tables (not yet implemented):**
-- `decisions`, `decision_options`, `decision_criteria`, `decision_scores` — ADR-016 Decision Support (Phase 3)
 - `reports` — Relatórios periódicos
 - **Learning:** `books`, `courses`, `book_goals`, `learning_certifications`, `study_sessions`, `study_goals`, `flashcards`, `flashcard_reviews`
 - **Professional:** `career_history`, `projects`, `project_tasks`, `professional_skills`, `professional_certifications`, `okr_objectives`, `okr_key_results`
@@ -341,14 +333,6 @@ export const exportStatusEnum = pgEnum('export_status', [
 
 export const exportTypeEnum = pgEnum('export_type', [
   'full_data', 'partial_data', 'deletion_request'
-]);
-```
-
-### 5.15 Decision Status (ADR-016)
-
-```typescript
-export const decisionStatus = pgEnum('decision_status', [
-  'draft', 'analyzing', 'ready', 'decided', 'postponed', 'canceled', 'reviewed'
 ]);
 ```
 
@@ -1265,7 +1249,6 @@ pnpm --filter database db:seed:prod
 **Total: 33 tabelas implementadas** (ver `packages/database/src/schema/*.ts`)
 
 **Planned (não implementadas):**
-- Decision Support: `decisions`, `decision_options`, `decision_criteria`, `decision_scores`
 - Relatórios: `reports`
 - Learning: `books`, `courses`, `book_goals`, `learning_certifications`, `study_sessions`, `study_goals`, `flashcards`, `flashcard_reviews`
 - Professional: `career_history`, `projects`, `project_tasks`, `professional_skills`, `professional_certifications`, `okr_objectives`, `okr_key_results`

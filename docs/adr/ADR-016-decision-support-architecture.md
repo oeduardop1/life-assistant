@@ -1,210 +1,127 @@
-# ADR-016: Decision Support Architecture
+# ADR-016: Decisions via Knowledge Items
 
 ## Status
 
-Accepted (Planejado - tabelas e tools ainda não implementados)
+Accepted
 
 ## Date
 
-2026-01-19
+2026-01-29
+
+## History
+
+> **Nota:** Este ADR substitui a versão anterior de 2026-01-19 que propunha um módulo dedicado de Decision Support com 4 tabelas, tool `save_decision`, e follow-up job. Após análise, concluiu-se que essa abordagem era redundante com o sistema de memória existente.
 
 ## Context
 
-O Life Assistant possui dois modos de conversa: **Chat** (conversação geral) e **Conselheira** (aconselhamento estruturado). O Modo Conselheira já oferece análise de decisões via prompt engineering (ai.md §4.2, §7.3), mas apresenta limitações:
+O Life Assistant possui o Modo Conselheira que oferece análise de decisões via prompt engineering (ai-personality.md §5.2). A versão anterior deste ADR propunha adicionar:
 
-### Funcionalidade Existente (ai.md §4.2, §7.3)
+- 4 tabelas dedicadas (`decisions`, `decision_options`, `decision_criteria`, `decision_scores`)
+- Tool `save_decision` para persistir decisões
+- Job de follow-up proativo (3:30 AM)
+- Learning loop com `decision_patterns` no Memory Consolidation
 
-| Existe | Descrição |
-|--------|-----------|
-| ✅ | Análise de situação em múltiplas perspectivas |
-| ✅ | Template de análise de decisão (contexto, opções, prós/contras) |
-| ✅ | `analyze_context` detecta padrões e correlações em tempo real |
-| ✅ | Encoraja reflexão antes de dar opinião |
+### Análise de Redundância
 
-### Limitações Identificadas
+| Feature Proposta | Já Existe Via |
+|------------------|---------------|
+| Persistir decisões | `add_knowledge` com type: "fact" |
+| Consultar decisões passadas | `search_knowledge` por área/tipo |
+| Detectar padrões | Memory Consolidation (genérico) |
+| Análise estruturada | §5.2 Decision Analysis prompt |
+| Follow-up | Usuário pode iniciar conversa quando quiser |
 
-| Faltava | Impacto |
-|---------|---------|
-| ❌ Persistência de decisões | Decisões importantes se perdem no histórico de chat |
-| ❌ Follow-up pós-decisão | Sem acompanhamento de resultados |
-| ❌ Learning loop | IA não aprende com outcomes de decisões passadas |
-| ❌ Modelagem de cenários | Não calcula impacto numérico de opções |
-| ❌ Detecção proativa | Usuário precisa pedir ajuda explicitamente |
+### Motivos para Eliminar Módulo Dedicado
 
-### Tabelas Planejadas (Não Implementadas)
-
-As tabelas de decisões foram **planejadas** mas **nunca criadas**:
-
-```sql
--- Tabelas criadas mas nunca implementadas
-decisions (id, user_id, title, description, area, deadline, status,
-           chosen_option_id, reasoning, ai_analysis, review_date,
-           review_score, review_notes, ...)
-decision_options (id, decision_id, title, pros, cons, score, ...)
-decision_criteria (id, decision_id, name, description, weight, ...)
-decision_scores (id, option_id, criterion_id, score, ...)
-```
-
-Estas tabelas foram criadas durante M0.4 (Database Foundation) mas o código de implementação (TypeScript schema, services, tools) nunca foi criado. A linha 1146 do product.md dizia "Removido Sistema de Decisões", indicando que foi deprioritizado mas não removido do banco.
+1. **Redundância:** Sistema de knowledge items já persiste informações importantes
+2. **Over-engineering:** Matriz de critérios × opções × pesos é formal demais para uso cotidiano
+3. **Preferência do usuário:** Follow-up proativo não desejado — usuário prefere ir até a IA quando quiser
+4. **Complexidade desnecessária:** 4 tabelas + tool + job para funcionalidade que já existe
 
 ## Decision
 
-Ativar e implementar o **Sistema de Suporte a Decisões** como M1.11 (core) + M3.7 (follow-up), utilizando as tabelas existentes e adicionando:
+**Não implementar módulo dedicado de Decision Support.**
 
-### 1. Tool `save_decision`
-
-Nova tool para persistir decisões importantes:
+Decisões importantes serão salvas via `add_knowledge` com formato consistente:
 
 ```typescript
-{
-  name: 'save_decision',
-  description: `Salva decisão importante do usuário para follow-up futuro.
-    QUANDO USAR:
-    - Usuário tomou decisão significativa (carreira, finanças, relacionamentos)
-    - Decisão tem consequências que podem ser avaliadas depois
-    - Usuário quer acompanhamento do resultado
-    NUNCA salvar decisões triviais (o que comer, etc.)`,
-  parameters: z.object({
-    title: z.string().describe('Título breve da decisão'),
-    description: z.string().optional().describe('Contexto detalhado'),
-    area: z.enum(['health', 'finance', 'professional', 'learning', 'spiritual', 'relationships']),
-    options: z.array(z.object({
-      title: z.string(),
-      pros: z.array(z.string()).optional(),
-      cons: z.array(z.string()).optional(),
-    })).optional().describe('Opções consideradas'),
-    chosenOption: z.string().optional().describe('Opção escolhida'),
-    reasoning: z.string().optional().describe('Razão da escolha'),
-    reviewDays: z.number().default(30).describe('Dias até follow-up'),
-  }),
-  requiresConfirmation: true, // SEMPRE requer confirmação
-}
+// Instrução no system prompt
+add_knowledge({
+  type: "fact",
+  content: "[DECISÃO] Título: X. Escolha: Y. Motivo: Z.",
+  area: "professional", // ou finance, health, relationships, etc.
+  confidence: 1.0
+});
 ```
 
-### 2. Follow-up Proativo
-
-Job diário que verifica decisões com `review_date` próximo:
-
-```typescript
-// Decision Follow-up Job (3:30 AM, após Memory Consolidation)
-async function processDecisionFollowups() {
-  const dueDecisions = await findDecisionsDueForReview(userId);
-
-  for (const decision of dueDecisions) {
-    // Adiciona mensagem de follow-up na próxima conversa
-    await queueProactiveMessage({
-      userId,
-      type: 'decision_followup',
-      content: `Há ${days} dias você decidiu: "${decision.title}".
-                Como foi essa decisão? Gostaria de registrar o resultado?`,
-      decisionId: decision.id,
-    });
-  }
-}
-```
-
-### 3. Learning Loop
-
-Memory Consolidation extrai padrões de decisões:
-
-```typescript
-// Novo campo em consolidation prompt (ai.md §6.5)
-decision_patterns: [
-  {
-    pattern: "Decisões financeiras acima de R$500 feitas por impulso têm 70% de arrependimento",
-    frequency: 3,
-    suggestion: "Sugerir período de reflexão de 48h para compras acima desse valor"
-  }
-]
-```
-
-### 4. Ciclo de Vida da Decisão
+### Fluxo Simplificado
 
 ```
-draft → analyzing → ready → decided → [postponed|canceled] → reviewed
-   ↓         ↓         ↓        ↓                              ↓
-Criação  IA analisa  Opções   Escolha                     Follow-up
-                    prontas   feita                       com outcome
+1. Usuário discute decisão no Modo Conselheira
+2. IA ajuda com análise (§5.2 Decision Analysis)
+3. Usuário toma decisão
+4. IA salva via add_knowledge (se relevante)
+5. Quando usuário quiser refletir, inicia nova conversa
+6. search_knowledge encontra decisões passadas
+7. IA faz conexões naturalmente
 ```
 
-### 5. Integração com Modo Conselheira
+### O Que Permanece
 
-O system prompt do Modo Conselheira (ai.md §4.2) é atualizado:
+| Feature | Status |
+|---------|--------|
+| Modo Conselheira | Inalterado |
+| §5.2 Decision Analysis prompt | Inalterado |
+| `analyze_context` tool | Inalterado |
+| `add_knowledge` / `search_knowledge` | Inalterado |
+| Memory Consolidation | Inalterado |
 
-```markdown
-## Regra 12: Persistência de Decisões
-Quando identificar que o usuário tomou uma decisão importante:
-1. Ofereça salvar para acompanhamento futuro
-2. Use `save_decision` se aceitar
-3. Explique que fará follow-up em X dias
-4. Consulte histórico de decisões similares via `search_knowledge`
-```
+### O Que Foi Removido
+
+| Feature | Status |
+|---------|--------|
+| Tabelas `decisions`, `decision_options`, etc. | Não implementar |
+| Tool `save_decision` | Não implementar |
+| Job `decision-followup` | Não implementar |
+| `decision_patterns` no Memory Consolidation | Não implementar |
+| Milestones M1.11 e M3.7 | Removidos |
 
 ## Consequences
 
 ### Positivos
 
-- **Continuidade**: Decisões importantes não se perdem no histórico
-- **Accountability**: Follow-up ajuda usuário a avaliar qualidade de suas decisões
-- **Learning**: IA melhora conselhos baseado em outcomes reais
-- **Diferencial**: Poucos assistentes oferecem tracking de decisões com aprendizado
-- **Reuso**: Aproveita tabelas já existentes no banco
+- **Simplicidade:** Zero tabelas novas, zero tools novas
+- **Menos manutenção:** Sem job adicional para gerenciar
+- **Consistência:** Decisões são tratadas como qualquer outro conhecimento
+- **Flexibilidade:** Usuário decide quando quer refletir sobre decisões
 
 ### Negativos
 
-- **Complexidade**: Adiciona mais uma entidade ao sistema
-- **Storage**: Mais dados armazenados por usuário
-- **Intrusividade**: Follow-ups podem ser percebidos como spam (mitigado com opt-out)
+- **Sem follow-up automático:** Usuário precisa lembrar de revisar decisões
+- **Menos estrutura:** Decisões são texto livre, não matriz de critérios
 
 ### Neutros
 
-- **Opt-in**: Usuário escolhe quais decisões salvar
-- **Modo Conselheira**: Continua funcionando sem persistência para quem preferir
+- **Análise de decisões:** Continua funcionando via Counselor Mode
+- **Histórico:** Decisões são persistidas via knowledge items
 
 ## Alternatives Considered
 
-### 1. Manter apenas em chat history
+### 1. Implementar módulo completo (versão anterior)
 
-**Descartado**: Decisões se perdem em conversas longas, sem follow-up estruturado.
+**Descartado:** Redundante com sistema existente, over-engineering.
 
-### 2. Remover tabelas do banco
+### 2. Implementar apenas tool save_decision
 
-**Descartado**: Perde diferencial importante do produto, trabalho já feito.
+**Descartado:** Ainda redundante — `add_knowledge` já faz o mesmo.
 
-### 3. Implementar apenas persistência sem follow-up
+### 3. Implementar apenas follow-up job
 
-**Descartado**: Perde valor principal (learning loop, accountability).
-
-## Implementation Notes
-
-### Milestone M1.11 — Decision Support Core + M3.7 — Decision Follow-up
-
-| Sub-milestone | Escopo | Estimativa |
-|---------------|--------|------------|
-| M1.11.1 | Histórico de Decisões (schema, services, tool) | 20-30h |
-| M1.11.2 | Modelagem de Cenários | 30-40h |
-| M1.11.3 | Learning Loop (memory consolidation) | 35-45h |
-| M3.7 | Follow-ups Pós-Decisão (job, notifications) | 25-35h |
-| M1.11.4 | Detecção Proativa (identificar decisões em conversa) | 10-15h |
-
-**Início sugerido**: M1.11.1 (Histórico de Decisões) — base para todos os outros.
-**Nota**: M3.7 depende de M3.4 (Notificações Proativas).
-
-### Documentos Atualizados
-
-| Documento | Seções |
-|-----------|--------|
-| **product.md** | §1.4, §2.1, §5.1, §6.X (novo módulo), linha 1146 |
-| **system.md** | §1.X (entidade Decision), §3.X (módulo decisões) |
-| **ai.md** | §4.1 (regra 12), §6.2 (save_decision), §6.5 (decision_patterns), §6.X (follow-up job) |
-| **data-model.md** | §2 (ER diagram), §4.X (tabelas existentes documentadas) |
-| **engineering.md** | Referência a este ADR |
+**Descartado:** Usuário não quer notificações proativas de decisões.
 
 ## References
 
-- TBD-206: Escopo do Sistema de Decisões
-- ADR-012: Tool Use + Memory Consolidation (base arquitetural)
-- ADR-014: Real-time Inference (analyze_context)
-- ai.md §4.2: Modo Conselheira
-- ai.md §7.3: Template de Análise de Decisão
-- product.md §2.1: Modo Conselheira (comportamentos)
+- ai-personality.md §5.2: Decision Analysis prompt
+- ai-personality.md §8: Tool Use Architecture
+- ADR-012: Tool Use + Memory Consolidation
+- Milestones removidos: M1.11 (Decision Support Core), M3.7 (Decision Follow-up)

@@ -185,16 +185,7 @@ Analise as mensagens abaixo e extraia:
   "preferences": [...],
   "inferences": [{ "content": "...", "evidence": "...", "confidence": 0.7 }],
   "contradictions": [{ "existing": "...", "new": "...", "resolution": "..." }],
-  "memoryUpdates": { "topOfMind": [...], "currentGoals": [...] },
-  "decision_patterns": [
-    {
-      "pattern": "descrição do padrão de decisão observado",
-      "frequency": 3,
-      "area": "health|finance|professional|learning|spiritual|relationships",
-      "suggestion": "sugestão para melhorar decisões futuras",
-      "evidence": ["decisão 1", "decisão 2", "decisão 3"]
-    }
-  ]
+  "memoryUpdates": { "topOfMind": [...], "currentGoals": [...] }
 }
 ```
 
