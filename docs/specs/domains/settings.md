@@ -26,13 +26,13 @@ O módulo Settings é a central de configurações do usuário, organizado em se
 **Regras:**
 - Mínimo 2 caracteres, máximo 100
 - Apenas trimmed (sem espaços no início/fim)
-- Armazenado em `auth.users.raw_user_meta_data.name`
+- Armazenado em `public.users.name` (sincronizado via trigger do Supabase Auth)
 
 **Fluxo:**
 1. Usuário edita nome
 2. Validação client-side
 3. `PATCH /api/settings/profile`
-4. Atualiza `user_metadata` via Supabase Auth
+4. Atualiza diretamente na tabela `public.users`
 5. Feedback de sucesso
 
 ---
@@ -243,12 +243,14 @@ Eventos logados:
 
 | Dado | Local | Motivo |
 |------|-------|--------|
-| Nome | `auth.users.raw_user_meta_data` | Dados de perfil básico |
-| Email | `auth.users.email` | Gerenciado pelo Supabase Auth |
+| Nome | `public.users.name` | Sincronizado via trigger do auth (ver supabase-auth.md) |
+| Email | `public.users.email` + `auth.users.email` | Leitura em public.users, alteração via Supabase Auth |
 | Senha | `auth.users` | Gerenciado pelo Supabase Auth |
 | Telegram ID | `public.user_profiles.telegram_chat_id` | Integração |
 | Google Token | `public.user_integrations` | Tokens OAuth (criptografado) |
 | Preferências | `public.user_preferences` | Configurações do app |
+
+> **Padrão de acesso a dados do usuário:** Para leitura, sempre usar `public.users` via DatabaseService (conforme `supabase-auth.md` §Auth Middleware). Supabase Admin API é usado apenas para operações de autenticação (login, senha, tokens).
 
 ### 7.2 Tabelas Relacionadas
 

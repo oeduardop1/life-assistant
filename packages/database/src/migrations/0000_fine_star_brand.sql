@@ -655,4 +655,111 @@ CREATE INDEX "knowledge_items_user_area_idx" ON "knowledge_items" USING btree ("
 CREATE INDEX "knowledge_items_source_idx" ON "knowledge_items" USING btree ("source");--> statement-breakpoint
 CREATE INDEX "knowledge_items_user_active_scope_idx" ON "knowledge_items" USING btree ("user_id","type","area");--> statement-breakpoint
 CREATE INDEX "memory_consolidations_user_id_idx" ON "memory_consolidations" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "memory_consolidations_created_at_idx" ON "memory_consolidations" USING btree ("created_at");
+CREATE INDEX "memory_consolidations_created_at_idx" ON "memory_consolidations" USING btree ("created_at");--> statement-breakpoint
+
+-- =============================================================================
+-- UPDATED_AT TRIGGER FUNCTION
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;--> statement-breakpoint
+
+-- =============================================================================
+-- UPDATED_AT TRIGGERS FOR ALL TABLES
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS set_updated_at_users ON users;
+CREATE TRIGGER set_updated_at_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_conversations ON conversations;
+CREATE TRIGGER set_updated_at_conversations BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_tracking_entries ON tracking_entries;
+CREATE TRIGGER set_updated_at_tracking_entries BEFORE UPDATE ON tracking_entries FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_notes ON notes;
+CREATE TRIGGER set_updated_at_notes BEFORE UPDATE ON notes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_people ON people;
+CREATE TRIGGER set_updated_at_people BEFORE UPDATE ON people FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_vault_items ON vault_items;
+CREATE TRIGGER set_updated_at_vault_items BEFORE UPDATE ON vault_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_goals ON goals;
+CREATE TRIGGER set_updated_at_goals BEFORE UPDATE ON goals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_habits ON habits;
+CREATE TRIGGER set_updated_at_habits BEFORE UPDATE ON habits FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_reminders ON reminders;
+CREATE TRIGGER set_updated_at_reminders BEFORE UPDATE ON reminders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_user_integrations ON user_integrations;
+CREATE TRIGGER set_updated_at_user_integrations BEFORE UPDATE ON user_integrations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_calendar_events ON calendar_events;
+CREATE TRIGGER set_updated_at_calendar_events BEFORE UPDATE ON calendar_events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_budgets ON budgets;
+CREATE TRIGGER set_updated_at_budgets BEFORE UPDATE ON budgets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_subscriptions ON subscriptions;
+CREATE TRIGGER set_updated_at_subscriptions BEFORE UPDATE ON subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_incomes ON incomes;
+CREATE TRIGGER set_updated_at_incomes BEFORE UPDATE ON incomes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_bills ON bills;
+CREATE TRIGGER set_updated_at_bills BEFORE UPDATE ON bills FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_variable_expenses ON variable_expenses;
+CREATE TRIGGER set_updated_at_variable_expenses BEFORE UPDATE ON variable_expenses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_debts ON debts;
+CREATE TRIGGER set_updated_at_debts BEFORE UPDATE ON debts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_investments ON investments;
+CREATE TRIGGER set_updated_at_investments BEFORE UPDATE ON investments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_export_requests ON export_requests;
+CREATE TRIGGER set_updated_at_export_requests BEFORE UPDATE ON export_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_user_memories ON user_memories;
+CREATE TRIGGER set_updated_at_user_memories BEFORE UPDATE ON user_memories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS set_updated_at_knowledge_items ON knowledge_items;
+CREATE TRIGGER set_updated_at_knowledge_items BEFORE UPDATE ON knowledge_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();--> statement-breakpoint
+
+-- =============================================================================
+-- AUTH TRIGGER: Sync auth.users to public.users (from Supabase auth)
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.users (id, email, name)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'name', NEW.email)
+    )
+    ON CONFLICT (id) DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';--> statement-breakpoint
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DO $$ BEGIN
+    CREATE TRIGGER on_auth_user_created
+        AFTER INSERT ON auth.users
+        FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+EXCEPTION WHEN undefined_table THEN
+    -- auth.users doesn't exist in this context (e.g., pure Drizzle test)
+    null;
+END $$;

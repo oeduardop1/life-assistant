@@ -10,6 +10,21 @@
   - **Contexto:** `consolidation-prompt.ts` descarta items com tipos inválidos silenciosamente
   - **Arquivo:** `apps/api/src/jobs/memory-consolidation/consolidation-prompt.ts`
 
+- [ ] Implementar Audit Logging para operações sensíveis do Settings
+  - **Contexto:** M0.11 Settings não inclui auditoria de alterações sensíveis
+  - **Eventos a logar:**
+    - `settings.profile.updated` - Alteração de perfil
+    - `settings.email.change_requested` - Solicitação de mudança de email
+    - `settings.email.changed` - Email alterado (após verificação)
+    - `settings.password.changed` - Senha alterada
+  - **Implementação sugerida:**
+    - Criar `AuditLogService` em `apps/api/src/modules/audit/`
+    - Persistir em tabela `audit_logs` (já existe no schema)
+    - Incluir: userId, action, metadata, ip, userAgent, timestamp
+  - **Arquivos:**
+    - `apps/api/src/modules/settings/application/services/settings.service.ts`
+    - `apps/api/src/modules/audit/` (criar)
+
 ---
 
 ## Memória e Contexto

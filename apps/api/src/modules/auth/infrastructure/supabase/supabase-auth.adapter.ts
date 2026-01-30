@@ -25,8 +25,13 @@ export interface RefreshResult {
 export interface UserInfo {
   id: string;
   email: string;
+  name?: string | undefined;
   emailConfirmedAt: string | null;
   createdAt: string;
+}
+
+export interface UpdateEmailResult {
+  oldEmail: string;
 }
 
 /**
@@ -203,12 +208,89 @@ export class SupabaseAuthAdapter {
       return null;
     }
 
+    const metadata = user.user_metadata as { name?: string } | undefined;
     return {
       id: user.id,
       email: user.email ?? '',
+      name: metadata?.name,
       emailConfirmedAt: user.email_confirmed_at ?? null,
       createdAt: user.created_at,
     };
+  }
+
+  /**
+   * Verify user password by attempting sign in
+   * Used for sensitive operations requiring password confirmation
+   */
+  async verifyPassword(email: string, password: string): Promise<boolean> {
+    const supabase = createClient(
+      this.config.supabaseUrl,
+      this.config.supabaseAnonKey,
+    );
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    return !error;
+  }
+
+  /**
+   * Update user email
+   * Sends verification email to new address
+   */
+  async updateEmail(userId: string, newEmail: string): Promise<UpdateEmailResult> {
+    // Get current email first
+    const { data: userData, error: getUserError } =
+      await this.supabaseAdmin.auth.admin.getUserById(userId);
+
+    if (getUserError) {
+      this.handleAuthError(getUserError);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Supabase types allow null even on success
+    const oldEmail = userData.user?.email ?? '';
+
+    // Update email - Supabase will send verification to new email
+    const { error } = await this.supabaseAdmin.auth.admin.updateUserById(userId, {
+      email: newEmail,
+      email_confirm: false, // Require confirmation of new email
+    });
+
+    if (error) {
+      this.handleAuthError(error);
+    }
+
+    return { oldEmail };
+  }
+
+  /**
+   * Update user metadata (name, etc.)
+   */
+  async updateUserMetadata(userId: string, metadata: Record<string, unknown>): Promise<void> {
+    const { error } = await this.supabaseAdmin.auth.admin.updateUserById(userId, {
+      user_metadata: metadata,
+    });
+
+    if (error) {
+      this.handleAuthError(error);
+    }
+  }
+
+  /**
+   * Check if email is already in use by another user
+   */
+  async isEmailInUse(email: string, excludeUserId?: string): Promise<boolean> {
+    const { data, error } = await this.supabaseAdmin.auth.admin.listUsers();
+
+    if (error) {
+      this.handleAuthError(error);
+    }
+
+    return data.users.some(
+      (user) => user.email?.toLowerCase() === email.toLowerCase() && user.id !== excludeUserId,
+    );
   }
 
   /**

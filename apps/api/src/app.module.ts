@@ -15,6 +15,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { MemoryModule } from './modules/memory/memory.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { SettingsModule } from './modules/settings/settings.module';
 import { AdminModule } from './modules/admin/admin.module';
 
 // Jobs
@@ -70,6 +71,7 @@ import { AllExceptionsFilter } from './common/filters/index';
     MemoryModule,
     TrackingModule,
     FinanceModule,
+    SettingsModule,
 
     // Background jobs
     JobsModule,

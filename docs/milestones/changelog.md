@@ -10,6 +10,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-29 | M0.11 | Concluído | Settings Base: módulo settings com endpoints (profile/email/password), validação zxcvbn-ts (score >= 2), rate limiting OWASP (3/h email, 5/h senha), frontend com Tabs/Cards responsivos, PasswordStrengthMeter, 859 API tests + 439 Web tests passando. Audit logging adicionado ao backlog. |
 | 2026-01-29 | M1.11, M3.7 | Removido | Módulo de decisões eliminado por redundância. Decisões importantes serão salvas via `add_knowledge` com formato consistente. Análise mostrou que 4 tabelas dedicadas + tool `save_decision` + follow-up job eram over-engineering — sistema de memória existente já cobre a funcionalidade. |
 | 2026-01-29 | ADR-016 | Reescrito | "Decisions via Knowledge Items" substitui versão anterior. Nova abordagem: usar `add_knowledge` em vez de módulo dedicado. Seção History documenta mudança. |
 | 2026-01-27 | M2.2 | Pagamento Antecipado | Dívidas: suporte a pagamento antecipado de parcelas. `debt_payments.monthYear` agora representa "para qual mês é a parcela" (não "quando foi pago"). Migration 0004 recalcula dados existentes. Novos endpoints: `GET :id/payments` (histórico com paidEarly), `GET upcoming-installments` (calendário do mês), `GET :id/projection` (projeção de quitação). AI tools: `get_debt_payment_history`, `get_upcoming_installments`. `get_debt_progress` enriquecido com projeção (estimatedPayoffMonthYear, remainingMonths, velocity). Frontend: hooks useDebtPaymentHistory, useUpcomingInstallments, useDebtProjection. |
@@ -77,4 +78,4 @@
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 29 Janeiro 2026*
