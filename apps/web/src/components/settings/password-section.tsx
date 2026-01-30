@@ -3,26 +3,19 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { Lock, Eye, EyeOff } from 'lucide-react';
+import { Lock, Eye, EyeOff, ShieldCheck, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import {
   updatePasswordSchema,
   type UpdatePasswordData,
@@ -59,7 +52,7 @@ export function PasswordSection({ userEmail, userName, onSubmit }: PasswordSecti
   const handleSubmit = form.handleSubmit(async (data) => {
     if (!isPasswordStrong) {
       form.setError('newPassword', {
-        message: 'A senha deve ter pelo menos nivel "Razoavel"',
+        message: 'A senha deve ter pelo menos nível "Razoável"',
       });
       return;
     }
@@ -83,103 +76,112 @@ export function PasswordSection({ userEmail, userName, onSubmit }: PasswordSecti
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Lock className="h-5 w-5 text-primary" />
+    <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
+      {/* Header with gradient accent */}
+      <div className="relative px-6 py-5 border-b border-border/50">
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-orange-500/5 to-transparent" />
+        <div className="relative flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+            <Lock className="w-6 h-6 text-amber-500 dark:text-amber-400" />
           </div>
           <div>
-            <CardTitle className="text-lg">Senha</CardTitle>
-            <CardDescription>
+            <h2 className="text-lg font-semibold text-foreground">Senha</h2>
+            <p className="text-sm text-muted-foreground">
               Atualize sua senha de acesso
-            </CardDescription>
+            </p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="currentPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha atual</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showCurrentPassword ? 'text' : 'password'}
-                        placeholder="Digite sua senha atual"
-                        autoComplete="current-password"
-                        className="pr-10"
-                        {...field}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        tabIndex={-1}
-                      >
-                        {showCurrentPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span className="sr-only">
-                          {showCurrentPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                        </span>
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      </div>
 
-            <FormField
-              control={form.control}
-              name="newPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nova senha</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showNewPassword ? 'text' : 'password'}
-                        placeholder="Digite a nova senha"
-                        autoComplete="new-password"
-                        className="pr-10"
-                        {...field}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        tabIndex={-1}
-                      >
-                        {showNewPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span className="sr-only">
-                          {showNewPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                        </span>
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    Minimo 8 caracteres. Use letras, numeros e simbolos.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      {/* Content */}
+      <div className="p-6">
+        <Form {...form}>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">
+                      Senha atual
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type={showCurrentPassword ? 'text' : 'password'}
+                          placeholder="Digite sua senha atual"
+                          autoComplete="current-password"
+                          className={cn(
+                            'h-11 px-4 pr-12 rounded-xl border-border/50 bg-background/50 transition-all duration-200',
+                            'focus:bg-background focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20'
+                          )}
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted/50 transition-colors"
+                          tabIndex={-1}
+                        >
+                          {showCurrentPassword ? (
+                            <EyeOff className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <span className="sr-only">
+                            {showCurrentPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                          </span>
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">
+                      Nova senha
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type={showNewPassword ? 'text' : 'password'}
+                          placeholder="Digite a nova senha"
+                          autoComplete="new-password"
+                          className={cn(
+                            'h-11 px-4 pr-12 rounded-xl border-border/50 bg-background/50 transition-all duration-200',
+                            'focus:bg-background focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20'
+                          )}
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted/50 transition-colors"
+                          tabIndex={-1}
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <span className="sr-only">
+                            {showNewPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                          </span>
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Password strength meter */}
             <PasswordStrengthMeter
@@ -187,17 +189,60 @@ export function PasswordSection({ userEmail, userName, onSubmit }: PasswordSecti
               userInputs={[userEmail, userName]}
             />
 
-            <div className="flex justify-end">
+            {/* Security tips */}
+            <div className="rounded-xl bg-muted/30 border border-border/30 p-4">
+              <div className="flex gap-3">
+                <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">
+                    Dicas para uma senha forte
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                      Mínimo de 8 caracteres
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                      Combine letras maiúsculas e minúsculas
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                      Inclua números e símbolos especiais
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                      Evite informações pessoais óbvias
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
               <Button
                 type="submit"
                 disabled={isLoading || !isPasswordStrong}
+                className={cn(
+                  'h-10 px-5 rounded-xl font-medium transition-all duration-200',
+                  'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600',
+                  'shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40',
+                  'disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed'
+                )}
               >
-                {isLoading ? 'Alterando...' : 'Alterar senha'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Alterando...
+                  </>
+                ) : (
+                  'Alterar senha'
+                )}
               </Button>
             </div>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

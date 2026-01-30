@@ -4,11 +4,14 @@ import { SettingsService } from '../../../../src/modules/settings/application/se
 
 describe('SettingsService', () => {
   let settingsService: SettingsService;
+  let mockDatabaseService: {
+    withUserId: ReturnType<typeof vi.fn>;
+    schema: {
+      users: { id: string; name: string; email: string };
+    };
+  };
   let mockSupabaseAuth: {
-    getUser: ReturnType<typeof vi.fn>;
-    updateUserMetadata: ReturnType<typeof vi.fn>;
     verifyPassword: ReturnType<typeof vi.fn>;
-    isEmailInUse: ReturnType<typeof vi.fn>;
     updateEmail: ReturnType<typeof vi.fn>;
     updatePassword: ReturnType<typeof vi.fn>;
   };
@@ -27,18 +30,37 @@ describe('SettingsService', () => {
     id: 'user-123',
     email: 'test@example.com',
     name: 'Test User',
-    emailConfirmedAt: '2024-01-01T00:00:00Z',
-    createdAt: '2024-01-01T00:00:00Z',
+  };
+
+  // Helper to create a chainable mock for drizzle queries
+  const createQueryChainMock = (result: unknown[]) => {
+    const chain = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue(result),
+      update: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+    };
+    return chain;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
 
+    // Mock database service - returns user by default
+    const defaultDbChain = createQueryChainMock([mockUser]);
+    mockDatabaseService = {
+      withUserId: vi.fn().mockImplementation(async (_userId, callback) => {
+        return callback(defaultDbChain);
+      }),
+      schema: {
+        users: { id: 'id', name: 'name', email: 'email' },
+      },
+    };
+
     mockSupabaseAuth = {
-      getUser: vi.fn(),
-      updateUserMetadata: vi.fn(),
       verifyPassword: vi.fn(),
-      isEmailInUse: vi.fn(),
       updateEmail: vi.fn(),
       updatePassword: vi.fn(),
     };
@@ -56,26 +78,29 @@ describe('SettingsService', () => {
     };
 
     settingsService = new SettingsService(
-      mockSupabaseAuth as unknown as ConstructorParameters<typeof SettingsService>[0],
-      mockEmailService as unknown as ConstructorParameters<typeof SettingsService>[1],
-      mockLogger as unknown as ConstructorParameters<typeof SettingsService>[2],
+      mockDatabaseService as unknown as ConstructorParameters<typeof SettingsService>[0],
+      mockSupabaseAuth as unknown as ConstructorParameters<typeof SettingsService>[1],
+      mockEmailService as unknown as ConstructorParameters<typeof SettingsService>[2],
+      mockLogger as unknown as ConstructorParameters<typeof SettingsService>[3],
     );
   });
 
   describe('getUserSettings', () => {
     it('should return user settings', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
-
       const result = await settingsService.getUserSettings('user-123');
 
       expect(result).toEqual({
         name: 'Test User',
         email: 'test@example.com',
       });
+      expect(mockDatabaseService.withUserId).toHaveBeenCalledWith('user-123', expect.any(Function));
     });
 
     it('should throw when user not found', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(null);
+      // Return empty array (no user found)
+      mockDatabaseService.withUserId.mockImplementation(async (_userId, callback) => {
+        return callback(createQueryChainMock([]));
+      });
 
       await expect(settingsService.getUserSettings('user-123')).rejects.toThrow(
         BadRequestException,
@@ -85,21 +110,37 @@ describe('SettingsService', () => {
 
   describe('updateProfile', () => {
     it('should update profile name', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
-      mockSupabaseAuth.updateUserMetadata.mockResolvedValue(undefined);
+      // Mock for getUserById (first call) and update (second call)
+      let callCount = 0;
+      mockDatabaseService.withUserId.mockImplementation(async (_userId, callback) => {
+        callCount++;
+        if (callCount === 1) {
+          // getUserById
+          return callback(createQueryChainMock([mockUser]));
+        } else {
+          // update call
+          const updateChain = createQueryChainMock([]);
+          updateChain.update = vi.fn().mockReturnValue({
+            set: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(undefined),
+            }),
+          });
+          return callback(updateChain);
+        }
+      });
 
       const result = await settingsService.updateProfile('user-123', {
         name: 'New Name',
       });
 
       expect(result.success).toBe(true);
-      expect(mockSupabaseAuth.updateUserMetadata).toHaveBeenCalledWith('user-123', {
-        name: 'New Name',
-      });
+      expect(mockDatabaseService.withUserId).toHaveBeenCalledTimes(2);
     });
 
     it('should throw when user not found', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(null);
+      mockDatabaseService.withUserId.mockImplementation(async (_userId, callback) => {
+        return callback(createQueryChainMock([]));
+      });
 
       await expect(
         settingsService.updateProfile('user-123', { name: 'Test' }),
@@ -109,10 +150,20 @@ describe('SettingsService', () => {
 
   describe('updateEmail', () => {
     it('should update email when password is valid', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
+      // First call: getUserById, Second call: isEmailInUse check
+      let callCount = 0;
+      mockDatabaseService.withUserId.mockImplementation(async (_userId, callback) => {
+        callCount++;
+        if (callCount === 1) {
+          // getUserById returns user
+          return callback(createQueryChainMock([mockUser]));
+        } else {
+          // isEmailInUse returns empty (email not in use)
+          return callback(createQueryChainMock([]));
+        }
+      });
       mockSupabaseAuth.verifyPassword.mockResolvedValue(true);
-      mockSupabaseAuth.isEmailInUse.mockResolvedValue(false);
-      mockSupabaseAuth.updateEmail.mockResolvedValue({ oldEmail: 'test@example.com' });
+      mockSupabaseAuth.updateEmail.mockResolvedValue({ success: true });
       mockEmailService.sendEmailChangeNotification.mockResolvedValue(undefined);
 
       const result = await settingsService.updateEmail('user-123', {
@@ -130,8 +181,6 @@ describe('SettingsService', () => {
     });
 
     it('should throw when new email is same as current', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
-
       await expect(
         settingsService.updateEmail('user-123', {
           newEmail: 'test@example.com',
@@ -141,7 +190,6 @@ describe('SettingsService', () => {
     });
 
     it('should throw when password is invalid', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
       mockSupabaseAuth.verifyPassword.mockResolvedValue(false);
 
       await expect(
@@ -153,9 +201,18 @@ describe('SettingsService', () => {
     });
 
     it('should throw when email is already in use', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
+      // First call: getUserById, Second call: isEmailInUse returns existing user
+      let callCount = 0;
+      mockDatabaseService.withUserId.mockImplementation(async (_userId, callback) => {
+        callCount++;
+        if (callCount === 1) {
+          return callback(createQueryChainMock([mockUser]));
+        } else {
+          // isEmailInUse returns a user (email is in use)
+          return callback(createQueryChainMock([{ id: 'other-user' }]));
+        }
+      });
       mockSupabaseAuth.verifyPassword.mockResolvedValue(true);
-      mockSupabaseAuth.isEmailInUse.mockResolvedValue(true);
 
       await expect(
         settingsService.updateEmail('user-123', {
@@ -168,7 +225,6 @@ describe('SettingsService', () => {
 
   describe('updatePassword', () => {
     it('should update password when current password is valid and new password is strong', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
       // First call: verify current password (true)
       // Second call: check if new password is same as current (false)
       mockSupabaseAuth.verifyPassword
@@ -191,7 +247,6 @@ describe('SettingsService', () => {
     });
 
     it('should throw when current password is invalid', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
       mockSupabaseAuth.verifyPassword.mockResolvedValue(false);
 
       await expect(
@@ -203,7 +258,6 @@ describe('SettingsService', () => {
     });
 
     it('should throw when new password is same as current', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
       // Both calls return true (current password valid, new password same as current)
       mockSupabaseAuth.verifyPassword
         .mockResolvedValueOnce(true)
@@ -218,7 +272,6 @@ describe('SettingsService', () => {
     });
 
     it('should throw when new password is too weak', async () => {
-      mockSupabaseAuth.getUser.mockResolvedValue(mockUser);
       mockSupabaseAuth.verifyPassword
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false);

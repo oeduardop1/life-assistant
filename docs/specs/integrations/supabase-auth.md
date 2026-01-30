@@ -231,6 +231,24 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_verified
   AFTER UPDATE ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_email_verified();
+
+-- Trigger para sincronizar alterações de email (M0.11)
+-- Quando usuário confirma alteração de email, sincroniza para public.users
+CREATE OR REPLACE FUNCTION sync_user_email_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.users
+  SET email = NEW.email, updated_at = NOW()
+  WHERE id = NEW.id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_email_updated
+  AFTER UPDATE OF email ON auth.users
+  FOR EACH ROW
+  WHEN (OLD.email IS DISTINCT FROM NEW.email)
+  EXECUTE FUNCTION sync_user_email_update();
 ```
 
 ---
@@ -320,4 +338,4 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 ---
 
-*Última atualização: 26 Janeiro 2026*
+*Última atualização: 30 Janeiro 2026*

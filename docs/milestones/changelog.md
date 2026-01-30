@@ -10,6 +10,7 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-01-30 | M0.11 | Bugfix | Email Change: corrigido fluxo de alteração de email. (1) Alterado `updateEmail` de Admin API para REST API (`PUT /auth/v1/user`) que envia email de verificação automaticamente. (2) Adicionado trigger `on_auth_user_email_updated` para sincronizar `auth.users.email` → `public.users.email` após confirmação. (3) Controller agora extrai access token do header para passar ao adapter. (4) Verificação de email em uso agora via query direta no banco (mais confiável). Docs: supabase-auth.md, settings.md atualizados. |
 | 2026-01-29 | M0.11 | Concluído | Settings Base: módulo settings com endpoints (profile/email/password), validação zxcvbn-ts (score >= 2), rate limiting OWASP (3/h email, 5/h senha), frontend com Tabs/Cards responsivos, PasswordStrengthMeter, 859 API tests + 439 Web tests passando. Audit logging adicionado ao backlog. |
 | 2026-01-29 | M1.11, M3.7 | Removido | Módulo de decisões eliminado por redundância. Decisões importantes serão salvas via `add_knowledge` com formato consistente. Análise mostrou que 4 tabelas dedicadas + tool `save_decision` + follow-up job eram over-engineering — sistema de memória existente já cobre a funcionalidade. |
 | 2026-01-29 | ADR-016 | Reescrito | "Decisions via Knowledge Items" substitui versão anterior. Nova abordagem: usar `add_knowledge` em vez de módulo dedicado. Seção History documenta mudança. |
@@ -78,4 +79,4 @@
 
 ---
 
-*Última atualização: 29 Janeiro 2026*
+*Última atualização: 30 Janeiro 2026*

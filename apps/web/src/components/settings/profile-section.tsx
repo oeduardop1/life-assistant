@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { User } from 'lucide-react';
+import { User, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,13 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { updateProfileSchema, type UpdateProfileData } from '@/lib/validations/settings';
 
 interface ProfileSectionProps {
@@ -34,6 +28,7 @@ interface ProfileSectionProps {
  */
 export function ProfileSection({ defaultName, onSubmit }: ProfileSectionProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const form = useForm<UpdateProfileData>({
     resolver: standardSchemaResolver(updateProfileSchema),
@@ -44,10 +39,13 @@ export function ProfileSection({ defaultName, onSubmit }: ProfileSectionProps) {
 
   const handleSubmit = form.handleSubmit(async (data) => {
     setIsLoading(true);
+    setShowSuccess(false);
     try {
       const result = await onSubmit(data);
       if (result.success) {
+        setShowSuccess(true);
         toast.success('Perfil atualizado com sucesso');
+        setTimeout(() => setShowSuccess(false), 2000);
       } else {
         toast.error(result.message || 'Erro ao atualizar perfil');
       }
@@ -63,49 +61,87 @@ export function ProfileSection({ defaultName, onSubmit }: ProfileSectionProps) {
   const isDirty = form.formState.isDirty;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <User className="h-5 w-5 text-primary" />
+    <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
+      {/* Header with gradient accent */}
+      <div className="relative px-6 py-5 border-b border-border/50">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-cyan-500/5 to-transparent" />
+        <div className="relative flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+            <User className="w-6 h-6 text-blue-500 dark:text-blue-400" />
           </div>
           <div>
-            <CardTitle className="text-lg">Perfil</CardTitle>
-            <CardDescription>
-              Gerencie suas informacoes pessoais
-            </CardDescription>
+            <h2 className="text-lg font-semibold text-foreground">Perfil</h2>
+            <p className="text-sm text-muted-foreground">
+              Gerencie suas informações pessoais
+            </p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+
+      {/* Content */}
+      <div className="p-6">
         <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome</FormLabel>
+                  <FormLabel className="text-sm font-medium">
+                    Nome completo
+                  </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Seu nome"
-                      autoComplete="name"
-                      {...field}
-                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="Digite seu nome"
+                        autoComplete="name"
+                        className={cn(
+                          'h-11 px-4 rounded-xl border-border/50 bg-background/50 transition-all duration-200',
+                          'focus:bg-background focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20'
+                        )}
+                        {...field}
+                      />
+                      {showSuccess && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center animate-in zoom-in-50 duration-200">
+                            <Check className="w-4 h-4 text-green-500" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isLoading || !isDirty}>
-                {isLoading ? 'Salvando...' : 'Salvar'}
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-muted-foreground">
+                Este nome será exibido em toda a plataforma
+              </p>
+              <Button
+                type="submit"
+                disabled={isLoading || !isDirty}
+                className={cn(
+                  'h-10 px-5 rounded-xl font-medium transition-all duration-200',
+                  'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600',
+                  'shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40',
+                  'disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed'
+                )}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar alterações'
+                )}
               </Button>
             </div>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

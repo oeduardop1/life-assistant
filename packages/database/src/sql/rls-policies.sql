@@ -205,3 +205,35 @@ CREATE POLICY "Users can only access own debt_payments" ON debt_payments
 
 CREATE POLICY "Users can only access own investments" ON investments
   FOR ALL USING (user_id = (SELECT auth.uid()));
+
+-- ============================================================================
+-- AUTH TRIGGER: Sync email changes from auth.users to public.users
+-- ============================================================================
+-- When a user confirms email change in Supabase Auth, this trigger
+-- syncs the new email to public.users table.
+-- See: docs/specs/integrations/supabase-auth.md
+
+CREATE OR REPLACE FUNCTION public.sync_user_email_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE public.users
+    SET email = NEW.email, updated_at = NOW()
+    WHERE id = NEW.id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Drop existing trigger if exists (for idempotency)
+DROP TRIGGER IF EXISTS on_auth_user_email_updated ON auth.users;
+
+-- Create trigger only for email updates
+DO $$ BEGIN
+    CREATE TRIGGER on_auth_user_email_updated
+        AFTER UPDATE OF email ON auth.users
+        FOR EACH ROW
+        WHEN (OLD.email IS DISTINCT FROM NEW.email)
+        EXECUTE FUNCTION public.sync_user_email_update();
+EXCEPTION WHEN undefined_table THEN
+    -- auth.users doesn't exist in this context (e.g., pure Drizzle test)
+    NULL;
+END $$;

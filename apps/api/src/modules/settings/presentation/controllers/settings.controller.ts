@@ -5,6 +5,7 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -71,8 +72,11 @@ export class SettingsController {
   async updateEmail(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateEmailDto,
+    @Headers('authorization') authHeader: string,
   ) {
-    return this.settingsService.updateEmail(user.id, dto);
+    // Extract access token from "Bearer <token>" header
+    const accessToken = authHeader?.replace('Bearer ', '');
+    return this.settingsService.updateEmail(user.id, dto, accessToken);
   }
 
   @Patch('password')

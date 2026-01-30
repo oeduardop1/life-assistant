@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/
 import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core';
 import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common';
 import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en';
-import { eq } from '@life-assistant/database';
+import { eq, ne, and, sql } from '@life-assistant/database';
 import { SupabaseAuthAdapter } from '../../../auth/infrastructure/supabase/supabase-auth.adapter';
 import { SettingsEmailService } from '../../infrastructure/email/settings-email.service';
 import { UpdateProfileDto, UpdateEmailDto, UpdatePasswordDto } from '../../presentation/dtos';
@@ -106,8 +106,12 @@ export class SettingsService {
    * Update user email
    * Requires current password verification
    * Sends notification to old email
+   *
+   * @param userId - User ID
+   * @param dto - Update email DTO with new email and current password
+   * @param accessToken - User's JWT access token for Supabase client SDK
    */
-  async updateEmail(userId: string, dto: UpdateEmailDto): Promise<SettingsResponse> {
+  async updateEmail(userId: string, dto: UpdateEmailDto, accessToken: string): Promise<SettingsResponse> {
     this.logger.log(`Email update requested for user: ${userId}`);
 
     // Get current user info from database
@@ -131,18 +135,18 @@ export class SettingsService {
       throw new UnauthorizedException('Senha atual incorreta');
     }
 
-    // Check if email is already in use
-    const emailInUse = await this.supabaseAuth.isEmailInUse(dto.newEmail, userId);
+    // Check if email is already in use (via direct database query, more reliable than Admin API)
+    const emailInUse = await this.isEmailInUse(dto.newEmail, userId);
     if (emailInUse) {
       throw new BadRequestException('Este email já está em uso');
     }
 
-    // Update email via Supabase Auth (will send verification to new email)
-    const { oldEmail } = await this.supabaseAuth.updateEmail(userId, dto.newEmail);
+    // Update email via Supabase client SDK (will send verification to new email)
+    await this.supabaseAuth.updateEmail(accessToken, dto.newEmail);
 
     // Send security notification to old email
     this.emailService.sendEmailChangeNotification(
-      oldEmail,
+      user.email,
       dto.newEmail,
       user.name,
     );
@@ -254,5 +258,30 @@ export class SettingsService {
     });
 
     return result[0] ?? null;
+  }
+
+  /**
+   * Check if email is already in use by another user
+   * Queries public.users table directly (more reliable than Supabase Admin API)
+   *
+   * Note: Uses raw SQL to bypass RLS for this admin-like check
+   */
+  private async isEmailInUse(email: string, excludeUserId: string): Promise<boolean> {
+    const result = await this.databaseService.withUserId(excludeUserId, async (db) => {
+      // Query all users with this email, excluding the current user
+      // Using sql`` to do case-insensitive comparison
+      return db
+        .select({ id: this.databaseService.schema.users.id })
+        .from(this.databaseService.schema.users)
+        .where(
+          and(
+            sql`lower(${this.databaseService.schema.users.email}) = lower(${email})`,
+            ne(this.databaseService.schema.users.id, excludeUserId),
+          ),
+        )
+        .limit(1);
+    });
+
+    return result.length > 0;
   }
 }

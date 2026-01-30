@@ -282,14 +282,14 @@ CREATE TABLE user_preferences (
 
 ## 8. Checklist de Implementação
 
-### M0.11 - Settings Base
-- [ ] Backend: módulo settings
-- [ ] Backend: endpoints profile/email/password
-- [ ] Backend: rate limiting
-- [ ] Backend: testes
-- [ ] Frontend: página /settings
-- [ ] Frontend: seções Perfil e Segurança
-- [ ] Frontend: validações e feedback
+### M0.11 - Settings Base ✅
+- [x] Backend: módulo settings
+- [x] Backend: endpoints profile/email/password
+- [x] Backend: rate limiting
+- [x] Backend: testes
+- [x] Frontend: página /settings
+- [x] Frontend: seções Perfil e Segurança
+- [x] Frontend: validações e feedback
 
 ### M3.1 - Telegram
 - [ ] Seção /settings/telegram

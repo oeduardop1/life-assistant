@@ -31,7 +31,7 @@ export interface UserInfo {
 }
 
 export interface UpdateEmailResult {
-  oldEmail: string;
+  success: boolean;
 }
 
 /**
@@ -239,30 +239,35 @@ export class SupabaseAuthAdapter {
   /**
    * Update user email
    * Sends verification email to new address
+   *
+   * Uses Supabase Auth REST API directly (PUT /auth/v1/user) as documented
+   * in the self-hosting reference. This triggers automatic email verification.
+   *
+   * @see https://supabase.com/docs/reference/self-hosting-auth/introduction
+   *
+   * @param accessToken - User's JWT access token from the request
+   * @param newEmail - New email address to change to
    */
-  async updateEmail(userId: string, newEmail: string): Promise<UpdateEmailResult> {
-    // Get current email first
-    const { data: userData, error: getUserError } =
-      await this.supabaseAdmin.auth.admin.getUserById(userId);
-
-    if (getUserError) {
-      this.handleAuthError(getUserError);
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Supabase types allow null even on success
-    const oldEmail = userData.user?.email ?? '';
-
-    // Update email - Supabase will send verification to new email
-    const { error } = await this.supabaseAdmin.auth.admin.updateUserById(userId, {
-      email: newEmail,
-      email_confirm: false, // Require confirmation of new email
+  async updateEmail(accessToken: string, newEmail: string): Promise<UpdateEmailResult> {
+    // Call Supabase Auth REST API directly
+    // PUT /auth/v1/user with Bearer token sends verification email automatically
+    const response = await fetch(`${this.config.supabaseUrl}/auth/v1/user`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': this.config.supabaseAnonKey,
+      },
+      body: JSON.stringify({ email: newEmail }),
     });
 
-    if (error) {
-      this.handleAuthError(error);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})) as { error_description?: string; msg?: string };
+      const errorMessage = errorData.error_description ?? errorData.msg ?? 'Failed to update email';
+      this.handleAuthError({ message: errorMessage } as AuthError);
     }
 
-    return { oldEmail };
+    return { success: true };
   }
 
   /**
