@@ -3,18 +3,10 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Mail, Lock } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/hooks/use-auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { AuthCard, AuthInput, GradientButton } from '@/components/auth';
 import { toast } from 'sonner';
 
 function LoginForm() {
@@ -22,6 +14,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
   const { login, isLoading } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,21 +36,51 @@ function LoginForm() {
     }
   };
 
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.3 },
+    },
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.08,
+        delayChildren: prefersReducedMotion ? 0 : 0.4,
+      },
+    },
+  };
+
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Entrar</CardTitle>
-        <CardDescription className="text-center">
-          Entre com seu email e senha para acessar sua conta
-        </CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
+    <AuthCard>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Header */}
+        <motion.div variants={itemVariants} className="mb-6 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Bem-vindo de volta
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Entre para continuar sua jornada
+          </p>
+        </motion.div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <motion.div variants={itemVariants}>
+            <AuthInput
               id="email"
               type="email"
+              label="Email"
+              icon={Mail}
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -65,48 +88,88 @@ function LoginForm() {
               autoComplete="email"
               data-testid="login-email"
             />
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Senha</span>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-muted-foreground hover:text-chat-accent transition-colors"
+                  data-testid="forgot-password-link"
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
+              <AuthInput
+                id="password"
+                type="password"
+                label=""
+                icon={Lock}
+                placeholder="********"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                data-testid="login-password"
+                className="mt-0"
+              />
+            </div>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <GradientButton
+              type="submit"
+              isLoading={isSubmitting || isLoading}
+              loadingText="Entrando..."
+              data-testid="login-submit"
+            >
+              Entrar
+            </GradientButton>
+          </motion.div>
+        </form>
+
+        {/* Footer */}
+        <motion.p
+          variants={itemVariants}
+          className="mt-6 text-center text-sm text-muted-foreground"
+        >
+          Ainda nao tem uma conta?{' '}
+          <Link
+            href="/signup"
+            className="font-medium text-chat-accent hover:underline"
+            data-testid="signup-link"
+          >
+            Criar conta
+          </Link>
+        </motion.p>
+      </motion.div>
+    </AuthCard>
+  );
+}
+
+function LoginFormSkeleton() {
+  return (
+    <AuthCard>
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="mx-auto h-7 w-48 animate-pulse rounded bg-muted" />
+          <div className="mx-auto mt-2 h-4 w-40 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="h-4 w-12 animate-pulse rounded bg-muted" />
+            <div className="h-11 w-full animate-pulse rounded-lg bg-muted" />
           </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Senha</Label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-muted-foreground hover:text-primary"
-                data-testid="forgot-password-link"
-              >
-                Esqueceu a senha?
-              </Link>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="********"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              data-testid="login-password"
-            />
+            <div className="h-4 w-12 animate-pulse rounded bg-muted" />
+            <div className="h-11 w-full animate-pulse rounded-lg bg-muted" />
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting || isLoading}
-            data-testid="login-submit"
-          >
-            {isSubmitting ? 'Entrando...' : 'Entrar'}
-          </Button>
-          <p className="text-sm text-center text-muted-foreground">
-            Ainda nao tem uma conta?{' '}
-            <Link href="/signup" className="text-primary hover:underline" data-testid="signup-link">
-              Criar conta
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+          <div className="h-11 w-full animate-pulse rounded-lg bg-muted" />
+        </div>
+      </div>
+    </AuthCard>
   );
 }
 
@@ -115,29 +178,5 @@ export default function LoginPage() {
     <Suspense fallback={<LoginFormSkeleton />}>
       <LoginForm />
     </Suspense>
-  );
-}
-
-function LoginFormSkeleton() {
-  return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <div className="h-8 w-24 mx-auto bg-muted animate-pulse rounded" />
-        <div className="h-4 w-48 mx-auto bg-muted animate-pulse rounded" />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="h-4 w-12 bg-muted animate-pulse rounded" />
-          <div className="h-10 w-full bg-muted animate-pulse rounded" />
-        </div>
-        <div className="space-y-2">
-          <div className="h-4 w-12 bg-muted animate-pulse rounded" />
-          <div className="h-10 w-full bg-muted animate-pulse rounded" />
-        </div>
-      </CardContent>
-      <CardFooter className="flex flex-col space-y-4">
-        <div className="h-10 w-full bg-muted animate-pulse rounded" />
-      </CardFooter>
-    </Card>
   );
 }

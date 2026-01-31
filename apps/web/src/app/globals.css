@@ -55,6 +55,13 @@
   --color-chat-input-bg: var(--chat-input-bg);
   --color-chat-input-border: var(--chat-input-border);
   --color-chat-input-focus: var(--chat-input-focus);
+  /* Auth color mappings */
+  --color-auth-gradient-start: var(--auth-gradient-start);
+  --color-auth-gradient-mid: var(--auth-gradient-mid);
+  --color-auth-gradient-end: var(--auth-gradient-end);
+  --color-auth-orb-1: var(--auth-orb-1);
+  --color-auth-orb-2: var(--auth-orb-2);
+  --color-auth-orb-3: var(--auth-orb-3);
 }
 
 :root {
@@ -100,6 +107,13 @@
   --chat-input-bg: oklch(0.99 0.005 200);
   --chat-input-border: oklch(0.90 0.02 200);
   --chat-input-focus: oklch(0.60 0.15 200);
+  /* Auth page colors - Soft Organic Tech theme */
+  --auth-gradient-start: oklch(0.99 0.005 200);
+  --auth-gradient-mid: oklch(0.97 0.02 200);
+  --auth-gradient-end: oklch(0.99 0.01 280);
+  --auth-orb-1: oklch(0.75 0.12 200 / 0.25);
+  --auth-orb-2: oklch(0.70 0.10 220 / 0.20);
+  --auth-orb-3: oklch(0.80 0.08 180 / 0.15);
 }
 
 .dark {
@@ -144,6 +158,13 @@
   --chat-input-bg: oklch(0.18 0.02 200);
   --chat-input-border: oklch(0.30 0.03 200);
   --chat-input-focus: oklch(0.75 0.14 195);
+  /* Auth page colors - Dark mode */
+  --auth-gradient-start: oklch(0.14 0.01 200);
+  --auth-gradient-mid: oklch(0.16 0.02 200);
+  --auth-gradient-end: oklch(0.14 0.015 280);
+  --auth-orb-1: oklch(0.45 0.10 200 / 0.12);
+  --auth-orb-2: oklch(0.40 0.08 220 / 0.10);
+  --auth-orb-3: oklch(0.50 0.06 180 / 0.08);
 }
 
 @layer base {
