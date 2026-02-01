@@ -1,6 +1,6 @@
-# Tracking & Life Balance (ADR-015, ADR-017)
+# Tracking & Habits (ADR-015, ADR-017)
 
-> Metric tracking, Life Balance Score calculation, and trend analysis.
+> Módulo unificado de tracking de métricas de saúde e hábitos diários, com calendário visual, streaks e insights de correlação.
 
 ---
 
@@ -19,8 +19,10 @@
 
 ### Two Registration Modes
 
-1. **Captura conversacional:** IA detecta métricas em conversa natural e pede confirmação
-2. **Dashboard manual:** Formulários para registro ativo (opcional)
+Similar ao módulo Finance, o tracking suporta dois modos de entrada:
+
+1. **Captura conversacional:** IA detecta métricas/hábitos em conversa natural e pede confirmação
+2. **Dashboard manual:** Formulários e checkboxes para registro ativo (opcional)
 
 ### Confirmation Rule
 
@@ -31,256 +33,366 @@ Antes de salvar, IA SEMPRE pergunta: "Quer que eu registre...?"
 
 ---
 
-## 2. Tracking Entry Types
+## 2. Conceito: Tracking Unificado
+
+> **Decisão (2026-02-01):** Unificar o antigo M2.1 (Tracking Métricas) com M2.3 (Hábitos) em um único módulo `/tracking`.
+
+### Dois Tipos de Dados
+
+| Tipo | Natureza | Exemplos | Armazenamento |
+|------|----------|----------|---------------|
+| **Métricas** | Valores numéricos | peso (kg), água (ml), sono (h), humor (1-10) | `tracking_entries` |
+| **Hábitos** | Booleanos (fez/não fez) | treino, leitura, meditação, journaling | `habits` + `habit_completions` |
+
+### Relação entre Tipos
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    /tracking                            │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  MÉTRICAS (quanto?)           HÁBITOS (fez?)           │
+│  ├─ peso: 75.5 kg             ├─ treino: ✓ 🔥12       │
+│  ├─ água: 2000 ml             ├─ leitura: ✓ 🔥45      │
+│  ├─ sono: 7.5 h               ├─ meditação: ✗         │
+│  ├─ humor: 7/10               └─ journaling: ✓ 🔥7    │
+│  └─ energia: 8/10                                      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. UI Structure
+
+### 3.1 Overview
+
+```
+/tracking
+├── 📅 Calendário Mensal (vista principal)
+│   ├── Navegação ◄ Mês ► (similar ao /finance)
+│   ├── Cada dia mostra resumo visual
+│   └── Clicar no dia abre detalhe
+│
+├── 📝 Vista do Dia (modal ou página)
+│   ├── Hábitos do dia (checkboxes + streaks)
+│   └── Métricas do dia (inputs numéricos)
+│
+├── 📊 Aba Insights
+│   ├── Correlações automáticas
+│   └── Life Balance Score
+│
+└── 🔥 Aba Streaks
+    └── Todos os hábitos com sequências
+```
+
+### 3.2 Calendário Mensal (Vista Principal)
+
+Inspirado no padrão "Year in Pixels" do Daylio. Cada dia mostra:
+
+```
+┌─────────────────────────────────────────┐
+│  ◄  Janeiro 2026  ►                     │
+├─────────────────────────────────────────┤
+│ Dom  Seg  Ter  Qua  Qui  Sex  Sáb      │
+│                  1    2    3    4       │
+│                 🟢   🟡   🟢   🟢       │
+│                 ●●   ●○   ●●●  ●●       │
+│                                         │
+│  5    6    7    8    9   10   11       │
+│ 🟡   🟢   🟢   🔴   🟡   🟢   🟡       │
+│ ●○   ●●●  ●●   ○○   ●○   ●●●  ●●       │
+└─────────────────────────────────────────┘
+
+Legenda:
+🟢🟡🔴 = Cor do humor (bom ≥7 / neutro 4-6 / ruim ≤3)
+●○ = Hábitos completados/total do dia
+```
+
+**Navegação:**
+- Similar ao `/finance` com MonthSelector
+- Setas ◄ ► para navegar entre meses
+- Clicar no mês atual retorna para hoje
+- Indicador visual quando não está no mês atual
+
+### 3.3 Vista do Dia
+
+Ao clicar em um dia no calendário:
+
+```
+┌─────────────────────────────────────────┐
+│ Terça, 7 de Janeiro                 ✕   │
+├─────────────────────────────────────────┤
+│ HÁBITOS                                 │
+│ ┌─────────────────────────────────────┐ │
+│ │ ☑ Treino (manhã)      🔥 12 dias   │ │
+│ │ ☑ Leitura (manhã)     🔥 45 dias   │ │
+│ │ ☐ Meditação (manhã)   🔥 0 dias    │ │
+│ │ ☑ Journaling (noite)  🔥 7 dias    │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ MÉTRICAS                                │
+│ ┌─────────────────────────────────────┐ │
+│ │ 😊 Humor      [●●●●●●●○○○] 7       │ │
+│ │ ⚡ Energia    [●●●●●●●●○○] 8       │ │
+│ │ 💧 Água       [2100] ml            │ │
+│ │ 😴 Sono       [7.5] h              │ │
+│ │ ⚖️ Peso       [75.2] kg            │ │
+│ └─────────────────────────────────────┘ │
+│              [Salvar]                   │
+└─────────────────────────────────────────┘
+```
+
+### 3.4 Aba Insights
+
+Correlações automáticas calculadas com níveis de confiança:
+
+```
+┌─────────────────────────────────────────┐
+│ 💡 Insights do Mês                      │
+├─────────────────────────────────────────┤
+│                                         │
+│ "Quando você dorme 7h+, seu humor       │
+│  tende a ser 1.5 pontos maior"          │
+│  Confiança: Alta ●●●                    │
+│                                         │
+│ "Dias com treino têm energia média      │
+│  de 7.8 vs 5.2 sem treino"              │
+│  Confiança: Média ●●○                   │
+│                                         │
+│ "Leitura matinal aparece em 80%         │
+│  dos seus melhores dias"                │
+│  Confiança: Alta ●●●                    │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+### 3.5 Aba Streaks
+
+Dashboard de sequências por hábito:
+
+```
+┌─────────────────────────────────────────┐
+│ 🔥 Streaks                              │
+├─────────────────────────────────────────┤
+│                                         │
+│ 📚 Leitura                              │
+│ ├─ Atual: 45 dias 🔥                    │
+│ └─ Recorde: 45 dias ⭐                  │
+│                                         │
+│ 🏋️ Treino                               │
+│ ├─ Atual: 12 dias 🔥                    │
+│ └─ Recorde: 30 dias                     │
+│                                         │
+│ ✍️ Journaling                           │
+│ ├─ Atual: 7 dias 🔥                     │
+│ └─ Recorde: 21 dias                     │
+│                                         │
+│ 🧘 Meditação                            │
+│ ├─ Atual: 0 dias                        │
+│ └─ Recorde: 14 dias                     │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## 4. Tracking Types (Métricas)
+
+> **Nota:** Dados financeiros são gerenciados pelo **módulo Finance (M2.2)**. Ver `docs/specs/domains/finance.md`.
 
 ```typescript
 enum TrackingType {
-  // Saúde
+  // Saúde física
   WEIGHT = 'weight',
   WATER = 'water',
   SLEEP = 'sleep',
   EXERCISE = 'exercise',
 
-  // Financeiro (basic tracking, M2.2 has full finance)
-  EXPENSE = 'expense',
-  INCOME = 'income',
-  INVESTMENT = 'investment',
-
-  // Hábitos
-  HABIT = 'habit',
-
-  // Bem-estar
+  // Bem-estar mental
   MOOD = 'mood',
   ENERGY = 'energy',
 
-  // Custom
+  // Personalizado
   CUSTOM = 'custom',
 }
 ```
 
----
+### 4.1 Validation Rules
 
-## 3. Validation Rules
-
-| Tipo | Campo | Validação |
-|------|-------|-----------|
-| **weight** | value | `0 < value ≤ 500` (kg) |
-| **weight** | date | `≤ now` (não pode ser futuro) |
-| **water** | value | `0 < value ≤ 10000` (ml) |
-| **expense** | value | `value > 0` |
-| **expense** | category | Enum válido |
-| **exercise** | duration | `0 < duration ≤ 1440` (min) |
-| **exercise** | intensity | `low | medium | high` |
-| **sleep** | duration | `0 < duration ≤ 24` (hours) |
-| **sleep** | quality | `1-10` |
-| **mood** | value | `1-10` |
-| **energy** | value | `1-10` |
-
-### 3.1 API Endpoints
-
-| Operacao | Endpoint | Tool | Confirmacao |
-|----------|----------|------|-------------|
-| Criar | `POST /tracking` | `record_metric` | Sistema |
-| Atualizar | `PATCH /tracking/:id` | `update_metric` | Sistema |
-| Deletar | `DELETE /tracking/:id` | `delete_metric` | Sistema |
-| Listar/Historico | `GET /tracking` | `get_tracking_history` | Nao |
+| Tipo | Campo | Validação | Unidade |
+|------|-------|-----------|---------|
+| **weight** | value | `0 < value ≤ 500` | kg |
+| **weight** | date | `≤ now` (não pode ser futuro) | - |
+| **water** | value | `0 < value ≤ 10000` | ml |
+| **exercise** | duration | `0 < duration ≤ 1440` | min |
+| **exercise** | intensity | `low \| medium \| high` | - |
+| **sleep** | duration | `0 < duration ≤ 24` | hours |
+| **sleep** | quality | `1-10` | score |
+| **mood** | value | `1-10` | score |
+| **energy** | value | `1-10` | score |
+| **custom** | value | `number` (sem limites) | custom |
 
 ---
 
-## 4. Life Balance Score (ADR-017)
+## 5. Habits (Hábitos)
 
-### 4.1 Overview
-
-Pontuação 0-100 que mede o equilíbrio geral da vida baseado em 6 áreas principais.
-
-> **Nota de Display:** O score interno é 0-100 para precisão de cálculo. Na UI, exibir como 0-10 para melhor UX (dividir por 10). Exemplo: score interno 75 → exibir como 7.5.
-
-### 4.2 Formula
+### 5.1 Habit Definition
 
 ```typescript
-// lifeBalanceScore = média simples das 6 áreas (pesos fixos 1.0)
-lifeBalanceScore = Σ areaScore / 6
+interface Habit {
+  id: string;
+  userId: string;
+  name: string;              // "Treino", "Leitura", "Meditação"
+  description?: string;
+  icon: string;              // emoji ou lucide icon name
+  color?: string;            // hex color para UI
+  frequency: HabitFrequency;
+  periodOfDay?: PeriodOfDay;
+  isActive: boolean;
+  currentStreak: number;     // calculado
+  longestStreak: number;     // histórico
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-// Each areaScore = weighted average of subAreaScore values
-areaScore = Σ (subAreaScore × subAreaWeight) / Σ subAreaWeight
-```
+enum HabitFrequency {
+  DAILY = 'daily',           // Todo dia
+  WEEKDAYS = 'weekdays',     // Seg-Sex
+  WEEKENDS = 'weekends',     // Sáb-Dom
+  CUSTOM = 'custom',         // Dias específicos
+}
 
-### 4.3 Main Areas & Weights
-
-| Área | Código | Sub-áreas |
-|------|--------|-----------|
-| Saúde | `health` | physical (50%), mental (35%), leisure (15%) |
-| Finanças | `finance` | budget (30%), savings (25%), debts (25%), investments (20%) |
-| Profissional | `professional` | career (60%), business (40%) |
-| Aprendizado | `learning` | formal (50%), informal (50%) |
-| Espiritual | `spiritual` | practice (70%), community (30%) |
-| Relacionamentos | `relationships` | family (40%), romantic (35%), social (25%) |
-
-> **Nota (2026-01-26):** Todas as 6 áreas têm peso fixo 1.0 (importância igual). Áreas são fixas e não configuráveis pelo usuário. Pesos de sub-áreas também são fixos.
-
-### 4.4 Area Calculations
-
-#### Health (Saúde)
-
-**Physical Score (50%):**
-- IMC: Baseado no cálculo IMC
-- Exercício: `(min_semana / meta_min) × 100`, max 100
-- Sono: `(horas_media / meta_horas) × 100`, default 50
-- Água: `(ml_registrado / meta_ml) × 100`, default 50
-
-**IMC Calculation:**
-```
-IMC = peso(kg) / altura(m)²
-- IMC 18.5-24.9 (ideal): score = 100
-- IMC < 18.5 (abaixo): score = 100 - ((18.5 - IMC) × 10), mín 0
-- IMC 25-29.9 (sobrepeso): score = 100 - ((IMC - 24.9) × 8), mín 50
-- IMC ≥ 30 (obesidade): score = 50 - ((IMC - 30) × 5), mín 0
-- Se altura não cadastrada: score = 50 (neutro)
-```
-
-**Mental Score (35%):**
-- Humor: Média dos últimos 7 dias
-- Energia: Média dos últimos 7 dias
-- Stress: Inverso do nível reportado
-
-**Leisure Score (15%):**
-- Baseado em registros de atividades de lazer/hobbies
-
-#### Finance (Finanças)
-
-| Sub-área | Peso | Cálculo |
-|----------|------|---------|
-| budget | 30% | `100 - (gastos_mes / budget_mes × 100)`, min 0 |
-| savings | 25% | `(poupança_mes / meta_poupança) × 100` |
-| debts | 25% | `100 - (dívida / renda_mes × 100)`, min 0 |
-| investments | 20% | Presença e crescimento de investimentos |
-
-#### Professional (Profissional)
-
-| Sub-área | Peso | Cálculo |
-|----------|------|---------|
-| career | 60% | Satisfação + progresso em metas de carreira |
-| business | 40% | Progresso em empreendedorismo/projetos pessoais |
-
-#### Learning (Aprendizado)
-
-| Sub-área | Peso | Cálculo |
-|----------|------|---------|
-| formal | 50% | Progresso em cursos, certificações |
-| informal | 50% | Livros lidos, vídeos, autodidatismo |
-
-#### Spiritual (Espiritual)
-
-| Sub-área | Peso | Cálculo |
-|----------|------|---------|
-| practice | 70% | Frequência de devocionais, meditação, oração |
-| community | 30% | Participação em igreja/grupos espirituais |
-
-#### Relationships (Relacionamentos)
-
-| Sub-área | Peso | Cálculo |
-|----------|------|---------|
-| family | 40% | Frequência de contato + qualidade |
-| romantic | 35% | Qualidade do relacionamento romântico |
-| social | 25% | Amigos + networking |
-
-**Se usuário não tem pessoas cadastradas:** score = 50 (neutro)
-
-### 4.5 Update Frequency
-
-| Score | Frequência | Trigger |
-|-------|------------|---------|
-| Area Score | Tempo real | Novo tracking entry |
-| Life Balance Score | Diário | Job às 00:00 UTC |
-| Histórico | Diário | Snapshot às 00:00 UTC |
-
-### 4.6 Insufficient Data Handling
-
-> **ADR-015:** O sistema NÃO penaliza tracking não realizado.
-
-| Situação | Comportamento |
-|----------|---------------|
-| Componente sem dados | Retorna **50** (neutro), sem penalização |
-| Área inteira sem dados | Retorna **50** para a área |
-| Menos de 7 dias de dados | Calcula com dados disponíveis |
-| Usuário novo (< 3 dias) | Não calcula, mostra onboarding |
-| Métrica opcional não registrada | **50**, sem mensagem de cobrança |
-
-**Mensagens informativas (não de cobrança):**
-- "Score baseado nas métricas que você compartilhou"
-- "Área [X] calculada com os dados disponíveis"
-
-### 4.7 Interpretation (UI 0-10)
-
-| Faixa | Significado | Cor |
-|-------|-------------|-----|
-| 9.0 - 10.0 | Excelente | 🟢 Verde |
-| 7.5 - 8.9 | Bom | 🟢 Verde claro |
-| 6.0 - 7.4 | Adequado | 🟡 Amarelo |
-| 4.0 - 5.9 | Atenção | 🟠 Laranja |
-| 0.0 - 3.9 | Crítico | 🔴 Vermelho |
-
----
-
-## 5. Trend Analysis
-
-### 5.1 get_trends Tool
-
-Analisa tendências e correlações entre métricas.
-
-```typescript
-{
-  name: 'get_trends',
-  parameters: {
-    types: TrackingType[],     // 1-5 tipos de métricas
-    days: number,              // 7-365 dias
-    period?: 'week' | 'month' | 'quarter' | 'semester' | 'year' | 'all',
-    includeCorrelations?: boolean,
-  },
+enum PeriodOfDay {
+  MORNING = 'morning',       // Manhã (05:00-12:00)
+  AFTERNOON = 'afternoon',   // Tarde (12:00-18:00)
+  EVENING = 'evening',       // Noite (18:00-05:00)
+  ANYTIME = 'anytime',       // Qualquer hora
 }
 ```
 
-### 5.2 Data Density
+### 5.2 Habit Completion
 
+```typescript
+interface HabitCompletion {
+  id: string;
+  habitId: string;
+  userId: string;
+  completedAt: Date;         // Data/hora da conclusão
+  date: Date;                // Data do hábito (YYYY-MM-DD)
+  notes?: string;
+  source: CompletionSource;
+}
+
+enum CompletionSource {
+  FORM = 'form',             // Dashboard manual
+  CHAT = 'chat',             // Via conversa com IA
+  API = 'api',               // API externa
+  TELEGRAM = 'telegram',     // Bot Telegram
+}
 ```
-density = dataPoints / days
+
+### 5.3 Streak Calculation
+
+```typescript
+// Streak é calculado em tempo real, não armazenado
+function calculateStreak(completions: HabitCompletion[], frequency: HabitFrequency): number {
+  // Ordena por data decrescente
+  // Conta dias consecutivos de acordo com a frequência
+  // Para DAILY: dias seguidos
+  // Para WEEKDAYS: dias úteis seguidos
+  // Para WEEKENDS: fins de semana seguidos
+}
 ```
 
-| Densidade | Fórmula | Comportamento |
-|-----------|---------|---------------|
-| **Alta** | >= 70% | Análise confiável, sem warnings |
-| **Média** | 30-70% | Análise possível, confidence='medium' |
-| **Baixa** | < 30% | Warning 'sparse_data', suggestion gerada |
+**Regras de Streak:**
+- Streak quebra se pular um dia esperado pela frequência
+- Streak não quebra em dias fora da frequência (ex: WEEKDAYS não quebra no fim de semana)
+- Completar no mesmo dia várias vezes conta como 1
 
-**Exemplos:**
-- 7 registros em 10 dias = 70% → density='high'
-- 9 registros em 30 dias = 30% → density='low'
-- 2 registros em 90 dias = 2.2% → density='low' + warning
+### 5.4 Habit Presets
 
-**Sugestões são informativas, não cobranças:**
-- ✅ "Para análise mais precisa de 90 dias, tente registrar peso semanalmente"
-- ❌ "Dados insuficientes! Registre mais para ver resultados"
+Hábitos sugeridos para onboarding:
 
-### 5.3 Calculated Aggregations
-
-| Métrica | Cálculo | Período |
-|---------|---------|---------|
-| Peso médio | `AVG(weight)` | 7 dias |
-| Variação peso | `(atual - anterior) / anterior × 100` | Semanal |
-| Água diária | `SUM(water)` | Dia |
-| Gasto total | `SUM(expense)` | Mês |
-| Gasto por categoria | `SUM(expense) GROUP BY category` | Mês |
-| Exercício semanal | `SUM(duration)` | Semana |
-| Sono médio | `AVG(duration)` | 7 dias |
-| Humor médio | `AVG(mood)` | 7 dias |
+| Categoria | Hábitos Sugeridos |
+|-----------|-------------------|
+| **Saúde** | Treino, Alongamento, Caminhada |
+| **Mente** | Meditação, Journaling, Gratidão |
+| **Conhecimento** | Leitura, Estudo, Podcast |
+| **Espiritual** | Devocional, Oração |
+| **Produtividade** | Planejamento do dia, Review semanal |
 
 ---
 
-## 6. AI Tools
+## 6. API Endpoints
 
-### 6.1 record_metric
+### 6.1 Tracking (Métricas)
 
-Registra uma métrica de tracking.
+| Operação | Endpoint | Método | Descrição |
+|----------|----------|--------|-----------|
+| Criar | `/tracking` | POST | Registra métrica |
+| Listar | `/tracking` | GET | Lista com filtros |
+| Buscar | `/tracking/:id` | GET | Busca por ID |
+| Atualizar | `/tracking/:id` | PATCH | Atualiza métrica |
+| Deletar | `/tracking/:id` | DELETE | Remove métrica |
+| Agregações | `/tracking/aggregations` | GET | Stats por tipo |
+| Por Dia | `/tracking/by-date/:date` | GET | Métricas de um dia |
+
+### 6.2 Habits (Hábitos)
+
+| Operação | Endpoint | Método | Descrição |
+|----------|----------|--------|-----------|
+| Criar | `/habits` | POST | Cria hábito |
+| Listar | `/habits` | GET | Lista hábitos do usuário |
+| Buscar | `/habits/:id` | GET | Busca por ID |
+| Atualizar | `/habits/:id` | PATCH | Atualiza hábito |
+| Deletar | `/habits/:id` | DELETE | Remove hábito |
+| Completar | `/habits/:id/complete` | POST | Marca como feito |
+| Desmarcar | `/habits/:id/uncomplete` | DELETE | Remove conclusão |
+| Streaks | `/habits/streaks` | GET | Streaks de todos |
+
+### 6.3 Calendar View
+
+| Operação | Endpoint | Método | Descrição |
+|----------|----------|--------|-----------|
+| Mês | `/tracking/calendar/:year/:month` | GET | Resumo do mês |
+| Dia | `/tracking/day/:date` | GET | Detalhes do dia |
+
+**Response do Calendar (mês):**
+```typescript
+interface CalendarMonthResponse {
+  month: string;  // "2026-01"
+  days: {
+    date: string;           // "2026-01-07"
+    moodScore?: number;     // 1-10, para cor do dia
+    moodColor: 'green' | 'yellow' | 'red' | 'gray';
+    habitsCompleted: number;
+    habitsTotal: number;
+    hasData: boolean;
+  }[];
+}
+```
+
+**Response do Day:**
+```typescript
+interface DayDetailResponse {
+  date: string;
+  metrics: TrackingEntry[];
+  habits: {
+    habit: Habit;
+    completed: boolean;
+    completedAt?: Date;
+  }[];
+}
+```
+
+---
+
+## 7. AI Tools
+
+### 7.1 record_metric
+
+Registra uma métrica de tracking (saúde, bem-estar).
 
 ```typescript
 {
@@ -289,110 +401,95 @@ Registra uma métrica de tracking.
     type: TrackingType,
     value: number,
     unit?: string,
-    category?: string,    // Para expense
-    date?: string,        // ISO date, default hoje
+    date?: string,         // ISO date, default hoje
     metadata?: object,
   },
-  requiresConfirmation: true,  // Sistema pede confirmação
+  requiresConfirmation: true,
 }
 ```
 
-### 6.2 update_metric
+### 7.2 record_habit
 
-Corrige um registro de métrica existente.
+Registra conclusão de um hábito.
 
 ```typescript
 {
-  name: 'update_metric',
+  name: 'record_habit',
   parameters: {
-    entryId: string,
-    value?: number,
-    unit?: string,
-    reason?: string,
+    habitName: string,     // Nome do hábito (fuzzy match)
+    date?: string,         // ISO date, default hoje
+    notes?: string,
   },
   requiresConfirmation: true,
 }
 ```
 
-⚠️ **REGRA CRÍTICA SOBRE entryId:**
-- O entryId DEVE ser o UUID EXATO retornado por get_tracking_history
-- NUNCA invente, gere ou fabrique IDs (como "sleep-12345" ou "entry-xxx")
-- IDs reais são UUIDs no formato: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-- Copie o ID EXATAMENTE como aparece na resposta de get_tracking_history
-
-**QUANDO USAR:**
-- Usuário quer CORRIGIR um valor JÁ REGISTRADO
-- Usuário diz "errei", "não era X, era Y", "corrigi", "o certo é"
-
-**FLUXO OBRIGATÓRIO:**
-1. PRIMEIRO: Chamar get_tracking_history para obter os registros
-2. SEGUNDO: Extrair o campo "id" do entry correto da resposta
-3. TERCEIRO: Chamar update_metric usando esse ID EXATO como entryId
-4. Sistema pedirá confirmação ao usuário
-
-**NUNCA use record_metric para corrigir** — isso cria duplicatas!
-
-### 6.3 delete_metric
-
-Remove um registro de métrica.
-
-```typescript
-{
-  name: 'delete_metric',
-  parameters: {
-    entryId: string,
-    reason?: string,
-  },
-  requiresConfirmation: true,
-}
+**Exemplo de uso:**
+```
+Usuário: "Treinei hoje de manhã"
+IA: "Quer que eu registre o hábito Treino como concluído hoje?"
+Usuário: "Sim"
+→ record_habit({ habitName: "Treino", date: "2026-01-07" })
 ```
 
-⚠️ **REGRA CRÍTICA SOBRE entryId:**
-- O entryId DEVE ser o UUID EXATO retornado por get_tracking_history
-- NUNCA invente, gere ou fabrique IDs (como "sleep-12345" ou "entry-xxx")
-- IDs reais são UUIDs no formato: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-- Copie o ID EXATAMENTE como aparece na resposta de get_tracking_history
+### 7.3 update_metric / delete_metric
 
-**ATENÇÃO:** Ação destrutiva. Use APENAS quando usuário EXPLICITAMENTE pedir para deletar.
+(Mantidos conforme versão anterior - ver seção 6.2/6.3 do doc antigo)
 
-**FLUXO OBRIGATÓRIO:**
-1. PRIMEIRO: Chamar get_tracking_history para obter os registros
-2. SEGUNDO: Mostrar ao usuário qual registro será deletado (data e valor)
-3. TERCEIRO: Extrair o campo "id" EXATO do entry da resposta
-4. QUARTO: Chamar delete_metric usando esse ID como entryId
-5. Sistema pedirá confirmação final
-
-**NUNCA delete sem confirmação explícita do usuário!**
-
-### 6.4 get_tracking_history
-
-Obtém histórico de métricas.
+### 7.4 get_tracking_history
 
 ```typescript
 {
   name: 'get_tracking_history',
   parameters: {
-    type: TrackingType,
-    days: number,    // Max 90, default 30
+    type?: TrackingType,   // Opcional, filtra por tipo
+    days: number,          // Max 90, default 30
+    includeHabits?: boolean,
   },
   requiresConfirmation: false,
 }
 ```
 
-### 6.5 get_trends
+### 7.5 get_habits
 
-Ver seção 5.1 acima.
+```typescript
+{
+  name: 'get_habits',
+  parameters: {
+    includeStreaks?: boolean,
+    includeCompletionsToday?: boolean,
+  },
+  requiresConfirmation: false,
+}
+```
+
+### 7.6 get_trends
+
+Analisa tendências e correlações entre métricas e hábitos.
+
+```typescript
+{
+  name: 'get_trends',
+  parameters: {
+    types?: TrackingType[],  // Métricas para analisar
+    habits?: string[],       // Nomes de hábitos
+    days: number,            // 7-365 dias
+    includeCorrelations?: boolean,
+  },
+  requiresConfirmation: false,
+}
+```
 
 ---
 
-## 7. Data Model
+## 8. Data Model
 
-### 7.1 Tracking Entries Table
+### 8.1 Tracking Entries Table (existente)
 
 ```sql
 CREATE TABLE tracking_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type tracking_type NOT NULL,
   area life_area,
   sub_area sub_area,
@@ -400,19 +497,76 @@ CREATE TABLE tracking_entries (
   unit VARCHAR(20),
   metadata JSONB,
   entry_date DATE NOT NULL,
-  entry_time TIMESTAMP,
-  source VARCHAR(50) DEFAULT 'user',  -- 'user', 'ai', 'import'
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  entry_time TIMESTAMP WITH TIME ZONE,
+  source VARCHAR(50) DEFAULT 'form',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Indexes
+CREATE INDEX idx_tracking_user ON tracking_entries(user_id);
+CREATE INDEX idx_tracking_user_type ON tracking_entries(user_id, type);
+CREATE INDEX idx_tracking_user_date ON tracking_entries(user_id, entry_date);
+CREATE INDEX idx_tracking_date ON tracking_entries(entry_date);
 ```
 
-### 7.2 Life Balance History Table
+### 8.2 Habits Table (nova)
+
+```sql
+CREATE TABLE habits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon VARCHAR(50) DEFAULT '✓',
+  color VARCHAR(7),                    -- hex color
+  frequency habit_frequency NOT NULL DEFAULT 'daily',
+  frequency_days INTEGER[],            -- para CUSTOM: [1,2,3,4,5] = seg-sex
+  period_of_day period_of_day DEFAULT 'anytime',
+  is_active BOOLEAN DEFAULT true,
+  sort_order INTEGER DEFAULT 0,
+  longest_streak INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  UNIQUE(user_id, name)
+);
+
+CREATE TYPE habit_frequency AS ENUM ('daily', 'weekdays', 'weekends', 'custom');
+CREATE TYPE period_of_day AS ENUM ('morning', 'afternoon', 'evening', 'anytime');
+
+-- Indexes
+CREATE INDEX idx_habits_user ON habits(user_id);
+CREATE INDEX idx_habits_user_active ON habits(user_id, is_active);
+```
+
+### 8.3 Habit Completions Table (nova)
+
+```sql
+CREATE TABLE habit_completions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  habit_id UUID NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  completion_date DATE NOT NULL,
+  completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  notes TEXT,
+  source VARCHAR(50) DEFAULT 'form',
+
+  UNIQUE(habit_id, completion_date)
+);
+
+-- Indexes
+CREATE INDEX idx_completions_habit ON habit_completions(habit_id);
+CREATE INDEX idx_completions_user_date ON habit_completions(user_id, completion_date);
+CREATE INDEX idx_completions_date ON habit_completions(completion_date);
+```
+
+### 8.4 Life Balance History Table (existente)
 
 ```sql
 CREATE TABLE life_balance_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   score_date DATE NOT NULL,
   total_score DECIMAL(5,2),
   health_score DECIMAL(5,2),
@@ -422,54 +576,167 @@ CREATE TABLE life_balance_history (
   spiritual_score DECIMAL(5,2),
   relationships_score DECIMAL(5,2),
   calculation_details JSONB,
-  created_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
   UNIQUE(user_id, score_date)
 );
 ```
 
-### 7.3 RLS Policies
+### 8.5 RLS Policies
 
 ```sql
-ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE life_balance_history ENABLE ROW LEVEL SECURITY;
-
--- Uses Supabase built-in auth.uid() function
-CREATE POLICY "user_access" ON tracking_entries
+-- Habits
+ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user_access" ON habits
   FOR ALL USING (user_id = (SELECT auth.uid()));
 
-CREATE POLICY "user_access" ON life_balance_history
+-- Habit Completions
+ALTER TABLE habit_completions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user_access" ON habit_completions
   FOR ALL USING (user_id = (SELECT auth.uid()));
 ```
 
-> **Referência:** Ver `docs/specs/core/auth-security.md` §3.2 para detalhes sobre `auth.uid()`.
+---
+
+## 9. Life Balance Score (ADR-017)
+
+### 9.1 Overview
+
+Pontuação 0-100 que mede o equilíbrio geral da vida baseado em 6 áreas principais.
+
+> **Nota de Display:** O score interno é 0-100 para precisão de cálculo. Na UI, exibir como 0-10 para melhor UX (dividir por 10).
+
+### 9.2 Main Areas & Weights
+
+| Área | Código | Sub-áreas | Fonte de Dados |
+|------|--------|-----------|----------------|
+| Saúde | `health` | physical (50%), mental (35%), leisure (15%) | Tracking + Habits |
+| Finanças | `finance` | budget (30%), savings (25%), debts (25%), investments (20%) | Finance Module |
+| Profissional | `professional` | career (60%), business (40%) | Goals + Manual |
+| Aprendizado | `learning` | formal (50%), informal (50%) | Habits + Tracking |
+| Espiritual | `spiritual` | practice (70%), community (30%) | Habits |
+| Relacionamentos | `relationships` | family (40%), romantic (35%), social (25%) | People Module |
+
+### 9.3 Health Score (usando Tracking + Habits)
+
+**Physical Score (50%):**
+- IMC: Baseado em tracking de peso + altura do perfil
+- Exercício: Hábito de treino + tracking de exercise
+- Sono: Tracking de sleep (média vs meta)
+- Água: Tracking de water (média vs meta)
+
+**Mental Score (35%):**
+- Humor: Média dos últimos 7 dias de mood
+- Energia: Média dos últimos 7 dias de energy
+- Práticas: Hábitos de meditação, journaling
+
+**Leisure Score (15%):**
+- Baseado em hábitos de lazer/hobbies cadastrados
+
+### 9.4 Learning Score (usando Habits)
+
+| Sub-área | Peso | Fonte |
+|----------|------|-------|
+| formal | 50% | Hábitos de estudo, cursos |
+| informal | 50% | Hábito de leitura, podcasts |
+
+### 9.5 Interpretation (UI 0-10)
+
+| Faixa | Significado | Cor |
+|-------|-------------|-----|
+| 9.0 - 10.0 | Excelente | Verde |
+| 7.5 - 8.9 | Bom | Verde claro |
+| 6.0 - 7.4 | Adequado | Amarelo |
+| 4.0 - 5.9 | Atenção | Laranja |
+| 0.0 - 3.9 | Crítico | Vermelho |
 
 ---
 
-## 8. Definition of Done
+## 10. Trend Analysis & Correlations
 
-### Tracking
+### 10.1 Correlation Engine
+
+O sistema calcula correlações automáticas entre:
+- Métricas ↔ Métricas (ex: sono ↔ humor)
+- Hábitos ↔ Métricas (ex: treino → energia)
+- Hábitos ↔ Hábitos (ex: leitura matinal → journaling)
+
+### 10.2 Confidence Levels
+
+| Nível | Critério | Display |
+|-------|----------|---------|
+| Alta | >= 30 data points, p < 0.01 | ●●● |
+| Média | >= 14 data points, p < 0.05 | ●●○ |
+| Baixa | >= 7 data points, p < 0.1 | ●○○ |
+| Insuficiente | < 7 data points | Não exibe |
+
+### 10.3 Example Insights
+
+```typescript
+interface Insight {
+  type: 'correlation' | 'pattern' | 'streak';
+  confidence: 'high' | 'medium' | 'low';
+  message: string;
+  data: {
+    metric1?: string;
+    metric2?: string;
+    correlation?: number;
+    impact?: number;
+  };
+}
+
+// Exemplos:
+{
+  type: 'correlation',
+  confidence: 'high',
+  message: 'Quando você dorme 7h+, seu humor tende a ser 1.5 pontos maior',
+  data: { metric1: 'sleep', metric2: 'mood', correlation: 0.72, impact: 1.5 }
+}
+
+{
+  type: 'pattern',
+  confidence: 'medium',
+  message: 'Dias com treino têm energia média de 7.8 vs 5.2 sem treino',
+  data: { metric1: 'treino', metric2: 'energy', impact: 2.6 }
+}
+```
+
+---
+
+## 11. Definition of Done
+
+### Tracking (Métricas)
 - [ ] Registrar cada tipo de métrica funciona
 - [ ] Validações aplicadas corretamente
 - [ ] Confirmação antes de salvar (via chat)
 - [ ] Histórico de métricas visível
 - [ ] Gráficos de evolução (quando há dados)
-- [ ] Comparativo com período anterior
+
+### Habits (Hábitos)
+- [ ] CRUD de hábitos funciona
+- [ ] Marcar/desmarcar conclusão funciona
+- [ ] Streaks calculados corretamente
+- [ ] Agrupamento por período do dia
+- [ ] Frequência customizada funciona
+
+### Calendar View
+- [ ] Calendário mensal renderiza corretamente
+- [ ] Navegação entre meses funciona
+- [ ] Cores dos dias baseadas no humor
+- [ ] Indicadores de hábitos por dia
+- [ ] Vista do dia com métricas + hábitos
+
+### Insights
+- [ ] Correlações calculadas
+- [ ] Níveis de confiança corretos
+- [ ] Mensagens informativas (não cobranças)
 
 ### Life Balance Score
 - [ ] Cálculo correto por área e sub-área
-- [ ] Pesos de área fixos (1.0 para todas)
+- [ ] Usa dados de tracking + habits
 - [ ] Histórico armazenado diariamente
-- [ ] Gráfico de evolução do score
 - [ ] Funciona com dados insuficientes (score 50)
-- [ ] Mensagens informativas, não de cobrança
-
-### Trends
-- [ ] get_trends tool funciona
-- [ ] Correlações calculadas corretamente
-- [ ] Densidade de dados calculada
-- [ ] Warnings para dados esparsos
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 01 Fevereiro 2026*

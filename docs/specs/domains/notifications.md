@@ -272,7 +272,7 @@ export type NewReminder = typeof reminders.$inferInsert;
 - [resend.md](../integrations/resend.md) — Email transacional (planejado)
 - [web-push.md](../integrations/web-push.md) — Push web (planejado)
 - [reports.md](reports.md) — Detalhes de relatórios periódicos
-- [goals-habits.md](goals-habits.md) — Lembretes de hábitos
+- [tracking.md](tracking.md) — Lembretes de hábitos
 - [people.md](people.md) — Lembretes de contato e aniversários
 
 ---

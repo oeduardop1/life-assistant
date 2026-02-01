@@ -121,7 +121,7 @@ Baseado nos milestones planejados (`docs/milestones/phase-2-tracker.md`, `phase-
 | Milestone | Novas Tools | Total Acumulado |
 |-----------|-------------|-----------------|
 | Atual (M2.2) | — | 15 tools |
-| M2.3 (Hábitos) | ~3-4 (CRUD hábitos) | ~19 tools |
+| M2.3 (Goals) | ~3-4 (CRUD metas) | ~19 tools |
 | M2.4 (CRM) | ~3-4 (CRUD pessoas) | ~23 tools |
 | M2.5 (Trends) | 1 (get_trends) | ~24 tools |
 | M3.x (Assistant) | ~4-5 (suggest_action, create_followup, save_decision, etc.) | **~29 tools** |

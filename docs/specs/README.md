@@ -327,10 +327,10 @@ O **Score Geral de Vida** é uma média simples das 6 áreas. Todas as áreas t�
 | [finance.md](domains/finance.md) | M2.2 | Rendas, contas, despesas, dívidas, investimentos |
 | [memory.md](domains/memory.md) | M1.7 | Knowledge Items, Memory Consolidation (ADR-012) |
 | [notes.md](domains/notes.md) | M1.x | Notas estruturadas, resumos e relatórios |
-| [tracking.md](domains/tracking.md) | M1.3 | Life Balance Score, métricas (ADR-015, ADR-017) |
+| [tracking.md](domains/tracking.md) | M2.1 | Métricas, hábitos, calendário (ADR-015, ADR-017) |
 | [people.md](domains/people.md) | M1.6 | CRM pessoal, relacionamentos |
 | [vault.md](domains/vault.md) | M1.8 | Informações sensíveis, criptografia |
-| [goals-habits.md](domains/goals-habits.md) | M1.9 | Metas, hábitos, streaks |
+| [goals.md](domains/goals.md) | M2.3 | Metas, progresso, milestones |
 | [notifications.md](domains/notifications.md) | M1.10 | Alertas, relatórios, lembretes |
 | [chat.md](domains/chat.md) | M1.2 | Conversação com IA, histórico |
 | [assistant-agenda.md](domains/assistant-agenda.md) | M3.x | Calendário, lembretes, planejamento |

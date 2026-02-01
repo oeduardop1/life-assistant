@@ -5,11 +5,11 @@
 
 ---
 
-## M2.1 — Módulo: Tracking de Métricas (Baixo Atrito) 🟢
+## M2.1 — Módulo: Tracking & Habits 🟡
 
-**Objetivo:** Implementar captura conversacional de métricas com confirmação obrigatória e dashboard opcional.
+**Objetivo:** Implementar captura conversacional de métricas e hábitos com confirmação obrigatória, calendário visual e dashboard opcional.
 
-**Filosofia:** Baixo atrito (ADR-015). IA detecta métricas na conversa e oferece registrar. Dashboard é secundário, para quem prefere controle direto. Sistema funciona normalmente sem nenhum tracking.
+**Filosofia:** Baixo atrito (ADR-015). IA detecta métricas/hábitos na conversa e oferece registrar. Dashboard é secundário, para quem prefere controle direto. Sistema funciona normalmente sem nenhum tracking/hábito ativo.
 
 **Referências:** `docs/specs/domains/tracking.md`, `docs/adr/ADR-015-tracking-low-friction-philosophy.md`
 
@@ -50,6 +50,15 @@
     - Sistema controla confirmação via intent detection (não depende do prompt da IA)
   - [x] Armazenar estado de confirmação pendente (expira em 5 min)
 
+**Backend — Habits:**
+- [ ] Criar tabelas `habits` + `habit_completions` (conforme tracking.md §8.2-8.3)
+- [ ] Criar enums `habit_frequency`, `period_of_day`
+- [ ] Implementar CRUD de hábitos (`HabitsController`, `HabitsService`, `HabitsRepository`)
+- [ ] Implementar endpoint completar/desmarcar (`POST/DELETE /habits/:id/complete`)
+- [ ] Implementar cálculo de streaks (conforme tracking.md §5.3)
+- [ ] Implementar AI tool `record_habit` (conforme tracking.md §7.2)
+- [ ] Implementar AI tool `get_habits` (conforme tracking.md §7.5)
+
 **Frontend:**
 - [x] Criar página `/tracking` (dashboard opcional):
   - [x] Empty state amigável quando não há dados:
@@ -67,6 +76,18 @@
     - Não há cards ou botões de confirmação
     - IA pergunta via texto, usuário responde via texto
     - Ver ai.md §9.3 para fluxo completo
+
+**Frontend — Habits & Calendar:**
+- [ ] Criar `TrackingContext` com navegação por mês (similar a FinanceContext)
+- [ ] Implementar calendário mensal visual (conforme tracking.md §3.2)
+- [ ] Implementar vista do dia com hábitos + métricas (conforme tracking.md §3.3)
+- [ ] Componentes de Habits:
+  - [ ] HabitCard (checkbox + streak badge)
+  - [ ] HabitList (agrupado por período do dia)
+  - [ ] StreakBadge (🔥 + número)
+  - [ ] HabitForm (criar/editar)
+- [ ] Aba Streaks (conforme tracking.md §3.5)
+- [ ] Aba Insights (conforme tracking.md §3.4) — placeholder para M2.5
 
 **Testes:**
 
@@ -105,6 +126,21 @@ _Testes E2E (6 tasks):_
 - [x] E2E: fluxo conversacional completo via chat
 - [x] E2E: navegação entre tipos de métricas via filtro
 
+_Testes — Habits:_
+- [ ] Unit: HabitsService CRUD
+- [ ] Unit: Cálculo de streak (frequência daily/weekdays/custom)
+- [ ] Unit: HabitsRepository operações
+- [ ] Integration: CRUD habits via API
+- [ ] Integration: Completar/desmarcar hábito
+- [ ] Component: HabitCard, HabitList, StreakBadge
+- [ ] E2E: Criar hábito → completar → verificar streak
+- [ ] E2E: Calendário navega entre meses
+
+_Testes — Calendar View:_
+- [ ] Component: CalendarMonth renderiza dias com cores
+- [ ] Component: DayDetail mostra hábitos + métricas
+- [ ] E2E: Clicar no dia abre detalhes
+
 **Definition of Done:**
 - [x] Sistema funciona normalmente sem nenhum tracking (não penaliza)
 - [x] Todos os tipos de tracking funcionam (7 tipos, sem expense/income)
@@ -121,6 +157,18 @@ _Testes E2E (6 tasks):_
 - [x] IA nunca cobra tracking não realizado (regra 11 no system prompt)
 - [x] Correções via conversa funcionam (IA ajusta e re-pergunta, suportado pela infraestrutura pendingConfirmation)
 - [x] Testes passam (243 testes: 42 unit backend, 9 integration, 22 component, 8 hooks, 162 E2E)
+
+_Habits:_
+- [ ] CRUD de hábitos funciona
+- [ ] Completar/desmarcar via API e chat
+- [ ] Streaks calculados corretamente
+- [ ] Agrupamento por período do dia funciona
+
+_Calendar View:_
+- [ ] Calendário mensal renderiza
+- [ ] Navegação entre meses funciona
+- [ ] Cores dos dias baseadas no humor
+- [ ] Vista do dia com hábitos + métricas
 
 **Notas (2026-01-20):**
 - Cobertura de testes expandida de 10 tasks genéricas para 25 tasks específicas
@@ -826,72 +874,45 @@ _Testes:_
 
 ---
 
-## M2.3 — Metas e Hábitos 🔴
+## M2.3 — Metas (Goals) 🔴
 
-**Objetivo:** Implementar sistema de metas e tracking de hábitos.
+**Objetivo:** Implementar sistema de metas com progresso e milestones.
 
-**Referências:** `docs/specs/domains/goals.md`, `docs/specs/domains/habits.md`
+**Referências:** `docs/specs/domains/goals.md`
 
-> **Nota:** Este módulo alimenta as áreas "learning" e "spiritual" do Life Balance Score (M2.5).
+> **Nota:** Hábitos foram movidos para M2.1 (Tracking & Habits). Este módulo foca apenas em Goals.
 
 **Tasks:**
 
 **Backend:**
 - [ ] Criar módulo `goals`:
   - [ ] CRUD de metas (título, área, valor alvo, prazo, milestones)
-  - [ ] Calcular progresso
-  - [ ] Notificar em risco/concluída
-- [ ] Criar módulo `habits`:
-  - [ ] CRUD de hábitos (título, frequência, reminder)
-  - [ ] Registrar completion
-  - [ ] Calcular streak
-  - [ ] Implementar grace period (1 dia não quebra streak)
-  - [ ] Implementar freeze (max 3/mês)
-  - [ ] Lembretes em horário configurado
+  - [ ] Calcular progresso automaticamente
+  - [ ] Notificar meta em risco/concluída
+- [ ] Implementar sub-metas (milestones)
+- [ ] Integrar com tracking entries (progresso automático)
 
 **Frontend:**
 - [ ] Criar página `/goals`:
   - [ ] Lista de metas com progresso
   - [ ] Criar/editar meta
   - [ ] Visualizar milestones
-- [ ] Criar página `/habits`:
-  - [ ] Lista de hábitos com streaks
-  - [ ] Check-in diário
-  - [ ] Calendário de completions
-  - [ ] Freeze button
 - [ ] Componentes:
   - [ ] GoalProgress (barra de progresso com percentual)
   - [ ] GoalCard (resumo da meta)
   - [ ] GoalForm (criar/editar meta)
   - [ ] MilestoneList (sub-metas)
-  - [ ] HabitCard (com streak e botão de check-in)
-  - [ ] HabitCalendar (visualização mensal de completions)
-  - [ ] StreakBadge (número + fogo emoji)
-  - [ ] FreezeButton (com contador de freezes restantes)
-  - [ ] HabitForm (criar/editar hábito)
 
 **Testes:**
-- [ ] Testes unitários:
-  - [ ] Cálculo de progresso de meta
-  - [ ] Cálculo de streak (considerando grace period)
-  - [ ] Lógica de freeze (max 3/mês)
-  - [ ] Validação de frequência de hábito
-- [ ] Testes de integração:
-  - [ ] CRUD de metas via API
-  - [ ] CRUD de hábitos via API
-  - [ ] Check-in de hábito
-  - [ ] Notificação de meta em risco
-- [ ] Teste E2E: criar meta → atualizar progresso → completar
-- [ ] Teste E2E: criar hábito → check-in diário → verificar streak
-- [ ] Teste E2E: usar freeze e verificar contador
+- [ ] Unit: Cálculo de progresso de meta
+- [ ] Integration: CRUD de metas via API
+- [ ] E2E: criar meta → atualizar progresso → completar
 
 **Definition of Done:**
 - [ ] CRUD de metas funciona
 - [ ] Progresso calculado automaticamente
-- [ ] Hábitos com streak funcionam
-- [ ] Grace period funciona
-- [ ] Freeze funciona (max 3/mês)
-- [ ] Lembretes enviados
+- [ ] Milestones funcionam
+- [ ] Notificações de risco/conclusão
 - [ ] Testes passam
 
 ---
@@ -965,13 +986,13 @@ _Testes:_
 
 **Referências:** `docs/specs/domains/tracking.md`, `docs/specs/core/ai-personality.md`
 
-**Pré-requisitos:** M2.1 (Tracking), M2.2 (Finance), M2.3 (Hábitos), M2.4 (CRM)
+**Pré-requisitos:** M2.1 (Tracking & Habits), M2.2 (Finance), M2.3 (Goals), M2.4 (CRM)
 
 > **Nota:** Life Balance Score calcula scores para 6 áreas. Fontes de dados:
-> - **health** (physical, mental, leisure): M2.1 Tracking
+> - **health** (physical, mental, leisure): M2.1 Tracking & Habits
 > - **finance** (budget, savings, debts, investments): M2.2 Finance
-> - **learning** (formal, informal): M2.3 Hábitos
-> - **spiritual** (practice, community): M2.3 Hábitos
+> - **learning** (formal, informal): M2.1 Tracking & Habits
+> - **spiritual** (practice, community): M2.1 Tracking & Habits
 > - **relationships** (family, romantic, social): M2.4 CRM Pessoas
 > - **professional** (career, business): Retorna 50 (neutro) - ver TBD-207
 

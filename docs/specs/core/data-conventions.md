@@ -84,7 +84,6 @@ erDiagram
     users ||--o{ vault_items : has
     users ||--o{ goals : has
     users ||--o{ habits : has
-    users ||--o{ habit_freezes : has
     users ||--o{ notifications : has
     users ||--o{ reminders : has
     users ||--o{ life_balance_history : has
@@ -110,7 +109,6 @@ erDiagram
     notes ||--o{ note_links : links_to
     notes ||--o{ person_notes : links
     habits ||--o{ habit_completions : has
-    habits ||--o{ habit_freezes : has
     goals ||--o{ goal_milestones : has
     goals ||--o{ tracking_entries : updates
     people ||--o{ person_notes : has
@@ -221,7 +219,11 @@ export const goalStatusEnum = pgEnum('goal_status', [
 ]);
 
 export const habitFrequencyEnum = pgEnum('habit_frequency', [
-  'daily', 'weekly', 'custom'
+  'daily', 'weekdays', 'weekends', 'custom'
+]);
+
+export const periodOfDayEnum = pgEnum('period_of_day', [
+  'morning', 'afternoon', 'evening', 'anytime'
 ]);
 ```
 
@@ -533,7 +535,6 @@ ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE export_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE habit_freezes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE knowledge_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memory_consolidations ENABLE ROW LEVEL SECURITY;
@@ -621,9 +622,6 @@ CREATE POLICY "Users can only access own subscriptions" ON subscriptions
   FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own export requests" ON export_requests
-  FOR ALL USING (user_id = (SELECT auth.uid()));
-
-CREATE POLICY "Users can only access own habit freezes" ON habit_freezes
   FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own user_memories" ON user_memories
@@ -1233,7 +1231,6 @@ pnpm --filter database db:seed:prod
 | `budgets` | Orçamentos mensais por categoria | ✅ |
 | `subscriptions` | Cópia local das assinaturas Stripe | ✅ |
 | `export_requests` | Solicitações de export LGPD | ✅ |
-| `habit_freezes` | Congelamento de streaks de hábitos | ✅ |
 | **Memory System (ADR-012)** | | |
 | `user_memories` | Contexto compacto do usuário (~500-800 tokens) | ✅ |
 | `knowledge_items` | Fatos, preferências, insights do usuário | ✅ |

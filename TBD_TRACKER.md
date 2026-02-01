@@ -283,10 +283,10 @@ Exemplo: regras de negócio, limites, comportamentos de UX, etc.
 
 **Contexto:**
 O Life Balance Score (M2.5) calcula scores para 6 áreas hierárquicas (ADR-017). Cinco áreas têm fontes de dados definidas:
-- **health** (physical, mental, leisure): M2.1 Tracking
+- **health** (physical, mental, leisure): M2.1 Tracking & Habits
 - **finance** (budget, savings, debts, investments): M2.2 Finance
-- **learning** (formal, informal): M2.3 Hábitos
-- **spiritual** (practice, community): M2.3 Hábitos
+- **learning** (formal, informal): M2.1 Tracking & Habits
+- **spiritual** (practice, community): M2.1 Tracking & Habits
 - **relationships** (family, romantic, social): M2.4 CRM Pessoas
 
 Porém, a área **professional** (career, business) não tem fonte de dados definida nos milestones.

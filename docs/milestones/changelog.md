@@ -6,6 +6,12 @@
 
 ## 2026
 
+### Fevereiro
+
+| Data | Milestone | Ação | Notas |
+|------|-----------|------|-------|
+| 2026-02-01 | M2.1, M2.3 | Reestruturação | Merge de Tracking + Habits em módulo único `/tracking` (M2.1). M2.3 renomeado para apenas "Metas (Goals)". Removido conceito de freeze/grace period de hábitos (simplificação - streak quebra imediatamente se pular dia esperado). Docs: tracking.md (expandido com habits), goals.md (criado), goals-habits.md (removido). data-conventions.md atualizado com enums `habit_frequency` (daily/weekdays/weekends/custom) e `period_of_day` (morning/afternoon/evening/anytime), removido `habit_freezes`. |
+
 ### Janeiro
 
 | Data | Milestone | Ação | Notas |
@@ -79,4 +85,4 @@
 
 ---
 
-*Última atualização: 30 Janeiro 2026*
+*Última atualização: 01 Fevereiro 2026*
