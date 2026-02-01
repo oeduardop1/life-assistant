@@ -606,39 +606,43 @@ Pontuação 0-100 que mede o equilíbrio geral da vida baseado em 6 áreas princ
 
 > **Nota de Display:** O score interno é 0-100 para precisão de cálculo. Na UI, exibir como 0-10 para melhor UX (dividir por 10).
 
-### 9.2 Main Areas & Weights
+### 9.2 Main Areas & Sub-areas
 
 | Área | Código | Sub-áreas | Fonte de Dados |
 |------|--------|-----------|----------------|
-| Saúde | `health` | physical (50%), mental (35%), leisure (15%) | Tracking + Habits |
-| Finanças | `finance` | budget (30%), savings (25%), debts (25%), investments (20%) | Finance Module |
-| Profissional | `professional` | career (60%), business (40%) | Goals + Manual |
-| Aprendizado | `learning` | formal (50%), informal (50%) | Habits + Tracking |
-| Espiritual | `spiritual` | practice (70%), community (30%) | Habits |
-| Relacionamentos | `relationships` | family (40%), romantic (35%), social (25%) | People Module |
+| Saúde | `health` | physical, mental, leisure | Tracking + Habits |
+| Finanças | `finance` | budget, savings, debts, investments | Finance Module |
+| Profissional | `professional` | career, business | Goals + Manual |
+| Aprendizado | `learning` | formal, informal | Habits + Tracking |
+| Espiritual | `spiritual` | practice, community | Habits |
+| Relacionamentos | `relationships` | family, romantic, social | People Module |
+
+> **Cálculo:** Cada sub-área tem peso igual (1.0). Score da área = média das sub-áreas com dados.
+> Sub-áreas sem dados são ignoradas no cálculo (não penaliza o usuário).
+> Áreas inteiras sem dados retornam 50 (neutro).
 
 ### 9.3 Health Score (usando Tracking + Habits)
 
-**Physical Score (50%):**
+**Physical:**
 - IMC: Baseado em tracking de peso + altura do perfil
 - Exercício: Hábito de treino + tracking de exercise
 - Sono: Tracking de sleep (média vs meta)
 - Água: Tracking de water (média vs meta)
 
-**Mental Score (35%):**
+**Mental:**
 - Humor: Média dos últimos 7 dias de mood
 - Energia: Média dos últimos 7 dias de energy
 - Práticas: Hábitos de meditação, journaling
 
-**Leisure Score (15%):**
+**Leisure:**
 - Baseado em hábitos de lazer/hobbies cadastrados
 
 ### 9.4 Learning Score (usando Habits)
 
-| Sub-área | Peso | Fonte |
-|----------|------|-------|
-| formal | 50% | Hábitos de estudo, cursos |
-| informal | 50% | Hábito de leitura, podcasts |
+| Sub-área | Fonte |
+|----------|-------|
+| formal | Hábitos de estudo, cursos |
+| informal | Hábito de leitura, podcasts |
 
 ### 9.5 Interpretation (UI 0-10)
 
@@ -674,14 +678,17 @@ O sistema calcula correlações automáticas entre:
 
 ```typescript
 interface Insight {
-  type: 'correlation' | 'pattern' | 'streak';
+  type: 'correlation' | 'pattern' | 'streak' | 'trend';
   confidence: 'high' | 'medium' | 'low';
   message: string;
   data: {
-    metric1?: string;
-    metric2?: string;
+    metric1?: TrackingType;
+    metric2?: TrackingType;
+    habit1?: string;
+    habit2?: string;
     correlation?: number;
-    impact?: number;
+    impact?: 'positive' | 'negative';
+    value?: number;
   };
 }
 
@@ -739,4 +746,4 @@ interface Insight {
 
 ---
 
-*Última atualização: 01 Fevereiro 2026*
+*Última atualização: 01 Fevereiro 2026 (interface Insight expandida para suportar métricas tipadas e hábitos)*

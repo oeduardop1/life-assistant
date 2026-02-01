@@ -58,6 +58,25 @@
 - [ ] Implementar cálculo de streaks (conforme tracking.md §5.3)
 - [ ] Implementar AI tool `record_habit` (conforme tracking.md §7.2)
 - [ ] Implementar AI tool `get_habits` (conforme tracking.md §7.5)
+- [ ] Implementar Habit Presets para onboarding (conforme tracking.md §5.4)
+
+**Backend — Calendar View API:**
+- [ ] Implementar `GET /tracking/calendar/:year/:month` (conforme tracking.md §6.3)
+  - Retorna resumo do mês: dias com moodColor, habitsCompleted/habitsTotal, hasData
+- [ ] Implementar `GET /tracking/day/:date` (conforme tracking.md §6.3)
+  - Retorna métricas + hábitos do dia com status de conclusão
+- [ ] Implementar `GET /tracking/by-date/:date` (conforme tracking.md §6.1)
+  - Retorna métricas de um dia específico
+
+**Backend — AI Tools (update/delete):**
+- [x] Implementar AI tool `update_metric` (conforme tracking.md §7.3)
+- [x] Implementar AI tool `delete_metric` (conforme tracking.md §7.3)
+- [x] Fix `get_tracking_history` para retornar `id` de cada entry
+- [x] Instruções no system prompt sobre datas relativas (ontem, dia X)
+
+**Backend — RLS:**
+- [ ] Aplicar RLS em tabela `habits` (conforme tracking.md §8.5)
+- [ ] Aplicar RLS em tabela `habit_completions` (conforme tracking.md §8.5)
 
 **Frontend:**
 - [x] Criar página `/tracking` (dashboard opcional):
@@ -79,13 +98,15 @@
 
 **Frontend — Habits & Calendar:**
 - [ ] Criar `TrackingContext` com navegação por mês (similar a FinanceContext)
-- [ ] Implementar calendário mensal visual (conforme tracking.md §3.2)
-- [ ] Implementar vista do dia com hábitos + métricas (conforme tracking.md §3.3)
+- [ ] Componentes de Calendar:
+  - [ ] CalendarMonth (grade mensal com cores por humor, indicadores de hábitos)
+  - [ ] DayDetail (modal/página com hábitos + métricas do dia)
 - [ ] Componentes de Habits:
   - [ ] HabitCard (checkbox + streak badge)
   - [ ] HabitList (agrupado por período do dia)
   - [ ] StreakBadge (🔥 + número)
   - [ ] HabitForm (criar/editar)
+  - [ ] HabitPresetSelector (seleção de hábitos sugeridos no onboarding)
 - [ ] Aba Streaks (conforme tracking.md §3.5)
 - [ ] Aba Insights (conforme tracking.md §3.4) — placeholder para M2.5
 
@@ -137,6 +158,9 @@ _Testes — Habits:_
 - [ ] E2E: Calendário navega entre meses
 
 _Testes — Calendar View:_
+- [ ] Integration: `GET /tracking/calendar/:year/:month` retorna resumo correto
+- [ ] Integration: `GET /tracking/day/:date` retorna métricas + hábitos
+- [ ] Integration: `GET /tracking/by-date/:date` retorna métricas do dia
 - [ ] Component: CalendarMonth renderiza dias com cores
 - [ ] Component: DayDetail mostra hábitos + métricas
 - [ ] E2E: Clicar no dia abre detalhes
@@ -158,17 +182,29 @@ _Testes — Calendar View:_
 - [x] Correções via conversa funcionam (IA ajusta e re-pergunta, suportado pela infraestrutura pendingConfirmation)
 - [x] Testes passam (243 testes: 42 unit backend, 9 integration, 22 component, 8 hooks, 162 E2E)
 
+_AI Tools (update/delete):_
+- [x] `update_metric` funciona via chat
+- [x] `delete_metric` funciona via chat
+- [x] Suporte a datas relativas (ontem, dia X)
+
 _Habits:_
 - [ ] CRUD de hábitos funciona
 - [ ] Completar/desmarcar via API e chat
 - [ ] Streaks calculados corretamente
 - [ ] Agrupamento por período do dia funciona
+- [ ] Habit Presets disponíveis no onboarding
+- [ ] RLS aplicado em `habits` e `habit_completions`
 
 _Calendar View:_
 - [ ] Calendário mensal renderiza
 - [ ] Navegação entre meses funciona
 - [ ] Cores dos dias baseadas no humor
 - [ ] Vista do dia com hábitos + métricas
+
+_Calendar API:_
+- [ ] `GET /tracking/calendar/:year/:month` funciona
+- [ ] `GET /tracking/day/:date` funciona
+- [ ] `GET /tracking/by-date/:date` funciona
 
 **Notas (2026-01-20):**
 - Cobertura de testes expandida de 10 tasks genéricas para 25 tasks específicas
@@ -191,6 +227,21 @@ _Calendar View:_
   - Reconhece variações naturais: "beleza", "manda ver", "tá certo", "bora"
   - SEM fallback para regex - erro explícito se LLM falhar
   - Docs atualizados: ai.md §2.3, §6.2, §9.3, §9.6; system.md §3.3
+
+**Notas (2026-02-01 - Auditoria de Cobertura):**
+- Auditoria completa comparando M2.1 tasks vs tracking.md spec
+- **Tasks adicionadas (Backend):**
+  - Calendar View API: 3 endpoints (`/calendar/:year/:month`, `/day/:date`, `/by-date/:date`)
+  - AI Tools update/delete: marcados como [x] (já implementados)
+  - RLS: 2 tasks para habits e habit_completions
+  - Habit Presets: 1 task para onboarding
+- **Tasks adicionadas (Frontend):**
+  - Componentes Calendar: CalendarMonth, DayDetail (explícitos)
+  - HabitPresetSelector para onboarding
+- **Tasks adicionadas (Testes):**
+  - 3 testes de integração para Calendar API
+- **Clarificação:** `get_trends` NÃO faz parte de M2.1 — está em M2.5 (Life Balance Score + Trends)
+- **Cobertura atualizada:** ~100% do tracking.md coberto por M2.1 + M2.5
 
 ---
 
@@ -1001,18 +1052,67 @@ _Testes:_
 **Backend — Life Balance Score:**
 - [ ] Criar serviço `ScoreCalculator`:
   - [ ] Calcular score de cada área (0-100)
-  - [ ] Aplicar pesos fixos (1.0 para todas as áreas)
-  - [ ] Calcular Life Balance Score geral
-- [ ] Implementar fórmulas por área (conforme `docs/specs/domains/tracking.md`):
-  - [ ] Saúde: peso (IMC), exercício, sono, água, alimentação
-  - [ ] Financeiro: budget, savings, debt, investments
-  - [ ] Relacionamentos: interações, qualidade
-  - [ ] Carreira: satisfação, progresso, work-life
-  - [ ] Saúde Mental: humor, energia, stress
-  - [ ] (outros conforme spec)
+  - [ ] Aplicar pesos iguais (1.0) para todas as áreas E sub-áreas
+  - [ ] Score de área = média das sub-áreas com dados
+  - [ ] Sub-áreas sem dados são ignoradas (não penaliza)
+  - [ ] Áreas sem dados retornam 50 (neutro)
+  - [ ] Calcular Life Balance Score geral (média das 6 áreas)
+- [ ] Implementar cálculo por sub-área (conforme `docs/specs/domains/tracking.md §9.3-9.4`):
+  - [ ] health.physical: IMC, exercício, sono, água
+  - [ ] health.mental: humor (média 7d), energia (média 7d), práticas (hábitos)
+  - [ ] health.leisure: hábitos de lazer/hobbies
+  - [ ] finance: budget, savings, debts, investments (via M2.2)
+  - [ ] learning: formal (estudo, cursos), informal (leitura, podcasts)
+  - [ ] spiritual: practice, community (via hábitos)
+  - [ ] relationships: family, romantic, social (via M2.4)
+  - [ ] professional: career, business (retorna 50 até TBD-207)
 - [ ] Implementar comportamento com dados insuficientes (retorna 50 + aviso)
 - [ ] Criar job para cálculo diário (00:00 UTC)
 - [ ] Armazenar histórico de scores
+
+**Backend — AI Tool para Life Balance Score:**
+- [ ] Criar tool schema `get_life_balance_score` em `packages/ai/src/schemas/tools/`:
+  ```typescript
+  {
+    name: 'get_life_balance_score',
+    description: 'Retorna o Life Balance Score atual e por área. Use quando perguntarem sobre equilíbrio de vida, saúde geral, ou áreas específicas (saúde, finanças, relacionamentos, etc.).',
+    parameters: {
+      includeHistory: z.boolean().default(false),    // Últimos 7/30 dias
+      includeTrend: z.boolean().default(true),       // Tendência up/down/stable
+      areas: z.array(LifeArea).optional(),           // Filtrar por áreas específicas
+    },
+    requiresConfirmation: false,  // READ tool
+  }
+  ```
+- [ ] Criar `GetLifeBalanceScoreUseCase`:
+  - [ ] Buscar score atual (ou calcular on-demand se não houver cache)
+  - [ ] Buscar histórico dos últimos 7/30 dias se `includeHistory=true`
+  - [ ] Calcular tendência (up/down/stable) por área se `includeTrend=true`
+  - [ ] Gerar highlights e concerns automaticamente
+- [ ] Implementar executor da tool no `ToolExecutorService`
+- [ ] Formato de retorno:
+  ```typescript
+  {
+    overallScore: number,        // 0-100 (interno)
+    overallDisplay: number,      // 0-10 (para UI/usuário)
+    overallTrend: 'up' | 'down' | 'stable',
+    areas: {
+      [area: LifeArea]: {
+        score: number,           // 0-100
+        display: number,         // 0-10
+        trend: 'up' | 'down' | 'stable',
+        changePercent: number,   // Variação % últimos 7 dias
+      }
+    },
+    highlights: string[],        // Ex: "Sua saúde mental melhorou 15%"
+    concerns: string[],          // Ex: "Área financeira precisa de atenção"
+    lastUpdated: Date,
+    history?: {                  // Se includeHistory=true
+      dates: Date[],
+      scores: number[],
+    }
+  }
+  ```
 
 **Backend — Trends Analysis (Tool `get_trends`):**
 
@@ -1022,9 +1122,11 @@ _Testes:_
   ```typescript
   {
     name: 'get_trends',
-    description: 'Analisa tendências e correlações entre métricas do usuário. Use quando perguntarem sobre evolução, padrões ou relações entre métricas.',
+    description: 'Analisa tendências e correlações entre métricas e hábitos do usuário. Use quando perguntarem sobre evolução, padrões ou relações entre métricas/hábitos.',
     parameters: {
-      types: z.array(TrackingType).min(1).max(5),  // Métricas para analisar
+      metrics: z.array(TrackingType).optional(),     // Métricas para analisar
+      habits: z.array(z.string()).optional(),        // Hábitos para analisar (slugs)
+      // Validação: pelo menos um de metrics ou habits deve ser informado
       days: z.number().min(7).max(365).default(30), // Período em dias (7-365)
       period: z.enum(['week', 'month', 'quarter', 'semester', 'year', 'all']).optional(), // Período predefinido (sobrescreve days)
       // Mapeamento: week=7, month=30, quarter=90, semester=180, year=365, all=todos os dados
@@ -1037,18 +1139,24 @@ _Testes:_
   - [ ] `analyzeTrend(data: number[], days: number)`: Retorna direção (up/down/stable), variação %, força
   - [ ] `calculateCorrelation(dataA: number[], dataB: number[])`: Retorna coeficiente de Pearson (-1 a 1)
   - [ ] `interpretCorrelation(coefficient: number, typeA: TrackingType, typeB: TrackingType)`: Gera texto interpretativo
-  - [ ] `generateInsights(metrics: MetricTrend[], correlations: Correlation[])`: Gera lista de insights acionáveis
+  - [ ] `generateInsights(metrics: MetricTrend[], correlations: Correlation[])`: Gera lista de insights estruturados (`Insight[]`)
   - [ ] `calculateDataDensity(dataPoints: number, days: number)`: Calcula densidade de registros
     - Retorna: 'high' (>=70%), 'medium' (30-70%), 'low' (<30%)
   - [ ] `generateSparseDataSuggestion(density: DataDensity, days: number, type: TrackingType)`: Gera sugestão para dados esparsos
+  - [ ] Suportar dados de `habit_completions` (série de 0/1 por dia)
+  - [ ] Calcular correlação hábito↔métrica (ex: treino → energia)
+  - [ ] Calcular correlação hábito↔hábito (ex: leitura matinal → journaling)
 - [ ] Criar `GetTrendsUseCase`:
   - [ ] Resolver período predefinido para dias (week=7, month=30, quarter=90, semester=180, year=365)
   - [ ] Para 'all': buscar data do primeiro registro do usuário
   - [ ] Buscar dados via `GetHistoryUseCase` (M2.1)
   - [ ] Buscar agregações via `GetAggregationsUseCase` (M2.1)
+  - [ ] Buscar `habit_completions` para hábitos informados
+  - [ ] Converter completions em série temporal (1 = completado, 0 = não)
   - [ ] Calcular densidade de dados por métrica
   - [ ] Aplicar análise de tendência por métrica
   - [ ] Calcular correlações entre pares de métricas (se `includeCorrelations=true`)
+  - [ ] Incluir correlações mistas (metrics↔habits e habits↔habits)
   - [ ] Gerar insights baseados em padrões detectados
   - [ ] Gerar sugestões para métricas com densidade='low'
   - [ ] Retornar estrutura completa para LLM interpretar
@@ -1069,16 +1177,25 @@ _Testes:_
         suggestion?: string,   // Sugestão se dados esparsos
       }
     },
+    habits: {
+      [slug: string]: {
+        name: string,
+        completionRate: number,  // % de dias completados
+        trend: 'up' | 'down' | 'stable',
+        currentStreak: number,
+        longestStreak: number,
+      }
+    },
     correlations: [
       {
-        pair: [TrackingType, TrackingType],
+        pair: [TrackingType | string, TrackingType | string],  // Suporta métricas e hábitos
         coefficient: number,   // -1 a 1 (Pearson)
         strength: 'strong' | 'moderate' | 'weak' | 'none',
         direction: 'positive' | 'negative',
         interpretation: string, // Texto explicativo
       }
     ],
-    insights: string[],        // Lista de insights acionáveis
+    insights: Insight[],       // Lista de insights estruturados (conforme tracking.md §10.3)
     warnings: [
       {
         metric: TrackingType,
@@ -1088,18 +1205,68 @@ _Testes:_
     ],
     period: { start: Date, end: Date, days: number, preset?: string },
   }
+
+  // Interface Insight (conforme tracking.md §10.3)
+  interface Insight {
+    type: 'correlation' | 'pattern' | 'streak' | 'trend';
+    confidence: 'high' | 'medium' | 'low';
+    message: string;
+    data: {
+      metric1?: TrackingType;
+      metric2?: TrackingType;
+      habit1?: string;
+      habit2?: string;
+      correlation?: number;
+      impact?: 'positive' | 'negative';
+      value?: number;
+    };
+  }
   ```
 
-**Frontend:**
-- [ ] Componentes de Score:
-  - [ ] LifeBalanceGauge (velocímetro 0-100 com cores)
-  - [ ] AreaScoreCard (score + ícone + tendência por área)
-  - [ ] ScoreTrend (seta up/down com percentual de mudança)
-  - [ ] ScoreHistoryChart (gráfico de linha da evolução)
-- [ ] Exibir Life Balance Score no dashboard
-- [ ] Exibir scores por área
-- [ ] Exibir tendências (setas up/down)
-- [ ] Gráfico de evolução dos scores
+**Frontend — Componentes de Score:**
+> **Nota:** M2.5 cria os componentes base. M2.6 (Dashboard) os reutiliza.
+
+- [ ] LifeBalanceGauge:
+  - [ ] Exibe score de 0 a 10 (não 0-100)
+  - [ ] Cores por faixa (conforme tracking.md §9.5):
+    - 0.0-3.9: vermelho (crítico)
+    - 4.0-5.9: laranja (atenção)
+    - 6.0-7.4: amarelo (adequado)
+    - 7.5-8.9: verde claro (bom)
+    - 9.0-10.0: verde (excelente)
+  - [ ] Animação suave ao carregar
+- [ ] AreaScoreCard:
+  - [ ] Score de 0-10 por área
+  - [ ] Ícone da área
+  - [ ] Tendência (seta + %)
+  - [ ] Cor baseada na faixa
+- [ ] ScoreTrend (seta up/down com percentual)
+- [ ] ScoreHistoryChart (gráfico de linha da evolução)
+- [ ] Barrel export em `components/tracking/score/index.ts`
+
+**Frontend — Aba Insights em /tracking:**
+> **Nota:** M2.1 criou placeholder. M2.5 implementa a versão real.
+
+- [ ] Implementar aba "Insights" em `/tracking`:
+  - [ ] Lista de insights com badges (type, confidence)
+  - [ ] InsightCard:
+    - [ ] Ícone por tipo (correlation, pattern, streak, trend)
+    - [ ] Cor por confiança (high=verde, medium=amarelo, low=cinza)
+    - [ ] Mensagem formatada
+    - [ ] Dados relacionados (métricas/hábitos envolvidos)
+  - [ ] Filtro por tipo de insight
+  - [ ] Período selecionável (7d, 30d, 90d)
+- [ ] Componentes:
+  - [ ] InsightCard
+  - [ ] InsightList
+  - [ ] InsightTypeBadge
+  - [ ] InsightConfidenceBadge
+  - [ ] CorrelationDetail (expande detalhes da correlação)
+
+**Frontend — Exibição no Dashboard (para M2.6):**
+- [ ] Criar componentes exportáveis:
+  - [ ] DashboardScoreWidget (usa LifeBalanceGauge + AreaScoreCards)
+  - [ ] DashboardInsightsWidget (top 3 insights do período)
 
 **Testes — Life Balance Score:**
 - [ ] Testes unitários para ScoreCalculator:
@@ -1111,6 +1278,17 @@ _Testes:_
   - [ ] Job de cálculo diário executa corretamente
   - [ ] Histórico é armazenado corretamente
 - [ ] Teste E2E: verificar scores no dashboard após tracking
+
+**Testes — AI Tool Life Balance Score:**
+- [ ] Unit: GetLifeBalanceScoreUseCase:
+  - [ ] Retorna estrutura correta com todas as áreas
+  - [ ] Calcula tendência corretamente (up quando score aumentou)
+  - [ ] Gera highlights para áreas que melhoraram >10%
+  - [ ] Gera concerns para áreas com score <40
+  - [ ] Filtra por áreas quando `areas` é especificado
+  - [ ] Inclui histórico quando `includeHistory=true`
+- [ ] Integration: Tool executa via ToolExecutorService
+- [ ] Integration: IA responde "como está meu equilíbrio de vida?" corretamente
 
 **Testes — Trends Analysis:**
 - [ ] Testes unitários para TrendsAnalyzer:
@@ -1124,12 +1302,16 @@ _Testes:_
   - [ ] `calculateCorrelation`: correlação perfeita negativa → -1.0
   - [ ] `calculateCorrelation`: sem correlação → próximo de 0
   - [ ] `interpretCorrelation`: gera texto correto por força/direção
-  - [ ] `generateInsights`: gera insights relevantes
+  - [ ] `generateInsights`: gera `Insight[]` com estrutura correta
+  - [ ] `generateInsights`: cada insight tem type, confidence, message e data
   - [ ] `calculateDataDensity`: 10 dias, 7 registros → 'high' (70%)
   - [ ] `calculateDataDensity`: 30 dias, 9 registros → 'low' (30%)
   - [ ] `calculateDataDensity`: 90 dias, 45 registros → 'medium' (50%)
   - [ ] `calculateDataDensity`: 365 dias, 50 registros → 'low' (~14%)
   - [ ] `generateSparseDataSuggestion`: density='low' → retorna sugestão
+  - [ ] Converte habit_completions em série temporal corretamente
+  - [ ] Calcula correlação treino↔energia (hábito↔métrica)
+  - [ ] Calcula correlação leitura↔journaling (hábito↔hábito)
 - [ ] Testes unitários para GetTrendsUseCase:
   - [ ] Retorna estrutura correta com métricas válidas
   - [ ] Retorna warnings para métricas sem dados (type='insufficient_data')
@@ -1138,31 +1320,80 @@ _Testes:_
   - [ ] Limita correlações a pares relevantes (não calcula sleep×sleep)
   - [ ] Resolve período predefinido corretamente (week→7, month→30, etc.)
   - [ ] Período 'all' busca todos os dados disponíveis
+  - [ ] Aceita `habits` sem `metrics`
+  - [ ] Aceita `metrics` + `habits` juntos
+  - [ ] Retorna erro se nenhum dos dois informado
 - [ ] Testes de integração:
   - [ ] Tool `get_trends` executa via ToolExecutorService
   - [ ] Usa dados reais de tracking_entries
   - [ ] Correlação sleep×mood retorna resultado coerente
   - [ ] Período 'year' funciona com dados de 365 dias
+  - [ ] IA responde "treinar afeta minha energia?" com correlação
+
+**Testes — Componentes de Score:**
+- [ ] Component: LifeBalanceGauge renderiza 0-10 corretamente
+- [ ] Component: LifeBalanceGauge aplica cores por faixa
+- [ ] Component: AreaScoreCard exibe score + tendência
+- [ ] Component: ScoreHistoryChart renderiza gráfico
+
+**Testes — Aba Insights:**
+- [ ] Component: InsightCard renderiza todos os campos
+- [ ] Component: InsightList ordena por confiança
+- [ ] Component: Filtro por tipo funciona
+- [ ] E2E: Aba Insights carrega e exibe dados
 
 **Definition of Done:**
+
+_Life Balance Score:_
 - [ ] Scores calculados corretamente
-- [ ] Pesos fixos (1.0) aplicados para todas as áreas
+- [ ] Pesos iguais (1.0) aplicados para áreas E sub-áreas
+- [ ] Sub-áreas sem dados ignoradas no cálculo
+- [ ] Áreas sem dados retornam 50 (neutro)
 - [ ] Histórico de scores armazenado
 - [ ] Job diário de score funcionando
-- [ ] UI exibe scores com tendências
+
+_AI Tool get_life_balance_score:_
+- [ ] Tool `get_life_balance_score` funciona:
+  - [ ] Retorna score geral e por área (0-100 interno, 0-10 display)
+  - [ ] Calcula tendências por área
+  - [ ] Gera highlights e concerns automaticamente
+  - [ ] Suporta filtro por áreas específicas
+  - [ ] Suporta histórico opcional
+
+_AI Tool get_trends:_
 - [ ] Tool `get_trends` funciona:
   - [ ] Retorna tendências por métrica (direção, variação, confiança)
   - [ ] Calcula correlações entre métricas (Pearson)
-  - [ ] Gera insights acionáveis em português
+  - [ ] Gera insights estruturados (`Insight[]`, não `string[]`)
   - [ ] Retorna warnings para dados insuficientes
   - [ ] Suporta períodos de 7 a 365 dias
   - [ ] Suporta períodos predefinidos (week/month/quarter/semester/year/all)
   - [ ] Calcula densidade de dados por métrica (high/medium/low)
   - [ ] Gera warnings tipados (sparse_data/insufficient_data)
   - [ ] Gera sugestões quando dados são insuficientes para análise confiável
-- [ ] IA consegue responder "como está minha saúde?" com análise de tendências
-- [ ] IA consegue responder "sono afeta meu humor?" com correlação
-- [ ] IA consegue responder "como está meu peso no último ano?" com análise de longo prazo
+  - [ ] Aceita parâmetro `habits` (além de `metrics`)
+  - [ ] Calcula correlações hábito↔métrica
+  - [ ] Calcula correlações hábito↔hábito
+
+_Frontend:_
+- [ ] LifeBalanceGauge exibe 0-10 (não 0-100)
+- [ ] Cores por faixa implementadas (§9.5)
+- [ ] UI exibe scores com tendências
+- [ ] Aba Insights funciona em `/tracking`
+- [ ] Insights exibem badges de tipo e confiança
+- [ ] Componentes exportados para M2.6 reutilizar (DashboardScoreWidget, DashboardInsightsWidget)
+
+_IA Queries:_
+- [ ] IA responde "como está meu equilíbrio de vida?" → usa `get_life_balance_score`
+- [ ] IA responde "qual área preciso melhorar?" → usa `get_life_balance_score`
+- [ ] IA responde "minha saúde melhorou esse mês?" → usa `get_life_balance_score`
+- [ ] IA responde "como está minha saúde?" → usa `get_trends`
+- [ ] IA responde "sono afeta meu humor?" → usa `get_trends` com correlação
+- [ ] IA responde "como está meu peso no último ano?" → usa `get_trends` com análise de longo prazo
+- [ ] IA responde "treinar afeta minha energia?" → usa `get_trends` com habits (hábito↔métrica)
+- [ ] IA responde "leitura matinal ajuda no journaling?" → usa `get_trends` com habits (hábito↔hábito)
+
+_Testes:_
 - [ ] Testes passam
 
 ---
@@ -1186,9 +1417,12 @@ _Testes:_
   - [ ] Hábitos (streaks)
   - [ ] Eventos do dia
   - [ ] Métricas recentes
-- [ ] Implementar widgets:
-  - [ ] ScoreGauge (velocímetro do score)
-  - [ ] AreaCard (score + tendência por área)
+- [ ] Usar componentes de M2.5:
+  - [ ] Importar `LifeBalanceGauge` de `components/tracking/score/`
+  - [ ] Importar `AreaScoreCard` de `components/tracking/score/`
+  - [ ] Importar `DashboardScoreWidget` (composição)
+  - [ ] Importar `DashboardInsightsWidget` (top 3 insights)
+- [ ] Implementar widgets específicos do dashboard:
   - [ ] HighlightsCard
   - [ ] AlertsCard
   - [ ] UpcomingEvents
@@ -1199,8 +1433,8 @@ _Testes:_
 
 **Testes:**
 - [ ] Testes de componentes para cada widget:
-  - [ ] ScoreGauge renderiza corretamente
-  - [ ] AreaCard exibe dados e tendência
+  - [ ] DashboardScoreWidget integra componentes de M2.5
+  - [ ] DashboardInsightsWidget exibe top 3 insights
   - [ ] HighlightsCard lista itens positivos
   - [ ] AlertsCard lista pontos de atenção
 - [ ] Testes de integração:
