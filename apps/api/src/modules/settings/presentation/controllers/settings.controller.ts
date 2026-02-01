@@ -75,7 +75,7 @@ export class SettingsController {
     @Headers('authorization') authHeader: string,
   ) {
     // Extract access token from "Bearer <token>" header
-    const accessToken = authHeader?.replace('Bearer ', '');
+    const accessToken = authHeader.replace('Bearer ', '');
     return this.settingsService.updateEmail(user.id, dto, accessToken);
   }
 

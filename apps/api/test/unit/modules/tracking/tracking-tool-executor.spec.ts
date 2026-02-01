@@ -133,19 +133,6 @@ describe('TrackingToolExecutorService', () => {
           'user-123',
           expect.objectContaining({ area: 'health' })
         );
-
-        // Test expense -> finance
-        vi.clearAllMocks();
-        mockTrackingService.recordMetric.mockResolvedValue(mockEntry);
-        toolCall = createMockToolCall({
-          name: 'record_metric',
-          arguments: { type: 'expense', value: 100, date: '2024-01-15' },
-        });
-        await trackingToolExecutor.execute(toolCall, { userId: 'user-123' });
-        expect(mockTrackingService.recordMetric).toHaveBeenCalledWith(
-          'user-123',
-          expect.objectContaining({ area: 'finance' })
-        );
       });
 
       it('should_use_portuguese_labels_in_response', async () => {
@@ -202,20 +189,20 @@ describe('TrackingToolExecutorService', () => {
         );
       });
 
-      it('should_include_metadata_when_category_and_notes_provided', async () => {
+      it('should_include_metadata_when_notes_provided', async () => {
         const mockEntry = createMockTrackingEntry({
-          metadata: { category: 'food', notes: 'Weekly groceries' },
+          metadata: { notes: 'Morning workout' },
         });
         mockTrackingService.recordMetric.mockResolvedValue(mockEntry);
 
         const toolCall = createMockToolCall({
           name: 'record_metric',
           arguments: {
-            type: 'expense',
-            value: 150,
+            type: 'exercise',
+            value: 45,
+            unit: 'min',
             date: '2024-01-15',
-            category: 'food',
-            notes: 'Weekly groceries',
+            notes: 'Morning workout',
           },
         });
 
@@ -224,7 +211,7 @@ describe('TrackingToolExecutorService', () => {
         expect(mockTrackingService.recordMetric).toHaveBeenCalledWith(
           'user-123',
           expect.objectContaining({
-            metadata: { category: 'food', notes: 'Weekly groceries' },
+            metadata: { notes: 'Morning workout' },
           })
         );
       });

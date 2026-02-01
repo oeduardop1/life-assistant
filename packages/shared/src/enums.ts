@@ -77,18 +77,15 @@ export const LIFE_AREA_SUB_AREAS: Record<LifeArea, SubArea[]> = {
   [LifeArea.RELATIONSHIPS]: [SubArea.FAMILY, SubArea.ROMANTIC, SubArea.SOCIAL],
 };
 
-// TrackingType - Tipos de métricas rastreáveis
-// M2.1: weight, water, sleep, exercise, mood, energy, custom, habit
-// M2.2: expense, income, investment
+// TrackingType - Tipos de métricas rastreáveis (M2.1)
+// 7 tipos: weight, water, sleep, exercise, mood, energy, custom
+// Nota: Finance (expense, income, investment) usa módulo M2.2 separado
+// Nota: Habits usa tabela própria (habits + habit_completions)
 export enum TrackingType {
   WEIGHT = 'weight',
   WATER = 'water',
   SLEEP = 'sleep',
   EXERCISE = 'exercise',
-  EXPENSE = 'expense',
-  INCOME = 'income',
-  INVESTMENT = 'investment',
-  HABIT = 'habit',
   MOOD = 'mood',
   ENERGY = 'energy',
   CUSTOM = 'custom',

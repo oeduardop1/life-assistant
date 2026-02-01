@@ -491,7 +491,7 @@ CREATE TABLE tracking_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type tracking_type NOT NULL,
-  area life_area,
+  area life_area NOT NULL,
   sub_area sub_area,
   value DECIMAL(10,2) NOT NULL,
   unit VARCHAR(20),

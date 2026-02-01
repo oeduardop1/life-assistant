@@ -89,13 +89,14 @@ export class TrackingToolExecutorService implements ToolExecutor {
       );
     }
 
-    const { type, value, unit, date, category, notes } = parseResult.data;
+    const { type, value, unit, date, notes } = parseResult.data;
 
     this.logger.debug(
       `record_metric params: type=${type}, value=${String(value)}, unit=${unit ?? '(default)'}, date=${date}`
     );
 
     // Map tracking type to life area (ADR-017: 6 main areas)
+    // Note: Finance types (expense, income, investment) use dedicated Finance module (M2.2)
     const areaMap: Record<string, string> = {
       weight: 'health',
       water: 'health',
@@ -103,17 +104,13 @@ export class TrackingToolExecutorService implements ToolExecutor {
       exercise: 'health',
       mood: 'health', // mental is now a sub-area of health
       energy: 'health',
-      expense: 'finance',
-      income: 'finance',
-      investment: 'finance',
-      custom: 'learning', // personal_growth renamed to learning
+      custom: 'learning',
     };
 
     const area = areaMap[type] ?? 'learning';
 
     // Build metadata
     const metadata: Record<string, unknown> = {};
-    if (category) metadata.category = category;
     if (notes) metadata.notes = notes;
 
     const entry = await this.trackingService.recordMetric(userId, {
@@ -136,9 +133,6 @@ export class TrackingToolExecutorService implements ToolExecutor {
       exercise: 'exercício',
       mood: 'humor',
       energy: 'energia',
-      expense: 'gasto',
-      income: 'receita',
-      investment: 'investimento',
       custom: 'métrica personalizada',
     };
 

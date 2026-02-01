@@ -9,7 +9,6 @@ import {
 } from '@tanstack/react-query';
 import { useAuthenticatedApi } from '@/hooks/use-authenticated-api';
 import type {
-  TrackingEntry,
   TrackingEntryListResponse,
   TrackingEntryResponse,
   TrackingAggregationResponse,
@@ -226,37 +225,6 @@ export function useTrackingAggregation(params: GetAggregationsParams | null) {
   });
 }
 
-/**
- * Hook to fetch aggregations for multiple types (for dashboard)
- */
-export function useTrackingAggregations(
-  types: TrackingType[],
-  startDate?: string,
-  endDate?: string
-) {
-  const api = useAuthenticatedApi();
-
-  // Create individual queries for each type
-  const queries = types.map((type) => ({
-    queryKey: trackingKeys.aggregation({ type, startDate, endDate }),
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      params.set('type', type);
-      if (startDate) params.set('startDate', startDate);
-      if (endDate) params.set('endDate', endDate);
-
-      const response = await api.get<TrackingAggregationResponse>(
-        `/tracking/aggregations?${params.toString()}`
-      );
-      return response.aggregation;
-    },
-    enabled: api.isAuthenticated,
-    staleTime: 5 * 60 * 1000,
-  }));
-
-  return queries;
-}
-
 // =============================================================================
 // Statistics
 // =============================================================================
@@ -281,40 +249,6 @@ export function useTrackingStats() {
 // =============================================================================
 // Helper Hooks
 // =============================================================================
-
-/**
- * Hook to get latest entries for each type (for quick display)
- */
-export function useLatestByTypes(types: TrackingType[]) {
-  const api = useAuthenticatedApi();
-
-  return useQuery({
-    queryKey: [...trackingKeys.entries(), 'latest', types],
-    queryFn: async () => {
-      // Fetch latest entry for each type
-      const results = await Promise.all(
-        types.map(async (type) => {
-          const response = await api.get<TrackingEntryListResponse>(
-            `/tracking?type=${type}&limit=1`
-          );
-          return {
-            type,
-            entry: response.entries[0] ?? null,
-          };
-        })
-      );
-
-      // Convert to map
-      const map = new Map<TrackingType, TrackingEntry | null>();
-      for (const { type, entry } of results) {
-        map.set(type, entry);
-      }
-      return map;
-    },
-    enabled: api.isAuthenticated && types.length > 0,
-    staleTime: 2 * 60 * 1000,
-  });
-}
 
 /**
  * Hook to check if user has any tracking data

@@ -169,10 +169,10 @@ describe('SettingsService', () => {
       const result = await settingsService.updateEmail('user-123', {
         newEmail: 'new@example.com',
         currentPassword: 'password123',
-      });
+      }, 'mock-access-token');
 
       expect(result.success).toBe(true);
-      expect(mockSupabaseAuth.updateEmail).toHaveBeenCalledWith('user-123', 'new@example.com');
+      expect(mockSupabaseAuth.updateEmail).toHaveBeenCalledWith('mock-access-token', 'new@example.com');
       expect(mockEmailService.sendEmailChangeNotification).toHaveBeenCalledWith(
         'test@example.com',
         'new@example.com',
@@ -185,7 +185,7 @@ describe('SettingsService', () => {
         settingsService.updateEmail('user-123', {
           newEmail: 'test@example.com',
           currentPassword: 'password123',
-        }),
+        }, 'mock-access-token'),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -196,7 +196,7 @@ describe('SettingsService', () => {
         settingsService.updateEmail('user-123', {
           newEmail: 'new@example.com',
           currentPassword: 'wrongpassword',
-        }),
+        }, 'mock-access-token'),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -218,7 +218,7 @@ describe('SettingsService', () => {
         settingsService.updateEmail('user-123', {
           newEmail: 'existing@example.com',
           currentPassword: 'password123',
-        }),
+        }, 'mock-access-token'),
       ).rejects.toThrow(BadRequestException);
     });
   });

@@ -90,13 +90,14 @@ describe('SubArea', () => {
 });
 
 describe('TrackingType', () => {
-  // 11 types: M2.1 (8) + M2.2 (3) - meal/medication removed per ADR-015
-  it('should have 11 values', () => {
-    expect(Object.values(TrackingType)).toHaveLength(11);
+  // 7 types: M2.1 health & wellbeing metrics only
+  // Finance types (expense, income, investment) moved to Finance module (M2.2)
+  // Habit type removed - habits use dedicated habits table
+  it('should have 7 values', () => {
+    expect(Object.values(TrackingType)).toHaveLength(7);
   });
 
   it('should have correct values', () => {
-    // M2.1 types (Tracking & Habits)
     expect(TrackingType.WEIGHT).toBe('weight');
     expect(TrackingType.WATER).toBe('water');
     expect(TrackingType.SLEEP).toBe('sleep');
@@ -104,11 +105,6 @@ describe('TrackingType', () => {
     expect(TrackingType.MOOD).toBe('mood');
     expect(TrackingType.ENERGY).toBe('energy');
     expect(TrackingType.CUSTOM).toBe('custom');
-    expect(TrackingType.HABIT).toBe('habit');
-    // M2.2 types (Finance)
-    expect(TrackingType.EXPENSE).toBe('expense');
-    expect(TrackingType.INCOME).toBe('income');
-    expect(TrackingType.INVESTMENT).toBe('investment');
   });
 });
 

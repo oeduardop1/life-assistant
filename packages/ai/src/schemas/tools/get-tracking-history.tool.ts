@@ -1,6 +1,6 @@
 /**
  * get_tracking_history tool definition.
- * Gets historical data for user metrics (weight, expenses, mood, etc.).
+ * Gets historical data for user metrics (weight, mood, water, sleep, etc.).
  * @module schemas/tools/get-tracking-history.tool
  */
 
@@ -29,7 +29,7 @@ export type GetTrackingHistoryParams = z.infer<typeof getTrackingHistoryParamsSc
  */
 export const getTrackingHistoryTool: ToolDefinition<typeof getTrackingHistoryParamsSchema> = {
   name: 'get_tracking_history',
-  description: `Obtém histórico de métricas do usuário (peso, gastos, humor, água, sono, etc.).
+  description: `Obtém histórico de métricas do usuário (peso, água, sono, exercício, humor, energia, etc.).
 
     RETORNA para cada entry:
     - id: UUID real do banco de dados (ex: "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
@@ -44,7 +44,7 @@ export const getTrackingHistoryTool: ToolDefinition<typeof getTrackingHistoryPar
   requiresConfirmation: false,
   inputExamples: [
     { type: TrackingType.WEIGHT, days: 30 },
-    { type: TrackingType.EXPENSE, days: 7 },
+    { type: TrackingType.WATER, days: 7 },
     { type: TrackingType.MOOD, days: 14 },
   ],
 };
