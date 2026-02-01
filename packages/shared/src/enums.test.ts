@@ -90,13 +90,13 @@ describe('SubArea', () => {
 });
 
 describe('TrackingType', () => {
-  // 11 types: M2.1 (7) + M2.4 (1) + M2.6 (3) - meal/medication removed per ADR-015
+  // 11 types: M2.1 (8) + M2.2 (3) - meal/medication removed per ADR-015
   it('should have 11 values', () => {
     expect(Object.values(TrackingType)).toHaveLength(11);
   });
 
   it('should have correct values', () => {
-    // M2.1 types
+    // M2.1 types (Tracking & Habits)
     expect(TrackingType.WEIGHT).toBe('weight');
     expect(TrackingType.WATER).toBe('water');
     expect(TrackingType.SLEEP).toBe('sleep');
@@ -104,9 +104,8 @@ describe('TrackingType', () => {
     expect(TrackingType.MOOD).toBe('mood');
     expect(TrackingType.ENERGY).toBe('energy');
     expect(TrackingType.CUSTOM).toBe('custom');
-    // M2.4 types
     expect(TrackingType.HABIT).toBe('habit');
-    // M2.6 types
+    // M2.2 types (Finance)
     expect(TrackingType.EXPENSE).toBe('expense');
     expect(TrackingType.INCOME).toBe('income');
     expect(TrackingType.INVESTMENT).toBe('investment');

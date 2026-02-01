@@ -109,29 +109,6 @@ export const messageRoleEnum = pgEnum('message_role', [
 ]);
 
 // ============================================================================
-// People/CRM
-// ============================================================================
-
-export const relationshipTypeEnum = pgEnum('relationship_type', [
-  'family',
-  'friend',
-  'work',
-  'acquaintance',
-  'romantic',
-  'mentor',
-  'other',
-]);
-
-export const interactionTypeEnum = pgEnum('interaction_type', [
-  'call',
-  'message',
-  'meeting',
-  'email',
-  'gift',
-  'other',
-]);
-
-// ============================================================================
 // Vault
 // ============================================================================
 
@@ -153,7 +130,7 @@ export const vaultCategoryEnum = pgEnum('vault_category', [
 ]);
 
 // ============================================================================
-// Goals & Habits
+// Goals (M2.3) & Habits (M2.1 - Tracking & Habits)
 // ============================================================================
 
 export const goalStatusEnum = pgEnum('goal_status', [
@@ -166,7 +143,8 @@ export const goalStatusEnum = pgEnum('goal_status', [
 
 export const habitFrequencyEnum = pgEnum('habit_frequency', [
   'daily',
-  'weekly',
+  'weekdays',
+  'weekends',
   'custom',
 ]);
 
@@ -340,8 +318,6 @@ export type ExerciseIntensity = (typeof exerciseIntensityEnum.enumValues)[number
 export type ExerciseType = (typeof exerciseTypeEnum.enumValues)[number];
 export type ConversationType = (typeof conversationTypeEnum.enumValues)[number];
 export type MessageRole = (typeof messageRoleEnum.enumValues)[number];
-export type RelationshipType = (typeof relationshipTypeEnum.enumValues)[number];
-export type InteractionType = (typeof interactionTypeEnum.enumValues)[number];
 export type VaultItemType = (typeof vaultItemTypeEnum.enumValues)[number];
 export type VaultCategory = (typeof vaultCategoryEnum.enumValues)[number];
 export type GoalStatus = (typeof goalStatusEnum.enumValues)[number];

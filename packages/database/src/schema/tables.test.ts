@@ -11,15 +11,11 @@ import {
   lifeBalanceHistory,
   notes,
   noteLinks,
-  people,
-  personNotes,
-  personInteractions,
   vaultItems,
   goals,
   goalMilestones,
   habits,
   habitCompletions,
-  habitFreezes,
   notifications,
   reminders,
   userIntegrations,
@@ -43,12 +39,6 @@ import {
   type NewNote,
   type NoteLink,
   type NewNoteLink,
-  type Person,
-  type NewPerson,
-  type PersonNote,
-  type NewPersonNote,
-  type PersonInteraction,
-  type NewPersonInteraction,
   type VaultItem,
   type NewVaultItem,
   type Goal,
@@ -59,8 +49,6 @@ import {
   type NewHabit,
   type HabitCompletion,
   type NewHabitCompletion,
-  type HabitFreeze,
-  type NewHabitFreeze,
   type Notification,
   type NewNotification,
   type Reminder,
@@ -225,52 +213,6 @@ describe('tables', () => {
     });
   });
 
-  describe('people table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(people)).toBe('people');
-    });
-
-    it('should have required columns', () => {
-      expect(people.id).toBeDefined();
-      expect(people.userId).toBeDefined();
-      expect(people.name).toBeDefined();
-      expect(people.relationship).toBeDefined();
-    });
-
-    it('should export Person and NewPerson types', () => {
-      const person: Person = {} as Person;
-      const newPerson: NewPerson = {} as NewPerson;
-      expect(person).toBeDefined();
-      expect(newPerson).toBeDefined();
-    });
-  });
-
-  describe('personNotes table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(personNotes)).toBe('person_notes');
-    });
-
-    it('should export PersonNote and NewPersonNote types', () => {
-      const pn: PersonNote = {} as PersonNote;
-      const newPn: NewPersonNote = {} as NewPersonNote;
-      expect(pn).toBeDefined();
-      expect(newPn).toBeDefined();
-    });
-  });
-
-  describe('personInteractions table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(personInteractions)).toBe('person_interactions');
-    });
-
-    it('should export PersonInteraction and NewPersonInteraction types', () => {
-      const interaction: PersonInteraction = {} as PersonInteraction;
-      const newInteraction: NewPersonInteraction = {} as NewPersonInteraction;
-      expect(interaction).toBeDefined();
-      expect(newInteraction).toBeDefined();
-    });
-  });
-
   describe('vaultItems table', () => {
     it('should have correct table name', () => {
       expect(getTableName(vaultItems)).toBe('vault_items');
@@ -362,18 +304,7 @@ describe('tables', () => {
     });
   });
 
-  describe('habitFreezes table', () => {
-    it('should have correct table name', () => {
-      expect(getTableName(habitFreezes)).toBe('habit_freezes');
-    });
-
-    it('should export HabitFreeze and NewHabitFreeze types', () => {
-      const freeze: HabitFreeze = {} as HabitFreeze;
-      const newFreeze: NewHabitFreeze = {} as NewHabitFreeze;
-      expect(freeze).toBeDefined();
-      expect(newFreeze).toBeDefined();
-    });
-  });
+  // Note: habitFreezes removed (M2.1 restructuring - streak breaks immediately on missed day)
 
   describe('notifications table', () => {
     it('should have correct table name', () => {
@@ -539,7 +470,7 @@ describe('tables', () => {
   });
 
   describe('total table count', () => {
-    it('should have exactly 24 tables defined', () => {
+    it('should have exactly 21 tables defined', () => {
       const allTables = [
         users,
         conversations,
@@ -548,15 +479,11 @@ describe('tables', () => {
         lifeBalanceHistory,
         notes,
         noteLinks,
-        people,
-        personNotes,
-        personInteractions,
         vaultItems,
         goals,
         goalMilestones,
         habits,
         habitCompletions,
-        habitFreezes,
         notifications,
         reminders,
         userIntegrations,
@@ -566,7 +493,7 @@ describe('tables', () => {
         exportRequests,
         auditLogs,
       ];
-      expect(allTables).toHaveLength(24);
+      expect(allTables).toHaveLength(20);
     });
   });
 });

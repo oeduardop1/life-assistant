@@ -150,7 +150,7 @@ O dashboard `/tracking` continua existindo, mas como **opção secundária**:
 >
 > A confirmação é garantida pelo SISTEMA, não pela IA (que poderia ignorar).
 > Padrões de detecção em `ChatService.detectUserIntent()`.
-> Tools como `create_reminder` e `update_person` também usam `requiresConfirmation: true`.
+> Tools como `create_reminder` e `mark_bill_paid` também usam `requiresConfirmation: true`.
 
 ### Milestone M2.1 Reformulado
 

@@ -46,7 +46,7 @@
     8. Se "reject" → Cancela
     9. Se "correction"/"unrelated" → Limpa pendente, inicia novo loop
   - [x] Implementar lógica de `pendingConfirmation` no Tool Loop (infraestrutura genérica)
-    - Nota: Esta lógica é usada por `record_metric`, `create_reminder`, `update_person`
+    - Nota: Esta lógica é usada por `record_metric`, `create_reminder`
     - Sistema controla confirmação via intent detection (não depende do prompt da IA)
   - [x] Armazenar estado de confirmação pendente (expira em 5 min)
 
@@ -968,66 +968,25 @@ _Testes:_
 
 ---
 
-## M2.4 — Pessoas (CRM Pessoal) 🔴
+## M2.4 — Pessoas (via Memory) 🟢
 
-**Objetivo:** Implementar gerenciamento de relacionamentos pessoais.
+**Objetivo:** Armazenar informações sobre pessoas via Knowledge Items.
 
-**Referências:** `docs/specs/domains/people.md`
+**Status:** JÁ IMPLEMENTADO via Memory (M1.6).
 
-> **Nota:** Este módulo alimenta a área "relationships" do Life Balance Score (M2.5).
+**Funcionalidades:**
+- [x] Knowledge Items com type='person' (implementado em M1.6)
+- [x] Campo personMetadata para dados estruturados
+- [x] Extração automática via Memory Consolidation
+- [x] Visualização em /memory com filtro type='person'
 
-**Tasks:**
+**Decisão:** CRM manual removido. Informações sobre pessoas são
+capturadas organicamente via conversas e journals.
 
-**Backend:**
-- [ ] Criar módulo `people`:
-  - [ ] CRUD de pessoas
-  - [ ] Registrar interações
-  - [ ] Lembretes de aniversário
-  - [ ] Lembretes de tempo sem contato
-  - [ ] Sugestão de presentes (via IA)
-- [ ] Vincular pessoas a notas
-
-**Frontend:**
-- [ ] Criar página `/people`:
-  - [ ] Lista de pessoas com busca/filtros (por grupo, última interação)
-  - [ ] Criar/editar pessoa
-  - [ ] Visualizar pessoa com histórico completo
-- [ ] Criar página `/people/[id]`:
-  - [ ] Informações da pessoa
-  - [ ] Timeline de interações
-  - [ ] Notas vinculadas
-  - [ ] Histórico de presentes
-- [ ] Componentes:
-  - [ ] PersonCard (avatar, nome, relacionamento, última interação)
-  - [ ] PersonForm (criar/editar pessoa)
-  - [ ] InteractionTimeline (lista cronológica)
-  - [ ] InteractionForm (registrar nova interação)
-  - [ ] BirthdayReminder (card de aniversários próximos)
-  - [ ] GiftSuggestions (sugestões da IA)
-  - [ ] GiftHistory (presentes dados/recebidos)
-  - [ ] PersonGroups (tags: família, trabalho, amigos, etc.)
-  - [ ] ContactSuggestion (alerta de tempo sem contato)
-
-**Testes:**
-- [ ] Testes de integração:
-  - [ ] CRUD de pessoas via API
-  - [ ] Registro de interações
-  - [ ] Lembretes de aniversário (job)
-  - [ ] Lembretes de tempo sem contato (job)
-  - [ ] Vínculo com notas
-- [ ] Testes unitários:
-  - [ ] Cálculo de tempo sem contato
-  - [ ] Validação de dados da pessoa
-- [ ] Teste E2E: criar pessoa → registrar interação → ver na timeline
-- [ ] Teste E2E: verificar lembrete de aniversário próximo
-
-**Definition of Done:**
-- [ ] CRUD funciona
-- [ ] Interações registradas
-- [ ] Lembretes de aniversário funcionam
-- [ ] Lembretes de contato funcionam
-- [ ] Vínculo com notas funciona
-- [ ] Testes passam
+**Notas:**
+- Data: 01 Fevereiro 2026
+- Tabelas people/person_notes/person_interactions removidas
+- AI Tools get_person/update_person removidas
 
 ---
 
@@ -1037,14 +996,14 @@ _Testes:_
 
 **Referências:** `docs/specs/domains/tracking.md`, `docs/specs/core/ai-personality.md`
 
-**Pré-requisitos:** M2.1 (Tracking & Habits), M2.2 (Finance), M2.3 (Goals), M2.4 (CRM)
+**Pré-requisitos:** M2.1 (Tracking & Habits), M2.2 (Finance), M2.3 (Goals)
 
 > **Nota:** Life Balance Score calcula scores para 6 áreas. Fontes de dados:
 > - **health** (physical, mental, leisure): M2.1 Tracking & Habits
 > - **finance** (budget, savings, debts, investments): M2.2 Finance
 > - **learning** (formal, informal): M2.1 Tracking & Habits
 > - **spiritual** (practice, community): M2.1 Tracking & Habits
-> - **relationships** (family, romantic, social): M2.4 CRM Pessoas
+> - **relationships** (family, romantic, social): Retorna 50 (neutro)
 > - **professional** (career, business): Retorna 50 (neutro) - ver TBD-207
 
 **Tasks:**
@@ -1064,7 +1023,7 @@ _Testes:_
   - [ ] finance: budget, savings, debts, investments (via M2.2)
   - [ ] learning: formal (estudo, cursos), informal (leitura, podcasts)
   - [ ] spiritual: practice, community (via hábitos)
-  - [ ] relationships: family, romantic, social (via M2.4)
+  - [ ] relationships: family, romantic, social (Retorna 50 neutro)
   - [ ] professional: career, business (retorna 50 até TBD-207)
 - [ ] Implementar comportamento com dados insuficientes (retorna 50 + aviso)
 - [ ] Criar job para cálculo diário (00:00 UTC)

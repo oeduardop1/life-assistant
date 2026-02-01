@@ -13,7 +13,6 @@ export * from './conversations';
 export * from './tracking';
 export * from './scores';
 export * from './notes';
-export * from './people';
 export * from './vault';
 export * from './goals';
 export * from './notifications';
@@ -31,7 +30,6 @@ export * from './debts';
 export * from './debt-payments';
 export * from './investments';
 export * from './exports';
-export * from './habit-freezes';
 export * from './audit';
 
 // Memory System (ADR-012)

@@ -124,7 +124,6 @@ export const STORAGE_LIMITS = {
     messagesPerDay: 20,
     trackingEntriesPerMonth: 100,
     notes: 50,
-    people: 20,
     storageBytes: 100 * 1024 * 1024, // 100MB
     conversationHistoryDays: 30,
   },
@@ -132,7 +131,6 @@ export const STORAGE_LIMITS = {
     messagesPerDay: 100,
     trackingEntriesPerMonth: 1000,
     notes: 500,
-    people: 200,
     storageBytes: 1024 * 1024 * 1024, // 1GB
     conversationHistoryDays: 365,
   },
@@ -140,7 +138,6 @@ export const STORAGE_LIMITS = {
     messagesPerDay: null,
     trackingEntriesPerMonth: null,
     notes: null,
-    people: null,
     storageBytes: 10 * 1024 * 1024 * 1024, // 10GB
     conversationHistoryDays: null,
   },

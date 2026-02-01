@@ -273,7 +273,6 @@ export type NewReminder = typeof reminders.$inferInsert;
 - [web-push.md](../integrations/web-push.md) — Push web (planejado)
 - [reports.md](reports.md) — Detalhes de relatórios periódicos
 - [tracking.md](tracking.md) — Lembretes de hábitos
-- [people.md](people.md) — Lembretes de contato e aniversários
 
 ---
 

@@ -80,7 +80,6 @@ erDiagram
     users ||--o{ conversations : has
     users ||--o{ tracking_entries : has
     users ||--o{ notes : has
-    users ||--o{ people : has
     users ||--o{ vault_items : has
     users ||--o{ goals : has
     users ||--o{ habits : has
@@ -107,12 +106,9 @@ erDiagram
     notes ||--o{ knowledge_items : generates
     notes ||--o{ note_links : links_from
     notes ||--o{ note_links : links_to
-    notes ||--o{ person_notes : links
     habits ||--o{ habit_completions : has
     goals ||--o{ goal_milestones : has
     goals ||--o{ tracking_entries : updates
-    people ||--o{ person_notes : has
-    people ||--o{ person_interactions : has
 ```
 
 **Planned Tables (not yet implemented):**
@@ -123,7 +119,6 @@ erDiagram
 - **Wellbeing:** `wellbeing_entries`, `hobbies`, `vacations`, `gratitude_entries`, `social_activities`, `achievements`
 - **Health (medical):** `medical_consultations`, `medical_exams`, `medications`, `vaccines`, `therapy_sessions`
 - **Spiritual:** `devotionals`, `bible_reading_plans`, `bible_reading_progress`, `saved_verses`, `prayer_requests`, `church_attendance`, `spiritual_groups`, `fasting_entries`
-- **People:** `gifts`, `person_groups`, `person_group_members`
 
 ---
 
@@ -187,19 +182,7 @@ export const messageRoleEnum = pgEnum('message_role', [
 ]);
 ```
 
-### 5.6 Relationship & Interaction Types
-
-```typescript
-export const relationshipTypeEnum = pgEnum('relationship_type', [
-  'family', 'friend', 'work', 'acquaintance', 'romantic', 'mentor', 'other'
-]);
-
-export const interactionTypeEnum = pgEnum('interaction_type', [
-  'call', 'message', 'meeting', 'email', 'gift', 'other'
-]);
-```
-
-### 5.7 Vault Enums
+### 5.6 Vault Enums
 
 ```typescript
 export const vaultItemTypeEnum = pgEnum('vault_item_type', [
@@ -211,7 +194,7 @@ export const vaultCategoryEnum = pgEnum('vault_category', [
 ]);
 ```
 
-### 5.8 Goals & Habits
+### 5.7 Goals & Habits
 
 ```typescript
 export const goalStatusEnum = pgEnum('goal_status', [
@@ -227,7 +210,7 @@ export const periodOfDayEnum = pgEnum('period_of_day', [
 ]);
 ```
 
-### 5.9 Notification Enums
+### 5.8 Notification Enums
 
 ```typescript
 export const notificationTypeEnum = pgEnum('notification_type', [
@@ -486,7 +469,6 @@ packages/database/src/schema/
 ├── knowledge-items.ts    # Knowledge items (ADR-012)
 ├── user-memories.ts      # User memories (ADR-012)
 ├── memory-consolidations.ts # Consolidation logs (ADR-012)
-├── people.ts             # CRM tables (people, person_notes, interactions)
 ├── vault.ts              # Vault items
 ├── goals.ts              # Goals, milestones, habits, completions
 ├── habit-freezes.ts      # Habit freezes
@@ -519,9 +501,6 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE life_balance_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE people ENABLE ROW LEVEL SECURITY;
-ALTER TABLE person_notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE person_interactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vault_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goal_milestones ENABLE ROW LEVEL SECURITY;
@@ -586,9 +565,6 @@ CREATE POLICY "Users can only access own scores" ON life_balance_history
   FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own notes" ON notes
-  FOR ALL USING (user_id = (SELECT auth.uid()));
-
-CREATE POLICY "Users can only access own people" ON people
   FOR ALL USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can only access own vault" ON vault_items
@@ -762,7 +738,6 @@ await db.update(notes)
 | users | ✅ Sim | LGPD - direito ao esquecimento |
 | conversations | ✅ Sim | Usuário pode excluir conversas |
 | notes | ✅ Sim | Lixeira com recuperação |
-| people | ✅ Sim | CRM com arquivamento |
 | goals | ✅ Sim | Histórico de metas |
 | habits | ✅ Sim | Histórico de hábitos |
 | vault_items | ✅ Sim | Segurança - auditoria |
@@ -804,7 +779,6 @@ $$ LANGUAGE plpgsql;
 | conversations | set_updated_at_conversations |
 | tracking_entries | set_updated_at_tracking_entries |
 | notes | set_updated_at_notes |
-| people | set_updated_at_people |
 | vault_items | set_updated_at_vault_items |
 | goals | set_updated_at_goals |
 | habits | set_updated_at_habits |
@@ -931,9 +905,6 @@ USING gin(to_tsvector('portuguese', COALESCE(title, '') || ' ' || content));
 -- User preferences
 CREATE INDEX idx_user_preferences_gin ON users USING GIN (preferences);
 
--- People preferences
-CREATE INDEX idx_people_preferences_gin ON people USING GIN (preferences);
-
 -- Vault metadata
 CREATE INDEX idx_vault_metadata_gin ON vault_items USING GIN (metadata);
 
@@ -942,9 +913,6 @@ CREATE INDEX idx_tracking_metadata_gin ON tracking_entries USING GIN (metadata);
 
 -- Notes tags
 CREATE INDEX idx_notes_tags_gin ON notes USING GIN (tags);
-
--- People tags
-CREATE INDEX idx_people_tags_gin ON people USING GIN (tags);
 ```
 
 ### 12.3 Composite Indexes
@@ -1215,9 +1183,6 @@ pnpm --filter database db:seed:prod
 | `life_balance_history` | Histórico de scores | ✅ |
 | `notes` | Notas automáticas (resumos, análises) | ✅ |
 | `note_links` | Wikilinks entre notas (bidirecionais) | — |
-| `people` | Contatos (CRM) | ✅ |
-| `person_notes` | Notas vinculadas a pessoas | ✅ |
-| `person_interactions` | Interações com pessoas | ✅ |
 | `vault_items` | Itens sensíveis (criptografados) | ✅ |
 | `goals` | Metas | ✅ |
 | `goal_milestones` | Milestones de metas | ✅ |
@@ -1243,7 +1208,7 @@ pnpm --filter database db:seed:prod
 | `debt_payments` | Histórico de pagamentos de parcelas por mês | ✅ |
 | `investments` | Investimentos com metas e aportes | ✅ |
 
-**Total: 33 tabelas implementadas** (ver `packages/database/src/schema/*.ts`)
+**Total: 30 tabelas implementadas** (ver `packages/database/src/schema/*.ts`)
 
 **Planned (não implementadas):**
 - Relatórios: `reports`
@@ -1253,7 +1218,6 @@ pnpm --filter database db:seed:prod
 - Wellbeing: `wellbeing_entries`, `hobbies`, `vacations`, `gratitude_entries`, `social_activities`, `achievements`
 - Health (medical): `medical_consultations`, `medical_exams`, `medications`, `vaccines`, `therapy_sessions`
 - Spiritual: `devotionals`, `bible_reading_plans`, `bible_reading_progress`, `saved_verses`, `prayer_requests`, `church_attendance`, `spiritual_groups`, `fasting_entries`
-- People: `gifts`, `person_groups`, `person_group_members`
 
 ---
 

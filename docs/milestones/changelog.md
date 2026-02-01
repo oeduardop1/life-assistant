@@ -10,6 +10,8 @@
 
 | Data | Milestone | Ação | Notas |
 |------|-----------|------|-------|
+| 2026-02-01 | M2.1 | Code Sync | Código alinhado com documentação: (1) Removido habit-freezes.ts e todas referências, (2) Enum habit_frequency corrigido de ['daily','weekly','custom'] para ['daily','weekdays','weekends','custom'], (3) Comentários atualizados com referências corretas de milestones (M2.1=Tracking&Habits, M2.3=Goals). Migration 0002 gerada. |
+| 2026-02-01 | M2.4 | Simplificado | CRM Pessoal removido — informações sobre pessoas agora via Memory (Knowledge Items com type='person'). Tabelas removidas: people, person_notes, person_interactions. AI Tools removidas: get_person, update_person. Enums removidos: relationship_type, interaction_type. Área 'relationships' do Life Balance Score retorna 50 (neutro) até usuário fornecer dados via conversas/journals. Docs: people.md excluído, data-conventions.md/ai-personality.md/tracking.md/family.md/memory.md/ADR-012 atualizados. |
 | 2026-02-01 | M2.1, M2.3 | Reestruturação | Merge de Tracking + Habits em módulo único `/tracking` (M2.1). M2.3 renomeado para apenas "Metas (Goals)". Removido conceito de freeze/grace period de hábitos (simplificação - streak quebra imediatamente se pular dia esperado). Docs: tracking.md (expandido com habits), goals.md (criado), goals-habits.md (removido). data-conventions.md atualizado com enums `habit_frequency` (daily/weekdays/weekends/custom) e `period_of_day` (morning/afternoon/evening/anytime), removido `habit_freezes`. |
 
 ### Janeiro

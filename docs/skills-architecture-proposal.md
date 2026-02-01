@@ -469,17 +469,17 @@ const relationshipsSkill: SkillDefinition = {
     /\bparente/i,                              // parente
   ],
   tools: [
-    'get_person',
-    'update_person',
+    'search_knowledge',
+    'add_knowledge',
   ],
   promptExtension: `## Skill: Relacionamentos
-- Use get_person para buscar contexto sobre pessoas mencionadas
+- Use search_knowledge com type='person' para buscar contexto sobre pessoas mencionadas
 - Mantenha neutralidade em conflitos (não tome lados)
 - Lembre conexões anteriores sobre a pessoa mencionada
 - Para namoro/casamento: sensibilidade e respeito
 - Para família: considerar dinâmicas complexas
 - Para trabalho: separar pessoal de profissional
-- Ofereça usar update_person quando aprender algo novo sobre alguém`,
+- Use add_knowledge com type='person' quando aprender algo novo sobre alguém`,
   tone: {
     style: 'empathetic',
     emojiLevel: 'minimal',
@@ -852,7 +852,7 @@ Com 15 tools disponíveis, o LLM pode confundir:
 | `record_metric` vs `create_expense` | Ambos registram "gastos" | Finance skill: só `create_expense` disponível |
 | `update_metric` vs `delete_metric` | Ambos operam em registros existentes | Health skill: ambos disponíveis, mas prompt extension clarifica |
 | `get_tracking_history` vs `get_trends` (futuro) | Ambos buscam dados históricos | Health skill: prompt extension diferencia uso |
-| `search_knowledge` vs `get_person` | Ambos buscam informações | Relationships skill: `get_person` priorizado no prompt |
+| `search_knowledge` type='person' vs type='fact' | Ambos buscam informações | Relationships skill: prompt extension clarifica uso de type='person' |
 | `add_knowledge` vs `record_metric` | "Lembra que peso 82kg" vs "Registra 82kg" | Health skill: regras ADR-015 no prompt extension |
 
 ### 7.3 Qualidade de Resposta

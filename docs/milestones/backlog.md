@@ -60,8 +60,8 @@
 >
 > **Decisão:** Consolidar RLS nas migrations Supabase (padrão novo) e manter `rls-policies.sql` apenas como referência.
 
-- [ ] Criar migration `20260117000000_complete_rls.sql` para as 13 tabelas faltantes:
-  - Tabelas: `life_balance_history`, `people`, `person_notes`, `person_interactions`, `vault_items`, `notifications`, `reminders`, `user_integrations`, `calendar_events`, `budgets`, `subscriptions`, `export_requests`, `audit_logs`
+- [ ] Criar migration `20260117000000_complete_rls.sql` para as 10 tabelas faltantes:
+  - Tabelas: `life_balance_history`, `vault_items`, `notifications`, `reminders`, `user_integrations`, `calendar_events`, `budgets`, `subscriptions`, `export_requests`, `audit_logs`
   - **Padrão:** Usar `public.get_current_user_id()` + service role bypass
   - **Referência:** `supabase/migrations/20260114200001_tracking_notes_goals_habits.sql`
 

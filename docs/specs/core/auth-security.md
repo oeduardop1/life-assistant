@@ -482,7 +482,6 @@ interface Consent {
   "conversations": [ ... ],
   "trackingEntries": [ ... ],
   "notes": [ ... ],
-  "people": [ ... ],
   "goals": [ ... ],
   "habits": [ ... ]
 }

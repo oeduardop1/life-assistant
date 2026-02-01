@@ -8,6 +8,20 @@
       "when": 1769715538485,
       "tag": "0000_fine_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769923901793,
+      "tag": "0001_zippy_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769927066496,
+      "tag": "0002_puzzling_the_renegades",
+      "breakpoints": true
     }
   ]
 }

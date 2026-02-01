@@ -242,7 +242,7 @@
   - [x] **Chat:** conversations, messages
   - [x] **Tracking:** tracking_entries, life_balance_history
   - [x] **Notes:** notes, note_links
-  - [x] **People:** people, person_notes, person_interactions
+  - [x] **People:** people, person_notes, person_interactions — **REMOVIDO: M2.4 simplificado para usar Memory**
   - [x] **Vault:** vault_items
   - [x] **Goals:** goals, goal_milestones, habits, habit_completions, habit_freezes
   - [x] **Integrations:** user_integrations, calendar_events, budgets, subscriptions

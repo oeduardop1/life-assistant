@@ -212,7 +212,6 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
 - **mark_bill_paid**: Marcar conta fixa como paga
 - **create_expense**: Registrar despesa variável
 - **get_debt_progress**: Obter progresso de pagamento das dívidas
-- **update_person**: Atualizar informações de pessoa do CRM
 
 ## Raciocínio Inferencial
 
@@ -738,18 +737,6 @@ export const tools: ToolDefinition[] = [
     ],
   },
   {
-    name: 'get_person',
-    description: 'Obtém informações sobre uma pessoa do CRM do usuário',
-    parameters: z.object({
-      name: z.string().describe('Nome da pessoa'),
-    }),
-    requiresConfirmation: false,
-    inputExamples: [
-      { name: "Maria" },
-      { name: "João da Silva" },
-    ],
-  },
-  {
     name: 'analyze_context',
     description: 'Analisa contexto para conexões, padrões e contradições. Use antes de responder sobre assuntos pessoais importantes.',
     parameters: z.object({
@@ -1095,25 +1082,6 @@ export const tools: ToolDefinition[] = [
     ],
   },
   {
-    name: 'update_person',
-    description: 'Atualiza informações de uma pessoa no CRM do usuário',
-    parameters: z.object({
-      name: z.string(),
-      updates: z.object({
-        relationship: z.string().optional(),
-        notes: z.string().optional(),
-        birthday: z.string().optional(),
-        preferences: z.record(z.string()).optional(),
-      }),
-    }),
-    requiresConfirmation: true,
-    inputExamples: [
-      { name: "Maria", updates: { relationship: "esposa", birthday: "1990-05-15" } },
-      { name: "João", updates: { notes: "Prefere reuniões pela manhã" } },
-      { name: "Ana", updates: { preferences: { "presente_ideal": "livros" } } },
-    ],
-  },
-  {
     name: 'mark_bill_paid',
     description: 'Marca uma conta fixa como paga no mês. Use quando o usuário informar que pagou uma conta específica.',
     parameters: z.object({
@@ -1263,7 +1231,6 @@ export class ToolExecutorService {
     private readonly trackingService: TrackingService,
     private readonly knowledgeService: KnowledgeService,
     private readonly reminderService: ReminderService,
-    private readonly peopleService: PeopleService,
   ) {}
 
   async execute(toolCall: ToolCall): Promise<ToolResult> {
@@ -1309,8 +1276,8 @@ export class ToolExecutorService {
 
 | Categoria | Tools | Confirmação |
 |-----------|-------|-------------|
-| **Read** | `search_knowledge`, `get_tracking_history`, `get_trends`, `get_person`, `analyze_context`, `get_finance_summary`, `get_pending_bills`, `get_bills`, `get_expenses`, `get_incomes`, `get_investments`, `get_debt_progress` | Não |
-| **Write** | `record_metric`, `update_metric`, `delete_metric`, `create_reminder`, `update_person`, `mark_bill_paid`, `create_expense` | Sim |
+| **Read** | `search_knowledge`, `get_tracking_history`, `get_trends`, `analyze_context`, `get_finance_summary`, `get_pending_bills`, `get_bills`, `get_expenses`, `get_incomes`, `get_investments`, `get_debt_progress` | Não |
+| **Write** | `record_metric`, `update_metric`, `delete_metric`, `create_reminder`, `mark_bill_paid`, `create_expense` | Sim |
 | **Knowledge** | `add_knowledge` | Não (IA confirma na resposta) |
 
 ### 8.4 Tool Loop Limits
@@ -1450,7 +1417,6 @@ interface AnalyzeContextResult {
 | `search_knowledge` | Não | Apenas leitura |
 | `get_tracking_history` | Não | Apenas leitura |
 | `get_trends` | Não | Análise de dados |
-| `get_person` | Não | Apenas leitura |
 | `analyze_context` | Não | Apenas leitura |
 | `get_finance_summary` | Não | Apenas leitura (resumo financeiro) |
 | `get_pending_bills` | Não | Apenas leitura (contas pendentes) |
@@ -1464,7 +1430,6 @@ interface AnalyzeContextResult {
 | `delete_metric` | Sim | Remove dados |
 | `add_knowledge` | Não | IA confirma naturalmente |
 | `create_reminder` | Sim | Cria agendamento |
-| `update_person` | Sim | Modifica dados |
 | `mark_bill_paid` | Sim | Modifica status |
 | `create_expense` | Sim | Cria registro financeiro |
 

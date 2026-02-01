@@ -220,7 +220,6 @@ Alerta quando eventos de membros se sobrepõem:
 export const familyMembers = pgTable('family_members', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id),
-  personId: uuid('person_id').references(() => people.id), // Link ao CRM
 
   name: varchar('name', { length: 255 }).notNull(),
   relationship: familyRelationshipEnum('relationship').notNull(),

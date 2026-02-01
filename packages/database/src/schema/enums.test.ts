@@ -12,8 +12,6 @@ import {
   exerciseTypeEnum,
   conversationTypeEnum,
   messageRoleEnum,
-  relationshipTypeEnum,
-  interactionTypeEnum,
   vaultItemTypeEnum,
   vaultCategoryEnum,
   goalStatusEnum,
@@ -34,8 +32,6 @@ import {
   type ExerciseType,
   type ConversationType,
   type MessageRole,
-  type RelationshipType,
-  type InteractionType,
   type VaultItemType,
   type VaultCategory,
   type GoalStatus,
@@ -257,51 +253,6 @@ describe('enums', () => {
     });
   });
 
-  describe('relationshipTypeEnum', () => {
-    it('should have correct enum name', () => {
-      expect(relationshipTypeEnum.enumName).toBe('relationship_type');
-    });
-
-    it('should have all expected values', () => {
-      expect(relationshipTypeEnum.enumValues).toEqual([
-        'family',
-        'friend',
-        'work',
-        'acquaintance',
-        'romantic',
-        'mentor',
-        'other',
-      ]);
-    });
-
-    it('should export correct TypeScript type', () => {
-      const type: RelationshipType = 'family';
-      expect(relationshipTypeEnum.enumValues).toContain(type);
-    });
-  });
-
-  describe('interactionTypeEnum', () => {
-    it('should have correct enum name', () => {
-      expect(interactionTypeEnum.enumName).toBe('interaction_type');
-    });
-
-    it('should have all expected values', () => {
-      expect(interactionTypeEnum.enumValues).toEqual([
-        'call',
-        'message',
-        'meeting',
-        'email',
-        'gift',
-        'other',
-      ]);
-    });
-
-    it('should export correct TypeScript type', () => {
-      const type: InteractionType = 'call';
-      expect(interactionTypeEnum.enumValues).toContain(type);
-    });
-  });
-
   describe('vaultItemTypeEnum', () => {
     it('should have correct enum name', () => {
       expect(vaultItemTypeEnum.enumName).toBe('vault_item_type');
@@ -372,7 +323,13 @@ describe('enums', () => {
     });
 
     it('should have all expected values', () => {
-      expect(habitFrequencyEnum.enumValues).toEqual(['daily', 'weekly', 'custom']);
+      // Updated per tracking.md: daily, weekdays, weekends, custom
+      expect(habitFrequencyEnum.enumValues).toEqual([
+        'daily',
+        'weekdays',
+        'weekends',
+        'custom',
+      ]);
     });
 
     it('should export correct TypeScript type', () => {
@@ -522,7 +479,8 @@ describe('enums', () => {
 
   describe('total enum count', () => {
     // ADR-017: Added subAreaEnum
-    it('should have exactly 21 enums defined', () => {
+    // Note: relationshipTypeEnum and interactionTypeEnum removed (M2.4 simplified)
+    it('should have exactly 19 enums defined', () => {
       const allEnums = [
         userStatusEnum,
         userPlanEnum,
@@ -533,8 +491,6 @@ describe('enums', () => {
         exerciseTypeEnum,
         conversationTypeEnum,
         messageRoleEnum,
-        relationshipTypeEnum,
-        interactionTypeEnum,
         vaultItemTypeEnum,
         vaultCategoryEnum,
         goalStatusEnum,
@@ -546,7 +502,7 @@ describe('enums', () => {
         exportStatusEnum,
         exportTypeEnum,
       ];
-      expect(allEnums).toHaveLength(21);
+      expect(allEnums).toHaveLength(19);
     });
   });
 });

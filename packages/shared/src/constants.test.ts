@@ -129,7 +129,6 @@ describe('STORAGE_LIMITS', () => {
       expect(STORAGE_LIMITS.free.messagesPerDay).toBe(20);
       expect(STORAGE_LIMITS.free.trackingEntriesPerMonth).toBe(100);
       expect(STORAGE_LIMITS.free.notes).toBe(50);
-      expect(STORAGE_LIMITS.free.people).toBe(20);
       expect(STORAGE_LIMITS.free.storageBytes).toBe(100 * 1024 * 1024); // 100MB
       expect(STORAGE_LIMITS.free.conversationHistoryDays).toBe(30);
     });
@@ -140,7 +139,6 @@ describe('STORAGE_LIMITS', () => {
       expect(STORAGE_LIMITS.pro.messagesPerDay).toBe(100);
       expect(STORAGE_LIMITS.pro.trackingEntriesPerMonth).toBe(1000);
       expect(STORAGE_LIMITS.pro.notes).toBe(500);
-      expect(STORAGE_LIMITS.pro.people).toBe(200);
       expect(STORAGE_LIMITS.pro.storageBytes).toBe(1024 * 1024 * 1024); // 1GB
       expect(STORAGE_LIMITS.pro.conversationHistoryDays).toBe(365);
     });
@@ -151,7 +149,6 @@ describe('STORAGE_LIMITS', () => {
       expect(STORAGE_LIMITS.premium.messagesPerDay).toBeNull();
       expect(STORAGE_LIMITS.premium.trackingEntriesPerMonth).toBeNull();
       expect(STORAGE_LIMITS.premium.notes).toBeNull();
-      expect(STORAGE_LIMITS.premium.people).toBeNull();
       expect(STORAGE_LIMITS.premium.storageBytes).toBe(10 * 1024 * 1024 * 1024); // 10GB
       expect(STORAGE_LIMITS.premium.conversationHistoryDays).toBeNull();
     });

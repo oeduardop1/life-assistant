@@ -615,7 +615,7 @@ Pontuação 0-100 que mede o equilíbrio geral da vida baseado em 6 áreas princ
 | Profissional | `professional` | career, business | Goals + Manual |
 | Aprendizado | `learning` | formal, informal | Habits + Tracking |
 | Espiritual | `spiritual` | practice, community | Habits |
-| Relacionamentos | `relationships` | family, romantic, social | People Module |
+| Relacionamentos | `relationships` | family, romantic, social | Retorna 50 (neutro) |
 
 > **Cálculo:** Cada sub-área tem peso igual (1.0). Score da área = média das sub-áreas com dados.
 > Sub-áreas sem dados são ignoradas no cálculo (não penaliza o usuário).

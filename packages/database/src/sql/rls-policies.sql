@@ -15,9 +15,6 @@ ALTER TABLE tracking_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE life_balance_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE note_links ENABLE ROW LEVEL SECURITY;
-ALTER TABLE people ENABLE ROW LEVEL SECURITY;
-ALTER TABLE person_notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE person_interactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vault_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goal_milestones ENABLE ROW LEVEL SECURITY;
@@ -58,14 +55,6 @@ CREATE POLICY "Users can only access own scores" ON life_balance_history
 
 -- Notes
 CREATE POLICY "Users can only access own notes" ON notes
-  FOR ALL USING (user_id = (SELECT auth.uid()));
-
--- People
-CREATE POLICY "Users can only access own people" ON people
-  FOR ALL USING (user_id = (SELECT auth.uid()));
-
--- Person interactions
-CREATE POLICY "Users can only access own person_interactions" ON person_interactions
   FOR ALL USING (user_id = (SELECT auth.uid()));
 
 -- Vault items
@@ -133,14 +122,6 @@ CREATE POLICY "Users can only access own note_links" ON note_links
   FOR ALL USING (
     source_note_id IN (
       SELECT id FROM notes WHERE user_id = (SELECT auth.uid())
-    )
-  );
-
--- Person notes (access through person)
-CREATE POLICY "Users can only access own person_notes" ON person_notes
-  FOR ALL USING (
-    person_id IN (
-      SELECT id FROM people WHERE user_id = (SELECT auth.uid())
     )
   );
 

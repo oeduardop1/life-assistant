@@ -58,6 +58,8 @@ O sistema de memória do Life Assistant usa uma arquitetura de **Tool Use + Memo
 | `insight` | Padrão ou correlação identificada | "Dorme melhor quando pratica exercício" |
 | `person` | Informação sobre pessoa do círculo | "Maria é a esposa", "João é colega de trabalho" |
 
+> **Nota (2026-02-01):** O tipo `person` substitui o módulo de CRM (M2.4). Informações sobre pessoas são capturadas organicamente via conversas e journals, armazenadas como Knowledge Items com `personMetadata` para dados estruturados (nome, relacionamento, aniversário, preferências).
+
 ### 2.3 Confidence Levels
 
 | Nível | Range | Fonte Típica |
