@@ -45,6 +45,8 @@ CLEAN_MODE=false
 VERBOSE_MODE=false
 SKIP_MIGRATIONS=false
 FORCE_SEED=false
+SKIP_IMAGE_CLEANUP=false
+CLEAN_BUILD_CACHE=false
 
 # Supabase ports
 readonly SUPABASE_API_PORT=54321
@@ -204,6 +206,11 @@ ${BOLD}OPTIONS${NC}
     ${GREEN}--seed, -s${NC}        Force database seeding even on existing databases
                       (seed is idempotent - uses ON CONFLICT DO NOTHING)
 
+    ${GREEN}--no-cleanup${NC}      Skip automatic cleanup of old Docker images
+                      (by default, old Supabase images are removed after update)
+
+    ${GREEN}--clean-cache${NC}     Also clean unused Docker build cache
+
     ${GREEN}--timeout, -t${NC} N   Set timeout for operations in seconds (default: 120)
 
     ${GREEN}--verbose, -v${NC}     Show detailed debug output
@@ -273,6 +280,14 @@ parse_args() {
                 ;;
             --seed|-s)
                 FORCE_SEED=true
+                shift
+                ;;
+            --no-cleanup)
+                SKIP_IMAGE_CLEANUP=true
+                shift
+                ;;
+            --clean-cache)
+                CLEAN_BUILD_CACHE=true
                 shift
                 ;;
             --verbose|-v)
@@ -471,6 +486,87 @@ force_stop_running() {
     timeout 30 npx -y supabase stop &>/dev/null || true
 
     print_success "Cleanup complete"
+}
+
+# =============================================================================
+# Image Cleanup
+# =============================================================================
+
+cleanup_old_supabase_images() {
+    if [[ "$SKIP_IMAGE_CLEANUP" == "true" ]]; then
+        print_verbose "Skipping image cleanup (--no-cleanup flag)"
+        return 0
+    fi
+
+    print_info "Checking for old Docker images..."
+
+    # Get list of images currently in use by running containers
+    local images_in_use
+    images_in_use=$(docker ps --format '{{.Image}}' | sort -u)
+
+    # Supabase image patterns to clean
+    local patterns=(
+        "public.ecr.aws/supabase/postgres"
+        "public.ecr.aws/supabase/studio"
+        "public.ecr.aws/supabase/logflare"
+        "public.ecr.aws/supabase/realtime"
+        "public.ecr.aws/supabase/gotrue"
+        "public.ecr.aws/supabase/storage-api"
+        "public.ecr.aws/supabase/edge-runtime"
+        "public.ecr.aws/supabase/postgres-meta"
+        "public.ecr.aws/supabase/postgrest"
+        "supabase/postgres"
+    )
+
+    local removed=0
+    local total_size=0
+
+    for pattern in "${patterns[@]}"; do
+        # Get all images matching this pattern
+        local all_images
+        all_images=$(docker images "$pattern" --format '{{.Repository}}:{{.Tag}}|{{.ID}}|{{.Size}}' 2>/dev/null || true)
+
+        while IFS='|' read -r image_tag image_id image_size; do
+            [[ -z "$image_tag" ]] && continue
+
+            # Skip if image is in use
+            if echo "$images_in_use" | grep -qF "$image_tag"; then
+                print_verbose "Keeping (in use): $image_tag"
+                continue
+            fi
+
+            # Remove unused image
+            if docker rmi "$image_id" &>/dev/null; then
+                print_debug "Removed: $image_tag ($image_size)"
+                removed=$((removed + 1))
+            fi
+        done <<< "$all_images"
+    done
+
+    if [[ $removed -gt 0 ]]; then
+        print_success "Removed $removed old Supabase images"
+    else
+        print_verbose "No old Supabase images to remove"
+    fi
+}
+
+cleanup_build_cache() {
+    if [[ "$CLEAN_BUILD_CACHE" != "true" ]]; then
+        return 0
+    fi
+
+    print_info "Cleaning unused Docker build cache..."
+
+    local before_size
+    before_size=$(docker system df --format '{{.Size}}' 2>/dev/null | tail -1 || echo "unknown")
+
+    if docker builder prune -f &>/dev/null; then
+        local after_size
+        after_size=$(docker system df --format '{{.Size}}' 2>/dev/null | tail -1 || echo "unknown")
+        print_success "Build cache cleaned (was: $before_size)"
+    else
+        print_warning "Could not clean build cache"
+    fi
 }
 
 # =============================================================================
@@ -767,6 +863,11 @@ show_summary() {
     echo -e "    Inbucket:     ${BLUE}localhost:54324${NC} (dev emails)"
     echo ""
 
+    # Show Docker disk usage
+    echo -e "  ${GREEN}Docker Disk Usage:${NC}"
+    docker system df --format '    {{.Type}}: {{.Size}} ({{.Reclaimable}} reclaimable)' 2>/dev/null || true
+    echo ""
+
     if [[ $WARNINGS -gt 0 ]]; then
         echo -e "  ${YELLOW}Warnings: $WARNINGS${NC}"
         echo ""
@@ -835,6 +936,11 @@ main() {
     fi
 
     show_supabase_status
+
+    # Cleanup old images and build cache
+    cleanup_old_supabase_images
+    cleanup_build_cache
+
     apply_database_schema
 
     local elapsed=$((SECONDS - start_time))
