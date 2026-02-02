@@ -7,241 +7,273 @@
 
 ## M2.1 — Módulo: Tracking & Habits 🟡
 
-**Objetivo:** Implementar captura conversacional de métricas e hábitos com confirmação obrigatória, calendário visual e dashboard opcional.
+**Objetivo:** Implementar sistema unificado de tracking de métricas e hábitos com calendário visual (Year in Pixels), streaks e insights.
 
-**Filosofia:** Baixo atrito (ADR-015). IA detecta métricas/hábitos na conversa e oferece registrar. Dashboard é secundário, para quem prefere controle direto. Sistema funciona normalmente sem nenhum tracking/hábito ativo.
+**Filosofia:** Baixo atrito (ADR-015). Calendário mensal como vista principal. Sistema funciona sem dados.
 
-**Referências:** `docs/specs/domains/tracking.md`, `docs/adr/ADR-015-tracking-low-friction-philosophy.md`
+**Referências:** `docs/specs/domains/tracking.md`
 
-**Tasks:**
+> **Reformulação (2026-02-02):** M2.1 foi reformulado para alinhar com a nova spec `tracking.md`. A UI principal agora é o calendário mensal (não mais dashboard de cards). Componentes de dashboard antigos foram removidos. Backend de métricas permanece inalterado.
 
-**Backend:**
-- [x] Criar módulo `tracking`:
-  - [x] `TrackingController` - CRUD de entries
-  - [x] `RecordMetricUseCase` - validar e salvar (requer confirmação)
-  - [x] `GetHistoryUseCase` - buscar histórico com filtros
-  - [x] `GetAggregationsUseCase` - cálculos (média, soma, etc)
-  - [x] `TrackingRepository`
-- [x] Implementar tipos de tracking (conforme `docs/specs/domains/tracking.md`):
-  - [x] weight (0-500kg)
-  - [x] water (0-10000ml)
-  - [x] sleep (0-24h, com qualidade 1-10)
-  - [x] exercise (tipo, duração, intensidade)
-  - [x] mood (1-10)
-  - [x] energy (1-10)
-  - [x] custom
-  - ~~expense/income~~ → Usar M2.2 Finance
-- [x] Implementar validações conforme `docs/specs/domains/tracking.md`
-- [x] Implementar agregações (média, soma, variação)
-- [x] Integrar com Tool Use (captura conversacional):
-  - [x] Implementar executor da tool `record_metric` no ToolExecutorService
-  - [x] Fluxo de captura conversacional (ADR-015, ai.md §9.3):
-    1. Usuário menciona métrica naturalmente ("voltei do médico, estou com 82kg")
-    2. IA chama `record_metric` → Sistema intercepta (`requiresConfirmation: true`)
-    3. Sistema salva `pendingConfirmation` no Redis (TTL 5min)
-    4. IA pergunta: "Quer que eu registre seu peso de 82kg?"
-    5. Usuário responde: "Sim" / "Na verdade foi 82.5" / "Não"
-    6. Sistema detecta intent ANTES de novo tool loop (`ChatService.detectUserIntent()`)
-    7. Se "confirm" → Executa tool diretamente (sem novo loop)
-    8. Se "reject" → Cancela
-    9. Se "correction"/"unrelated" → Limpa pendente, inicia novo loop
-  - [x] Implementar lógica de `pendingConfirmation` no Tool Loop (infraestrutura genérica)
-    - Nota: Esta lógica é usada por `record_metric`, `create_reminder`
-    - Sistema controla confirmação via intent detection (não depende do prompt da IA)
-  - [x] Armazenar estado de confirmação pendente (expira em 5 min)
+---
 
-**Backend — Habits:**
-- [ ] Criar tabelas `habits` + `habit_completions` (conforme tracking.md §8.2-8.3)
-- [ ] Criar enums `habit_frequency`, `period_of_day`
-- [ ] Implementar CRUD de hábitos (`HabitsController`, `HabitsService`, `HabitsRepository`)
-- [ ] Implementar endpoint completar/desmarcar (`POST/DELETE /habits/:id/complete`)
-- [ ] Implementar cálculo de streaks (conforme tracking.md §5.3)
-- [ ] Implementar AI tool `record_habit` (conforme tracking.md §7.2)
-- [ ] Implementar AI tool `get_habits` (conforme tracking.md §7.5)
-- [ ] Implementar Habit Presets para onboarding (conforme tracking.md §5.4)
+### Backend — Métricas ✅ (Implementado)
 
-**Backend — Calendar View API:**
-- [ ] Implementar `GET /tracking/calendar/:year/:month` (conforme tracking.md §6.3)
-  - Retorna resumo do mês: dias com moodColor, habitsCompleted/habitsTotal, hasData
-- [ ] Implementar `GET /tracking/day/:date` (conforme tracking.md §6.3)
-  - Retorna métricas + hábitos do dia com status de conclusão
-- [ ] Implementar `GET /tracking/by-date/:date` (conforme tracking.md §6.1)
-  - Retorna métricas de um dia específico
+- [x] Módulo `tracking` com CRUD completo:
+  - [x] `TrackingController` - 7 endpoints REST
+  - [x] `TrackingService` - validações, agregações
+  - [x] `TrackingRepository` - Drizzle ORM com RLS
+- [x] 7 tipos de tracking: weight, water, sleep, exercise, mood, energy, custom
+- [x] Validações por tipo (limites, unidades padrão)
+- [x] Agregações (média, soma, min, max, variação)
+- [x] AI Tools:
+  - [x] `record_metric` (requiresConfirmation: true)
+  - [x] `get_tracking_history` (retorna IDs para update/delete)
+  - [x] `update_metric` (requiresConfirmation: true)
+  - [x] `delete_metric` (requiresConfirmation: true)
+- [x] Captura conversacional com confirmação obrigatória
+- [x] Testes unitários e integração passando
 
-**Backend — AI Tools (update/delete):**
-- [x] Implementar AI tool `update_metric` (conforme tracking.md §7.3)
-- [x] Implementar AI tool `delete_metric` (conforme tracking.md §7.3)
-- [x] Fix `get_tracking_history` para retornar `id` de cada entry
-- [x] Instruções no system prompt sobre datas relativas (ontem, dia X)
+### Backend — Habits
 
-**Backend — RLS:**
-- [ ] Aplicar RLS em tabela `habits` (conforme tracking.md §8.5)
-- [ ] Aplicar RLS em tabela `habit_completions` (conforme tracking.md §8.5)
+- [ ] Criar tabelas `habits` + `habit_completions` (§8.2-8.3)
+- [ ] Criar/usar enums `habit_frequency`, `period_of_day`
+- [ ] Implementar `HabitsController` com endpoints (§6.2):
+  - [ ] POST /habits - criar hábito
+  - [ ] GET /habits - listar hábitos do usuário
+  - [ ] GET /habits/:id - buscar por ID
+  - [ ] PATCH /habits/:id - atualizar
+  - [ ] DELETE /habits/:id - remover
+  - [ ] POST /habits/:id/complete - marcar como feito
+  - [ ] DELETE /habits/:id/uncomplete - desmarcar
+  - [ ] GET /habits/streaks - streaks de todos
+- [ ] Implementar `HabitsService`:
+  - [ ] CRUD de hábitos
+  - [ ] Cálculo de streaks (§5.3) - daily/weekdays/weekends/custom
+  - [ ] Validação de frequência
+- [ ] Implementar `HabitsRepository` com Drizzle
+- [ ] Aplicar RLS em habits e habit_completions (§8.5)
+- [ ] AI Tools:
+  - [ ] `record_habit` (§7.2) - fuzzy match por nome
+  - [ ] `get_habits` (§7.5) - includeStreaks, includeCompletionsToday
 
-**Frontend:**
-- [x] Criar página `/tracking` (dashboard opcional):
-  - [x] Empty state amigável quando não há dados:
-    - "Você ainda não registrou nenhuma métrica. Converse comigo sobre seu dia e eu posso registrar para você, ou use os formulários abaixo."
-  - [x] Formulários para registro manual (secundário)
-  - [x] Histórico com filtros (quando há dados)
-  - [x] Gráficos de evolução (quando há dados)
-  - [x] Sem widgets de "meta diária" ou "streak" impostos
-- [x] Componentes:
-  - [x] TrackingEmptyState (mensagem amigável)
-  - [x] ManualTrackForm (formulários por tipo)
-  - [x] MetricChart (gráfico de linha/barra)
-  - [x] TrackingHistory (lista com filtros)
-  - Nota: Confirmação de métricas é 100% conversacional (JARVIS-first)
-    - Não há cards ou botões de confirmação
-    - IA pergunta via texto, usuário responde via texto
-    - Ver ai.md §9.3 para fluxo completo
+### Backend — Calendar API
 
-**Frontend — Habits & Calendar:**
-- [ ] Criar `TrackingContext` com navegação por mês (similar a FinanceContext)
-- [ ] Componentes de Calendar:
-  - [ ] CalendarMonth (grade mensal com cores por humor, indicadores de hábitos)
-  - [ ] DayDetail (modal/página com hábitos + métricas do dia)
-- [ ] Componentes de Habits:
-  - [ ] HabitCard (checkbox + streak badge)
-  - [ ] HabitList (agrupado por período do dia)
-  - [ ] StreakBadge (🔥 + número)
-  - [ ] HabitForm (criar/editar)
-  - [ ] HabitPresetSelector (seleção de hábitos sugeridos no onboarding)
-- [ ] Aba Streaks (conforme tracking.md §3.5)
-- [ ] Aba Insights (conforme tracking.md §3.4) — placeholder para M2.5
+- [ ] `GET /tracking/calendar/:year/:month` (§6.3):
+  - Retorna: days[] com date, moodScore, moodColor, habitsCompleted/Total, hasData
+- [ ] `GET /tracking/day/:date` (§6.3):
+  - Retorna: metrics[] + habits[] com status de conclusão
+- [ ] `GET /tracking/by-date/:date` (§6.1):
+  - Retorna: métricas de um dia específico
 
-**Testes:**
+---
 
-_Testes Unitários Backend (7 tasks):_
-- [x] Unit: TrackingService validações por tipo (weight/water/sleep/exercise/mood/energy)
-- [x] Unit: TrackingService limites min/max e unidades padrão
-- [x] Unit: TrackingController endpoints REST (POST, GET, DELETE)
-- [x] Unit: TrackingRepository operações CRUD com Drizzle
-- [x] Unit: TrackingToolExecutorService (record_metric, get_tracking_history)
-- [x] Unit: ConfirmationStateService (store, get, confirm, reject, clearAll, TTL)
-- [x] Unit: ToolLoopService pendingConfirmation (pausa, retoma, rejeita)
+### Frontend — Limpeza (Remover Dashboard Antigo)
 
-_Testes de Integração (5 tasks):_
-- [x] Integration: API REST tracking (POST, GET, DELETE com banco real)
-- [x] Integration: Multi-tenant isolation (user A não vê dados de B)
-- [x] Integration: Chat → IA pergunta → "Sim" → registra métrica
-- [x] Integration: Chat → IA pergunta → "Não" → NÃO registra
-- [x] Integration: Chat → correção → re-pergunta → confirma
+- [ ] Remover `MetricCardsGrid` da página principal
+- [ ] Remover `TrackingHistory` da página principal
+- [ ] Remover `TrackingEmptyState`
+- [ ] Manter componentes reusáveis:
+  - [x] `types.ts` - types, helpers, constantes (100% reusável)
+  - [x] `hooks/use-tracking.ts` - React Query hooks (100% reusável)
+  - [x] `ManualTrackForm` - usar na Vista do Dia
+  - [x] `MetricCard` - usar em Insights (opcional)
+  - [x] `MetricChart` - usar em Insights (opcional)
 
-_Testes de Componente Frontend (5 tasks):_
-- [x] Component: MetricCard (valor, unidade, trend, cor por tipo)
-- [x] Component: MetricChart (line/bar, loading, empty, average)
-- [x] Component: ManualTrackForm (validação, submit, reset, erro)
-- [x] Component: TrackingHistory (listagem, paginação, delete)
-- [x] Component: TrackingEmptyState
+### Frontend — Estrutura e Navegação
 
-_Testes de Hooks Frontend (2 tasks):_
-- [x] Hooks: useTrackingEntries, useCreateTrackingEntry, useTrackingStats
-- [x] Hooks: useDeleteTrackingEntry, useTrackingAggregations
+- [ ] Criar `TrackingContext` com estado do mês selecionado
+- [ ] Copiar/adaptar `useMonthNavigation` do finance
+- [ ] Copiar/adaptar `MonthSelector` do finance
+- [ ] Criar página `/tracking` com layout de abas:
+  - [ ] Tab Calendário (default)
+  - [ ] Tab Insights (placeholder para M2.5)
+  - [ ] Tab Streaks
 
-_Testes E2E (6 tasks):_
-- [x] E2E: registrar peso via formulário → ver no histórico
-- [x] E2E: registrar água múltiplas vezes → ver soma diária
-- [x] E2E: visualizar histórico com dados reais
-- [x] E2E: dashboard exibe empty state
-- [x] E2E: fluxo conversacional completo via chat
-- [x] E2E: navegação entre tipos de métricas via filtro
+### Frontend — Calendário (Vista Principal)
 
-_Testes — Habits:_
+- [ ] `CalendarMonth`: Grade 7 colunas x 6 linhas
+  - [ ] Dias do mês atual
+  - [ ] Dias do mês anterior/próximo (esmaecidos)
+- [ ] `DayCell`: Célula clicável com:
+  - [ ] Número do dia
+  - [ ] Cor do humor (🟢 ≥7 / 🟡 4-6 / 🔴 ≤3 / cinza sem dados)
+  - [ ] Indicadores de hábitos (●○)
+- [ ] Navegação ◄ Mês ► funcional
+- [ ] Indicador visual quando não está no mês atual
+
+### Frontend — Vista do Dia
+
+- [ ] `DayDetail`: Modal/drawer ao clicar em um dia
+- [ ] Header com data formatada (ex: "Terça, 7 de Janeiro")
+- [ ] Seção HÁBITOS:
+  - [ ] `HabitCheckbox`: Checkbox + nome + período + streak
+  - [ ] `StreakBadge`: 🔥 + número de dias
+  - [ ] Toggle de conclusão com feedback otimista
+  - [ ] Agrupamento por período do dia (manhã/tarde/noite)
+- [ ] Seção MÉTRICAS:
+  - [ ] Inputs para humor (1-10 slider)
+  - [ ] Inputs para energia (1-10 slider)
+  - [ ] Inputs para água (ml)
+  - [ ] Inputs para sono (horas)
+  - [ ] Inputs para peso (kg)
+- [ ] Botão Salvar
+
+### Frontend — Aba Streaks
+
+- [ ] `StreaksTab`: Lista de todos os hábitos com streaks
+- [ ] `StreakCard`:
+  - [ ] Nome do hábito + ícone
+  - [ ] Streak atual (🔥 X dias)
+  - [ ] Recorde (⭐ se atual = recorde)
+- [ ] Ordenação por streak atual (maior primeiro)
+
+### Frontend — Aba Insights
+
+- [ ] `InsightsTab`: Placeholder para M2.5
+- [ ] Mensagem: "Em breve: correlações entre hábitos e métricas"
+- [ ] Preview de como será (mockup estático)
+
+### Frontend — Gerenciamento de Hábitos
+
+- [ ] `HabitForm`: Modal para criar/editar hábito
+  - [ ] Nome (obrigatório)
+  - [ ] Ícone (emoji picker ou lucide)
+  - [ ] Cor (color picker)
+  - [ ] Frequência (daily/weekdays/weekends/custom)
+  - [ ] Período do dia (manhã/tarde/noite/qualquer)
+- [ ] Botão "+ Novo Hábito" no header ou empty state
+- [ ] Editar/excluir via menu no HabitCheckbox
+
+### Frontend — Hooks de Habits
+
+- [ ] `useHabits()`: Lista hábitos ativos do usuário
+- [ ] `useHabit(id)`: Busca hábito específico
+- [ ] `useCreateHabit()`: Mutation criar
+- [ ] `useUpdateHabit()`: Mutation atualizar
+- [ ] `useDeleteHabit()`: Mutation deletar
+- [ ] `useCompleteHabit()`: Mutation completar (otimistic update)
+- [ ] `useUncompleteHabit()`: Mutation desmarcar
+- [ ] `useHabitStreaks()`: Busca todos os streaks
+
+### Frontend — Hooks de Calendar
+
+- [ ] `useCalendarMonth(year, month)`: Busca resumo do mês
+- [ ] `useDayDetail(date)`: Busca métricas + hábitos do dia
+- [ ] `useSaveDayMetrics()`: Mutation salvar métricas do dia
+
+---
+
+### Testes — Backend Métricas ✅ (Implementado)
+
+- [x] Unit: TrackingService validações, limites, unidades
+- [x] Unit: TrackingController endpoints REST
+- [x] Unit: TrackingRepository operações CRUD
+- [x] Unit: TrackingToolExecutorService (4 tools)
+- [x] Integration: API REST tracking
+- [x] Integration: Multi-tenant isolation
+
+### Testes — Backend Habits
+
 - [ ] Unit: HabitsService CRUD
-- [ ] Unit: Cálculo de streak (frequência daily/weekdays/custom)
+- [ ] Unit: HabitsService cálculo de streak (daily/weekdays/custom)
 - [ ] Unit: HabitsRepository operações
 - [ ] Integration: CRUD habits via API
 - [ ] Integration: Completar/desmarcar hábito
-- [ ] Component: HabitCard, HabitList, StreakBadge
-- [ ] E2E: Criar hábito → completar → verificar streak
-- [ ] E2E: Calendário navega entre meses
+- [ ] Integration: GET /habits/streaks
 
-_Testes — Calendar View:_
-- [ ] Integration: `GET /tracking/calendar/:year/:month` retorna resumo correto
-- [ ] Integration: `GET /tracking/day/:date` retorna métricas + hábitos
-- [ ] Integration: `GET /tracking/by-date/:date` retorna métricas do dia
-- [ ] Component: CalendarMonth renderiza dias com cores
-- [ ] Component: DayDetail mostra hábitos + métricas
-- [ ] E2E: Clicar no dia abre detalhes
+### Testes — Backend Calendar API
 
-**Definition of Done:**
-- [x] Sistema funciona normalmente sem nenhum tracking (não penaliza)
-- [x] Todos os tipos de tracking funcionam (7 tipos, sem expense/income)
+- [ ] Integration: GET /tracking/calendar/:year/:month retorna resumo correto
+- [ ] Integration: GET /tracking/day/:date retorna métricas + hábitos
+- [ ] Integration: GET /tracking/by-date/:date retorna métricas do dia
+
+### Testes — Frontend Componentes
+
+- [ ] Component: CalendarMonth renderiza dias corretamente
+- [ ] Component: DayCell mostra cor e indicadores
+- [ ] Component: DayDetail abre com dados corretos
+- [ ] Component: HabitCheckbox toggle funciona
+- [ ] Component: StreakBadge exibe número correto
+- [ ] Component: HabitForm validação funciona
+
+### Testes — Frontend Hooks
+
+- [ ] Hooks: useHabits, useCreateHabit, useDeleteHabit
+- [ ] Hooks: useCompleteHabit, useUncompleteHabit
+- [ ] Hooks: useCalendarMonth, useDayDetail
+- [ ] Hooks: useHabitStreaks
+
+### Testes — E2E
+
+- [ ] E2E: Navegar entre meses no calendário
+- [ ] E2E: Clicar no dia → ver detalhes
+- [ ] E2E: Completar hábito → streak atualiza
+- [ ] E2E: Criar novo hábito
+- [ ] E2E: Registrar métricas do dia
+- [ ] E2E: Ver aba Streaks com dados
+
+---
+
+### Definition of Done
+
+**Métricas ✅ (já implementado):**
+- [x] CRUD funciona
 - [x] Validações aplicadas
-- [x] Agregações calculadas corretamente
-- [x] Dashboard é opcional com empty state amigável
-- [x] Gráficos funcionam quando há dados
-- [x] Captura conversacional funciona (JARVIS-first):
-  - [x] IA pergunta via texto ("Quer que eu registre...? 👍")
-  - [x] Usuário confirma/corrige/recusa via texto
-  - [x] Sem botões ou cards de confirmação
-- [x] `pendingConfirmation` pausa tool loop até resposta do usuário
-- [x] IA nunca registra sem confirmação textual explícita
-- [x] IA nunca cobra tracking não realizado (regra 11 no system prompt)
-- [x] Correções via conversa funcionam (IA ajusta e re-pergunta, suportado pela infraestrutura pendingConfirmation)
-- [x] Testes passam (243 testes: 42 unit backend, 9 integration, 22 component, 8 hooks, 162 E2E)
+- [x] Agregações calculadas
+- [x] AI tools funcionam (record, get, update, delete)
+- [x] Captura conversacional com confirmação
+- [x] Testes passam
 
-_AI Tools (update/delete):_
-- [x] `update_metric` funciona via chat
-- [x] `delete_metric` funciona via chat
-- [x] Suporte a datas relativas (ontem, dia X)
+**Habits:**
+- [ ] CRUD de hábitos funciona via API
+- [ ] Completar/desmarcar via API
+- [ ] Completar/desmarcar via chat (AI tool)
+- [ ] Streaks calculados corretamente (daily/weekdays/custom)
+- [ ] RLS aplicado em habits e habit_completions
 
-_Habits:_
-- [ ] CRUD de hábitos funciona
-- [ ] Completar/desmarcar via API e chat
-- [ ] Streaks calculados corretamente
-- [ ] Agrupamento por período do dia funciona
-- [ ] Habit Presets disponíveis no onboarding
-- [ ] RLS aplicado em `habits` e `habit_completions`
-
-_Calendar View:_
-- [ ] Calendário mensal renderiza
+**Calendar View:**
+- [ ] Calendário mensal é a vista principal de /tracking
 - [ ] Navegação entre meses funciona
-- [ ] Cores dos dias baseadas no humor
-- [ ] Vista do dia com hábitos + métricas
+- [ ] Cores dos dias baseadas no humor (🟢🟡🔴 ou cinza)
+- [ ] Indicadores de hábitos por dia (●○)
+- [ ] Clicar no dia abre Vista do Dia
 
-_Calendar API:_
-- [ ] `GET /tracking/calendar/:year/:month` funciona
-- [ ] `GET /tracking/day/:date` funciona
-- [ ] `GET /tracking/by-date/:date` funciona
+**Vista do Dia:**
+- [ ] Modal/drawer abre corretamente
+- [ ] Hábitos com checkboxes funcionam
+- [ ] Métricas com inputs funcionam
+- [ ] Salvar persiste dados
+
+**Abas:**
+- [ ] Tab Calendário funcional (default)
+- [ ] Tab Streaks funcional
+- [ ] Tab Insights (placeholder)
+
+**Testes:**
+- [ ] Testes unitários backend passam
+- [ ] Testes integração passam
+- [ ] Testes componentes passam
+- [ ] Testes E2E passam
+
+---
+
+### Notas Históricas
 
 **Notas (2026-01-20):**
-- Cobertura de testes expandida de 10 tasks genéricas para 25 tasks específicas
-- Backend: TrackingService, TrackingController, TrackingRepository, TrackingToolExecutor, ConfirmationStateService, ToolLoopService
-- Frontend: 5 componentes testados (MetricCard, MetricChart, ManualTrackForm, TrackingHistory, TrackingEmptyState)
-- Hooks: 11 hooks do useTracking testados
-- E2E: 6 fluxos completos (formulário manual, água, histórico, empty state, chat conversacional, filtros)
-- Fixes E2E: sidebar toggle CSS classes, mobile-chrome skips, memory search debounce
-- **Enhancement: Tools `update_metric` e `delete_metric`** (Gap 2)
-  - Novas tools para correção/deleção de métricas já registradas
-  - Fix `get_tracking_history` para retornar `id` de cada entry
-  - Instruções no system prompt sobre datas relativas (ontem, dia X)
-  - 12 novos testes unitários no tracking-tool-executor.spec.ts
-  - Docs atualizados: ai.md §6.2, §9.1, §9.2, §9.7; system.md §3.3
-- **Enhancement: Detecção de Intent via LLM** (Gap 7 - 2026-01-21)
-  - Nova tool `respond_to_confirmation` para detecção de intent
-  - `ToolChoice` estendido para suportar `{ type: 'tool', toolName: string }`
-  - Adapters Gemini e Claude atualizados para forçar tool específica
-  - Detecção via LLM substitui regex patterns limitados
-  - Reconhece variações naturais: "beleza", "manda ver", "tá certo", "bora"
-  - SEM fallback para regex - erro explícito se LLM falhar
-  - Docs atualizados: ai.md §2.3, §6.2, §9.3, §9.6; system.md §3.3
+- Backend de métricas implementado com 7 tipos
+- AI tools record_metric, get_tracking_history, update_metric, delete_metric funcionando
+- Captura conversacional com confirmação via LLM (não regex)
 
-**Notas (2026-02-01 - Auditoria de Cobertura):**
-- Auditoria completa comparando M2.1 tasks vs tracking.md spec
-- **Tasks adicionadas (Backend):**
-  - Calendar View API: 3 endpoints (`/calendar/:year/:month`, `/day/:date`, `/by-date/:date`)
-  - AI Tools update/delete: marcados como [x] (já implementados)
-  - RLS: 2 tasks para habits e habit_completions
-  - Habit Presets: 1 task para onboarding
-- **Tasks adicionadas (Frontend):**
-  - Componentes Calendar: CalendarMonth, DayDetail (explícitos)
-  - HabitPresetSelector para onboarding
-- **Tasks adicionadas (Testes):**
-  - 3 testes de integração para Calendar API
-- **Clarificação:** `get_trends` NÃO faz parte de M2.1 — está em M2.5 (Life Balance Score + Trends)
-- **Cobertura atualizada:** ~100% do tracking.md coberto por M2.1 + M2.5
+**Notas (2026-02-02 - Reformulação):**
+- M2.1 reformulado para alinhar com nova spec `docs/specs/domains/tracking.md`
+- **REMOVIDO:** Dashboard de cards (MetricCardsGrid, TrackingHistory, TrackingEmptyState)
+- **MANTIDO:** Backend de métricas inteiro, types.ts, hooks/use-tracking.ts, ManualTrackForm
+- **NOVA UI:** Calendário mensal "Year in Pixels" como vista principal
+- **NOVO:** Sistema de hábitos com streaks
+- **NOVO:** Abas (Calendário, Insights, Streaks)
+- Tasks de frontend/testes antigos removidas pois componentes serão diferentes
+- Tasks de backend métricas mantidas como ✅ (implementação válida)
 
 ---
 
