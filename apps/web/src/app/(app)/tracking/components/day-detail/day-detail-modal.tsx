@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -63,24 +63,13 @@ export function DayDetailModal() {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && clearSelectedDate()}>
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
-            <DialogTitle className="text-lg font-semibold">
-              {displayDate}
-            </DialogTitle>
-            {isToday && (
-              <p className="text-xs text-muted-foreground mt-1">Hoje</p>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={clearSelectedDate}
-            className="h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Fechar</span>
-          </Button>
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold">
+            {displayDate}
+          </DialogTitle>
+          {isToday && (
+            <p className="text-xs text-muted-foreground">Hoje</p>
+          )}
         </DialogHeader>
 
         <div className="space-y-6 pt-2">
