@@ -18,7 +18,9 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
 
   // Auth (synced from Supabase Auth)
-  email: varchar('email', { length: 255 }).notNull().unique(),
+  // Note: users_email_unique is a PARTIAL unique index (WHERE deleted_at IS NULL)
+  // Created via migration 0006, not inline because Drizzle doesn't support partial indexes
+  email: varchar('email', { length: 255 }).notNull(),
 
   // Profile
   name: varchar('name', { length: 255 }).notNull(),

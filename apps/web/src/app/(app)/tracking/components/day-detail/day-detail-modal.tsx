@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import {
   Dialog,
@@ -11,28 +12,33 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { CelebrationConfetti } from '@/app/(app)/finance/components/bill/bill-animations';
+import { DateHeader } from './date-header';
+import { HabitProgressDots } from './habit-progress-dots';
 import { HabitsSection } from './habits-section';
 import { MetricsSection } from './metrics-section';
-import { ProgressRing } from './progress-ring';
 import { ManualTrackForm } from '../manual-track-form';
 import { useTracking } from '../../context/tracking-context';
 import { useDayDetailData } from '../../hooks/use-calendar';
 import { useCompleteHabit, useUncompleteHabit } from '../../hooks/use-habits';
-import { formatDateDisplay, getTodayDate } from '../../types';
+import { getTodayDate, getMoodColor } from '../../types';
+import { journalEntrance, noAnimation } from './animations';
 
 /**
- * DayDetailModal - Modal showing details for a selected day
+ * DayDetailModal - Journal-style modal showing details for a selected day
  *
  * Features:
- * - Date header with progress ring
- * - Habits section with checkboxes
- * - Metrics section with values
- * - Optimistic updates for habit completion
- * - Celebration confetti when all habits completed
+ * - DateHeader with large day number and "Hoje" badge
+ * - HabitProgressDots replacing circular ring
+ * - Habits section with journal-style checkboxes
+ * - Metrics section with emoji sliders and visual bars
+ * - Mood-based background tint
+ * - Celebration confetti on 100% completion
+ * - Respects reduced motion preference
  *
  * @see docs/specs/domains/tracking.md §3.3 for day detail view
  */
 export function DayDetailModal() {
+  const prefersReducedMotion = useReducedMotion();
   const { selectedDate, clearSelectedDate } = useTracking();
   const [togglingHabitId, setTogglingHabitId] = useState<string | null>(null);
   const [showMetricForm, setShowMetricForm] = useState(false);
@@ -45,7 +51,6 @@ export function DayDetailModal() {
     isLoading,
     habitsTotal,
     habitsCompleted,
-    completionPercent,
   } = useDayDetailData(selectedDate);
 
   const completeHabit = useCompleteHabit();
@@ -53,10 +58,6 @@ export function DayDetailModal() {
 
   // Celebrate when all habits are completed
   useEffect(() => {
-    // Only celebrate if:
-    // 1. There are habits
-    // 2. All habits are now completed
-    // 3. Previously not all were completed (prevents celebration on initial load)
     if (
       habitsTotal > 0 &&
       habitsCompleted === habitsTotal &&
@@ -97,40 +98,68 @@ export function DayDetailModal() {
   };
 
   const isOpen = selectedDate !== null;
-  const displayDate = selectedDate ? formatDateDisplay(selectedDate) : '';
   const isToday = selectedDate === getTodayDate();
-  const isAllComplete = habitsTotal > 0 && habitsCompleted === habitsTotal;
+
+  // Get mood-based background tint
+  const getMoodTint = () => {
+    const moodEntry = metrics.find((m) => m.type === 'mood');
+    if (!moodEntry) return undefined;
+
+    const moodScore = parseFloat(moodEntry.value);
+    const moodColor = getMoodColor(moodScore);
+
+    const tintColors: Record<string, string> = {
+      green: 'var(--tracking-fill-good)',
+      yellow: 'var(--tracking-fill-neutral)',
+      red: 'var(--tracking-fill-poor)',
+      gray: 'transparent',
+    };
+
+    return tintColors[moodColor];
+  };
+
+  const moodTint = getMoodTint();
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && clearSelectedDate()}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto bg-journal-paper">
         {/* Celebration confetti overlay */}
         {showCelebration && <CelebrationConfetti />}
 
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-lg font-semibold">
-                {displayDate}
-              </DialogTitle>
-              {isToday && (
-                <p className="text-xs text-muted-foreground">Hoje</p>
-              )}
-            </div>
+        <DialogHeader className="relative pb-2">
+          {/* Accessible title (visually hidden) */}
+          <DialogTitle className="sr-only">
+            Detalhes do dia {selectedDate}
+          </DialogTitle>
 
-            {/* Progress ring - only show if there are habits */}
-            {habitsTotal > 0 && !isLoading && (
-              <div className="flex items-center gap-2">
-                <ProgressRing
-                  progress={completionPercent}
-                  size={48}
-                  strokeWidth={4}
-                  showLabel
-                  color={isAllComplete ? 'success' : 'default'}
-                />
-              </div>
+          {/* Mood tint background */}
+          {moodTint && (
+            <div
+              className="absolute inset-0 -mx-6 -mt-6 rounded-t-lg opacity-50"
+              style={{ backgroundColor: moodTint }}
+            />
+          )}
+
+          {/* Date header */}
+          <motion.div
+            className="relative"
+            initial="hidden"
+            animate="visible"
+            variants={prefersReducedMotion ? noAnimation : journalEntrance}
+          >
+            {selectedDate && (
+              <DateHeader date={selectedDate} isToday={isToday} />
             )}
-          </div>
+
+            {/* Progress dots */}
+            {habitsTotal > 0 && !isLoading && (
+              <HabitProgressDots
+                completed={habitsCompleted}
+                total={habitsTotal}
+                className="mt-2"
+              />
+            )}
+          </motion.div>
         </DialogHeader>
 
         <div className="space-y-6 pt-2">
@@ -142,19 +171,20 @@ export function DayDetailModal() {
             onToggle={handleToggle}
           />
 
-          <Separator />
+          {/* Dashed separator */}
+          <Separator className="border-dashed border-journal-border" />
 
           {/* Metrics Section with Add button */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              <h3 className="text-sm font-semibold text-journal-ink">
                 Métricas
               </h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowMetricForm(true)}
-                className="h-8 text-xs"
+                className="h-8 text-xs text-journal-ink-soft hover:text-journal-ink"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Adicionar

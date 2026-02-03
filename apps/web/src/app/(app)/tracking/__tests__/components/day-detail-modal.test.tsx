@@ -159,7 +159,7 @@ describe('DayDetailModal', () => {
     render(<DayDetailModal />);
 
     expect(
-      screen.getByText(/Nenhuma métrica registrada para este dia/iu)
+      screen.getByText(/Nenhuma métrica registrada/iu)
     ).toBeInTheDocument();
   });
 

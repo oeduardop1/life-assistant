@@ -132,7 +132,8 @@ export const habits = pgTable(
   (table) => [
     index('habits_user_id_idx').on(table.userId),
     index('habits_user_active_idx').on(table.userId, table.isActive),
-    unique('habits_user_name_unique').on(table.userId, table.name),
+    // Note: habits_user_name_unique is a PARTIAL unique index (WHERE deleted_at IS NULL)
+    // Created via migration 0005, not in schema because Drizzle doesn't support partial indexes
   ]
 );
 

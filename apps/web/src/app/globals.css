@@ -62,6 +62,14 @@
   --color-auth-orb-1: var(--auth-orb-1);
   --color-auth-orb-2: var(--auth-orb-2);
   --color-auth-orb-3: var(--auth-orb-3);
+  /* Journal/Day Detail color mappings */
+  --color-journal-paper: var(--journal-paper);
+  --color-journal-ink: var(--journal-ink);
+  --color-journal-ink-soft: var(--journal-ink-soft);
+  --color-journal-border: var(--journal-border);
+  --color-journal-checkbox-bg: var(--journal-checkbox-bg);
+  --color-journal-checkbox-checked: var(--journal-checkbox-checked);
+  --color-journal-fire-glow: var(--journal-fire-glow);
 }
 
 :root {
@@ -119,6 +127,14 @@
   --tracking-fill-neutral: oklch(0.80 0.15 85 / 0.35);
   --tracking-fill-poor: oklch(0.65 0.20 25 / 0.35);
   --tracking-fill-empty: oklch(0.70 0 0 / 0.1);
+  /* Journal/Day Detail colors - Soft Journaling theme */
+  --journal-paper: oklch(0.985 0.008 85);
+  --journal-ink: oklch(0.25 0.02 250);
+  --journal-ink-soft: oklch(0.50 0.02 250);
+  --journal-border: oklch(0.75 0.02 250 / 0.35);
+  --journal-checkbox-bg: oklch(0.96 0.02 145);
+  --journal-checkbox-checked: oklch(0.65 0.15 145);
+  --journal-fire-glow: oklch(0.70 0.20 40 / 0.4);
 }
 
 .dark {
@@ -175,6 +191,14 @@
   --tracking-fill-neutral: oklch(0.75 0.13 85 / 0.25);
   --tracking-fill-poor: oklch(0.60 0.18 25 / 0.25);
   --tracking-fill-empty: oklch(0.50 0 0 / 0.08);
+  /* Journal/Day Detail colors - Dark mode */
+  --journal-paper: oklch(0.18 0.01 250);
+  --journal-ink: oklch(0.92 0.01 85);
+  --journal-ink-soft: oklch(0.65 0.01 85);
+  --journal-border: oklch(0.45 0.02 85 / 0.30);
+  --journal-checkbox-bg: oklch(0.28 0.03 145);
+  --journal-checkbox-checked: oklch(0.55 0.12 145);
+  --journal-fire-glow: oklch(0.55 0.18 40 / 0.35);
 }
 
 @layer base {

@@ -1,10 +1,12 @@
 'use client';
 
+import { motion, useReducedMotion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Smile, Zap, Droplet, Moon, Scale } from 'lucide-react';
+import { Scale, BarChart3 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { WaterBar, SleepBar } from './metric-bar';
+import { staggerContainer, staggerItem, noAnimation } from './animations';
 import type { TrackingEntry } from '../../types';
 
 interface MetricsSectionProps {
@@ -18,26 +20,17 @@ interface MetricsSectionProps {
   hideHeader?: boolean;
 }
 
-const metricIcons = {
-  mood: Smile,
-  energy: Zap,
-  water: Droplet,
-  sleep: Moon,
-  weight: Scale,
-};
-
-const metricLabels: Record<string, string> = {
-  mood: 'Humor',
-  energy: 'Energia',
-  water: 'Água',
-  sleep: 'Sono',
-  weight: 'Peso',
-};
-
 /**
- * MetricsSection - Display/edit metrics for a specific day
+ * MetricsSection - Display metrics for a specific day
  *
- * Shows sliders for mood/energy (1-10) and inputs for other metrics
+ * Features:
+ * - Mood/Energy sliders with emoji endpoints
+ * - Water/Sleep as visual bars
+ * - Weight display
+ * - Staggered entrance animation
+ * - Respects reduced motion preference
+ *
+ * @see docs/specs/domains/tracking.md for metrics tracking
  */
 export function MetricsSection({
   metrics,
@@ -45,14 +38,12 @@ export function MetricsSection({
   readOnly = true,
   hideHeader = false,
 }: MetricsSectionProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {!hideHeader && (
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Métricas
-          </h3>
-        )}
+        {!hideHeader && <SectionHeader title="Métricas" />}
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-12 rounded-lg" />
@@ -84,146 +75,182 @@ export function MetricsSection({
   if (!hasAnyMetric && readOnly) {
     return (
       <div className="space-y-3">
-        {!hideHeader && (
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Métricas
-          </h3>
-        )}
-        <p className="text-sm text-muted-foreground py-4 text-center">
-          Nenhuma métrica registrada para este dia.
-        </p>
+        {!hideHeader && <SectionHeader title="Métricas" />}
+        <EmptyState />
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {!hideHeader && (
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Métricas
-        </h3>
-      )}
-      <div className="space-y-4">
-        {/* Mood Slider */}
+      {!hideHeader && <SectionHeader title="Métricas" />}
+
+      <motion.div
+        className="space-y-4"
+        initial="hidden"
+        animate="visible"
+        variants={prefersReducedMotion ? noAnimation : staggerContainer}
+      >
+        {/* Mood Slider with emojis */}
         {(moodValue !== null || !readOnly) && (
-          <MetricSlider
-            icon={metricIcons.mood}
-            label={metricLabels.mood}
-            value={moodValue}
-            readOnly={readOnly}
-          />
+          <motion.div variants={prefersReducedMotion ? noAnimation : staggerItem}>
+            <EmojiSlider
+              label="Humor"
+              value={moodValue}
+              minEmoji="😔"
+              maxEmoji="😊"
+              readOnly={readOnly}
+              colorClass="bg-yellow-500"
+            />
+          </motion.div>
         )}
 
-        {/* Energy Slider */}
+        {/* Energy Slider with emojis */}
         {(energyValue !== null || !readOnly) && (
-          <MetricSlider
-            icon={metricIcons.energy}
-            label={metricLabels.energy}
-            value={energyValue}
-            readOnly={readOnly}
-          />
+          <motion.div variants={prefersReducedMotion ? noAnimation : staggerItem}>
+            <EmojiSlider
+              label="Energia"
+              value={energyValue}
+              minEmoji="😴"
+              maxEmoji="⚡"
+              readOnly={readOnly}
+              colorClass="bg-orange-500"
+            />
+          </motion.div>
         )}
 
-        {/* Water Input */}
+        {/* Water Bar */}
         {(waterValue !== null || !readOnly) && (
-          <MetricInput
-            icon={metricIcons.water}
-            label={metricLabels.water}
-            value={waterValue}
-            unit="ml"
-            readOnly={readOnly}
-          />
+          <motion.div variants={prefersReducedMotion ? noAnimation : staggerItem}>
+            <WaterBar value={waterValue ?? 0} goal={2000} />
+          </motion.div>
         )}
 
-        {/* Sleep Input */}
+        {/* Sleep Bar */}
         {(sleepValue !== null || !readOnly) && (
-          <MetricInput
-            icon={metricIcons.sleep}
-            label={metricLabels.sleep}
-            value={sleepValue}
-            unit="h"
-            readOnly={readOnly}
-          />
+          <motion.div variants={prefersReducedMotion ? noAnimation : staggerItem}>
+            <SleepBar value={sleepValue ?? 0} goal={8} />
+          </motion.div>
         )}
 
-        {/* Weight Input */}
+        {/* Weight Display */}
         {(weightValue !== null || !readOnly) && (
-          <MetricInput
-            icon={metricIcons.weight}
-            label={metricLabels.weight}
-            value={weightValue}
-            unit="kg"
-            readOnly={readOnly}
-          />
+          <motion.div variants={prefersReducedMotion ? noAnimation : staggerItem}>
+            <WeightDisplay value={weightValue} />
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
 
-interface MetricSliderProps {
-  icon: typeof Smile;
-  label: string;
-  value: number | null;
-  readOnly?: boolean;
+// =============================================================================
+// Sub-components
+// =============================================================================
+
+interface SectionHeaderProps {
+  title: string;
 }
 
-function MetricSlider({ icon: Icon, label, value, readOnly }: MetricSliderProps) {
+function SectionHeader({ title }: SectionHeaderProps) {
+  return (
+    <h3 className="text-sm font-semibold text-journal-ink">{title}</h3>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-journal-border py-6">
+      <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+        <BarChart3 className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <p className="text-sm text-journal-ink-soft">
+        Nenhuma métrica registrada
+      </p>
+    </div>
+  );
+}
+
+interface EmojiSliderProps {
+  label: string;
+  value: number | null;
+  minEmoji: string;
+  maxEmoji: string;
+  readOnly?: boolean;
+  colorClass?: string;
+}
+
+function EmojiSlider({
+  label,
+  value,
+  minEmoji,
+  maxEmoji,
+  readOnly = true,
+  colorClass = 'bg-primary',
+}: EmojiSliderProps) {
   const displayValue = value ?? 5;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="flex items-center gap-2 text-sm">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          {label}
-        </Label>
-        <span className="text-sm font-medium">{displayValue}/10</span>
+        <span className="text-sm font-medium text-journal-ink">{label}</span>
+        <span className="text-sm font-semibold tabular-nums text-journal-ink">
+          {displayValue}/10
+        </span>
       </div>
-      <Slider
-        value={[displayValue]}
-        min={1}
-        max={10}
-        step={1}
-        disabled={readOnly}
-        className={readOnly ? 'pointer-events-none' : ''}
-      />
+
+      <div className="flex items-center gap-3">
+        {/* Min emoji */}
+        <span className="text-lg" aria-hidden="true">
+          {minEmoji}
+        </span>
+
+        {/* Slider */}
+        <div className="relative flex-1">
+          <Slider
+            value={[displayValue]}
+            min={1}
+            max={10}
+            step={1}
+            disabled={readOnly}
+            className={cn(readOnly && 'pointer-events-none')}
+          />
+          {/* Color overlay for filled portion */}
+          <div
+            className={cn(
+              'absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full pointer-events-none',
+              colorClass,
+              'opacity-30'
+            )}
+            style={{ width: `${((displayValue - 1) / 9) * 100}%` }}
+          />
+        </div>
+
+        {/* Max emoji */}
+        <span className="text-lg" aria-hidden="true">
+          {maxEmoji}
+        </span>
+      </div>
     </div>
   );
 }
 
-interface MetricInputProps {
-  icon: typeof Smile;
-  label: string;
+interface WeightDisplayProps {
   value: number | null;
-  unit: string;
-  readOnly?: boolean;
 }
 
-function MetricInput({
-  icon: Icon,
-  label,
-  value,
-  unit,
-  readOnly,
-}: MetricInputProps) {
+function WeightDisplay({ value }: WeightDisplayProps) {
+  if (value === null) return null;
+
   return (
     <div className="flex items-center gap-3">
-      <Label className="flex items-center gap-2 text-sm min-w-[80px]">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        {label}
-      </Label>
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          value={value ?? ''}
-          readOnly={readOnly}
-          disabled={readOnly}
-          className="w-24"
-          placeholder="-"
-        />
-        <span className="text-sm text-muted-foreground">{unit}</span>
+      <div className="flex h-8 w-8 items-center justify-center text-muted-foreground">
+        <Scale className="h-5 w-5 text-blue-500" />
       </div>
+      <span className="text-sm font-medium text-journal-ink">Peso</span>
+      <span className="ml-auto text-sm font-semibold tabular-nums">
+        {value.toFixed(1)} kg
+      </span>
     </div>
   );
 }

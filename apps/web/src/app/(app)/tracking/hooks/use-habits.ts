@@ -16,6 +16,7 @@ import type {
   CreateHabitInput,
   UpdateHabitInput,
 } from '../types';
+import { calendarKeys } from './use-calendar';
 
 // =============================================================================
 // Query Keys
@@ -113,6 +114,8 @@ export function useCreateHabit() {
       queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitsKeys.listWithInactive() });
       queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+      // Invalidate all calendar queries (new habit affects all days)
+      queryClient.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 }
@@ -146,6 +149,8 @@ export function useUpdateHabit() {
       queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitsKeys.listWithInactive() });
       queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+      // Invalidate all calendar queries (habit changes affect all days)
+      queryClient.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 }
@@ -170,6 +175,8 @@ export function useDeleteHabit() {
       queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitsKeys.listWithInactive() });
       queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+      // Invalidate all calendar queries (deleted habit affects all days)
+      queryClient.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 }
@@ -233,10 +240,17 @@ export function useCompleteHabit() {
         queryClient.setQueryData(habitsKeys.list(), context.previousHabits);
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _error, { date }) => {
       // Refetch to ensure server state
       queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+      // Also invalidate calendar queries to update the modal and calendar UI
+      if (date) {
+        queryClient.invalidateQueries({ queryKey: calendarKeys.day(date) });
+        // Parse date (YYYY-MM-DD) to invalidate month view
+        const [year, month] = date.split('-').map(Number);
+        queryClient.invalidateQueries({ queryKey: calendarKeys.month(year, month) });
+      }
     },
   });
 }
@@ -298,10 +312,15 @@ export function useUncompleteHabit() {
         queryClient.setQueryData(habitsKeys.list(), context.previousHabits);
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _error, { date }) => {
       // Refetch to ensure server state
       queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+      // Also invalidate calendar queries to update the modal and calendar UI
+      queryClient.invalidateQueries({ queryKey: calendarKeys.day(date) });
+      // Parse date (YYYY-MM-DD) to invalidate month view
+      const [year, month] = date.split('-').map(Number);
+      queryClient.invalidateQueries({ queryKey: calendarKeys.month(year, month) });
     },
   });
 }
