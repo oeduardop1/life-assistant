@@ -1,29 +1,37 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ManualTrackForm,
-  MetricCard,
-  MetricChart,
   MetricsPageFilters,
-  MetricsStatsTable,
-  MetricsConsistencyBars,
-  MetricsTimeline,
+  MetricSelector,
+  MetricDetailPanel,
+  InsightsPlaceholder,
+  GroupedTimeline,
   type PeriodFilter,
 } from '../components';
+import { type TrackingType } from '../types';
 
 /**
- * Metrics page for tracking module
+ * Metrics page for tracking module - Redesigned
+ *
+ * Layout structure:
+ * 1. Header with period filters + add button
+ * 2. MetricSelector (horizontal pills to choose metric)
+ * 3. MetricDetailPanel (unified chart + stats + consistency)
+ * 4. InsightsPlaceholder (teaser for M2.5)
+ * 5. GroupedTimeline (entries grouped by day)
  *
  * @see docs/specs/domains/tracking.md §3.5 for Aba Métricas specification
  * @see docs/milestones/phase-2-tracker.md M2.1 for implementation tasks
  */
 export default function MetricsPage() {
   const [period, setPeriod] = useState<PeriodFilter>('30d');
+  const [selectedType, setSelectedType] = useState<TrackingType>('weight');
   const [showForm, setShowForm] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
 
   // Calculate date range based on period
   const { startDate, endDate } = useMemo(() => {
@@ -37,63 +45,51 @@ export default function MetricsPage() {
     };
   }, [period]);
 
-  const trackingTypes = ['weight', 'water', 'sleep', 'exercise', 'mood', 'energy'] as const;
-
   return (
     <div className="space-y-6">
       {/* Header with filters and action button */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <MetricsPageFilters period={period} onPeriodChange={setPeriod} />
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => setShowForm(true)} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Nova Métrica
         </Button>
       </div>
 
-      {/* Section 1: Summary Cards */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4">Resumo</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {trackingTypes.map((type) => (
-            <MetricCard
-              key={type}
-              type={type}
-              startDate={startDate}
-              endDate={endDate}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Section 2: Evolution Chart - has internal type dropdown */}
-      <MetricChart
-        startDate={startDate}
-        endDate={endDate}
-        height={300}
-        showAverage
+      {/* Metric Type Selector */}
+      <MetricSelector
+        selected={selectedType}
+        onSelect={setSelectedType}
       />
 
-      {/* Section 3: Statistics Table */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4">Estatísticas</h2>
-        <MetricsStatsTable startDate={startDate} endDate={endDate} />
-      </section>
+      {/* Main Detail Panel - Chart + Stats + Consistency unified */}
+      <MetricDetailPanel
+        type={selectedType}
+        startDate={startDate}
+        endDate={endDate}
+      />
 
-      {/* Section 4: Consistency Bars */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Consistência</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MetricsConsistencyBars startDate={startDate} endDate={endDate} />
-        </CardContent>
-      </Card>
+      {/* Insights Teaser - Placeholder for M2.5 */}
+      <InsightsPlaceholder type={selectedType} />
 
-      {/* Section 5: Timeline - has internal type dropdown */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4">Últimas Entradas</h2>
-        <MetricsTimeline startDate={startDate} endDate={endDate} />
-      </section>
+      {/* Timeline Toggle Section */}
+      <div>
+        <button
+          onClick={() => setShowTimeline(!showTimeline)}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+        >
+          <History className="h-4 w-4" />
+          {showTimeline ? 'Ocultar histórico' : 'Ver histórico completo'}
+        </button>
+
+        {showTimeline && (
+          <GroupedTimeline
+            startDate={startDate}
+            endDate={endDate}
+            filterType={selectedType}
+          />
+        )}
+      </div>
 
       {/* New metric form modal */}
       <ManualTrackForm open={showForm} onOpenChange={setShowForm} />

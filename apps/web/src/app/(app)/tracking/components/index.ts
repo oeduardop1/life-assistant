@@ -42,4 +42,11 @@ export {
   EditMetricModal,
   DeleteMetricDialog,
   type PeriodFilter,
+  // Redesigned metrics components
+  MetricSelector,
+  MetricDetailPanel,
+  InsightsPlaceholder,
+  GroupedTimeline,
+  metricColors,
+  TRACKING_TYPES,
 } from './metrics';
