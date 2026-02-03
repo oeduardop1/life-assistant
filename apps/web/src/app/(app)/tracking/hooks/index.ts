@@ -48,3 +48,6 @@ export {
   useTrackingConsistency,
   type ConsistencyData,
 } from './use-tracking-consistency';
+
+// Navigation hooks
+export { useSwipeNavigation } from './use-swipe-navigation';

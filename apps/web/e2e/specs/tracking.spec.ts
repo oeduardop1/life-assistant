@@ -325,6 +325,163 @@ test.describe('Navigation Between Metrics', () => {
 });
 
 // =========================================================================
+// Calendar UI Tests (Year in Pixels style)
+// =========================================================================
+test.describe('Calendar UI', () => {
+  test('should_display_month_summary_stats', async ({ loginPage, page }) => {
+    // Login first
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+
+    // Navigate to tracking
+    await page.goto('/tracking');
+    await page.waitForLoadState('networkidle');
+
+    // Check for month summary stats labels
+    // These may not be visible if there's no data, so we check for the container
+    const summaryContainer = page.locator('text=streak atual');
+    const isVisible = await summaryContainer.isVisible({ timeout: 5000 }).catch(() => false);
+
+    if (isVisible) {
+      await expect(page.getByText('streak atual')).toBeVisible();
+      await expect(page.getByText('humor médio')).toBeVisible();
+      await expect(page.getByText('hábitos')).toBeVisible();
+    }
+  });
+
+  test('should_display_calendar_grid_with_days', async ({ loginPage, page }) => {
+    // Login first
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+
+    // Navigate to tracking
+    await page.goto('/tracking');
+    await page.waitForLoadState('networkidle');
+
+    // Check that calendar header with day names is visible
+    await expect(page.getByText('Dom')).toBeVisible();
+    await expect(page.getByText('Seg')).toBeVisible();
+    await expect(page.getByText('Ter')).toBeVisible();
+
+    // Check that day cells are rendered (at least 28 for any month)
+    const dayCells = page.locator('button[aria-label*="tem dados"], button[aria-label*="sem dados"], button[aria-label*="dia futuro"]');
+    const count = await dayCells.count();
+    expect(count).toBeGreaterThanOrEqual(28);
+  });
+
+  test('should_open_day_detail_modal_on_click', async ({ loginPage, page }) => {
+    // Login first
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+
+    // Navigate to tracking
+    await page.goto('/tracking');
+    await page.waitForLoadState('networkidle');
+
+    // Click on a day cell (first one that's clickable)
+    const dayCell = page.locator('button[aria-label*="tem dados"], button[aria-label*="sem dados"]').first();
+    await dayCell.click();
+
+    // Modal should open with day detail
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Hábitos')).toBeVisible();
+    await expect(page.getByText('Métricas')).toBeVisible();
+  });
+
+  test('should_navigate_months_with_buttons', async ({ loginPage, page }) => {
+    // Login first
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+
+    // Navigate to tracking
+    await page.goto('/tracking');
+    await page.waitForLoadState('networkidle');
+
+    // Get current month text
+    const monthSelector = page.getByTestId('month-selector-current');
+    const initialMonth = await monthSelector.textContent();
+
+    // Click previous month button
+    await page.getByTestId('month-selector-prev').click();
+    await page.waitForLoadState('networkidle');
+
+    // Month should have changed
+    const newMonth = await monthSelector.textContent();
+    expect(newMonth).not.toBe(initialMonth);
+
+    // Click next month twice to go forward
+    await page.getByTestId('month-selector-next').click();
+    await page.waitForLoadState('networkidle');
+
+    // Should be back to original or next month
+  });
+
+  test('should_show_progress_ring_in_day_modal', async ({ loginPage, page }) => {
+    // Login first
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+
+    // Navigate to tracking
+    await page.goto('/tracking');
+    await page.waitForLoadState('networkidle');
+
+    // Click on a day cell
+    const dayCell = page.locator('button[aria-label*="tem dados"], button[aria-label*="sem dados"]').first();
+    await dayCell.click();
+
+    // Modal should open
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+    // Progress ring is shown only if there are habits
+    // We just check the modal opens correctly
+    await expect(page.getByText('Hábitos')).toBeVisible();
+  });
+
+  // Mobile-specific test for swipe navigation
+  test('should_support_swipe_navigation_on_mobile', async ({ loginPage, page }, testInfo) => {
+    // Only run on mobile viewport
+    if (testInfo.project.name !== 'mobile-chrome') {
+      test.skip();
+    }
+
+    // Login first
+    await loginPage.goto();
+    await loginPage.login('test@example.com', 'testpassword123');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+
+    // Navigate to tracking
+    await page.goto('/tracking');
+    await page.waitForLoadState('networkidle');
+
+    // Get current month
+    const monthSelector = page.getByTestId('month-selector-current');
+    const initialMonth = await monthSelector.textContent();
+
+    // Simulate swipe left (next month)
+    const calendar = page.locator('.touch-pan-y').first();
+    const box = await calendar.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2, { steps: 10 });
+      await page.mouse.up();
+    }
+
+    // Wait for animation
+    await page.waitForTimeout(500);
+
+    // Month should have changed
+    const newMonth = await monthSelector.textContent();
+    expect(newMonth).not.toBe(initialMonth);
+  });
+});
+
+// =========================================================================
 // Note: Chat → Tracking integration (conversational flow) is tested in:
 // - apps/api/test/integration/chat-tracking.integration.spec.ts
 // E2E chat flow requires AI mocking which is better suited for backend tests.

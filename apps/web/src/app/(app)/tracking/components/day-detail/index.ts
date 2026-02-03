@@ -9,3 +9,4 @@ export { HabitsSection } from './habits-section';
 export { MetricsSection } from './metrics-section';
 export { HabitCheckbox } from './habit-checkbox';
 export { StreakBadge } from './streak-badge';
+export { ProgressRing } from './progress-ring';

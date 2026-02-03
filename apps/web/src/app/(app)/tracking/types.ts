@@ -598,6 +598,17 @@ export const moodColorClasses: Record<string, string> = {
 };
 
 /**
+ * Mood fill colors for calendar day cells (Year in Pixels style)
+ * Uses CSS variables defined in globals.css for theme support
+ */
+export const moodFillClasses: Record<string, string> = {
+  green: 'bg-[var(--tracking-fill-good)]',
+  yellow: 'bg-[var(--tracking-fill-neutral)]',
+  red: 'bg-[var(--tracking-fill-poor)]',
+  gray: 'bg-[var(--tracking-fill-empty)]',
+};
+
+/**
  * Day of week labels (Portuguese)
  */
 export const dayOfWeekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];

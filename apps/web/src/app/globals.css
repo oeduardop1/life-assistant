@@ -114,6 +114,11 @@
   --auth-orb-1: oklch(0.75 0.12 200 / 0.25);
   --auth-orb-2: oklch(0.70 0.10 220 / 0.20);
   --auth-orb-3: oklch(0.80 0.08 180 / 0.15);
+  /* Tracking calendar colors - Year in Pixels theme */
+  --tracking-fill-good: oklch(0.76 0.17 145 / 0.35);
+  --tracking-fill-neutral: oklch(0.80 0.15 85 / 0.35);
+  --tracking-fill-poor: oklch(0.65 0.20 25 / 0.35);
+  --tracking-fill-empty: oklch(0.70 0 0 / 0.1);
 }
 
 .dark {
@@ -165,6 +170,11 @@
   --auth-orb-1: oklch(0.45 0.10 200 / 0.12);
   --auth-orb-2: oklch(0.40 0.08 220 / 0.10);
   --auth-orb-3: oklch(0.50 0.06 180 / 0.08);
+  /* Tracking calendar colors - Dark mode */
+  --tracking-fill-good: oklch(0.70 0.15 145 / 0.25);
+  --tracking-fill-neutral: oklch(0.75 0.13 85 / 0.25);
+  --tracking-fill-poor: oklch(0.60 0.18 25 / 0.25);
+  --tracking-fill-empty: oklch(0.50 0 0 / 0.08);
 }
 
 @layer base {

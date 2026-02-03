@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CalendarHeader } from './calendar-header';
 import { DayCell } from './day-cell';
+import { MonthSummary } from './month-summary';
 import { useTracking } from '../../context/tracking-context';
 import { useCalendarMonthData } from '../../hooks/use-calendar';
 import {
@@ -33,7 +34,7 @@ interface CalendarDay {
  */
 export function CalendarMonth() {
   const { currentMonth, year, month, setSelectedDate } = useTracking();
-  const { isLoading, isError, getDay } = useCalendarMonthData(year, month);
+  const { isLoading, isError, getDay, days } = useCalendarMonthData(year, month);
 
   // Build calendar grid
   const calendarDays = useMemo(() => {
@@ -100,9 +101,13 @@ export function CalendarMonth() {
 
   return (
     <div className="space-y-1">
+      {/* Month summary stats */}
+      <MonthSummary days={days} year={year} month={month} />
+
+      {/* Calendar grid */}
       <CalendarHeader />
       <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map((calDay) => (
+        {calendarDays.map((calDay, index) => (
           <DayCell
             key={calDay.date}
             day={calDay.day}
@@ -110,6 +115,7 @@ export function CalendarMonth() {
             daySummary={getDay(calDay.date)}
             isCurrentMonth={calDay.isCurrentMonth}
             onClick={() => handleDayClick(calDay.date, calDay.isCurrentMonth)}
+            animationDelay={index * 0.015}
           />
         ))}
       </div>

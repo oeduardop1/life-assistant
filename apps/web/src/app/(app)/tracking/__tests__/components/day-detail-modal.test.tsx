@@ -201,7 +201,7 @@ describe('DayDetailModal', () => {
     const user = userEvent.setup();
     render(<DayDetailModal />);
 
-    const closeButton = screen.getByRole('button', { name: /Fechar/iu });
+    const closeButton = screen.getByRole('button', { name: /Close/iu });
     await user.click(closeButton);
 
     expect(mockClearSelectedDate).toHaveBeenCalled();
