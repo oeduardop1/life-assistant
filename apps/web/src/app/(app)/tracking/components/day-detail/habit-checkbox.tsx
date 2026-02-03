@@ -55,7 +55,14 @@ export function HabitCheckbox({
           className="h-5 w-5"
         />
         <div className="flex items-center gap-2">
-          <span className="text-lg">{habit.icon}</span>
+          <span
+            className="text-lg rounded-md px-1"
+            style={{
+              backgroundColor: habit.color ? `${habit.color}20` : undefined,
+            }}
+          >
+            {habit.icon}
+          </span>
           <div>
             <label
               htmlFor={`habit-${habit.id}`}

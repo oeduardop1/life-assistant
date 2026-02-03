@@ -79,7 +79,14 @@ function HabitListItem({ habit, onEdit, onDelete }: HabitListItemProps) {
   return (
     <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
       <div className="flex items-center gap-3">
-        <span className="text-2xl">{habit.icon}</span>
+        <span
+          className="text-2xl rounded-md px-1"
+          style={{
+            backgroundColor: habit.color ? `${habit.color}20` : undefined,
+          }}
+        >
+          {habit.icon}
+        </span>
         <div>
           <div className="flex items-center gap-2">
             <p className="font-medium">{habit.name}</p>

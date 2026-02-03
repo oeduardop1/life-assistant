@@ -111,7 +111,14 @@ export default function StreaksPage() {
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{habit.icon}</span>
+                  <span
+                    className="text-2xl rounded-md px-1"
+                    style={{
+                      backgroundColor: habit.color ? `${habit.color}20` : undefined,
+                    }}
+                  >
+                    {habit.icon}
+                  </span>
                   <div>
                     <p className="font-medium">{habit.name}</p>
                     <p className="text-sm text-muted-foreground">

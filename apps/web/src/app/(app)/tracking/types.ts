@@ -426,6 +426,7 @@ export interface HabitStreakInfo {
   habitId: string;
   name: string;
   icon: string;
+  color?: string | null;
   currentStreak: number;
   longestStreak: number;
 }

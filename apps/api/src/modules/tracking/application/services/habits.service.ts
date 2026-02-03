@@ -51,6 +51,7 @@ export interface HabitStreakInfo {
   habitId: string;
   name: string;
   icon: string;
+  color?: string | null;
   currentStreak: number;
   longestStreak: number;
 }
@@ -240,6 +241,7 @@ export class HabitsService {
       habitId: habit.id,
       name: habit.name,
       icon: habit.icon,
+      color: habit.color,
       currentStreak: habit.currentStreak,
       longestStreak: habit.longestStreak,
     }));

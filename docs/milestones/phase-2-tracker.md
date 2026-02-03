@@ -56,6 +56,7 @@
 - [ ] AI Tools:
   - [ ] `record_habit` (§7.2) - fuzzy match por nome
   - [ ] `get_habits` (§7.5) - includeStreaks, includeCompletionsToday
+- [x] Atualizar `GET /habits/streaks` para incluir campo `color` na resposta
 
 ### Backend — Calendar API
 
@@ -165,6 +166,13 @@
 - [ ] Botão "+ Novo Hábito" no header ou empty state
 - [ ] Editar/excluir via menu no HabitCheckbox
 
+### Frontend — Exibição de Ícone/Cor nos Hábitos
+
+- [x] Atualizar tipo `HabitStreakInfo` para incluir `color?: string | null`
+- [x] `HabitCheckbox`: Aplicar `habit.color` ao emoji (background com opacidade)
+- [x] `HabitList`: Aplicar `habit.color` ao emoji
+- [x] `StreaksPage`: Aplicar `habit.color` ao emoji
+
 ### Frontend — Hooks de Habits
 
 - [ ] `useHabits()`: Lista hábitos ativos do usuário
@@ -220,6 +228,9 @@
 - [ ] Component: HabitCheckbox toggle funciona
 - [ ] Component: StreakBadge exibe número correto
 - [ ] Component: HabitForm validação funciona
+- [x] Component: HabitCheckbox exibe cor do hábito
+- [x] Component: HabitList exibe cor do hábito
+- [x] Component: StreaksPage exibe cor do hábito
 
 ### Testes — Frontend Componentes Métricas
 
