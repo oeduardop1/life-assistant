@@ -1,24 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Scale,
-  Droplet,
-  Moon,
-  Activity,
-  Smile,
-  Zap,
-  PenLine,
-  Pencil,
-  Trash2,
-  type LucideIcon,
-} from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useTrackingEntriesFlat } from '../../hooks/use-tracking';
 import {
   trackingTypeLabels,
+  trackingTypeIcons,
   trackingTypeColors,
   type TrackingEntry,
   type TrackingType,
@@ -26,36 +23,28 @@ import {
 import { EditMetricModal } from './edit-metric-modal';
 import { DeleteMetricDialog } from './delete-metric-dialog';
 
-// Icon mapping for tracking types
-const typeIcons: Record<TrackingType, LucideIcon> = {
-  weight: Scale,
-  water: Droplet,
-  sleep: Moon,
-  exercise: Activity,
-  mood: Smile,
-  energy: Zap,
-  custom: PenLine,
-};
-
 interface MetricsTimelineProps {
-  type?: TrackingType;
   startDate: string;
   endDate: string;
 }
 
+const TRACKING_TYPES: TrackingType[] = ['weight', 'water', 'sleep', 'exercise', 'mood', 'energy'];
+
 /**
  * Timeline showing recent tracking entries with edit/delete actions
+ * Includes internal type filter dropdown per tracking.md §3.5
  *
  * @see docs/specs/domains/tracking.md §3.5 for metrics page specification
  */
 export function MetricsTimeline({
-  type,
   startDate,
   endDate,
 }: MetricsTimelineProps) {
+  const [filterType, setFilterType] = useState<TrackingType | 'all'>('all');
+
   const { entries, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useTrackingEntriesFlat({
-      type,
+      type: filterType === 'all' ? undefined : filterType,
       startDate,
       endDate,
       limit: 20,
@@ -70,40 +59,66 @@ export function MetricsTimeline({
     return <MetricsTimelineSkeleton />;
   }
 
-  if (entries.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <p>Nenhuma entrada no período selecionado.</p>
-        <p className="text-sm mt-1">
-          Adicione métricas para ver seu histórico.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="space-y-2">
-        {entries.map((entry) => (
-          <TimelineItem
-            key={entry.id}
-            entry={entry}
-            onEdit={() => setEditingEntry(entry)}
-            onDelete={() => setDeletingEntry(entry)}
-          />
-        ))}
-
-        {hasNextPage && (
-          <Button
-            variant="ghost"
-            className="w-full"
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-          >
-            {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
-          </Button>
-        )}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-muted-foreground">
+          {entries.length} {entries.length === 1 ? 'entrada' : 'entradas'}
+        </p>
+        <Select
+          value={filterType}
+          onValueChange={(v) => setFilterType(v as TrackingType | 'all')}
+        >
+          <SelectTrigger className="w-[140px] h-8 text-xs">
+            <SelectValue placeholder="Filtrar" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os tipos</SelectItem>
+            {TRACKING_TYPES.map((t) => {
+              const Icon = trackingTypeIcons[t];
+              return (
+                <SelectItem key={t} value={t}>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5" />
+                    {trackingTypeLabels[t]}
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
       </div>
+
+      {entries.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>Nenhuma entrada no período selecionado.</p>
+          <p className="text-sm mt-1">
+            Adicione métricas para ver seu histórico.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {entries.map((entry) => (
+            <TimelineItem
+              key={entry.id}
+              entry={entry}
+              onEdit={() => setEditingEntry(entry)}
+              onDelete={() => setDeletingEntry(entry)}
+            />
+          ))}
+
+          {hasNextPage && (
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+            >
+              {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
+            </Button>
+          )}
+        </div>
+      )}
 
       <EditMetricModal
         entry={editingEntry}
@@ -127,7 +142,7 @@ interface TimelineItemProps {
 }
 
 function TimelineItem({ entry, onEdit, onDelete }: TimelineItemProps) {
-  const Icon = typeIcons[entry.type];
+  const Icon = trackingTypeIcons[entry.type];
   const date = new Date(entry.entryDate + 'T00:00:00');
   const time = entry.entryTime
     ? new Date(entry.entryTime).toLocaleTimeString('pt-BR', {

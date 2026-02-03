@@ -1,15 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { trackingTypeLabels, type TrackingType } from '../../types';
 
 export type PeriodFilter = '7d' | '30d' | '90d';
 
@@ -22,30 +14,18 @@ const periodOptions: { value: PeriodFilter; label: string }[] = [
 interface MetricsPageFiltersProps {
   period: PeriodFilter;
   onPeriodChange: (period: PeriodFilter) => void;
-  selectedType: TrackingType | 'all';
-  onTypeChange: (type: TrackingType | 'all') => void;
 }
 
 /**
- * Filters for the metrics page
+ * Global period filter for the metrics page
+ * Type filters are now local to each component (chart, timeline)
  *
  * @see docs/specs/domains/tracking.md §3.5 for metrics page specification
  */
 export function MetricsPageFilters({
   period,
   onPeriodChange,
-  selectedType,
-  onTypeChange,
 }: MetricsPageFiltersProps) {
-  const trackingTypes: TrackingType[] = [
-    'weight',
-    'water',
-    'sleep',
-    'exercise',
-    'mood',
-    'energy',
-  ];
-
   return (
     <div className="flex items-center gap-3">
       {/* Period filter - button group */}
@@ -66,24 +46,6 @@ export function MetricsPageFilters({
           </Button>
         ))}
       </div>
-
-      {/* Type filter - select dropdown */}
-      <Select
-        value={selectedType}
-        onValueChange={(value) => onTypeChange(value as TrackingType | 'all')}
-      >
-        <SelectTrigger className="w-[160px] h-9">
-          <SelectValue placeholder="Todos os tipos" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os tipos</SelectItem>
-          {trackingTypes.map((type) => (
-            <SelectItem key={type} value={type}>
-              {trackingTypeLabels[type]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   );
 }

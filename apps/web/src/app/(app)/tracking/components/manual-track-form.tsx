@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Scale, Droplet, Moon, Activity, Smile, Zap, PenLine, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,20 +26,10 @@ import {
   type TrackingType,
   type LifeArea,
   trackingTypeLabels,
+  trackingTypeIcons,
   defaultUnits,
   validationRules,
 } from '../types';
-
-// Icons mapping
-const typeIcons: Record<TrackingType, React.ReactNode> = {
-  weight: <Scale className="h-4 w-4" />,
-  water: <Droplet className="h-4 w-4" />,
-  sleep: <Moon className="h-4 w-4" />,
-  exercise: <Activity className="h-4 w-4" />,
-  mood: <Smile className="h-4 w-4" />,
-  energy: <Zap className="h-4 w-4" />,
-  custom: <PenLine className="h-4 w-4" />,
-};
 
 interface FormData {
   type: TrackingType;
@@ -181,14 +171,17 @@ export function ManualTrackForm({
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(trackingTypeLabels) as TrackingType[]).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    <div className="flex items-center gap-2">
-                      {typeIcons[type]}
-                      {trackingTypeLabels[type]}
-                    </div>
-                  </SelectItem>
-                ))}
+                {(Object.keys(trackingTypeLabels) as TrackingType[]).map((type) => {
+                  const Icon = trackingTypeIcons[type];
+                  return (
+                    <SelectItem key={type} value={type}>
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
+                        {trackingTypeLabels[type]}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <input type="hidden" {...register('type')} />

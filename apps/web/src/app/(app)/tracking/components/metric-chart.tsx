@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -16,11 +16,19 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackingEntriesFlat } from '../hooks/use-tracking';
 import {
   type TrackingType,
   trackingTypeLabels,
+  trackingTypeIcons,
   defaultUnits,
   trackingTypeColors,
 } from '../types';
@@ -39,12 +47,14 @@ const chartColors: Record<TrackingType, string> = {
 // Types that should use bar chart (sums) vs line chart (trends)
 const barChartTypes: TrackingType[] = ['water', 'exercise'];
 
+const TRACKING_TYPES: TrackingType[] = ['weight', 'water', 'sleep', 'exercise', 'mood', 'energy'];
+
 interface MetricChartProps {
-  type: TrackingType;
   startDate?: string;
   endDate?: string;
   height?: number;
   showAverage?: boolean;
+  defaultType?: TrackingType;
 }
 
 interface ChartDataPoint {
@@ -56,6 +66,7 @@ interface ChartDataPoint {
 
 /**
  * MetricChart - Displays tracking data as a line or bar chart
+ * Includes internal type dropdown per tracking.md §3.5
  *
  * - Line chart for trending metrics (weight, sleep, mood, energy)
  * - Bar chart for cumulative metrics (water, exercise)
@@ -64,14 +75,16 @@ interface ChartDataPoint {
  * @see ADR-015 for Low Friction Tracking Philosophy
  */
 export function MetricChart({
-  type,
   startDate,
   endDate,
   height = 250,
   showAverage = true,
+  defaultType = 'weight',
 }: MetricChartProps) {
+  const [selectedType, setSelectedType] = useState<TrackingType>(defaultType);
+
   const { entries, isLoading } = useTrackingEntriesFlat({
-    type,
+    type: selectedType,
     startDate,
     endDate,
     limit: 100,
@@ -82,7 +95,7 @@ export function MetricChart({
     if (!entries || entries.length === 0) return [];
 
     // Group by date for bar charts (sum), or just map for line charts
-    const isBarChart = barChartTypes.includes(type);
+    const isBarChart = barChartTypes.includes(selectedType);
 
     if (isBarChart) {
       // Aggregate by date
@@ -97,7 +110,7 @@ export function MetricChart({
           date,
           dateFormatted: formatChartDate(date),
           value,
-          unit: defaultUnits[type],
+          unit: defaultUnits[selectedType],
         }))
         .sort((a, b) => a.date.localeCompare(b.date));
     }
@@ -111,7 +124,7 @@ export function MetricChart({
         unit: entry.unit,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [entries, type]);
+  }, [entries, selectedType]);
 
   // Calculate average for reference line
   const average = useMemo(() => {
@@ -120,9 +133,9 @@ export function MetricChart({
     return sum / chartData.length;
   }, [chartData]);
 
-  const isBarChart = barChartTypes.includes(type);
-  const color = chartColors[type];
-  const unit = defaultUnits[type];
+  const isBarChart = barChartTypes.includes(selectedType);
+  const color = chartColors[selectedType];
+  const unit = defaultUnits[selectedType];
 
   if (isLoading) {
     return (
@@ -138,11 +151,38 @@ export function MetricChart({
     );
   }
 
+  // Type selector dropdown
+  const typeSelector = (
+    <Select value={selectedType} onValueChange={(v) => setSelectedType(v as TrackingType)}>
+      <SelectTrigger className="w-[130px] h-8 text-xs">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {TRACKING_TYPES.map((t) => {
+          const Icon = trackingTypeIcons[t];
+          return (
+            <SelectItem key={t} value={t}>
+              <div className="flex items-center gap-2">
+                <Icon className="h-3.5 w-3.5" />
+                {trackingTypeLabels[t]}
+              </div>
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+
   if (chartData.length === 0) {
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{trackingTypeLabels[type]}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className={`text-base ${trackingTypeColors[selectedType]}`}>
+              Evolução
+            </CardTitle>
+            {typeSelector}
+          </div>
           <CardDescription>Nenhum dado para exibir</CardDescription>
         </CardHeader>
         <CardContent>
@@ -150,7 +190,7 @@ export function MetricChart({
             className="flex items-center justify-center text-muted-foreground"
             style={{ height }}
           >
-            Registre algumas entradas para ver o grafico
+            Registre algumas entradas para ver o gráfico
           </div>
         </CardContent>
       </Card>
@@ -160,13 +200,16 @@ export function MetricChart({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className={`text-base ${trackingTypeColors[type]}`}>
-          {trackingTypeLabels[type]}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className={`text-base ${trackingTypeColors[selectedType]}`}>
+            Evolução
+          </CardTitle>
+          {typeSelector}
+        </div>
         <CardDescription>
           {chartData.length} {chartData.length === 1 ? 'registro' : 'registros'}
           {average !== null && showAverage && (
-            <> | Media: {average.toFixed(1)} {unit}</>
+            <> | Média: {average.toFixed(1)} {unit}</>
           )}
         </CardDescription>
       </CardHeader>
@@ -189,7 +232,7 @@ export function MetricChart({
                 width={40}
                 className="fill-muted-foreground"
               />
-              <Tooltip content={<CustomTooltip unit={unit} type={type} />} />
+              <Tooltip content={<CustomTooltip unit={unit} type={selectedType} />} />
               {showAverage && average !== null && (
                 <ReferenceLine
                   y={average}
@@ -225,10 +268,10 @@ export function MetricChart({
                 tickLine={false}
                 axisLine={false}
                 width={40}
-                domain={getYAxisDomain(type, chartData)}
+                domain={getYAxisDomain(selectedType, chartData)}
                 className="fill-muted-foreground"
               />
-              <Tooltip content={<CustomTooltip unit={unit} type={type} />} />
+              <Tooltip content={<CustomTooltip unit={unit} type={selectedType} />} />
               {showAverage && average !== null && (
                 <ReferenceLine
                   y={average}
@@ -359,7 +402,7 @@ export function MetricChartsGrid({
       {types.map((type) => (
         <MetricChart
           key={type}
-          type={type}
+          defaultType={type}
           startDate={startDate}
           endDate={endDate}
         />

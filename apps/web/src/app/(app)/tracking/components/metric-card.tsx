@@ -1,39 +1,19 @@
 'use client';
 
-import { Scale, Droplet, Moon, Activity, Smile, Zap, PenLine, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackingAggregation } from '../hooks/use-tracking';
 import {
   type TrackingType,
   trackingTypeLabels,
+  trackingTypeIcons,
+  trackingTypeColors,
   defaultUnits,
   formatTrackingValue,
   formatVariation,
   getVariationColor,
 } from '../types';
-
-// Icons mapping
-const typeIcons: Record<TrackingType, React.ReactNode> = {
-  weight: <Scale className="h-5 w-5" />,
-  water: <Droplet className="h-5 w-5" />,
-  sleep: <Moon className="h-5 w-5" />,
-  exercise: <Activity className="h-5 w-5" />,
-  mood: <Smile className="h-5 w-5" />,
-  energy: <Zap className="h-5 w-5" />,
-  custom: <PenLine className="h-5 w-5" />,
-};
-
-// Color classes mapping
-const typeColorClasses: Record<TrackingType, string> = {
-  weight: 'text-blue-500',
-  water: 'text-cyan-500',
-  sleep: 'text-indigo-500',
-  exercise: 'text-green-500',
-  mood: 'text-yellow-500',
-  energy: 'text-orange-500',
-  custom: 'text-gray-500',
-};
 
 interface MetricCardProps {
   type: TrackingType;
@@ -51,6 +31,7 @@ export function MetricCard({ type, startDate, endDate }: MetricCardProps) {
 
   const unit = defaultUnits[type];
   const variationColor = getVariationColor(aggregation?.variation ?? null, type);
+  const Icon = trackingTypeIcons[type];
 
   if (isLoading) {
     return (
@@ -75,8 +56,8 @@ export function MetricCard({ type, startDate, endDate }: MetricCardProps) {
           <CardTitle className="text-sm font-medium text-muted-foreground">
             {trackingTypeLabels[type]}
           </CardTitle>
-          <div className={typeColorClasses[type]}>
-            {typeIcons[type]}
+          <div className={trackingTypeColors[type]}>
+            <Icon className="h-5 w-5" />
           </div>
         </div>
       </CardHeader>

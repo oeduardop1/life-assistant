@@ -70,10 +70,10 @@ describe('MetricChart', () => {
       total: 3,
     } as unknown as ReturnType<typeof useTrackingEntriesFlat>);
 
-    render(<MetricChart type="weight" />);
+    render(<MetricChart defaultType="weight" />);
 
-    // Should display the type label
-    expect(screen.getByText('Peso')).toBeInTheDocument();
+    // Should display the chart title
+    expect(screen.getByText('Evolução')).toBeInTheDocument();
     // Should display record count
     expect(screen.getByText(/3 registros/iu)).toBeInTheDocument();
     // Should render line chart (not bar chart) for weight
@@ -96,10 +96,10 @@ describe('MetricChart', () => {
       total: 3,
     } as unknown as ReturnType<typeof useTrackingEntriesFlat>);
 
-    render(<MetricChart type="water" />);
+    render(<MetricChart defaultType="water" />);
 
-    // Should display the type label
-    expect(screen.getByText('Água')).toBeInTheDocument();
+    // Should display the chart title
+    expect(screen.getByText('Evolução')).toBeInTheDocument();
     // Should render bar chart for water
     expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
     expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
@@ -120,7 +120,7 @@ describe('MetricChart', () => {
       total: 3,
     } as unknown as ReturnType<typeof useTrackingEntriesFlat>);
 
-    render(<MetricChart type="weight" showAverage={true} />);
+    render(<MetricChart defaultType="weight" showAverage={true} />);
 
     // Should show reference line with average
     const referenceLine = screen.getByTestId('reference-line');
@@ -128,7 +128,7 @@ describe('MetricChart', () => {
     // Average of 74, 75, 76 = 75
     expect(referenceLine).toHaveAttribute('data-y', '75');
     // Should show average in description
-    expect(screen.getByText(/Media: 75.0 kg/iu)).toBeInTheDocument();
+    expect(screen.getByText(/Média: 75.0 kg/iu)).toBeInTheDocument();
   });
 
   it('should_show_empty_state_when_no_data', () => {
@@ -138,11 +138,11 @@ describe('MetricChart', () => {
       total: 0,
     } as unknown as ReturnType<typeof useTrackingEntriesFlat>);
 
-    render(<MetricChart type="weight" />);
+    render(<MetricChart defaultType="weight" />);
 
     // Should show empty state message
     expect(screen.getByText('Nenhum dado para exibir')).toBeInTheDocument();
-    expect(screen.getByText(/Registre algumas entradas para ver o grafico/iu)).toBeInTheDocument();
+    expect(screen.getByText(/Registre algumas entradas para ver o gráfico/iu)).toBeInTheDocument();
     // Should not render any chart
     expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
@@ -159,7 +159,7 @@ describe('MetricChart', () => {
       total: 1,
     } as unknown as ReturnType<typeof useTrackingEntriesFlat>);
 
-    render(<MetricChart type="weight" />);
+    render(<MetricChart defaultType="weight" />);
 
     // Check record count uses Portuguese singular
     expect(screen.getByText(/1 registro/iu)).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe('MetricChart', () => {
       total: 0,
     } as unknown as ReturnType<typeof useTrackingEntriesFlat>);
 
-    const { container } = render(<MetricChart type="weight" />);
+    const { container } = render(<MetricChart defaultType="weight" />);
 
     // Should show skeleton elements (Skeleton uses animate-pulse class)
     const skeletons = container.querySelectorAll('.animate-pulse');
@@ -197,12 +197,12 @@ describe('MetricChart', () => {
       total: 2,
     } as unknown as ReturnType<typeof useTrackingEntriesFlat>);
 
-    render(<MetricChart type="weight" showAverage={false} />);
+    render(<MetricChart defaultType="weight" showAverage={false} />);
 
     // Should not show reference line
     expect(screen.queryByTestId('reference-line')).not.toBeInTheDocument();
     // Should not show average in description
-    expect(screen.queryByText(/Media:/iu)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Média:/iu)).not.toBeInTheDocument();
   });
 });
 
@@ -219,23 +219,17 @@ describe('MetricChartsGrid', () => {
   it('should_render_all_default_tracking_types', () => {
     render(<MetricChartsGrid />);
 
-    // Should render all 6 default types
-    expect(screen.getByText('Peso')).toBeInTheDocument();
-    expect(screen.getByText('Água')).toBeInTheDocument();
-    expect(screen.getByText('Sono')).toBeInTheDocument();
-    expect(screen.getByText('Exercício')).toBeInTheDocument();
-    expect(screen.getByText('Humor')).toBeInTheDocument();
-    expect(screen.getByText('Energia')).toBeInTheDocument();
+    // Should render 6 charts (one for each default type)
+    // Each chart now has "Evolução" title with type selector
+    const evolutionTitles = screen.getAllByText('Evolução');
+    expect(evolutionTitles.length).toBe(6);
   });
 
   it('should_render_only_specified_types', () => {
     render(<MetricChartsGrid types={['weight', 'water']} />);
 
-    // Should render only specified types
-    expect(screen.getByText('Peso')).toBeInTheDocument();
-    expect(screen.getByText('Água')).toBeInTheDocument();
-    // Should not render other types
-    expect(screen.queryByText('Sono')).not.toBeInTheDocument();
-    expect(screen.queryByText('Exercício')).not.toBeInTheDocument();
+    // Should render 2 charts
+    const evolutionTitles = screen.getAllByText('Evolução');
+    expect(evolutionTitles.length).toBe(2);
   });
 });

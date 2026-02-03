@@ -14,7 +14,6 @@ import {
   MetricsTimeline,
   type PeriodFilter,
 } from '../components';
-import type { TrackingType } from '../types';
 
 /**
  * Metrics page for tracking module
@@ -24,7 +23,6 @@ import type { TrackingType } from '../types';
  */
 export default function MetricsPage() {
   const [period, setPeriod] = useState<PeriodFilter>('30d');
-  const [selectedType, setSelectedType] = useState<TrackingType | 'all'>('all');
   const [showForm, setShowForm] = useState(false);
 
   // Calculate date range based on period
@@ -39,25 +37,13 @@ export default function MetricsPage() {
     };
   }, [period]);
 
-  const trackingTypes: TrackingType[] = [
-    'weight',
-    'water',
-    'sleep',
-    'exercise',
-    'mood',
-    'energy',
-  ];
+  const trackingTypes = ['weight', 'water', 'sleep', 'exercise', 'mood', 'energy'] as const;
 
   return (
     <div className="space-y-6">
       {/* Header with filters and action button */}
       <div className="flex items-center justify-between">
-        <MetricsPageFilters
-          period={period}
-          onPeriodChange={setPeriod}
-          selectedType={selectedType}
-          onTypeChange={setSelectedType}
-        />
+        <MetricsPageFilters period={period} onPeriodChange={setPeriod} />
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Métrica
@@ -79,21 +65,13 @@ export default function MetricsPage() {
         </div>
       </section>
 
-      {/* Section 2: Evolution Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Evolução</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MetricChart
-            type={selectedType === 'all' ? 'weight' : selectedType}
-            startDate={startDate}
-            endDate={endDate}
-            height={300}
-            showAverage
-          />
-        </CardContent>
-      </Card>
+      {/* Section 2: Evolution Chart - has internal type dropdown */}
+      <MetricChart
+        startDate={startDate}
+        endDate={endDate}
+        height={300}
+        showAverage
+      />
 
       {/* Section 3: Statistics Table */}
       <section>
@@ -111,14 +89,10 @@ export default function MetricsPage() {
         </CardContent>
       </Card>
 
-      {/* Section 5: Timeline */}
+      {/* Section 5: Timeline - has internal type dropdown */}
       <section>
         <h2 className="text-lg font-semibold mb-4">Últimas Entradas</h2>
-        <MetricsTimeline
-          type={selectedType === 'all' ? undefined : selectedType}
-          startDate={startDate}
-          endDate={endDate}
-        />
+        <MetricsTimeline startDate={startDate} endDate={endDate} />
       </section>
 
       {/* New metric form modal */}

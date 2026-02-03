@@ -273,16 +273,19 @@ export const validationRules: Record<TrackingType, { min?: number; max?: number;
 };
 
 /**
- * Icons for tracking types (Lucide icon names)
+ * Icons for tracking types (Lucide icon components)
+ * Use: const Icon = trackingTypeIcons[type]; <Icon className="h-4 w-4" />
  */
-export const trackingTypeIcons: Record<TrackingType, string> = {
-  weight: 'Scale',
-  water: 'Droplet',
-  sleep: 'Moon',
-  exercise: 'Activity',
-  mood: 'Smile',
-  energy: 'Zap',
-  custom: 'PenLine',
+import { Scale, Droplet, Moon, Activity, Smile, Zap, PenLine, type LucideIcon } from 'lucide-react';
+
+export const trackingTypeIcons: Record<TrackingType, LucideIcon> = {
+  weight: Scale,
+  water: Droplet,
+  sleep: Moon,
+  exercise: Activity,
+  mood: Smile,
+  energy: Zap,
+  custom: PenLine,
 };
 
 /**
