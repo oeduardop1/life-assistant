@@ -100,6 +100,13 @@ export {
   recordMetricTool,
   recordMetricParamsSchema,
   type RecordMetricParams,
+  // Habits tools (M2.1)
+  recordHabitTool,
+  recordHabitParamsSchema,
+  type RecordHabitParams,
+  getHabitsTool,
+  getHabitsParamsSchema,
+  type GetHabitsParams,
   updateMetricTool,
   updateMetricParamsSchema,
   type UpdateMetricParams,

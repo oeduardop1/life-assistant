@@ -78,6 +78,13 @@ Antes de salvar, IA SEMPRE pergunta: "Quer que eu registre...?"
 │   ├── Hábitos do dia (checkboxes + streaks)
 │   └── Métricas do dia (inputs numéricos)
 │
+├── 📈 Aba Métricas
+│   ├── Grid de resumo por tipo (último valor, média, variação)
+│   ├── Gráficos de evolução (período customizável)
+│   ├── Tabela de estatísticas (min/max/média/variação)
+│   ├── Barras de consistência (% de dias com registro)
+│   └── Timeline de entradas (editar/deletar)
+│
 ├── 📊 Aba Insights
 │   ├── Correlações automáticas
 │   └── Life Balance Score
@@ -143,7 +150,7 @@ Ao clicar em um dia no calendário:
 └─────────────────────────────────────────┘
 ```
 
-### 3.4 Aba Insights
+### 3.4 Aba Insights (M2.5)
 
 Correlações automáticas calculadas com níveis de confiança:
 
@@ -167,7 +174,58 @@ Correlações automáticas calculadas com níveis de confiança:
 └─────────────────────────────────────────┘
 ```
 
-### 3.5 Aba Streaks
+### 3.5 Aba Métricas
+
+Página dedicada para visualização e gerenciamento de métricas:
+
+```
+┌─────────────────────────────────────────┐
+│ 📈 Métricas            [7d] [30d] [90d] │
+│                         [+ Nova Métrica] │
+├─────────────────────────────────────────┤
+│                                          │
+│ RESUMO                                   │
+│ ┌───────┬───────┬───────┬───────┐       │
+│ │ Peso  │ Água  │ Sono  │ Humor │       │
+│ │75.2kg │1800ml │ 7.5h  │ 7/10  │       │
+│ │↓ 0.3% │↑ 15%  │ → 0%  │↑ 1pt │       │
+│ └───────┴───────┴───────┴───────┘       │
+│                                          │
+│ EVOLUÇÃO (Peso)          [Tipo ▼]       │
+│ ┌─────────────────────────────────┐     │
+│ │   76 ─┐                         │     │
+│ │       └──┐     ┌──┐             │     │
+│ │   75 ────└─────┘  └──────       │     │
+│ └─────────────────────────────────┘     │
+│                                          │
+│ ESTATÍSTICAS                             │
+│ ┌────────┬───────┬───────┬───────┬────┐ │
+│ │Métrica │ Min   │ Max   │ Média │Dias│ │
+│ ├────────┼───────┼───────┼───────┼────┤ │
+│ │ Peso   │ 74.5  │ 76.2  │ 75.3  │ 28 │ │
+│ │ Água   │ 800   │ 2500  │ 1650  │ 25 │ │
+│ └────────┴───────┴───────┴───────┴────┘ │
+│                                          │
+│ CONSISTÊNCIA (Janeiro 2026)              │
+│ Peso:  ████████████░░░░░░░░ 83% (25/30) │
+│ Água:  ████████░░░░░░░░░░░░ 67% (20/30) │
+│ Sono:  ██████████████████░░ 100% (30/30)│
+│                                          │
+│ TIMELINE                    [Filtrar ▼] │
+│ 02/02 10:30  Peso   75.2 kg  [✏️] [🗑️] │
+│ 02/02 08:00  Humor  8/10     [✏️] [🗑️] │
+│ 01/02 22:00  Sono   7.5 h    [✏️] [🗑️] │
+│                     [Carregar mais...]   │
+└─────────────────────────────────────────┘
+```
+
+**Diferencial:** Único lugar para:
+- Ver evolução histórica com período customizável
+- Ver estatísticas agregadas (min/max/média)
+- Ver consistência de registros (motivação)
+- Editar/excluir métricas existentes
+
+### 3.6 Aba Streaks
 
 Dashboard de sequências por hábito:
 
@@ -733,6 +791,14 @@ interface Insight {
 - [ ] Indicadores de hábitos por dia
 - [ ] Vista do dia com métricas + hábitos
 
+### Aba Métricas
+- [ ] Grid de resumo por tipo exibe valores e variações
+- [ ] Gráficos de evolução funcionam com período customizável
+- [ ] Tabela de estatísticas mostra min/max/média/variação/dias
+- [ ] Barras de consistência mostram % de dias com registro
+- [ ] Timeline lista entradas com editar/deletar
+- [ ] Filtros de período e tipo funcionam
+
 ### Insights
 - [ ] Correlações calculadas
 - [ ] Níveis de confiança corretos
@@ -746,4 +812,4 @@ interface Insight {
 
 ---
 
-*Última atualização: 01 Fevereiro 2026 (interface Insight expandida para suportar métricas tipadas e hábitos)*
+*Última atualização: 02 Fevereiro 2026 (adicionada Aba Métricas §3.5 com grid, gráficos, estatísticas, consistência e timeline)*

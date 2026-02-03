@@ -20,7 +20,6 @@ ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goal_milestones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE habit_completions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE habit_freezes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_integrations ENABLE ROW LEVEL SECURITY;
@@ -67,10 +66,6 @@ CREATE POLICY "Users can only access own goals" ON goals
 
 -- Habits
 CREATE POLICY "Users can only access own habits" ON habits
-  FOR ALL USING (user_id = (SELECT auth.uid()));
-
--- Habit freezes
-CREATE POLICY "Users can only access own habit_freezes" ON habit_freezes
   FOR ALL USING (user_id = (SELECT auth.uid()));
 
 -- Notifications

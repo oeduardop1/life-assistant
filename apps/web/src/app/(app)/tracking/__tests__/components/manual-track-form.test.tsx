@@ -144,4 +144,51 @@ describe('ManualTrackForm', () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it('should_prefill_date_when_defaultDate_is_provided', () => {
+    const defaultDate = '2026-01-15';
+    render(
+      <ManualTrackForm
+        open={true}
+        onOpenChange={vi.fn()}
+        defaultDate={defaultDate}
+      />
+    );
+
+    const dateInput = screen.getByLabelText(/Data/iu);
+    expect(dateInput).toHaveValue(defaultDate);
+  });
+
+  it('should_submit_with_provided_defaultDate', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const defaultDate = '2026-01-15';
+
+    render(
+      <ManualTrackForm
+        open={true}
+        onOpenChange={onOpenChange}
+        defaultType="mood"
+        defaultDate={defaultDate}
+      />
+    );
+
+    // Fill in the value
+    const valueInput = screen.getByRole('spinbutton', { name: /Valor/iu });
+    await user.clear(valueInput);
+    await user.type(valueInput, '8');
+
+    // Submit
+    const submitButton = screen.getByRole('button', { name: /Salvar/iu });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'mood',
+          entryDate: defaultDate,
+        })
+      );
+    });
+  });
 });

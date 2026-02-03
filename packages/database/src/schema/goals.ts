@@ -14,8 +14,9 @@ import {
   timestamp,
   jsonb,
   index,
+  unique,
 } from 'drizzle-orm/pg-core';
-import { goalStatusEnum, habitFrequencyEnum, lifeAreaEnum, subAreaEnum } from './enums';
+import { goalStatusEnum, habitFrequencyEnum, periodOfDayEnum, lifeAreaEnum, subAreaEnum } from './enums';
 import { users } from './users';
 
 export const goals = pgTable(
@@ -93,21 +94,22 @@ export const habits = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
-    // Basic info (ADR-017)
-    title: varchar('title', { length: 255 }).notNull(),
+    // Basic info (per tracking.md §5.1)
+    name: varchar('name', { length: 100 }).notNull(),
     description: text('description'),
-    area: lifeAreaEnum('area').notNull(),
-    subArea: subAreaEnum('sub_area'),
+    icon: varchar('icon', { length: 50 }).notNull().default('✓'),
+    color: varchar('color', { length: 7 }), // hex color, nullable
 
     // Frequency
-    frequency: habitFrequencyEnum('frequency').notNull(),
-    daysOfWeek: jsonb('days_of_week').default([]), // number[] (0-6)
-    timesPerPeriod: integer('times_per_period'),
+    frequency: habitFrequencyEnum('frequency').notNull().default('daily'),
+    frequencyDays: jsonb('frequency_days').default([]), // number[] (0-6) for custom frequency
+    periodOfDay: periodOfDayEnum('period_of_day').notNull().default('anytime'),
 
-    // Streaks
-    currentStreak: integer('current_streak').notNull().default(0),
+    // Ordering
+    sortOrder: integer('sort_order').notNull().default(0),
+
+    // Streaks (longestStreak stored, currentStreak calculated)
     longestStreak: integer('longest_streak').notNull().default(0),
-    totalCompletions: integer('total_completions').notNull().default(0),
 
     // Reminder
     reminderTime: time('reminder_time'),
@@ -129,7 +131,8 @@ export const habits = pgTable(
   },
   (table) => [
     index('habits_user_id_idx').on(table.userId),
-    index('habits_is_active_idx').on(table.isActive),
+    index('habits_user_active_idx').on(table.userId, table.isActive),
+    unique('habits_user_name_unique').on(table.userId, table.name),
   ]
 );
 
@@ -140,18 +143,23 @@ export const habitCompletions = pgTable(
     habitId: uuid('habit_id')
       .notNull()
       .references(() => habits.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
 
-    date: date('date').notNull(),
-    completed: boolean('completed').notNull().default(true),
-    notes: text('notes'),
-
-    createdAt: timestamp('created_at', { withTimezone: true })
+    // Date of completion (per tracking.md §8.3)
+    completionDate: date('completion_date').notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    notes: text('notes'),
+    source: varchar('source', { length: 50 }).notNull().default('form'),
   },
   (table) => [
     index('habit_completions_habit_id_idx').on(table.habitId),
-    index('habit_completions_date_idx').on(table.date),
+    index('habit_completions_user_date_idx').on(table.userId, table.completionDate),
+    index('habit_completions_date_idx').on(table.completionDate),
+    unique('habit_completions_habit_date_unique').on(table.habitId, table.completionDate),
   ]
 );
 

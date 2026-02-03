@@ -12,20 +12,26 @@ import {
   getTrackingHistoryParamsSchema,
   updateMetricParamsSchema,
   deleteMetricParamsSchema,
+  recordHabitParamsSchema,
+  getHabitsParamsSchema,
 } from '@life-assistant/ai';
 import { TrackingService } from './tracking.service';
+import { HabitsService } from './habits.service';
 
 /**
- * Tracking Tool Executor - Executes record_metric and get_tracking_history tools
+ * Tracking Tool Executor - Executes tracking and habits tools
  *
- * @see docs/specs/ai.md §6.2 for tool definitions
+ * @see docs/specs/domains/tracking.md §7 for tool definitions
  * @see ADR-015 for Low Friction Tracking Philosophy
  */
 @Injectable()
 export class TrackingToolExecutorService implements ToolExecutor {
   private readonly logger = new Logger(TrackingToolExecutorService.name);
 
-  constructor(private readonly trackingService: TrackingService) {}
+  constructor(
+    private readonly trackingService: TrackingService,
+    private readonly habitsService: HabitsService
+  ) {}
 
   /**
    * Execute a tool call
@@ -54,6 +60,12 @@ export class TrackingToolExecutorService implements ToolExecutor {
 
         // delete_metrics (batch) was removed - LLM hallucinates entry IDs
         // Parallel delete_metric calls work correctly
+
+        case 'record_habit':
+          return await this.executeRecordHabit(toolCall, userId);
+
+        case 'get_habits':
+          return await this.executeGetHabits(toolCall, userId);
 
         default:
           return createErrorResult(
@@ -379,4 +391,174 @@ export class TrackingToolExecutorService implements ToolExecutor {
 
   // executeDeleteMetrics was removed - LLM hallucinates entry IDs
   // Parallel delete_metric calls work correctly and are confirmed together
+
+  /**
+   * Execute record_habit tool
+   *
+   * Note: This tool has requiresConfirmation: true, meaning the tool loop
+   * should pause and ask for user confirmation before executing this.
+   *
+   * @see docs/specs/domains/tracking.md §7.2 for spec
+   */
+  private async executeRecordHabit(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = recordHabitParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { habitName, date, notes } = parseResult.data;
+    const targetDate = date ?? new Date().toISOString().split('T')[0] ?? '';
+
+    this.logger.debug(
+      `record_habit params: habitName="${habitName}", date=${targetDate}`
+    );
+
+    // Get all habits and find the best match
+    const habits = await this.habitsService.findAll(userId);
+
+    if (habits.length === 0) {
+      return createErrorResult(
+        toolCall,
+        new Error('Você ainda não tem hábitos cadastrados. Crie um hábito primeiro no dashboard de Tracking.')
+      );
+    }
+
+    // Find exact match first (case-insensitive)
+    let matchedHabit = habits.find(
+      (h) => h.name.toLowerCase() === habitName.toLowerCase()
+    );
+
+    // If no exact match, try fuzzy matching (contains)
+    matchedHabit ??= habits.find(
+      (h) =>
+        h.name.toLowerCase().includes(habitName.toLowerCase()) ||
+        habitName.toLowerCase().includes(h.name.toLowerCase())
+    );
+
+    if (!matchedHabit) {
+      const availableHabits = habits.map((h) => h.name).join(', ');
+      return createErrorResult(
+        toolCall,
+        new Error(
+          `Hábito "${habitName}" não encontrado. Hábitos disponíveis: ${availableHabits}`
+        )
+      );
+    }
+
+    try {
+      const completion = await this.habitsService.complete(
+        userId,
+        matchedHabit.id,
+        targetDate,
+        'chat',
+        notes
+      );
+
+      // Get updated habit with streak
+      const updatedHabit = await this.habitsService.findById(userId, matchedHabit.id);
+
+      this.logger.log(
+        `record_habit completed habit ${matchedHabit.id} ("${matchedHabit.name}") for ${targetDate}`
+      );
+
+      return createSuccessResult(toolCall, {
+        success: true,
+        completionId: completion.id,
+        habitId: matchedHabit.id,
+        habitName: matchedHabit.name,
+        date: targetDate,
+        currentStreak: updatedHabit?.currentStreak ?? 0,
+        message: `Hábito "${matchedHabit.name}" ${matchedHabit.icon} marcado como concluído em ${targetDate}. Sequência: ${String(updatedHabit?.currentStreak ?? 0)} dias 🔥`,
+      });
+    } catch (error) {
+      // Handle "already completed" error gracefully
+      if (error instanceof Error && error.message.includes('já foi marcado')) {
+        return createSuccessResult(toolCall, {
+          success: false,
+          habitId: matchedHabit.id,
+          habitName: matchedHabit.name,
+          date: targetDate,
+          message: `O hábito "${matchedHabit.name}" já estava marcado como concluído em ${targetDate}.`,
+          alreadyCompleted: true,
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Execute get_habits tool
+   *
+   * @see docs/specs/domains/tracking.md §7.5 for spec
+   */
+  private async executeGetHabits(
+    toolCall: ToolCall,
+    userId: string
+  ): Promise<ToolExecutionResult> {
+    const parseResult = getHabitsParamsSchema.safeParse(toolCall.arguments);
+
+    if (!parseResult.success) {
+      return createErrorResult(
+        toolCall,
+        new Error(`Invalid parameters: ${parseResult.error.message}`)
+      );
+    }
+
+    const { includeStreaks, includeCompletionsToday } = parseResult.data;
+
+    this.logger.debug(
+      `get_habits params: includeStreaks=${String(includeStreaks)}, includeCompletionsToday=${String(includeCompletionsToday)}`
+    );
+
+    // Get habits (already includes streaks from findAll)
+    const habits = await this.habitsService.findAll(userId);
+
+    // Get today's completions if requested
+    let todayCompletions = new Set<string>();
+    if (includeCompletionsToday) {
+      const today = new Date().toISOString().split('T')[0] ?? '';
+      const habitsForDate = await this.habitsService.getHabitsForDate(userId, today);
+      todayCompletions = new Set(
+        habitsForDate.filter((h) => h.completed).map((h) => h.habit.id)
+      );
+    }
+
+    // Format response
+    const formattedHabits = habits.map((habit) => ({
+      id: habit.id,
+      name: habit.name,
+      icon: habit.icon,
+      frequency: habit.frequency,
+      periodOfDay: habit.periodOfDay,
+      ...(includeStreaks
+        ? {
+            currentStreak: habit.currentStreak,
+            longestStreak: habit.longestStreak,
+          }
+        : {}),
+      ...(includeCompletionsToday
+        ? {
+            completedToday: todayCompletions.has(habit.id),
+          }
+        : {}),
+    }));
+
+    this.logger.debug(`get_habits found ${String(habits.length)} habits`);
+
+    return createSuccessResult(toolCall, {
+      count: habits.length,
+      habits: formattedHabits,
+      message:
+        habits.length === 0
+          ? 'Você ainda não tem hábitos cadastrados.'
+          : `Encontrados ${String(habits.length)} hábitos.`,
+    });
+  }
 }

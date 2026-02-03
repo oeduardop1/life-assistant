@@ -144,6 +144,13 @@ export const habitFrequencyEnum = pgEnum('habit_frequency', [
   'custom',
 ]);
 
+export const periodOfDayEnum = pgEnum('period_of_day', [
+  'morning',
+  'afternoon',
+  'evening',
+  'anytime',
+]);
+
 // ============================================================================
 // Notifications
 // ============================================================================
@@ -318,6 +325,7 @@ export type VaultItemType = (typeof vaultItemTypeEnum.enumValues)[number];
 export type VaultCategory = (typeof vaultCategoryEnum.enumValues)[number];
 export type GoalStatus = (typeof goalStatusEnum.enumValues)[number];
 export type HabitFrequency = (typeof habitFrequencyEnum.enumValues)[number];
+export type PeriodOfDay = (typeof periodOfDayEnum.enumValues)[number];
 export type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
 export type NotificationStatus = (typeof notificationStatusEnum.enumValues)[number];
 export type IncomeType = (typeof incomeTypeEnum.enumValues)[number];

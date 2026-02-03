@@ -1,0 +1,346 @@
+'use client';
+
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useAuthenticatedApi } from '@/hooks/use-authenticated-api';
+import type {
+  HabitsListResponse,
+  HabitResponse,
+  HabitStreaksResponse,
+  HabitCompleteResponse,
+  HabitWithStreak,
+  HabitStreakInfo,
+  CreateHabitInput,
+  UpdateHabitInput,
+} from '../types';
+
+// =============================================================================
+// Query Keys
+// =============================================================================
+
+export const habitsKeys = {
+  all: ['habits'] as const,
+  list: () => [...habitsKeys.all, 'list'] as const,
+  listWithInactive: () => [...habitsKeys.all, 'list', 'includeInactive'] as const,
+  habit: (id: string) => [...habitsKeys.all, 'detail', id] as const,
+  streaks: () => [...habitsKeys.all, 'streaks'] as const,
+};
+
+// =============================================================================
+// List Habits
+// =============================================================================
+
+/**
+ * Hook to fetch all habits for the current user
+ */
+export function useHabits(includeInactive = false) {
+  const api = useAuthenticatedApi();
+
+  return useQuery({
+    queryKey: includeInactive ? habitsKeys.listWithInactive() : habitsKeys.list(),
+    queryFn: async () => {
+      const params = includeInactive ? '?includeInactive=true' : '';
+      const response = await api.get<HabitsListResponse>(`/habits${params}`);
+      return response.habits;
+    },
+    enabled: api.isAuthenticated,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+// =============================================================================
+// Single Habit
+// =============================================================================
+
+/**
+ * Hook to fetch a single habit by ID
+ */
+export function useHabit(habitId: string | null) {
+  const api = useAuthenticatedApi();
+
+  return useQuery({
+    queryKey: habitsKeys.habit(habitId ?? ''),
+    queryFn: async () => {
+      const response = await api.get<HabitResponse>(`/habits/${habitId}`);
+      return response.habit;
+    },
+    enabled: api.isAuthenticated && !!habitId,
+  });
+}
+
+// =============================================================================
+// Habit Streaks
+// =============================================================================
+
+/**
+ * Hook to fetch streaks for all habits
+ */
+export function useHabitStreaks() {
+  const api = useAuthenticatedApi();
+
+  return useQuery({
+    queryKey: habitsKeys.streaks(),
+    queryFn: async () => {
+      const response = await api.get<HabitStreaksResponse>('/habits/streaks');
+      return response.streaks;
+    },
+    enabled: api.isAuthenticated,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+// =============================================================================
+// Create Habit
+// =============================================================================
+
+/**
+ * Hook to create a new habit
+ */
+export function useCreateHabit() {
+  const api = useAuthenticatedApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateHabitInput) => {
+      const response = await api.post<HabitResponse>('/habits', data);
+      return response.habit;
+    },
+    onSuccess: () => {
+      // Invalidate habits list and streaks
+      queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
+      queryClient.invalidateQueries({ queryKey: habitsKeys.listWithInactive() });
+      queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+    },
+  });
+}
+
+// =============================================================================
+// Update Habit
+// =============================================================================
+
+/**
+ * Hook to update a habit
+ */
+export function useUpdateHabit() {
+  const api = useAuthenticatedApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      habitId,
+      data,
+    }: {
+      habitId: string;
+      data: UpdateHabitInput;
+    }) => {
+      const response = await api.patch<HabitResponse>(`/habits/${habitId}`, data);
+      return response.habit;
+    },
+    onSuccess: (updatedHabit) => {
+      // Update cache for the specific habit
+      queryClient.setQueryData(habitsKeys.habit(updatedHabit.id), updatedHabit);
+      // Invalidate habits list and streaks
+      queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
+      queryClient.invalidateQueries({ queryKey: habitsKeys.listWithInactive() });
+      queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+    },
+  });
+}
+
+// =============================================================================
+// Delete Habit
+// =============================================================================
+
+/**
+ * Hook to delete a habit (soft delete)
+ */
+export function useDeleteHabit() {
+  const api = useAuthenticatedApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (habitId: string) => api.delete<void>(`/habits/${habitId}`),
+    onSuccess: (_data, habitId) => {
+      // Remove from cache
+      queryClient.removeQueries({ queryKey: habitsKeys.habit(habitId) });
+      // Invalidate habits list and streaks
+      queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
+      queryClient.invalidateQueries({ queryKey: habitsKeys.listWithInactive() });
+      queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+    },
+  });
+}
+
+// =============================================================================
+// Complete Habit
+// =============================================================================
+
+/**
+ * Hook to mark a habit as completed
+ *
+ * Supports optimistic updates for instant UI feedback
+ */
+export function useCompleteHabit() {
+  const api = useAuthenticatedApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      habitId,
+      date,
+      notes,
+    }: {
+      habitId: string;
+      date?: string;
+      notes?: string;
+    }) => {
+      const body = { date, notes };
+      const response = await api.post<HabitCompleteResponse>(
+        `/habits/${habitId}/complete`,
+        body
+      );
+      return response;
+    },
+    onMutate: async ({ habitId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: habitsKeys.list() });
+
+      // Snapshot the previous value
+      const previousHabits = queryClient.getQueryData<HabitWithStreak[]>(
+        habitsKeys.list()
+      );
+
+      // Optimistically update the streak
+      if (previousHabits) {
+        queryClient.setQueryData<HabitWithStreak[]>(
+          habitsKeys.list(),
+          previousHabits.map((habit) =>
+            habit.id === habitId
+              ? { ...habit, currentStreak: habit.currentStreak + 1 }
+              : habit
+          )
+        );
+      }
+
+      return { previousHabits };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousHabits) {
+        queryClient.setQueryData(habitsKeys.list(), context.previousHabits);
+      }
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
+      queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+    },
+  });
+}
+
+// =============================================================================
+// Uncomplete Habit
+// =============================================================================
+
+/**
+ * Hook to remove a habit completion (uncomplete)
+ *
+ * Supports optimistic updates for instant UI feedback
+ */
+export function useUncompleteHabit() {
+  const api = useAuthenticatedApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      habitId,
+      date,
+    }: {
+      habitId: string;
+      date: string;
+    }) => {
+      // Using request directly since delete doesn't support body
+      const response = await api.request<{ success: boolean; habit: HabitWithStreak }>(
+        `/habits/${habitId}/uncomplete`,
+        { method: 'DELETE', data: { date } }
+      );
+      return response;
+    },
+    onMutate: async ({ habitId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: habitsKeys.list() });
+
+      // Snapshot the previous value
+      const previousHabits = queryClient.getQueryData<HabitWithStreak[]>(
+        habitsKeys.list()
+      );
+
+      // Optimistically update the streak
+      if (previousHabits) {
+        queryClient.setQueryData<HabitWithStreak[]>(
+          habitsKeys.list(),
+          previousHabits.map((habit) =>
+            habit.id === habitId
+              ? { ...habit, currentStreak: Math.max(0, habit.currentStreak - 1) }
+              : habit
+          )
+        );
+      }
+
+      return { previousHabits };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousHabits) {
+        queryClient.setQueryData(habitsKeys.list(), context.previousHabits);
+      }
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: habitsKeys.list() });
+      queryClient.invalidateQueries({ queryKey: habitsKeys.streaks() });
+    },
+  });
+}
+
+// =============================================================================
+// Helper Hooks
+// =============================================================================
+
+/**
+ * Hook to check if user has any habits
+ */
+export function useHasHabits() {
+  const { data: habits, isLoading } = useHabits();
+
+  return {
+    hasHabits: (habits?.length ?? 0) > 0,
+    isLoading,
+    count: habits?.length ?? 0,
+  };
+}
+
+/**
+ * Hook to get habits sorted by streak (for streaks tab)
+ */
+export function useHabitsByStreak(): {
+  habits: HabitStreakInfo[];
+  isLoading: boolean;
+  isError: boolean;
+} {
+  const { data: streaks, isLoading, isError } = useHabitStreaks();
+
+  // Sort by current streak descending
+  const sortedHabits = streaks
+    ? [...streaks].sort((a, b) => b.currentStreak - a.currentStreak)
+    : [];
+
+  return {
+    habits: sortedHabits,
+    isLoading,
+    isError,
+  };
+}

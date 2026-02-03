@@ -175,9 +175,8 @@ export async function seed() {
   const testHabit: NewHabit = {
     id: TEST_HABIT_ID,
     userId: TEST_USER_ID,
-    title: 'Beber água',
+    name: 'Beber água',
     description: 'Beber pelo menos 2L de água por dia',
-    area: 'health',
     frequency: 'daily',
     isActive: true,
   };

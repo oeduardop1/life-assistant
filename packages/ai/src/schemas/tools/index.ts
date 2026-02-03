@@ -25,6 +25,18 @@ export {
 } from './record-metric.tool.js';
 
 export {
+  recordHabitTool,
+  recordHabitParamsSchema,
+  type RecordHabitParams,
+} from './record-habit.tool.js';
+
+export {
+  getHabitsTool,
+  getHabitsParamsSchema,
+  type GetHabitsParams,
+} from './get-habits.tool.js';
+
+export {
   updateMetricTool,
   updateMetricParamsSchema,
   type UpdateMetricParams,
@@ -116,6 +128,8 @@ export {
 import { searchKnowledgeTool } from './search-knowledge.tool.js';
 import { getTrackingHistoryTool } from './get-tracking-history.tool.js';
 import { recordMetricTool } from './record-metric.tool.js';
+import { recordHabitTool } from './record-habit.tool.js';
+import { getHabitsTool } from './get-habits.tool.js';
 import { updateMetricTool } from './update-metric.tool.js';
 import { deleteMetricTool } from './delete-metric.tool.js';
 import { addKnowledgeTool } from './add-knowledge.tool.js';
@@ -139,8 +153,8 @@ import type { ToolDefinition } from '../../ports/llm.port.js';
 
 /**
  * All available tools.
- * READ tools: search_knowledge, get_tracking_history, analyze_context, get_finance_summary, get_pending_bills, get_bills, get_expenses, get_incomes, get_investments, get_debt_progress, get_debt_payment_history, get_upcoming_installments
- * WRITE tools: record_metric, update_metric, delete_metric, add_knowledge, create_reminder, mark_bill_paid, create_expense
+ * READ tools: search_knowledge, get_tracking_history, get_habits, analyze_context, get_finance_summary, get_pending_bills, get_bills, get_expenses, get_incomes, get_investments, get_debt_progress, get_debt_payment_history, get_upcoming_installments
+ * WRITE tools: record_metric, update_metric, delete_metric, record_habit, add_knowledge, create_reminder, mark_bill_paid, create_expense
  *
  * Note: delete_metrics (batch) was removed - LLM hallucinates entry IDs.
  * Parallel delete_metric calls work correctly and are confirmed together.
@@ -158,6 +172,9 @@ export const allTools: ToolDefinition[] = [
   getTrackingHistoryTool,
   updateMetricTool,
   deleteMetricTool,
+  // Habits tools (M2.1)
+  recordHabitTool,
+  getHabitsTool,
   // Reminder tools
   createReminderTool,
   // Finance tools (M2.2)
@@ -181,6 +198,8 @@ export const readTools: ToolDefinition[] = [
   searchKnowledgeTool,
   getTrackingHistoryTool,
   analyzeContextTool,
+  // Habits READ tools (M2.1)
+  getHabitsTool,
   // Finance READ tools (M2.2)
   getFinanceSummaryTool,
   getPendingBillsTool,
@@ -200,6 +219,8 @@ export const writeTools: ToolDefinition[] = [
   recordMetricTool,
   updateMetricTool,
   deleteMetricTool,
+  // Habits WRITE tools (M2.1)
+  recordHabitTool,
   addKnowledgeTool,
   createReminderTool,
   // Finance WRITE tools (M2.2)

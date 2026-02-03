@@ -19,6 +19,7 @@ import type {
   UpdateTrackingEntryInput,
   TrackingType,
 } from '../types';
+import { calendarKeys } from './use-calendar';
 
 // =============================================================================
 // Query Keys
@@ -136,11 +137,19 @@ export function useCreateTrackingEntry() {
       const response = await api.post<TrackingEntryResponse>('/tracking', data);
       return response.entry;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       // Invalidate entries list and stats
       queryClient.invalidateQueries({ queryKey: trackingKeys.entries() });
       queryClient.invalidateQueries({ queryKey: trackingKeys.aggregations() });
       queryClient.invalidateQueries({ queryKey: trackingKeys.stats() });
+
+      // Invalidate calendar queries to update DayDetailModal and CalendarMonth
+      if (variables.entryDate) {
+        const [year, month] = variables.entryDate.split('-').map(Number);
+        queryClient.invalidateQueries({ queryKey: calendarKeys.day(variables.entryDate) });
+        queryClient.invalidateQueries({ queryKey: calendarKeys.metricsByDate(variables.entryDate) });
+        queryClient.invalidateQueries({ queryKey: calendarKeys.month(year, month) });
+      }
     },
   });
 }

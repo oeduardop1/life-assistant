@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { TrackingService } from '../../application/services/tracking.service';
+import { CalendarService } from '../../application/services/calendar.service';
 import { CurrentUser } from '../../../../common/decorators';
 import type { AuthenticatedUser } from '../../../../common/types/request.types';
 import {
@@ -32,7 +33,10 @@ import {
 @ApiBearerAuth()
 @Controller('tracking')
 export class TrackingController {
-  constructor(private readonly trackingService: TrackingService) {}
+  constructor(
+    private readonly trackingService: TrackingService,
+    private readonly calendarService: CalendarService
+  ) {}
 
   /**
    * Create a new tracking entry (manual form submission)
@@ -117,6 +121,64 @@ export class TrackingController {
   async getStats(@CurrentUser() user: AuthenticatedUser) {
     const stats = await this.trackingService.getStats(user.id);
     return { stats };
+  }
+
+  /**
+   * Get calendar month summary
+   *
+   * @see docs/specs/domains/tracking.md §6.3
+   */
+  @Get('calendar/:year/:month')
+  @ApiOperation({ summary: 'Get calendar month summary' })
+  @ApiParam({ name: 'year', description: 'Year (e.g., 2026)' })
+  @ApiParam({ name: 'month', description: 'Month (1-12)' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Calendar month retrieved successfully' })
+  async getCalendarMonth(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('year') year: string,
+    @Param('month') month: string
+  ) {
+    const yearNum = parseInt(year, 10);
+    const monthNum = parseInt(month, 10);
+
+    if (isNaN(yearNum) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      throw new NotFoundException('Invalid year or month');
+    }
+
+    const calendar = await this.calendarService.getMonthSummary(user.id, yearNum, monthNum);
+    return calendar;
+  }
+
+  /**
+   * Get day detail (metrics + habits)
+   *
+   * @see docs/specs/domains/tracking.md §6.3
+   */
+  @Get('day/:date')
+  @ApiOperation({ summary: 'Get day detail with metrics and habits' })
+  @ApiParam({ name: 'date', description: 'Date in YYYY-MM-DD format' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Day detail retrieved successfully' })
+  async getDayDetail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('date') date: string
+  ) {
+    const detail = await this.calendarService.getDayDetail(user.id, date);
+    return detail;
+  }
+
+  /**
+   * Get metrics for a specific date
+   */
+  @Get('by-date/:date')
+  @ApiOperation({ summary: 'Get metrics for a specific date' })
+  @ApiParam({ name: 'date', description: 'Date in YYYY-MM-DD format' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Metrics retrieved successfully' })
+  async getByDate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('date') date: string
+  ) {
+    const metrics = await this.calendarService.getMetricsByDate(user.id, date);
+    return { metrics };
   }
 
   /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Scale, Droplet, Moon, Activity, Smile, Zap, PenLine, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,8 @@ interface ManualTrackFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultType?: TrackingType;
+  /** Default date for the entry (YYYY-MM-DD format). If provided, pre-fills the date field. */
+  defaultDate?: string;
 }
 
 /**
@@ -61,7 +63,12 @@ interface ManualTrackFormProps {
  * @see docs/specs/system.md §3.3 for validation rules
  * @see ADR-015 for Low Friction Tracking Philosophy
  */
-export function ManualTrackForm({ open, onOpenChange, defaultType = 'weight' }: ManualTrackFormProps) {
+export function ManualTrackForm({
+  open,
+  onOpenChange,
+  defaultType = 'weight',
+  defaultDate,
+}: ManualTrackFormProps) {
   const createEntry = useCreateTrackingEntry();
   const [selectedType, setSelectedType] = useState<TrackingType>(defaultType);
 
@@ -79,10 +86,17 @@ export function ManualTrackForm({ open, onOpenChange, defaultType = 'weight' }: 
       type: defaultType,
       value: '',
       unit: defaultUnit,
-      entryDate: new Date().toISOString().split('T')[0],
+      entryDate: defaultDate || new Date().toISOString().split('T')[0],
       entryTime: '',
     },
   });
+
+  // Update entryDate when defaultDate changes (e.g., when opening from DayDetailModal)
+  useEffect(() => {
+    if (defaultDate) {
+      setValue('entryDate', defaultDate);
+    }
+  }, [defaultDate, setValue]);
 
   const handleTypeChange = (type: TrackingType) => {
     setSelectedType(type);

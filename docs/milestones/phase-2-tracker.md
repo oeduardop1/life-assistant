@@ -134,6 +134,26 @@
 - [ ] Mensagem: "Em breve: correlações entre hábitos e métricas"
 - [ ] Preview de como será (mockup estático)
 
+### Frontend — Página Métricas `/tracking/metrics`
+
+- [ ] Criar página `/tracking/metrics/page.tsx`
+- [ ] Header com título + filtro de período + botão "+ Nova Métrica"
+- [ ] Seção 1: Resumo (MetricCardsGrid existente)
+- [ ] Seção 2: Gráficos de Evolução (MetricChart existente)
+- [ ] Seção 3: Tabela de Estatísticas (MetricsStatsTable)
+- [ ] Seção 4: Consistência de Registros (MetricsConsistencyBars)
+- [ ] Seção 5: Timeline com Edit/Delete (MetricsTimeline)
+- [ ] Adicionar aba "Métricas" ao layout de /tracking
+
+### Frontend — Componentes de Métricas
+
+- [ ] `MetricsStatsTable`: Tabela min/max/média/variação/dias por tipo
+- [ ] `MetricsConsistencyBars`: Barras de % de dias com registro por tipo
+- [ ] `MetricsTimeline`: Lista paginada de entradas com editar/deletar
+- [ ] `MetricsPageFilters`: Filtros de período (7d/30d/90d) e tipo
+- [ ] `EditMetricModal`: Modal para editar métrica existente
+- [ ] `DeleteMetricDialog`: Dialog de confirmação de exclusão
+
 ### Frontend — Gerenciamento de Hábitos
 
 - [ ] `HabitForm`: Modal para criar/editar hábito
@@ -161,6 +181,10 @@
 - [ ] `useCalendarMonth(year, month)`: Busca resumo do mês
 - [ ] `useDayDetail(date)`: Busca métricas + hábitos do dia
 - [ ] `useSaveDayMetrics()`: Mutation salvar métricas do dia
+
+### Frontend — Hooks de Métricas
+
+- [ ] `useTrackingConsistency(days)`: Calcula % de dias com registro por tipo
 
 ---
 
@@ -197,12 +221,21 @@
 - [ ] Component: StreakBadge exibe número correto
 - [ ] Component: HabitForm validação funciona
 
+### Testes — Frontend Componentes Métricas
+
+- [ ] Component: MetricsStatsTable renderiza estatísticas corretamente
+- [ ] Component: MetricsConsistencyBars calcula % corretamente
+- [ ] Component: MetricsTimeline lista com paginação e ações
+- [ ] Component: EditMetricModal edição funciona
+- [ ] Component: DeleteMetricDialog confirmação funciona
+
 ### Testes — Frontend Hooks
 
 - [ ] Hooks: useHabits, useCreateHabit, useDeleteHabit
 - [ ] Hooks: useCompleteHabit, useUncompleteHabit
 - [ ] Hooks: useCalendarMonth, useDayDetail
 - [ ] Hooks: useHabitStreaks
+- [ ] Hooks: useTrackingConsistency
 
 ### Testes — E2E
 
@@ -212,6 +245,10 @@
 - [ ] E2E: Criar novo hábito
 - [ ] E2E: Registrar métricas do dia
 - [ ] E2E: Ver aba Streaks com dados
+- [ ] E2E: Navegar para /tracking/metrics
+- [ ] E2E: Editar métrica via timeline
+- [ ] E2E: Excluir métrica via timeline
+- [ ] E2E: Filtrar métricas por período e tipo
 
 ---
 
@@ -247,8 +284,17 @@
 
 **Abas:**
 - [ ] Tab Calendário funcional (default)
+- [ ] Tab Métricas funcional
 - [ ] Tab Streaks funcional
 - [ ] Tab Insights (placeholder)
+
+**Página Métricas:**
+- [ ] Grid de resumo por tipo (MetricCardsGrid)
+- [ ] Gráficos de evolução funcionam (MetricChart)
+- [ ] Tabela de estatísticas exibe min/max/média/variação
+- [ ] Barras de consistência mostram % de dias com registro
+- [ ] Timeline lista entradas com editar/deletar
+- [ ] Filtros de período e tipo funcionam
 
 **Testes:**
 - [ ] Testes unitários backend passam
