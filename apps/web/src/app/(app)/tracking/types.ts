@@ -597,6 +597,20 @@ export interface HabitCompleteResponse {
   message: string;
 }
 
+/**
+ * Habit completions with calculated stats
+ * Response from GET /habits/:id/completions
+ */
+export interface HabitCompletionsWithStats {
+  completions: HabitCompletion[];
+  stats: {
+    totalCompletions: number;
+    completionRate: number;
+    currentStreak: number;
+    longestStreak: number;
+  };
+}
+
 // =============================================================================
 // Calendar Types (M2.1 Unified Tracking)
 // =============================================================================

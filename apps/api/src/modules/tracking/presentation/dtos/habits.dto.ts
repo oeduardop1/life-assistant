@@ -248,3 +248,26 @@ export class GetHabitsQueryDto {
   @Type(() => Boolean)
   includeInactive?: boolean;
 }
+
+/**
+ * Query parameters for habit completions with stats
+ *
+ * @see docs/specs/domains/tracking.md §5.4 for API spec
+ */
+export class GetHabitCompletionsQueryDto {
+  @ApiPropertyOptional({
+    description: 'Start date (YYYY-MM-DD). Defaults to 84 days ago (12 weeks).',
+    example: '2026-01-01',
+  })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'End date (YYYY-MM-DD). Defaults to today.',
+    example: '2026-02-04',
+  })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+}

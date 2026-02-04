@@ -245,6 +245,39 @@
 - [x] Integração no `ManualTrackForm`: Permitir registrar custom (chips visuais)
 - [x] Botão "Gerenciar Métricas" na página /tracking/metrics
 
+### Frontend — Página de Hábitos (Detalhes e Analytics) ✅ (Implementado)
+
+> **Contexto:** Extensão do gerenciamento de hábitos com vista detalhada por hábito, similar à `MetricDetailPanel` da página de métricas.
+
+_Backend:_
+- [x] Adicionar endpoint `GET /habits/:id/completions`:
+  - [x] Query params: `startDate`, `endDate` (YYYY-MM-DD, default 84 dias)
+  - [x] Response: `completions[]` + `stats` (totalCompletions, completionRate, currentStreak, longestStreak)
+  - [x] Reutilizar `findCompletions()` do repository existente
+- [x] Adicionar `GetHabitCompletionsQueryDto` em `habits.dto.ts`
+- [x] Adicionar `getCompletionsWithStats()` em `habits.service.ts`
+
+_Frontend - Componentes:_
+- [x] Criar `habit-selector.tsx` - seletor horizontal de hábitos (copiar pattern de `metric-selector.tsx`)
+- [x] Criar `habit-detail-panel.tsx` - painel unificado com chart + stats (copiar layout de `metric-detail-panel.tsx`)
+- [x] Criar `completion-heatmap.tsx` - grid de 12 semanas com completions
+- [x] Criar `habit-stats-sidebar.tsx` - estatísticas (reutilizar `StreakBadge`)
+- [x] Export novos componentes em `components/habits/index.ts`
+
+_Frontend - Hooks e Types:_
+- [x] Adicionar `HabitCompletionsWithStats` type em `types.ts`
+- [x] Adicionar `useHabitCompletions(habitId, startDate, endDate)` hook em `use-habits.ts`
+- [x] Utilizar `habitsKeys.completions(id)` query key
+
+_Frontend - Integração:_
+- [x] Atualizar página `/tracking/habits` com layout selector + detail panel
+- [x] Adicionar CSS variables para heatmap em `globals.css`
+
+_Frontend - Period of Day Grouping (Vista Alternativa):_
+- [x] Criar `habit-period-grouping.tsx` - agrupamento por período do dia (manhã/tarde/noite/qualquer hora)
+- [x] Toggle de vista no header da página (Grid ↔ Período)
+- [x] Clique em hábito seleciona e mostra HabitDetailPanel
+
 ---
 
 ### Testes — Backend Métricas ✅ (Implementado)

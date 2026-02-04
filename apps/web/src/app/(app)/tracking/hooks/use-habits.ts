@@ -11,6 +11,7 @@ import type {
   HabitResponse,
   HabitStreaksResponse,
   HabitCompleteResponse,
+  HabitCompletionsWithStats,
   HabitWithStreak,
   HabitStreakInfo,
   CreateHabitInput,
@@ -28,6 +29,8 @@ export const habitsKeys = {
   listWithInactive: () => [...habitsKeys.all, 'list', 'includeInactive'] as const,
   habit: (id: string) => [...habitsKeys.all, 'detail', id] as const,
   streaks: () => [...habitsKeys.all, 'streaks'] as const,
+  completions: (id: string, startDate?: string, endDate?: string) =>
+    [...habitsKeys.all, 'completions', id, startDate, endDate] as const,
 };
 
 // =============================================================================
@@ -89,6 +92,42 @@ export function useHabitStreaks() {
       return response.streaks;
     },
     enabled: api.isAuthenticated,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+// =============================================================================
+// Habit Completions with Stats
+// =============================================================================
+
+/**
+ * Hook to fetch habit completions with calculated statistics
+ *
+ * Returns completions for the specified date range (default 12 weeks)
+ * along with stats: totalCompletions, completionRate, currentStreak, longestStreak
+ *
+ * @param habitId - The habit ID to fetch completions for
+ * @param startDate - Optional start date (YYYY-MM-DD). Defaults to 84 days ago.
+ * @param endDate - Optional end date (YYYY-MM-DD). Defaults to today.
+ */
+export function useHabitCompletions(
+  habitId: string | null,
+  startDate?: string,
+  endDate?: string
+) {
+  const api = useAuthenticatedApi();
+
+  return useQuery({
+    queryKey: habitsKeys.completions(habitId ?? '', startDate, endDate),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      const queryString = params.toString();
+      const url = `/habits/${habitId}/completions${queryString ? `?${queryString}` : ''}`;
+      return api.get<HabitCompletionsWithStats>(url);
+    },
+    enabled: api.isAuthenticated && !!habitId,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }

@@ -23,6 +23,7 @@ import {
   CompleteHabitDto,
   UncompleteHabitDto,
   GetHabitsQueryDto,
+  GetHabitCompletionsQueryDto,
 } from '../dtos/habits.dto';
 import type { HabitFrequency, PeriodOfDay } from '@life-assistant/database';
 
@@ -96,6 +97,34 @@ export class HabitsController {
   async getStreaks(@CurrentUser() user: AuthenticatedUser) {
     const streaks = await this.habitsService.getAllStreaks(user.id);
     return { streaks };
+  }
+
+  /**
+   * Get habit completions with statistics
+   *
+   * Returns completions for the specified date range (default 12 weeks)
+   * along with stats: totalCompletions, completionRate, currentStreak, longestStreak
+   */
+  @Get(':id/completions')
+  @ApiOperation({ summary: 'Get habit completions with stats' })
+  @ApiParam({ name: 'id', description: 'Habit ID' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Completions retrieved successfully' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Habit not found' })
+  async getCompletions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query() query: GetHabitCompletionsQueryDto
+  ) {
+    const result = await this.habitsService.getCompletionsWithStats(
+      user.id,
+      id,
+      query.startDate,
+      query.endDate
+    );
+    if (!result) {
+      throw new NotFoundException('Hábito não encontrado');
+    }
+    return result;
   }
 
   /**

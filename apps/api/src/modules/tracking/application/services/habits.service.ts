@@ -59,6 +59,19 @@ export interface HabitStreakInfo {
 }
 
 /**
+ * Habit completions with calculated stats
+ */
+export interface HabitCompletionsWithStats {
+  completions: HabitCompletion[];
+  stats: {
+    totalCompletions: number;
+    completionRate: number;
+    currentStreak: number;
+    longestStreak: number;
+  };
+}
+
+/**
  * Service for managing habits and streaks
  *
  * @see docs/specs/domains/tracking.md §5 for Habits spec
@@ -265,6 +278,8 @@ export class HabitsService {
   /**
    * Get completions for a date range
    * Used by CalendarService to build month summaries
+   *
+   * @deprecated Use getCompletionsForDateRangeStr instead to avoid timezone issues
    */
   async getCompletionsForDateRange(
     userId: string,
@@ -278,6 +293,96 @@ export class HabitsService {
       endDate,
       limit: 31,
     });
+  }
+
+  /**
+   * Get completions for a date range using string dates
+   *
+   * Preferred over getCompletionsForDateRange to avoid timezone conversion issues.
+   *
+   * @param userId - User ID
+   * @param habitId - Habit ID
+   * @param startDateStr - Start date in YYYY-MM-DD format
+   * @param endDateStr - End date in YYYY-MM-DD format
+   */
+  async getCompletionsForDateRangeStr(
+    userId: string,
+    habitId: string,
+    startDateStr: string,
+    endDateStr: string
+  ): Promise<HabitCompletion[]> {
+    return this.habitsRepository.findCompletions(userId, {
+      habitId,
+      startDate: startDateStr, // Pass string directly
+      endDate: endDateStr,     // Pass string directly
+      limit: 31,
+    });
+  }
+
+  /**
+   * Get habit completions with calculated statistics
+   *
+   * Returns completions for the specified date range (default 12 weeks)
+   * along with stats: totalCompletions, completionRate, currentStreak, longestStreak
+   *
+   * @see docs/specs/domains/tracking.md §5.4
+   */
+  async getCompletionsWithStats(
+    userId: string,
+    habitId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<HabitCompletionsWithStats | null> {
+    const habit = await this.habitsRepository.findById(userId, habitId);
+    if (!habit) return null;
+
+    const timezone = await this.getUserTimezone(userId);
+    const endDateStr = endDate ?? getTodayInTimezone(timezone);
+    const startDateStr = startDate ?? getDateDaysAgo(84, timezone); // 12 weeks
+
+    const completions = await this.habitsRepository.findCompletions(userId, {
+      habitId,
+      startDate: new Date(startDateStr + 'T00:00:00'),
+      endDate: new Date(endDateStr + 'T23:59:59'),
+      limit: 100,
+    });
+
+    // Count expected days based on habit frequency
+    const expectedDays = this.countExpectedDays(startDateStr, endDateStr, habit);
+    const completionRate =
+      expectedDays > 0 ? Math.round((completions.length / expectedDays) * 100) : 0;
+
+    const currentStreak = await this.calculateStreak(userId, habit);
+
+    return {
+      completions,
+      stats: {
+        totalCompletions: completions.length,
+        completionRate,
+        currentStreak,
+        longestStreak: habit.longestStreak,
+      },
+    };
+  }
+
+  /**
+   * Count expected days for a habit based on its frequency
+   */
+  private countExpectedDays(startDateStr: string, endDateStr: string, habit: Habit): number {
+    const startDate = new Date(startDateStr + 'T12:00:00');
+    const endDate = new Date(endDateStr + 'T12:00:00');
+
+    let count = 0;
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      if (this.isExpectedDay(currentDate, habit)) {
+        count++;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return count;
   }
 
   /**
@@ -410,7 +515,7 @@ export class HabitsService {
    * Uses local date components to avoid timezone issues
    */
   private formatDate(date: Date): string {
-    const year = date.getFullYear();
+    const year = String(date.getFullYear());
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
