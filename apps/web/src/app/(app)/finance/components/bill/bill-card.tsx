@@ -31,6 +31,7 @@ import {
   formatCurrency,
   billCategoryLabels,
   getDueDateForMonth,
+  getDaysUntilDue,
   type Bill,
   type BillCategory,
 } from '../../types';
@@ -46,6 +47,8 @@ interface BillCardProps {
   onDelete: (bill: Bill) => void;
   onTogglePaid: (bill: Bill) => void;
   isTogglingPaid?: boolean;
+  /** Today's date in YYYY-MM-DD format (from timezone-aware helper) */
+  today: string;
 }
 
 // =============================================================================
@@ -84,20 +87,6 @@ function formatDueDate(monthYear: string, dueDay: number): string {
   const dueDate = getDueDateForMonth(monthYear, dueDay);
   const [year, month, day] = dueDate.split('-');
   return `${day}/${month}/${year}`;
-}
-
-function getDaysUntilDue(monthYear: string, dueDay: number): number {
-  const dueDate = getDueDateForMonth(monthYear, dueDay);
-  const today = new Date();
-  const due = new Date(dueDate + 'T00:00:00');
-
-  // Reset hours for accurate day calculation
-  today.setHours(0, 0, 0, 0);
-
-  const diffTime = due.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  return diffDays;
 }
 
 interface UrgencyInfo {
@@ -167,6 +156,7 @@ export function BillCard({
   onDelete,
   onTogglePaid,
   isTogglingPaid,
+  today,
 }: BillCardProps) {
   const CategoryIcon = categoryIcons[bill.category] || Receipt;
   const categoryBg = categoryBgColors[bill.category] || 'bg-gray-500/10';
@@ -177,7 +167,7 @@ export function BillCard({
   const isCanceled = bill.status === 'canceled';
   const canToggle = !isCanceled;
 
-  const daysUntilDue = getDaysUntilDue(bill.monthYear, bill.dueDay);
+  const daysUntilDue = getDaysUntilDue(bill.monthYear, bill.dueDay, today);
   const urgencyInfo = getUrgencyInfo(daysUntilDue, isPaid, isOverdue);
 
   return (

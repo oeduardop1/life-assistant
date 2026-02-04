@@ -1,12 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   formatCurrency,
   formatPercentage,
-  getCurrentMonth,
   formatMonthDisplay,
   getPreviousMonth,
   getNextMonth,
-  isOverdue,
   getBalanceColor,
 } from '../types';
 
@@ -37,21 +35,6 @@ describe('Finance Type Helpers', () => {
 
     it('should_round_percentage', () => {
       expect(formatPercentage(33.333)).toBe('33.3%');
-    });
-  });
-
-  describe('getCurrentMonth', () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date('2026-01-15T12:00:00Z'));
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it('should_return_current_month_in_YYYY-MM_format', () => {
-      expect(getCurrentMonth()).toBe('2026-01');
     });
   });
 
@@ -86,29 +69,6 @@ describe('Finance Type Helpers', () => {
 
     it('should_handle_mid_year', () => {
       expect(getNextMonth('2026-05')).toBe('2026-06');
-    });
-  });
-
-  describe('isOverdue', () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date('2026-01-15T12:00:00Z'));
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it('should_return_true_for_past_date', () => {
-      expect(isOverdue('2026-01-10')).toBe(true);
-    });
-
-    it('should_return_false_for_future_date', () => {
-      expect(isOverdue('2026-01-20')).toBe(false);
-    });
-
-    it('should_return_false_for_today', () => {
-      expect(isOverdue('2026-01-15')).toBe(false);
     });
   });
 

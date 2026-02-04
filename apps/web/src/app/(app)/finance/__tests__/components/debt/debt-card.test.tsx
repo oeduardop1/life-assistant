@@ -14,6 +14,11 @@ vi.mock('../../../hooks/use-debts', () => ({
   useUpcomingInstallments: vi.fn(() => ({ data: null, isLoading: false })),
 }));
 
+// Mock useUserTimezone hook
+vi.mock('@/hooks/use-user-timezone', () => ({
+  useUserTimezone: vi.fn(() => 'America/Sao_Paulo'),
+}));
+
 // =============================================================================
 // Test Data
 // =============================================================================

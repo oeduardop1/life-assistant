@@ -3,7 +3,8 @@
 import { AlertTriangle, Clock, CalendarClock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { formatCurrency, type Debt, type UpcomingInstallmentItem } from '../../types';
+import { formatCurrency, getDebtDaysUntilDue, getTodayInTimezone, type Debt, type UpcomingInstallmentItem } from '../../types';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 // =============================================================================
 // Types
@@ -29,29 +30,10 @@ interface DebtAlertsProps {
 // Helper Functions
 // =============================================================================
 
-function getDaysUntilDue(dueDay: number): number {
-  const today = new Date();
-  const currentDay = today.getDate();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  // Check if due date is this month
-  const dueDate = new Date(currentYear, currentMonth, dueDay);
-
-  // If due day already passed this month, it's for next month
-  if (dueDay < currentDay) {
-    dueDate.setMonth(dueDate.getMonth() + 1);
-  }
-
-  const diffTime = dueDate.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  return diffDays;
-}
-
 function generateAlerts(
   debts: Debt[],
-  upcomingInstallments?: UpcomingInstallmentItem[]
+  upcomingInstallments: UpcomingInstallmentItem[] | undefined,
+  today: string
 ): AlertItem[] {
   const alerts: AlertItem[] = [];
 
@@ -91,7 +73,7 @@ function generateAlerts(
 
     // Add due soon alerts (within 7 days)
     for (const inst of pendingInstallments) {
-      const daysUntil = getDaysUntilDue(inst.dueDay);
+      const daysUntil = getDebtDaysUntilDue(inst.dueDay, today);
 
       if (daysUntil === 0) {
         alerts.push({
@@ -118,7 +100,7 @@ function generateAlerts(
     );
 
     for (const debt of activeDebts) {
-      const daysUntil = getDaysUntilDue(debt.dueDay!);
+      const daysUntil = getDebtDaysUntilDue(debt.dueDay!, today);
 
       if (daysUntil === 0) {
         alerts.push({
@@ -227,7 +209,9 @@ export function DebtAlerts({
   onDebtClick,
   className,
 }: DebtAlertsProps) {
-  const alerts = generateAlerts(debts, upcomingInstallments);
+  const timezone = useUserTimezone();
+  const today = getTodayInTimezone(timezone);
+  const alerts = generateAlerts(debts, upcomingInstallments, today);
 
   if (alerts.length === 0) {
     return null;

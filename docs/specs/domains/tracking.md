@@ -63,6 +63,40 @@ Antes de salvar, IA SEMPRE pergunta: "Quer que eu registre...?"
 
 ---
 
+## 2.1 Timezone Handling
+
+All date operations in tracking respect the user's timezone (stored in `public.users.timezone`).
+
+**Key principles:**
+- `entry_date` (DATE) stores the user's local date, not UTC
+- "Today" = Current date in user's timezone
+- Calendar navigation uses timezone-aware date calculations
+- Streak calculations use timezone-aware day comparisons
+
+**Frontend:**
+```typescript
+// Use the useUserTimezone hook
+const timezone = useUserTimezone();
+
+// Get today in user's timezone
+const today = getTodayInTimezone(timezone);
+
+// Calculate date range for calendar
+const startDate = getDateDaysAgo(30, timezone);
+```
+
+**Backend:**
+```typescript
+// Get user timezone from settings
+const settings = await this.settingsService.getUserSettings(userId);
+const timezone = settings.timezone;
+
+// Use for date defaults
+const today = getTodayInTimezone(timezone);
+```
+
+---
+
 ## 3. UI Structure
 
 ### 3.1 Overview

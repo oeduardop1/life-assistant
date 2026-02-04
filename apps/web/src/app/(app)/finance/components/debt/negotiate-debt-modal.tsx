@@ -34,12 +34,13 @@ import { cn } from '@/lib/utils';
 import { useNegotiateDebt } from '../../hooks/use-debts';
 import {
   formatCurrency,
-  getCurrentMonth,
+  getCurrentMonthInTimezone,
   calculateDebtEndMonth,
   formatMonthDisplay,
   type Debt,
 } from '../../types';
 import { MonthPicker } from '../month-picker';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 // =============================================================================
 // Types
@@ -441,6 +442,8 @@ export function NegotiateDebtModal({
 }: NegotiateDebtModalProps) {
   const negotiateDebt = useNegotiateDebt();
   const [mode, setMode] = useState<CalculatorMode>('installment');
+  const timezone = useUserTimezone();
+  const currentMonth = getCurrentMonthInTimezone(timezone);
 
   const suggestedInstallment = debt ? Math.ceil(debt.totalAmount / 12) : 0;
 
@@ -454,7 +457,7 @@ export function NegotiateDebtModal({
       totalInstallments: 12,
       installmentAmount: suggestedInstallment,
       dueDay: 10,
-      startMonthYear: getCurrentMonth(),
+      startMonthYear: currentMonth,
     },
   });
 
@@ -471,10 +474,10 @@ export function NegotiateDebtModal({
         totalInstallments: 12,
         installmentAmount: suggested,
         dueDay: 10,
-        startMonthYear: getCurrentMonth(),
+        startMonthYear: currentMonth,
       });
     }
-  }, [debt, open, reset]);
+  }, [debt, open, reset, currentMonth]);
 
   // Calculate derived values
   const totalNegotiated = totalInstallments * installmentAmount;

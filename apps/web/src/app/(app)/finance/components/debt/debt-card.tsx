@@ -29,11 +29,14 @@ import {
   debtStatusLabels,
   calculateDebtProgress,
   formatMonthDisplay,
+  getDebtDaysUntilDue,
+  getTodayInTimezone,
   type Debt,
   type UpcomingInstallmentStatus,
 } from '../../types';
 import { useDebtProjection, useUpcomingInstallments } from '../../hooks/use-debts';
 import { DebtPaymentHistory } from './debt-payment-history';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 // =============================================================================
 // Types
@@ -52,21 +55,6 @@ interface DebtCardProps {
 // =============================================================================
 // Helper Functions
 // =============================================================================
-
-function getDaysUntilDue(dueDay: number): number {
-  const today = new Date();
-  const currentDay = today.getDate();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  const dueDate = new Date(currentYear, currentMonth, dueDay);
-  if (dueDay < currentDay) {
-    dueDate.setMonth(dueDate.getMonth() + 1);
-  }
-
-  const diffTime = dueDate.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
 
 function getInstallmentStatusConfig(status: UpcomingInstallmentStatus) {
   const config = {
@@ -464,6 +452,8 @@ export function DebtCard({
   isPayingInstallment,
 }: DebtCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const timezone = useUserTimezone();
+  const today = getTodayInTimezone(timezone);
 
   // Fetch projection when expanded
   const { data: projection } = useDebtProjection(
@@ -482,7 +472,7 @@ export function DebtCard({
   const progress = calculateDebtProgress(debt);
 
   // Get days until due
-  const daysUntil = debt.dueDay ? getDaysUntilDue(debt.dueDay) : null;
+  const daysUntil = debt.dueDay ? getDebtDaysUntilDue(debt.dueDay, today) : null;
 
   // Get status config
   const statusConfig = getStatusConfig(debt.status, debt.isNegotiated);

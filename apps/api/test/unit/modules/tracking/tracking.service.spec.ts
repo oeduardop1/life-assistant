@@ -69,6 +69,13 @@ describe('TrackingService', () => {
     getLatestByType: ReturnType<typeof vi.fn>;
     countByType: ReturnType<typeof vi.fn>;
   };
+  let mockCustomMetricRepository: {
+    findById: ReturnType<typeof vi.fn>;
+    findByUserId: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -84,8 +91,17 @@ describe('TrackingService', () => {
       countByType: vi.fn(),
     };
 
+    mockCustomMetricRepository = {
+      findById: vi.fn(),
+      findByUserId: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    };
+
     service = new TrackingService(
-      mockRepository as unknown as TrackingEntryRepositoryPort
+      mockRepository as unknown as TrackingEntryRepositoryPort,
+      mockCustomMetricRepository as unknown as ConstructorParameters<typeof TrackingService>[1]
     );
   });
 
@@ -470,17 +486,28 @@ describe('TrackingService', () => {
           unit: 'unit',
           area: 'learning' as LifeArea,
           subArea: 'informal' as SubArea,
+          metadata: { customMetricId: 'custom-metric-123' },
         });
         mockRepository.create.mockResolvedValue(mockEntry);
+        mockCustomMetricRepository.findById.mockResolvedValue({
+          id: 'custom-metric-123',
+          userId: 'user-123',
+          name: 'My Custom Metric',
+        });
 
         const result = await service.recordMetric('user-123', {
           type: 'custom',
           area: 'learning',
           value: 9999, // No max limit for custom
           entryDate: '2024-01-15',
+          metadata: { customMetricId: 'custom-metric-123' },
         });
 
         expect(result).toEqual(mockEntry);
+        expect(mockCustomMetricRepository.findById).toHaveBeenCalledWith(
+          'user-123',
+          'custom-metric-123'
+        );
       });
     });
 

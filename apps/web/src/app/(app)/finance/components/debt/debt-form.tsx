@@ -9,10 +9,11 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { MonthPicker } from '../month-picker';
 import {
-  getCurrentMonth,
+  getCurrentMonthInTimezone,
   formatMonthDisplay,
   calculateDebtEndMonth,
 } from '../../types';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 // =============================================================================
 // Types
@@ -59,6 +60,9 @@ export function DebtForm({
   isSubmitting,
   hideNegotiatedToggle,
 }: DebtFormProps) {
+  const timezone = useUserTimezone();
+  const currentMonth = getCurrentMonthInTimezone(timezone);
+
   const {
     register,
     handleSubmit,
@@ -74,14 +78,14 @@ export function DebtForm({
       totalInstallments: undefined,
       installmentAmount: undefined,
       dueDay: undefined,
-      startMonthYear: getCurrentMonth(),
+      startMonthYear: currentMonth,
       notes: '',
       ...defaultValues,
     },
   });
 
   const isNegotiated = useWatch({ control, name: 'isNegotiated' });
-  const startMonthYear = useWatch({ control, name: 'startMonthYear' }) ?? getCurrentMonth();
+  const startMonthYear = useWatch({ control, name: 'startMonthYear' }) ?? currentMonth;
   const totalInstallments = useWatch({ control, name: 'totalInstallments' });
 
   return (

@@ -11,6 +11,7 @@ import type {
   DebtPaymentWithEarly,
   UpcomingInstallment,
   UpcomingInstallmentStatus,
+  TodayContext,
 } from '../../domain/ports/debts.repository.port';
 
 @Injectable()
@@ -497,7 +498,8 @@ export class DebtsRepository implements DebtsRepositoryPort {
 
   async getUpcomingInstallments(
     userId: string,
-    monthYear: string
+    monthYear: string,
+    today: TodayContext
   ): Promise<UpcomingInstallment[]> {
     return this.db.withUserId(userId, async (db) => {
       // Get all active/overdue negotiated debts that have installments in this month
@@ -541,10 +543,9 @@ export class DebtsRepository implements DebtsRepositoryPort {
         paymentsByDebtId.set(payment.debtId, payment);
       }
 
-      // Calculate the current date for overdue checking
-      const now = new Date();
-      const currentMonth = `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const currentDay = now.getDate();
+      // Use timezone-aware "today" context from service for overdue checking
+      // This ensures correct overdue detection regardless of server timezone
+      const { month: currentMonth, day: currentDay } = today;
 
       // Build the installments array
       const installments: UpcomingInstallment[] = [];

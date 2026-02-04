@@ -71,6 +71,9 @@ describe('FinanceSummaryService', () => {
   let mockInvestmentsService: {
     getSummary: ReturnType<typeof vi.fn>;
   };
+  let mockSettingsService: {
+    getUserSettings: ReturnType<typeof vi.fn>;
+  };
   let mockLogger: {
     setContext: ReturnType<typeof vi.fn>;
     log: ReturnType<typeof vi.fn>;
@@ -105,6 +108,10 @@ describe('FinanceSummaryService', () => {
       getSummary: vi.fn(),
     };
 
+    mockSettingsService = {
+      getUserSettings: vi.fn().mockResolvedValue({ timezone: 'America/Sao_Paulo' }),
+    };
+
     mockLogger = {
       setContext: vi.fn(),
       log: vi.fn(),
@@ -126,9 +133,12 @@ describe('FinanceSummaryService', () => {
       mockInvestmentsService as unknown as ConstructorParameters<
         typeof FinanceSummaryService
       >[4],
+      mockSettingsService as unknown as ConstructorParameters<
+        typeof FinanceSummaryService
+      >[5],
       mockLogger as unknown as ConstructorParameters<
         typeof FinanceSummaryService
-      >[5]
+      >[6]
     );
   });
 

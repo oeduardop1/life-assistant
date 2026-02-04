@@ -9,11 +9,12 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  getCurrentMonth,
+  getCurrentMonthInTimezone,
   getPreviousMonth,
   getNextMonth,
   parseMonthYear,
 } from '../types';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 /**
  * Tracking context value
@@ -49,7 +50,8 @@ const TrackingContext = createContext<TrackingContextValue | null>(null);
  * @see docs/specs/domains/tracking.md §3 for UI structure
  */
 export function TrackingProvider({ children }: { children: ReactNode }) {
-  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth);
+  const timezone = useUserTimezone();
+  const [currentMonth, setCurrentMonth] = useState(() => getCurrentMonthInTimezone(timezone));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const { year, month } = useMemo(() => parseMonthYear(currentMonth), [currentMonth]);
@@ -67,8 +69,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const goToToday = useCallback(() => {
-    setCurrentMonth(getCurrentMonth());
-  }, []);
+    setCurrentMonth(getCurrentMonthInTimezone(timezone));
+  }, [timezone]);
 
   const clearSelectedDate = useCallback(() => {
     setSelectedDate(null);

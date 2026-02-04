@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { format, parseISO, isToday, isYesterday } from 'date-fns';
+import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,8 @@ import {
 import { metricColors } from './metric-selector';
 import { EditMetricModal } from './edit-metric-modal';
 import { DeleteMetricDialog } from './delete-metric-dialog';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { getTodayInTimezone } from '@life-assistant/shared';
 
 interface GroupedTimelineProps {
   startDate: string;
@@ -61,6 +63,9 @@ export function GroupedTimeline({
       limit: 50,
     });
 
+  const timezone = useUserTimezone();
+  const today = getTodayInTimezone(timezone);
+
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [editingEntry, setEditingEntry] = useState<TrackingEntry | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<TrackingEntry | null>(null);
@@ -82,7 +87,7 @@ export function GroupedTimeline({
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, dayEntries]) => ({
         date,
-        label: formatDayLabel(date),
+        label: formatDayLabel(date, today),
         entries: dayEntries.sort((a, b) => {
           // Sort by time descending within each day
           const timeA = a.entryTime ?? '';
@@ -90,7 +95,7 @@ export function GroupedTimeline({
           return timeB.localeCompare(timeA);
         }),
       }));
-  }, [entries]);
+  }, [entries, today]);
 
   // Auto-expand first 2 days on initial load
   const initialExpandedDays = useMemo(() => {
@@ -322,11 +327,19 @@ function GroupedTimelineSkeleton() {
 // Helpers
 // =============================================================================
 
-function formatDayLabel(dateStr: string): string {
+function formatDayLabel(dateStr: string, today: string): string {
   try {
+    // Check if dateStr is today or yesterday using string comparison (timezone-aware)
+    if (dateStr === today) return 'Hoje';
+
+    // Calculate yesterday's date string
+    const todayDate = parseISO(today);
+    const yesterdayDate = subDays(todayDate, 1);
+    const yesterdayStr = format(yesterdayDate, 'yyyy-MM-dd');
+
+    if (dateStr === yesterdayStr) return 'Ontem';
+
     const date = parseISO(dateStr);
-    if (isToday(date)) return 'Hoje';
-    if (isYesterday(date)) return 'Ontem';
     return format(date, "EEEE, d 'de' MMMM", { locale: ptBR });
   } catch {
     return dateStr;

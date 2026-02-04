@@ -15,6 +15,8 @@ import {
   parseMetricSelection,
 } from '../components';
 import { CustomMetricsManager } from '../components/custom-metrics';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { getTodayInTimezone, getDateDaysAgo } from '@life-assistant/shared';
 
 /**
  * Metrics page for tracking module - Redesigned
@@ -42,17 +44,17 @@ export default function MetricsPage() {
     [selectedMetric]
   );
 
-  // Calculate date range based on period
+  // Get user timezone for date calculations
+  const timezone = useUserTimezone();
+
+  // Calculate date range based on period (timezone-aware)
   const { startDate, endDate } = useMemo(() => {
-    const end = new Date();
-    const start = new Date();
     const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
-    start.setDate(end.getDate() - days + 1);
     return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate: getDateDaysAgo(days - 1, timezone),
+      endDate: getTodayInTimezone(timezone),
     };
-  }, [period]);
+  }, [period, timezone]);
 
   return (
     <div className="space-y-6">

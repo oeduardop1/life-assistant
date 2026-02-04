@@ -41,6 +41,9 @@ describe('DebtsService', () => {
     recordPayment: ReturnType<typeof vi.fn>;
     sumPaymentsByMonthYear: ReturnType<typeof vi.fn>;
   };
+  let mockSettingsService: {
+    getUserSettings: ReturnType<typeof vi.fn>;
+  };
   let mockLogger: {
     setContext: ReturnType<typeof vi.fn>;
     log: ReturnType<typeof vi.fn>;
@@ -63,6 +66,10 @@ describe('DebtsService', () => {
       sumPaymentsByMonthYear: vi.fn(),
     };
 
+    mockSettingsService = {
+      getUserSettings: vi.fn().mockResolvedValue({ timezone: 'America/Sao_Paulo' }),
+    };
+
     mockLogger = {
       setContext: vi.fn(),
       log: vi.fn(),
@@ -70,7 +77,8 @@ describe('DebtsService', () => {
 
     service = new DebtsService(
       mockRepository as unknown as ConstructorParameters<typeof DebtsService>[0],
-      mockLogger as unknown as ConstructorParameters<typeof DebtsService>[1]
+      mockSettingsService as unknown as ConstructorParameters<typeof DebtsService>[1],
+      mockLogger as unknown as ConstructorParameters<typeof DebtsService>[2]
     );
   });
 

@@ -51,11 +51,24 @@ export const updatePasswordSchema = z.object({
 export type UpdatePasswordData = z.infer<typeof updatePasswordSchema>;
 
 /**
+ * Update timezone validation schema
+ * - Timezone: IANA format (e.g., America/Sao_Paulo)
+ */
+export const updateTimezoneSchema = z.object({
+  timezone: z
+    .string()
+    .regex(/^[A-Za-z_]+\/[A-Za-z_]+$/, 'Timezone deve estar no formato IANA (ex: America/Sao_Paulo)'),
+});
+
+export type UpdateTimezoneData = z.infer<typeof updateTimezoneSchema>;
+
+/**
  * User settings response from API
  */
 export interface UserSettings {
   name: string;
   email: string;
+  timezone: string;
 }
 
 /**

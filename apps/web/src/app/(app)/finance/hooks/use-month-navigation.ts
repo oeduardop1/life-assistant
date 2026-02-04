@@ -2,11 +2,12 @@
 
 import { useState, useCallback } from 'react';
 import {
-  getCurrentMonth,
+  getCurrentMonthInTimezone,
   getPreviousMonth,
   getNextMonth,
   formatMonthDisplay,
 } from '../types';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 /**
  * Hook for month navigation in Finance module
@@ -15,8 +16,9 @@ import {
  * @see docs/milestones/phase-2-tracker.md M2.2
  */
 export function useMonthNavigation(initialMonth?: string) {
+  const timezone = useUserTimezone();
   const [currentMonth, setCurrentMonth] = useState(
-    initialMonth ?? getCurrentMonth()
+    () => initialMonth ?? getCurrentMonthInTimezone(timezone)
   );
 
   const goToPrevMonth = useCallback(() => {
@@ -32,12 +34,12 @@ export function useMonthNavigation(initialMonth?: string) {
   }, []);
 
   const goToCurrentMonth = useCallback(() => {
-    setCurrentMonth(getCurrentMonth());
-  }, []);
+    setCurrentMonth(getCurrentMonthInTimezone(timezone));
+  }, [timezone]);
 
   const formattedMonth = formatMonthDisplay(currentMonth);
 
-  const isCurrentMonth = currentMonth === getCurrentMonth();
+  const isCurrentMonth = currentMonth === getCurrentMonthInTimezone(timezone);
 
   return {
     currentMonth,

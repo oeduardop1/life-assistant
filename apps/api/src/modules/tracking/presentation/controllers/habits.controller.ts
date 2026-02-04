@@ -12,7 +12,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { getTodayInTimezone } from '@life-assistant/shared';
 import { HabitsService } from '../../application/services/habits.service';
+import { SettingsService } from '../../../settings/application/services/settings.service';
 import { CurrentUser } from '../../../../common/decorators';
 import type { AuthenticatedUser } from '../../../../common/types/request.types';
 import {
@@ -33,7 +35,22 @@ import type { HabitFrequency, PeriodOfDay } from '@life-assistant/database';
 @ApiBearerAuth()
 @Controller('habits')
 export class HabitsController {
-  constructor(private readonly habitsService: HabitsService) {}
+  constructor(
+    private readonly habitsService: HabitsService,
+    private readonly settingsService: SettingsService
+  ) {}
+
+  /**
+   * Get user's timezone from settings, defaulting to America/Sao_Paulo
+   */
+  private async getUserTimezone(userId: string): Promise<string> {
+    try {
+      const settings = await this.settingsService.getUserSettings(userId);
+      return settings.timezone;
+    } catch {
+      return 'America/Sao_Paulo';
+    }
+  }
 
   /**
    * Create a new habit
@@ -161,7 +178,9 @@ export class HabitsController {
     @Param('id') id: string,
     @Body() dto: CompleteHabitDto
   ) {
-    const date = dto.date ?? new Date().toISOString().split('T')[0] ?? '';
+    // Get user timezone for accurate "today" calculation
+    const timezone = await this.getUserTimezone(user.id);
+    const date = dto.date ?? getTodayInTimezone(timezone);
     const completion = await this.habitsService.complete(user.id, id, date, 'form', dto.notes);
 
     // Get updated habit with streak

@@ -5,7 +5,8 @@ import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en';
 import { eq, ne, and, sql } from '@life-assistant/database';
 import { SupabaseAuthAdapter } from '../../../auth/infrastructure/supabase/supabase-auth.adapter';
 import { SettingsEmailService } from '../../infrastructure/email/settings-email.service';
-import { UpdateProfileDto, UpdateEmailDto, UpdatePasswordDto } from '../../presentation/dtos';
+import { UpdateProfileDto, UpdateEmailDto, UpdatePasswordDto, UpdateTimezoneDto } from '../../presentation/dtos';
+import { isValidTimezone } from '@life-assistant/shared';
 import { AppLoggerService } from '../../../../logger/logger.service';
 import { DatabaseService } from '../../../../database/database.service';
 
@@ -32,6 +33,7 @@ export interface SettingsResponse {
 export interface UserSettingsResponse {
   name: string;
   email: string;
+  timezone: string;
 }
 
 /**
@@ -58,7 +60,7 @@ export class SettingsService {
   }
 
   /**
-   * Get current user settings (name and email)
+   * Get current user settings (name, email, timezone)
    * Reads from public.users table (not Supabase Admin API)
    */
   async getUserSettings(userId: string): Promise<UserSettingsResponse> {
@@ -71,6 +73,7 @@ export class SettingsService {
     return {
       name: user.name,
       email: user.email,
+      timezone: user.timezone,
     };
   }
 
@@ -241,16 +244,50 @@ export class SettingsService {
   }
 
   /**
+   * Update user timezone
+   * Validates timezone is a valid IANA timezone string
+   */
+  async updateTimezone(userId: string, dto: UpdateTimezoneDto): Promise<SettingsResponse> {
+    this.logger.log(`Timezone update for user: ${userId}`);
+
+    // Validate timezone is valid IANA timezone
+    if (!isValidTimezone(dto.timezone)) {
+      throw new BadRequestException('Timezone inválido. Use formato IANA (ex: America/Sao_Paulo)');
+    }
+
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new BadRequestException('Usuário não encontrado');
+    }
+
+    // Update timezone in public.users table
+    await this.databaseService.withUserId(userId, async (db) => {
+      await db
+        .update(this.databaseService.schema.users)
+        .set({ timezone: dto.timezone, updatedAt: new Date() })
+        .where(eq(this.databaseService.schema.users.id, userId));
+    });
+
+    this.logger.log(`Timezone updated to ${dto.timezone} for user: ${userId}`);
+
+    return {
+      success: true,
+      message: 'Fuso horário atualizado com sucesso',
+    };
+  }
+
+  /**
    * Helper to get user by ID from public.users table
    * Uses RLS context via DatabaseService
    */
-  private async getUserById(userId: string): Promise<{ id: string; name: string; email: string } | null> {
+  private async getUserById(userId: string): Promise<{ id: string; name: string; email: string; timezone: string } | null> {
     const result = await this.databaseService.withUserId(userId, async (db) => {
       return db
         .select({
           id: this.databaseService.schema.users.id,
           name: this.databaseService.schema.users.name,
           email: this.databaseService.schema.users.email,
+          timezone: this.databaseService.schema.users.timezone,
         })
         .from(this.databaseService.schema.users)
         .where(eq(this.databaseService.schema.users.id, userId))

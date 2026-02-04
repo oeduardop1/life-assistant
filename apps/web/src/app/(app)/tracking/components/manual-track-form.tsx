@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCreateTrackingEntry } from '../hooks/use-tracking';
 import { useCustomMetrics } from '../hooks/use-custom-metrics';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { getTodayInTimezone } from '@life-assistant/shared';
 import {
   type TrackingType,
   type LifeArea,
@@ -190,6 +192,7 @@ export function ManualTrackForm({
 }: ManualTrackFormProps) {
   const createEntry = useCreateTrackingEntry();
   const { data: customMetrics, isLoading: isLoadingCustomMetrics } = useCustomMetrics();
+  const timezone = useUserTimezone();
 
   // Selection state: built-in type or custom metric
   const [selection, setSelection] = useState<MetricSelection>({
@@ -219,6 +222,9 @@ export function ManualTrackForm({
     }
   }, [selection]);
 
+  // Get today's date in user's timezone for default
+  const todayInTimezone = useMemo(() => getTodayInTimezone(timezone), [timezone]);
+
   const {
     register,
     handleSubmit,
@@ -229,7 +235,7 @@ export function ManualTrackForm({
     defaultValues: {
       value: '',
       unit: unit,
-      entryDate: defaultDate || new Date().toISOString().split('T')[0],
+      entryDate: defaultDate || todayInTimezone,
       entryTime: '',
     },
   });

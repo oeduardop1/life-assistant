@@ -75,6 +75,22 @@ export interface DebtProjection {
   message: string;
 }
 
+/**
+ * Context for "today" in user's timezone.
+ * Used to determine overdue status without repository needing timezone logic.
+ *
+ * @example
+ * // User in São Paulo at 22:00 on Feb 3rd (01:00 UTC Feb 4th)
+ * const todayContext = { month: '2026-02', day: 3 }; // Correct!
+ * // Without timezone: { month: '2026-02', day: 4 }  // Wrong!
+ */
+export interface TodayContext {
+  /** Current month in user's timezone (YYYY-MM format) */
+  month: string;
+  /** Current day of month in user's timezone (1-31) */
+  day: number;
+}
+
 export interface DebtsRepositoryPort {
   create(userId: string, data: Omit<NewDebt, 'userId'>): Promise<Debt>;
   findByUserId(userId: string, params: DebtSearchParams): Promise<Debt[]>;
@@ -111,7 +127,8 @@ export interface DebtsRepositoryPort {
   ): Promise<DebtPaymentWithEarly[]>;
   getUpcomingInstallments(
     userId: string,
-    monthYear: string
+    monthYear: string,
+    today: TodayContext
   ): Promise<UpcomingInstallment[]>;
 }
 

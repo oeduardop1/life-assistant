@@ -411,6 +411,9 @@ describe('Debt Conditional Validation (Service-level)', () => {
     countByUserId: ReturnType<typeof vi.fn>;
     getSummary: ReturnType<typeof vi.fn>;
   };
+  let mockSettingsService: {
+    getUserSettings: ReturnType<typeof vi.fn>;
+  };
   let mockLogger: {
     setContext: ReturnType<typeof vi.fn>;
     log: ReturnType<typeof vi.fn>;
@@ -433,6 +436,10 @@ describe('Debt Conditional Validation (Service-level)', () => {
       getSummary: vi.fn(),
     };
 
+    mockSettingsService = {
+      getUserSettings: vi.fn().mockResolvedValue({ timezone: 'America/Sao_Paulo' }),
+    };
+
     mockLogger = {
       setContext: vi.fn(),
       log: vi.fn(),
@@ -442,7 +449,8 @@ describe('Debt Conditional Validation (Service-level)', () => {
 
     service = new DebtsService(
       mockRepository as unknown as ConstructorParameters<typeof DebtsService>[0],
-      mockLogger as unknown as ConstructorParameters<typeof DebtsService>[1]
+      mockSettingsService as unknown as ConstructorParameters<typeof DebtsService>[1],
+      mockLogger as unknown as ConstructorParameters<typeof DebtsService>[2]
     );
   });
 

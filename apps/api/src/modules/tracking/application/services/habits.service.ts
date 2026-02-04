@@ -1,10 +1,12 @@
 import { Injectable, Inject, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import type { Habit, HabitCompletion, HabitFrequency, PeriodOfDay } from '@life-assistant/database';
+import { getTodayInTimezone, getDateDaysAgo } from '@life-assistant/shared';
 import {
   HabitsRepositoryPort,
   HABITS_REPOSITORY,
   type HabitWithStreak,
 } from '../../domain/ports/habits.repository.port';
+import { SettingsService } from '../../../settings/application/services/settings.service';
 
 /**
  * Parameters for creating a habit
@@ -67,8 +69,21 @@ export class HabitsService {
 
   constructor(
     @Inject(HABITS_REPOSITORY)
-    private readonly habitsRepository: HabitsRepositoryPort
+    private readonly habitsRepository: HabitsRepositoryPort,
+    private readonly settingsService: SettingsService
   ) {}
+
+  /**
+   * Get user's timezone from settings, defaulting to America/Sao_Paulo
+   */
+  private async getUserTimezone(userId: string): Promise<string> {
+    try {
+      const settings = await this.settingsService.getUserSettings(userId);
+      return settings.timezone;
+    } catch {
+      return 'America/Sao_Paulo';
+    }
+  }
 
   /**
    * Create a new habit
@@ -271,10 +286,14 @@ export class HabitsService {
    * @see docs/specs/domains/tracking.md §5.3 for streak rules
    */
   async calculateStreak(userId: string, habit: Habit): Promise<number> {
+    // Get user timezone for accurate date calculations
+    const timezone = await this.getUserTimezone(userId);
+
     // Get completions for the last 365 days
-    const endDate = new Date();
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - 365);
+    const todayStr = getTodayInTimezone(timezone);
+    const startDateStr = getDateDaysAgo(365, timezone);
+    const endDate = new Date(todayStr + 'T23:59:59');
+    const startDate = new Date(startDateStr + 'T00:00:00');
 
     const completions = await this.habitsRepository.findCompletions(userId, {
       habitId: habit.id,
@@ -292,11 +311,10 @@ export class HabitsService {
 
     // Start from today and count backwards
     let streak = 0;
-    const today = new Date();
+    const today = new Date(todayStr + 'T12:00:00'); // Use noon to avoid DST issues
     today.setHours(0, 0, 0, 0);
 
     // Check if today is completed (or if we should start from yesterday)
-    const todayStr = this.formatDate(today);
     let currentDate = new Date(today);
 
     // If today isn't completed yet, check if it's still within the habit's expected time
@@ -389,8 +407,12 @@ export class HabitsService {
 
   /**
    * Format date as YYYY-MM-DD
+   * Uses local date components to avoid timezone issues
    */
   private formatDate(date: Date): string {
-    return date.toISOString().split('T')[0] ?? '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

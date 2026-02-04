@@ -20,8 +20,9 @@ import { ManualTrackForm } from '../manual-track-form';
 import { useTracking } from '../../context/tracking-context';
 import { useDayDetailData } from '../../hooks/use-calendar';
 import { useCompleteHabit, useUncompleteHabit } from '../../hooks/use-habits';
-import { getTodayDate, getMoodColor } from '../../types';
+import { getTodayInTimezone, getMoodColor } from '../../types';
 import { journalEntrance, noAnimation } from './animations';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 /**
  * DayDetailModal - Journal-style modal showing details for a selected day
@@ -40,6 +41,7 @@ import { journalEntrance, noAnimation } from './animations';
 export function DayDetailModal() {
   const prefersReducedMotion = useReducedMotion();
   const { selectedDate, clearSelectedDate } = useTracking();
+  const timezone = useUserTimezone();
   const [togglingHabitId, setTogglingHabitId] = useState<string | null>(null);
   const [showMetricForm, setShowMetricForm] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -98,7 +100,7 @@ export function DayDetailModal() {
   };
 
   const isOpen = selectedDate !== null;
-  const isToday = selectedDate === getTodayDate();
+  const isToday = selectedDate === getTodayInTimezone(timezone);
 
   // Get mood-based background tint
   const getMoodTint = () => {

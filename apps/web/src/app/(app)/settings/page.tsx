@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Sparkles,
   RefreshCw,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,10 +18,11 @@ import {
   ProfileSection,
   EmailSection,
   PasswordSection,
+  PreferencesSection,
 } from '@/components/settings';
 import { useSettings } from '@/hooks/use-settings';
 
-type SettingsSection = 'profile' | 'email' | 'password';
+type SettingsSection = 'profile' | 'email' | 'password' | 'preferences';
 
 const navigationItems = [
   {
@@ -30,6 +32,14 @@ const navigationItems = [
     icon: User,
     color: 'from-blue-500/20 to-cyan-500/20',
     iconColor: 'text-blue-500 dark:text-blue-400',
+  },
+  {
+    id: 'preferences' as const,
+    label: 'Preferências',
+    description: 'Fuso horário e região',
+    icon: Globe,
+    color: 'from-emerald-500/20 to-teal-500/20',
+    iconColor: 'text-emerald-500 dark:text-emerald-400',
   },
   {
     id: 'email' as const,
@@ -69,6 +79,7 @@ export default function SettingsPage() {
     updateProfile,
     updateEmail,
     updatePassword,
+    updateTimezone,
   } = useSettings();
 
   // React Query handles fetching automatically when authenticated
@@ -112,6 +123,13 @@ export default function SettingsPage() {
           <ProfileSection
             defaultName={settings.name}
             onSubmit={updateProfile}
+          />
+        );
+      case 'preferences':
+        return (
+          <PreferencesSection
+            currentTimezone={settings.timezone}
+            onSubmit={updateTimezone}
           />
         );
       case 'email':

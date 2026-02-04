@@ -53,6 +53,9 @@ const mockBillCanceled: Bill = {
   isRecurring: false,
 };
 
+// Fixed "today" for tests - January 3rd, 2026
+const TODAY = '2026-01-03';
+
 // =============================================================================
 // Tests
 // =============================================================================
@@ -65,6 +68,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -79,6 +83,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -93,6 +98,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -106,6 +112,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -119,6 +126,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -132,6 +140,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -146,6 +155,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -161,6 +171,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -178,6 +189,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={onTogglePaid}
+        today={TODAY}
       />
     );
 
@@ -196,6 +208,7 @@ describe('BillCard', () => {
         onEdit={onEdit}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -216,6 +229,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={onDelete}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -235,6 +249,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -252,6 +267,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -269,6 +285,7 @@ describe('BillCard', () => {
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
         isTogglingPaid={true}
+        today={TODAY}
       />
     );
 
@@ -282,6 +299,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 
@@ -296,6 +314,7 @@ describe('BillCard', () => {
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onTogglePaid={vi.fn()}
+        today={TODAY}
       />
     );
 

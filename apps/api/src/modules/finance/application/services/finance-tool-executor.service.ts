@@ -22,12 +22,18 @@ import {
   getDebtPaymentHistoryParamsSchema,
   getUpcomingInstallmentsParamsSchema,
 } from '@life-assistant/ai';
+import {
+  getCurrentMonthInTimezone,
+  getTodayInTimezone,
+  getDaysUntilDueDay,
+} from '@life-assistant/shared';
 import { FinanceSummaryService } from './finance-summary.service';
 import { BillsService } from './bills.service';
 import { VariableExpensesService } from './variable-expenses.service';
 import { DebtsService } from './debts.service';
 import { IncomesService } from './incomes.service';
 import { InvestmentsService } from './investments.service';
+import { SettingsService } from '../../../settings/application/services/settings.service';
 
 /**
  * Finance Tool Executor - Executes finance-related tools for AI chat
@@ -45,8 +51,21 @@ export class FinanceToolExecutorService implements ToolExecutor {
     private readonly variableExpensesService: VariableExpensesService,
     private readonly debtsService: DebtsService,
     private readonly incomesService: IncomesService,
-    private readonly investmentsService: InvestmentsService
+    private readonly investmentsService: InvestmentsService,
+    private readonly settingsService: SettingsService
   ) {}
+
+  /**
+   * Get user's timezone from settings, defaulting to America/Sao_Paulo
+   */
+  private async getUserTimezone(userId: string): Promise<string> {
+    try {
+      const settings = await this.settingsService.getUserSettings(userId);
+      return settings.timezone;
+    } catch {
+      return 'America/Sao_Paulo';
+    }
+  }
 
   /**
    * Execute a tool call
@@ -128,17 +147,23 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
     this.logger.debug(`get_finance_summary params: period=${period}`);
 
-    // Map period to monthYear
+    // Get user timezone for accurate date calculations
+    const timezone = await this.getUserTimezone(userId);
+
+    // Map period to monthYear using timezone-aware calculation
     let monthYear: string | undefined;
-    const now = new Date();
+    const currentMonth = getCurrentMonthInTimezone(timezone);
+    const [yearStr, monthStr] = currentMonth.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
 
     switch (period) {
       case 'current_month':
-        monthYear = now.toISOString().slice(0, 7); // YYYY-MM
+        monthYear = currentMonth;
         break;
       case 'last_month': {
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        monthYear = lastMonth.toISOString().slice(0, 7);
+        const lastMonth = new Date(year, month - 2, 1); // month-2 because Date uses 0-indexed months
+        monthYear = `${String(lastMonth.getFullYear())}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
         break;
       }
       case 'year':
@@ -217,10 +242,14 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
     const { month, year } = parseResult.data;
 
-    // Default to current month/year
-    const now = new Date();
-    const targetMonth = month ?? now.getMonth() + 1;
-    const targetYear = year ?? now.getFullYear();
+    // Get user timezone for accurate date calculations
+    const timezone = await this.getUserTimezone(userId);
+    const currentMonth = getCurrentMonthInTimezone(timezone);
+    const [currentYearStr, currentMonthStr] = currentMonth.split('-');
+
+    // Default to current month/year in user's timezone
+    const targetMonth = month ?? Number(currentMonthStr);
+    const targetYear = year ?? Number(currentYearStr);
     const monthYear = `${String(targetYear)}-${String(targetMonth).padStart(2, '0')}`;
 
     this.logger.debug(`get_pending_bills params: monthYear=${monthYear}`);
@@ -231,13 +260,9 @@ export class FinanceToolExecutorService implements ToolExecutor {
       status: 'pending', // Will also include overdue via date logic
     });
 
-    // Calculate due status for each bill
-    const today = new Date();
+    // Calculate due status for each bill using timezone-aware calculation
     const formattedBills = bills.map((bill) => {
-      const dueDate = new Date(targetYear, targetMonth - 1, bill.dueDay);
-      const daysUntilDue = Math.ceil(
-        (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
+      const daysUntilDue = getDaysUntilDueDay(bill.dueDay, timezone);
       const status = daysUntilDue < 0 ? 'overdue' : 'pending';
 
       return {
@@ -352,6 +377,10 @@ export class FinanceToolExecutorService implements ToolExecutor {
     };
     const dbCategory = categoryMapping[category] ?? 'other';
 
+    // Get user timezone for accurate month calculation
+    const timezone = await this.getUserTimezone(userId);
+    const currentMonth = getCurrentMonthInTimezone(timezone);
+
     // Create the expense
     const expense = await this.variableExpensesService.create(userId, {
       name,
@@ -359,7 +388,7 @@ export class FinanceToolExecutorService implements ToolExecutor {
       expectedAmount: String(budgetedAmount ?? actualAmount ?? 0),
       actualAmount: String(actualAmount ?? 0),
       isRecurring,
-      monthYear: new Date().toISOString().slice(0, 7),
+      monthYear: currentMonth,
     });
 
     this.logger.log(`create_expense: expense ${expense.id} created`);
@@ -410,10 +439,13 @@ export class FinanceToolExecutorService implements ToolExecutor {
       `get_debt_progress params: debtId=${debtId ?? 'all'}, monthYear=${monthYear ?? 'none'}`
     );
 
+    // Get user timezone for accurate date calculations
+    const timezone = await this.getUserTimezone(userId);
+
     if (debtId) {
       // Get specific debt
       const debt = await this.debtsService.findById(userId, debtId);
-      const formattedDebt = this.formatDebtForResponse(debt, monthYear);
+      const formattedDebt = this.formatDebtForResponse(debt, monthYear, timezone);
 
       // Add projection for the specific debt
       const projection = await this.debtsService.calculateProjection(userId, debtId);
@@ -443,7 +475,7 @@ export class FinanceToolExecutorService implements ToolExecutor {
     // Format debts and add projections (only for negotiated debts)
     const formattedDebts = await Promise.all(
       debts.map(async (debt) => {
-        const formatted = this.formatDebtForResponse(debt, monthYear);
+        const formatted = this.formatDebtForResponse(debt, monthYear, timezone);
 
         // Only calculate projection for negotiated debts with installments
         if (debt.isNegotiated && debt.totalInstallments && debt.status !== 'paid_off') {
@@ -589,7 +621,9 @@ export class FinanceToolExecutorService implements ToolExecutor {
       paidInMonth: inst.paidInMonth,
     }));
 
-    const targetMonth = monthYear ?? new Date().toISOString().slice(0, 7);
+    // Get user timezone for accurate month calculation
+    const timezone = await this.getUserTimezone(userId);
+    const targetMonth = monthYear ?? getCurrentMonthInTimezone(timezone);
 
     this.logger.log(
       `get_upcoming_installments returned ${String(result.installments.length)} installments for ${targetMonth}`
@@ -620,7 +654,8 @@ export class FinanceToolExecutorService implements ToolExecutor {
       status: string;
       createdAt: Date;
     },
-    _monthYear?: string
+    _monthYear?: string,
+    timezone = 'America/Sao_Paulo'
   ): Record<string, unknown> {
     const totalAmount = parseFloat(debt.totalAmount);
     const installmentAmount = debt.installmentAmount
@@ -655,7 +690,7 @@ export class FinanceToolExecutorService implements ToolExecutor {
       result.creditor = debt.creditor;
     }
     if (debt.dueDay) {
-      result.nextDueDate = this.getNextDueDate(debt.dueDay);
+      result.nextDueDate = this.getNextDueDate(debt.dueDay, timezone);
     }
     if (debt.startMonthYear) {
       result.startMonthYear = debt.startMonthYear;
@@ -682,10 +717,14 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
     const { month, year, status } = parseResult.data;
 
-    // Default to current month/year
-    const now = new Date();
-    const targetMonth = month ?? now.getMonth() + 1;
-    const targetYear = year ?? now.getFullYear();
+    // Get user timezone for accurate date calculations
+    const timezone = await this.getUserTimezone(userId);
+    const currentMonth = getCurrentMonthInTimezone(timezone);
+    const [currentYearStr, currentMonthStr] = currentMonth.split('-');
+
+    // Default to current month/year in user's timezone
+    const targetMonth = month ?? Number(currentMonthStr);
+    const targetYear = year ?? Number(currentYearStr);
     const monthYear = `${String(targetYear)}-${String(targetMonth).padStart(2, '0')}`;
 
     this.logger.debug(`get_bills params: monthYear=${monthYear}, status=${status}`);
@@ -701,13 +740,9 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
     const { bills } = await this.billsService.findAll(userId, findParams);
 
-    // Calculate due status for each bill
-    const today = new Date();
+    // Calculate due status for each bill using timezone-aware calculation
     const formattedBills = bills.map((bill) => {
-      const dueDate = new Date(targetYear, targetMonth - 1, bill.dueDay);
-      const daysUntilDue = Math.ceil(
-        (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
+      const daysUntilDue = getDaysUntilDueDay(bill.dueDay, timezone);
 
       return {
         id: bill.id,
@@ -769,10 +804,14 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
     const { month, year } = parseResult.data;
 
-    // Default to current month/year
-    const now = new Date();
-    const targetMonth = month ?? now.getMonth() + 1;
-    const targetYear = year ?? now.getFullYear();
+    // Get user timezone for accurate date calculations
+    const timezone = await this.getUserTimezone(userId);
+    const currentMonth = getCurrentMonthInTimezone(timezone);
+    const [currentYearStr, currentMonthStr] = currentMonth.split('-');
+
+    // Default to current month/year in user's timezone
+    const targetMonth = month ?? Number(currentMonthStr);
+    const targetYear = year ?? Number(currentYearStr);
     const monthYear = `${String(targetYear)}-${String(targetMonth).padStart(2, '0')}`;
 
     this.logger.debug(`get_expenses params: monthYear=${monthYear}`);
@@ -847,10 +886,14 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
     const { month, year } = parseResult.data;
 
-    // Default to current month/year
-    const now = new Date();
-    const targetMonth = month ?? now.getMonth() + 1;
-    const targetYear = year ?? now.getFullYear();
+    // Get user timezone for accurate date calculations
+    const timezone = await this.getUserTimezone(userId);
+    const currentMonth = getCurrentMonthInTimezone(timezone);
+    const [currentYearStr, currentMonthStr] = currentMonth.split('-');
+
+    // Default to current month/year in user's timezone
+    const targetMonth = month ?? Number(currentMonthStr);
+    const targetYear = year ?? Number(currentYearStr);
     const monthYear = `${String(targetYear)}-${String(targetMonth).padStart(2, '0')}`;
 
     this.logger.debug(`get_incomes params: monthYear=${monthYear}`);
@@ -988,21 +1031,17 @@ export class FinanceToolExecutorService implements ToolExecutor {
 
   /**
    * Helper to calculate next due date based on due day
+   * Uses timezone-aware calculation for accurate date
    */
-  private getNextDueDate(dueDay: number): string {
-    const now = new Date();
-    const currentDay = now.getDate();
+  private getNextDueDate(dueDay: number, timezone: string): string {
+    const daysUntil = getDaysUntilDueDay(dueDay, timezone);
+    const today = getTodayInTimezone(timezone);
+    const todayDate = new Date(today + 'T12:00:00'); // Use noon to avoid DST issues
+    todayDate.setDate(todayDate.getDate() + daysUntil);
 
-    let nextDueDate: Date;
-    if (currentDay <= dueDay) {
-      // Due date is this month
-      nextDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
-    } else {
-      // Due date is next month
-      nextDueDate = new Date(now.getFullYear(), now.getMonth() + 1, dueDay);
-    }
-
-    const dateStr = nextDueDate.toISOString().split('T')[0];
-    return dateStr ?? '';
+    const year = todayDate.getFullYear();
+    const month = String(todayDate.getMonth() + 1).padStart(2, '0');
+    const day = String(todayDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

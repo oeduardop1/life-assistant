@@ -1,7 +1,8 @@
 // apps/api/src/modules/finance/finance.module.ts
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { LoggerModule } from '../../logger/logger.module';
+import { SettingsModule } from '../settings/settings.module';
 
 // Controllers
 import { IncomesController } from './presentation/controllers/incomes.controller';
@@ -35,7 +36,7 @@ import { DEBTS_REPOSITORY } from './domain/ports/debts.repository.port';
 import { INVESTMENTS_REPOSITORY } from './domain/ports/investments.repository.port';
 
 @Module({
-  imports: [LoggerModule],
+  imports: [LoggerModule, forwardRef(() => SettingsModule)],
   controllers: [
     IncomesController,
     BillsController,

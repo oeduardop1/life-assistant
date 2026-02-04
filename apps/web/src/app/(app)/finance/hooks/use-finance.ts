@@ -2,6 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useAuthenticatedApi } from '@/hooks/use-authenticated-api';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { getCurrentMonthInTimezone } from '@life-assistant/shared';
 import type {
   FinanceSummary,
   FinanceSummaryResponse,
@@ -63,7 +65,8 @@ export function useFinanceSummary(monthYear: string) {
  */
 export function useMonthlyEvolution(endMonth?: string, months = 6) {
   const api = useAuthenticatedApi();
-  const targetMonth = endMonth ?? new Date().toISOString().slice(0, 7);
+  const timezone = useUserTimezone();
+  const targetMonth = endMonth ?? getCurrentMonthInTimezone(timezone);
 
   return useQuery({
     queryKey: financeKeys.evolution(targetMonth, months),

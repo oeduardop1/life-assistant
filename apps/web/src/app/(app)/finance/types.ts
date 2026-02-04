@@ -5,6 +5,16 @@
  * @see docs/milestones/phase-2-tracker.md M2.2 for Finance implementation
  */
 
+// Import timezone utilities from shared package
+import {
+  getPreviousMonth as sharedGetPreviousMonth,
+  getNextMonth as sharedGetNextMonth,
+  formatMonthDisplay as sharedFormatMonthDisplay,
+  getCurrentMonthInTimezone,
+  isOverdueInTimezone,
+  getTodayInTimezone,
+} from '@life-assistant/shared';
+
 // =============================================================================
 // Summary (from backend FinanceSummary)
 // =============================================================================
@@ -268,55 +278,14 @@ export function formatPercentage(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
-/**
- * Get current month in YYYY-MM format
- */
-export function getCurrentMonth(): string {
-  return new Date().toISOString().slice(0, 7);
-}
+// Re-export pure calculation functions from shared (no timezone needed)
+export const getPreviousMonth = sharedGetPreviousMonth;
+export const getNextMonth = sharedGetNextMonth;
+export const formatMonthDisplay = sharedFormatMonthDisplay;
 
-/**
- * Format month for display (e.g., "Janeiro 2026")
- */
-export function formatMonthDisplay(monthYear: string): string {
-  const [year, month] = monthYear.split('-');
-  const months = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-  ];
-  return `${months[parseInt(month, 10) - 1]} ${year}`;
-}
-
-/**
- * Get previous month in YYYY-MM format
- */
-export function getPreviousMonth(monthYear: string): string {
-  const [year, month] = monthYear.split('-').map(Number);
-  const date = new Date(year, month - 2, 1); // month - 2 because Date months are 0-indexed
-  return date.toISOString().slice(0, 7);
-}
-
-/**
- * Get next month in YYYY-MM format
- */
-export function getNextMonth(monthYear: string): string {
-  const [year, month] = monthYear.split('-').map(Number);
-  const date = new Date(year, month, 1); // month (not month - 1) because we want next month
-  return date.toISOString().slice(0, 7);
-}
-
-/**
- * Check if a date is overdue (date is in the past)
- * Uses local date string comparison for timezone safety
- */
-export function isOverdue(dueDate: string): boolean {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const todayStr = `${year}-${month}-${day}`;
-  return dueDate < todayStr;
-}
+// Re-export timezone-aware functions from shared
+// Components should use useUserTimezone() hook to get timezone
+export { getCurrentMonthInTimezone, isOverdueInTimezone, getTodayInTimezone };
 
 /**
  * Get balance color based on value
@@ -677,14 +646,53 @@ export function getDueDateForMonth(monthYear: string, dueDay: number): string {
 }
 
 /**
- * Check if a bill is overdue based on dueDay and monthYear
+ * Calculate days until due date for a bill
+ * Positive = days remaining, 0 = due today, negative = overdue
+ * @param monthYear - Month in YYYY-MM format
+ * @param dueDay - Day of month (1-31)
+ * @param today - Today's date in YYYY-MM-DD format (from timezone-aware helper)
  */
-export function isBillOverdue(bill: Bill): boolean {
-  if (bill.status === 'paid' || bill.status === 'canceled') {
-    return false;
+export function getDaysUntilDue(monthYear: string, dueDay: number, today: string): number {
+  const dueDate = getDueDateForMonth(monthYear, dueDay);
+  const [dueYear, dueMonth, dueD] = dueDate.split('-').map(Number);
+  const [todayYear, todayMonth, todayD] = today.split('-').map(Number);
+
+  const dueMs = Date.UTC(dueYear, dueMonth - 1, dueD);
+  const todayMs = Date.UTC(todayYear, todayMonth - 1, todayD);
+
+  const diffMs = dueMs - todayMs;
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Calculate days until due date for a debt installment (monthly recurring)
+ * Uses just the day of month since debts recur monthly
+ * @param dueDay - Day of month (1-31)
+ * @param today - Today's date in YYYY-MM-DD format (from timezone-aware helper)
+ * @returns Days until next due date (positive = future, 0 = today, negative = past this month)
+ */
+export function getDebtDaysUntilDue(dueDay: number, today: string): number {
+  const [todayYear, todayMonth, todayDay] = today.split('-').map(Number);
+  const currentDay = todayDay;
+
+  // Get actual last day of month to handle months with fewer days
+  const lastDayOfMonth = new Date(todayYear, todayMonth, 0).getDate();
+  const actualDueDay = Math.min(dueDay, lastDayOfMonth);
+
+  // If due day hasn't passed, calculate days until this month's due date
+  if (actualDueDay >= currentDay) {
+    return actualDueDay - currentDay;
   }
-  const dueDate = getDueDateForMonth(bill.monthYear, bill.dueDay);
-  return isOverdue(dueDate);
+
+  // If due day already passed, calculate days until next month's due date
+  const nextMonth = todayMonth === 12 ? 1 : todayMonth + 1;
+  const nextMonthYear = todayMonth === 12 ? todayYear + 1 : todayYear;
+  const lastDayOfNextMonth = new Date(nextMonthYear, nextMonth, 0).getDate();
+  const actualDueDayNextMonth = Math.min(dueDay, lastDayOfNextMonth);
+
+  // Days remaining in current month + days into next month
+  const daysRemainingThisMonth = lastDayOfMonth - currentDay;
+  return daysRemainingThisMonth + actualDueDayNextMonth;
 }
 
 // =============================================================================
@@ -1207,19 +1215,6 @@ export function getDebtDueDateForCurrentMonth(dueDay: number): string {
 }
 
 /**
- * Check if a debt installment is overdue
- * @param debt - The debt entity
- * @returns true if the debt has a dueDay and it's past that date
- */
-export function isDebtInstallmentOverdue(debt: Debt): boolean {
-  if (!debt.isNegotiated || !debt.dueDay || debt.status !== 'active') {
-    return false;
-  }
-  const dueDate = getDebtDueDateForCurrentMonth(debt.dueDay);
-  return isOverdue(dueDate);
-}
-
-/**
  * Calculate end month for a debt based on startMonthYear and totalInstallments
  * @param startMonth - Start month in YYYY-MM format
  * @param totalInstallments - Total number of installments
@@ -1475,15 +1470,4 @@ export function formatInvestmentDeadline(deadline: string | null): string {
     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
   ];
   return `${months[month - 1]} ${year}`;
-}
-
-/**
- * Check if investment deadline has passed
- * @param deadline - Date string in YYYY-MM-DD format
- * @returns true if deadline is in the past
- */
-export function isInvestmentOverdue(deadline: string | null): boolean {
-  if (!deadline) return false;
-  const today = new Date().toISOString().slice(0, 10);
-  return deadline < today;
 }

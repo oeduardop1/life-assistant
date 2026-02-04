@@ -4,7 +4,8 @@ import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { getCurrentMonth } from '../types';
+import { getCurrentMonthInTimezone } from '../types';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 interface MonthSelectorProps {
   currentMonth: string;
@@ -31,7 +32,8 @@ export function MonthSelector({
   onNextMonth,
   onCurrentMonth,
 }: MonthSelectorProps) {
-  const isCurrentMonth = currentMonth === getCurrentMonth();
+  const timezone = useUserTimezone();
+  const isCurrentMonth = currentMonth === getCurrentMonthInTimezone(timezone);
 
   return (
     <div className="flex items-center gap-1">

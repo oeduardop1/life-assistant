@@ -3,13 +3,14 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { CalendarDaySummary } from '../../types';
-import { isToday, getTodayDate } from '../../types';
 
 interface DayCellProps {
   /** Day number (1-31) */
   day: number;
   /** Full date string (YYYY-MM-DD) */
   date: string;
+  /** Today's date in YYYY-MM-DD format (from parent, timezone-aware) */
+  today: string;
   /** Calendar data for this day */
   daySummary?: CalendarDaySummary;
   /** Whether this day is in the current month */
@@ -53,8 +54,8 @@ function getDayFill(
 /**
  * Check if date is in the future
  */
-function isFutureDate(dateStr: string): boolean {
-  return dateStr > getTodayDate();
+function isFutureDate(dateStr: string, today: string): boolean {
+  return dateStr > today;
 }
 
 /**
@@ -72,13 +73,14 @@ function isFutureDate(dateStr: string): boolean {
 export function DayCell({
   day,
   date,
+  today,
   daySummary,
   isCurrentMonth,
   onClick,
   animationDelay = 0,
 }: DayCellProps) {
-  const isCurrentDay = isToday(date);
-  const isFuture = isFutureDate(date);
+  const isCurrentDay = date === today;
+  const isFuture = isFutureDate(date, today);
   const hasData = daySummary?.hasData ?? false;
   const moodColor = daySummary?.moodColor ?? 'gray';
   const habitsCompleted = daySummary?.habitsCompleted ?? 0;

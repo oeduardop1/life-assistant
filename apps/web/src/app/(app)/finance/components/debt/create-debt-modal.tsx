@@ -27,11 +27,12 @@ import { cn } from '@/lib/utils';
 import { useCreateDebt } from '../../hooks/use-debts';
 import { MonthPicker } from '../month-picker';
 import {
-  getCurrentMonth,
+  getCurrentMonthInTimezone,
   formatMonthDisplay,
   calculateDebtEndMonth,
   formatCurrency,
 } from '../../types';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 // =============================================================================
 // Types
@@ -303,6 +304,7 @@ interface TermsStepProps {
   onBack: () => void;
   onNext: () => void;
   isValid: boolean;
+  currentMonth: string;
 }
 
 function TermsStep({
@@ -313,11 +315,12 @@ function TermsStep({
   onBack,
   onNext,
   isValid,
+  currentMonth,
 }: TermsStepProps) {
   const totalAmount = useWatch({ control, name: 'totalAmount' }) || 0;
   const totalInstallments = useWatch({ control, name: 'totalInstallments' }) || 0;
   const installmentAmount = useWatch({ control, name: 'installmentAmount' }) || 0;
-  const startMonthYear = useWatch({ control, name: 'startMonthYear' }) || getCurrentMonth();
+  const startMonthYear = useWatch({ control, name: 'startMonthYear' }) || currentMonth;
 
   const totalWithInstallments = totalInstallments * installmentAmount;
   const difference = totalWithInstallments - totalAmount;
@@ -478,9 +481,10 @@ interface ReviewStepProps {
   onBack: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  currentMonth: string;
 }
 
-function ReviewStep({ control, onBack, onSubmit, isSubmitting }: ReviewStepProps) {
+function ReviewStep({ control, onBack, onSubmit, isSubmitting, currentMonth }: ReviewStepProps) {
   const data = useWatch({ control });
   const totalInstallments = data.totalInstallments ?? 0;
   const totalAmount = data.totalAmount ?? 0;
@@ -488,7 +492,7 @@ function ReviewStep({ control, onBack, onSubmit, isSubmitting }: ReviewStepProps
   const endMonth =
     data.isNegotiated && totalInstallments > 0
       ? calculateDebtEndMonth(
-          data.startMonthYear || getCurrentMonth(),
+          data.startMonthYear || currentMonth,
           totalInstallments
         )
       : null;
@@ -558,7 +562,7 @@ function ReviewStep({ control, onBack, onSubmit, isSubmitting }: ReviewStepProps
               <div>
                 <span className="text-xs text-muted-foreground">Período</span>
                 <p className="text-sm">
-                  {formatMonthDisplay(data.startMonthYear || getCurrentMonth())} →{' '}
+                  {formatMonthDisplay(data.startMonthYear || currentMonth)} →{' '}
                   {endMonth ? formatMonthDisplay(endMonth) : '-'}
                 </p>
               </div>
@@ -633,6 +637,8 @@ const STEPS: { key: Step; label: string }[] = [
 export function CreateDebtModal({ open, onOpenChange }: CreateDebtModalProps) {
   const [step, setStep] = useState<Step>('type');
   const createDebt = useCreateDebt();
+  const timezone = useUserTimezone();
+  const currentMonth = getCurrentMonthInTimezone(timezone);
 
   const form = useForm<FormData>({
     defaultValues: {
@@ -643,7 +649,7 @@ export function CreateDebtModal({ open, onOpenChange }: CreateDebtModalProps) {
       totalInstallments: 12,
       installmentAmount: 0,
       dueDay: 10,
-      startMonthYear: getCurrentMonth(),
+      startMonthYear: currentMonth,
       notes: '',
     },
     mode: 'onChange',
@@ -787,6 +793,7 @@ export function CreateDebtModal({ open, onOpenChange }: CreateDebtModalProps) {
                 onBack={() => goToStep('info')}
                 onNext={() => goToStep('review')}
                 isValid={isTermsValid}
+                currentMonth={currentMonth}
               />
             )}
             {step === 'review' && (
@@ -796,6 +803,7 @@ export function CreateDebtModal({ open, onOpenChange }: CreateDebtModalProps) {
                 onBack={() => goToStep(getPrevStep())}
                 onSubmit={handleSubmit}
                 isSubmitting={createDebt.isPending}
+                currentMonth={currentMonth}
               />
             )}
           </AnimatePresence>

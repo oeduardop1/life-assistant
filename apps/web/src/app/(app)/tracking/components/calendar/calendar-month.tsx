@@ -13,7 +13,9 @@ import {
   getPreviousMonth,
   getNextMonth,
   parseMonthYear,
+  getTodayInTimezone,
 } from '../../types';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 interface CalendarDay {
   day: number;
@@ -35,6 +37,8 @@ interface CalendarDay {
 export function CalendarMonth() {
   const { currentMonth, year, month, setSelectedDate } = useTracking();
   const { isLoading, isError, getDay, days } = useCalendarMonthData(year, month);
+  const timezone = useUserTimezone();
+  const today = getTodayInTimezone(timezone);
 
   // Build calendar grid
   const calendarDays = useMemo(() => {
@@ -102,7 +106,7 @@ export function CalendarMonth() {
   return (
     <div className="space-y-1">
       {/* Month summary stats */}
-      <MonthSummary days={days} year={year} month={month} />
+      <MonthSummary days={days} year={year} month={month} today={today} />
 
       {/* Calendar grid */}
       <CalendarHeader />
@@ -112,6 +116,7 @@ export function CalendarMonth() {
             key={calDay.date}
             day={calDay.day}
             date={calDay.date}
+            today={today}
             daySummary={getDay(calDay.date)}
             isCurrentMonth={calDay.isCurrentMonth}
             onClick={() => handleDayClick(calDay.date, calDay.isCurrentMonth)}

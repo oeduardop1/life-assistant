@@ -8,6 +8,7 @@ import type {
   UpdateProfileData,
   UpdateEmailData,
   UpdatePasswordData,
+  UpdateTimezoneData,
 } from '@/lib/validations/settings';
 
 // =============================================================================
@@ -101,6 +102,27 @@ export function useUpdatePassword() {
   });
 }
 
+/**
+ * useUpdateTimezone - Update user timezone
+ */
+export function useUpdateTimezone() {
+  const api = useAuthenticatedApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: UpdateTimezoneData): Promise<SettingsResponse> => {
+      return api.patch<SettingsResponse>('/settings/timezone', data);
+    },
+    onSuccess: (_response, variables) => {
+      // Optimistically update the cache
+      queryClient.setQueryData<UserSettings>(settingsKeys.user(), (old) => {
+        if (!old) return old;
+        return { ...old, timezone: variables.timezone };
+      });
+    },
+  });
+}
+
 // =============================================================================
 // Combined Settings Hook (for backward compatibility)
 // =============================================================================
@@ -113,6 +135,7 @@ interface UseSettingsResult {
   updateProfile: (data: UpdateProfileData) => Promise<SettingsResponse>;
   updateEmail: (data: UpdateEmailData) => Promise<SettingsResponse>;
   updatePassword: (data: UpdatePasswordData) => Promise<SettingsResponse>;
+  updateTimezone: (data: UpdateTimezoneData) => Promise<SettingsResponse>;
 }
 
 /**
@@ -133,6 +156,7 @@ export function useSettings(): UseSettingsResult {
   const updateProfileMutation = useUpdateProfile();
   const updateEmailMutation = useUpdateEmail();
   const updatePasswordMutation = useUpdatePassword();
+  const updateTimezoneMutation = useUpdateTimezone();
 
   return {
     settings: settings ?? null,
@@ -149,6 +173,9 @@ export function useSettings(): UseSettingsResult {
     },
     updatePassword: async (data: UpdatePasswordData) => {
       return updatePasswordMutation.mutateAsync(data);
+    },
+    updateTimezone: async (data: UpdateTimezoneData) => {
+      return updateTimezoneMutation.mutateAsync(data);
     },
   };
 }

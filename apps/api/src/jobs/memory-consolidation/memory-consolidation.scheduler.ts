@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { eq } from '@life-assistant/database';
+import { getTodayInTimezone } from '@life-assistant/shared';
 import { DatabaseService } from '../../database/database.service';
 import { AppLoggerService } from '../../logger/logger.service';
 import { QUEUES } from '../queues';
@@ -65,7 +66,7 @@ export class MemoryConsolidationScheduler implements OnModuleInit {
           name: 'consolidate-timezone',
           data: {
             timezone,
-            date: new Date().toISOString().split('T')[0], // YYYY-MM-DD for deduplication
+            date: getTodayInTimezone(timezone), // YYYY-MM-DD for deduplication
           },
         }
       );
@@ -107,7 +108,7 @@ export class MemoryConsolidationScheduler implements OnModuleInit {
       {
         userId,
         timezone: 'manual',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayInTimezone('America/Sao_Paulo'), // Default timezone for manual trigger
       },
       {
         jobId: `consolidation_${userId}_manual_${String(timestamp)}`,
@@ -129,7 +130,7 @@ export class MemoryConsolidationScheduler implements OnModuleInit {
       'consolidate-timezone-manual',
       {
         timezone,
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayInTimezone(timezone),
       },
       {
         jobId: `consolidation_${timezone.replace(/\//g, '-')}_manual_${String(timestamp)}`,

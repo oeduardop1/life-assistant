@@ -13,8 +13,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { formatCurrency, formatMonthDisplay, getDueDateForMonth, type Bill } from '../../types';
+import { formatCurrency, formatMonthDisplay, getDaysUntilDue, getTodayInTimezone, type Bill } from '../../types';
 import { CelebrationConfetti } from './bill-animations';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 // =============================================================================
 // Types
@@ -31,21 +32,6 @@ interface BillQuickPayProps {
 }
 
 // =============================================================================
-// Helpers
-// =============================================================================
-
-function getDaysUntilDue(monthYear: string, dueDay: number): number {
-  const dueDate = getDueDateForMonth(monthYear, dueDay);
-  const today = new Date();
-  const due = new Date(dueDate + 'T00:00:00');
-
-  today.setHours(0, 0, 0, 0);
-
-  const diffTime = due.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
-
-// =============================================================================
 // Bill Item Component
 // =============================================================================
 
@@ -54,11 +40,12 @@ interface BillItemProps {
   onPay: () => void;
   index: number;
   isPaying?: boolean;
+  today: string;
 }
 
-function BillItem({ bill, onPay, index, isPaying }: BillItemProps) {
+function BillItem({ bill, onPay, index, isPaying, today }: BillItemProps) {
   const isPaid = bill.status === 'paid';
-  const isOverdue = bill.status === 'overdue' || getDaysUntilDue(bill.monthYear, bill.dueDay) < 0;
+  const isOverdue = bill.status === 'overdue' || getDaysUntilDue(bill.monthYear, bill.dueDay, today) < 0;
 
   return (
     <motion.div
@@ -207,6 +194,9 @@ export function BillQuickPay({
   open,
   payingBillId,
 }: BillQuickPayProps) {
+  const timezone = useUserTimezone();
+  const today = getTodayInTimezone(timezone);
+
   // Calculate stats
   const stats = useMemo(() => {
     const paid = bills.filter((b) => b.status === 'paid');
@@ -226,8 +216,8 @@ export function BillQuickPay({
 
     // Sort pending by due date
     const sortedPending = [...pending].sort((a, b) => {
-      const daysA = getDaysUntilDue(a.monthYear, a.dueDay);
-      const daysB = getDaysUntilDue(b.monthYear, b.dueDay);
+      const daysA = getDaysUntilDue(a.monthYear, a.dueDay, today);
+      const daysB = getDaysUntilDue(b.monthYear, b.dueDay, today);
       return daysA - daysB;
     });
 
@@ -239,7 +229,7 @@ export function BillQuickPay({
       pendingBills: sortedPending,
       paidBills: paid,
     };
-  }, [bills]);
+  }, [bills, today]);
 
   const allPaid = stats.pendingCount === 0 && stats.paidCount > 0;
   const pendingAmount = stats.totalAmount - stats.paidAmount;
@@ -323,6 +313,7 @@ export function BillQuickPay({
                       onPay={() => onPayBill(bill)}
                       index={index}
                       isPaying={payingBillId === bill.id}
+                      today={today}
                     />
                   ))}
                 </div>

@@ -337,11 +337,41 @@ const total = acc + row.amount; // "0" + "100" = "0100"
 const total = acc + parseFloat(row.amount); // 0 + 100 = 100
 ```
 
-### 6.2 Timestamps
+### 6.2 Timestamps & Timezone Handling
 
-- Always use UTC in database
-- Convert to user timezone in presentation layer
-- Use `timestamp with time zone` in PostgreSQL
+**Database:**
+- Use UTC for all `TIMESTAMPTZ` columns (`created_at`, `updated_at`, `entry_time`)
+- Use DATE for user-relative dates (`entry_date`, `completion_date`) - stores local date as-is
+- User timezone stored in `public.users.timezone` (IANA format, ex: 'America/Sao_Paulo')
+
+**Backend:**
+- Use `@life-assistant/shared` timezone utilities:
+  - `getTodayInTimezone(timezone)` - replaces `new Date().toISOString().slice(0, 10)`
+  - `getCurrentMonthInTimezone(timezone)` - replaces `new Date().toISOString().slice(0, 7)`
+  - `getDaysUntilDue(dueDate, timezone)` - accurate due date calculation
+- Get user timezone via SettingsService when needed
+
+**Frontend:**
+- Use `useUserTimezone()` hook to get timezone from settings
+- Use shared utilities for date calculations (imported from `@life-assistant/shared`)
+- Pass timezone-aware dates to backend
+
+**Hybrid approach:**
+- `entryDate` (DATE) = User's local date at time of entry (no timezone conversion)
+- `entryTime` (TIMESTAMPTZ) = Optional precise timestamp in UTC
+- "Today" = Current date in user's timezone (not UTC!)
+
+**Example (backend service):**
+```typescript
+import { getCurrentMonthInTimezone } from '@life-assistant/shared';
+
+// Get user's timezone
+const settings = await this.settingsService.getUserSettings(userId);
+const timezone = settings.timezone;
+
+// Use timezone-aware month
+const currentMonth = getCurrentMonthInTimezone(timezone);
+```
 
 ### 6.3 UUIDs
 

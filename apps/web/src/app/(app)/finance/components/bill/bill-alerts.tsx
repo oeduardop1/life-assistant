@@ -3,7 +3,8 @@
 import { AlertTriangle, Clock, CalendarClock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { formatCurrency, getDueDateForMonth, type Bill } from '../../types';
+import { formatCurrency, getDaysUntilDue, getTodayInTimezone, type Bill } from '../../types';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 // =============================================================================
 // Types
@@ -27,20 +28,7 @@ interface BillAlertsProps {
 // Helper Functions
 // =============================================================================
 
-function getDaysUntilDue(monthYear: string, dueDay: number): number {
-  const dueDate = getDueDateForMonth(monthYear, dueDay);
-  const today = new Date();
-  const due = new Date(dueDate + 'T00:00:00');
-
-  today.setHours(0, 0, 0, 0);
-
-  const diffTime = due.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  return diffDays;
-}
-
-function generateAlerts(bills: Bill[]): AlertItem[] {
+function generateAlerts(bills: Bill[], today: string): AlertItem[] {
   const alerts: AlertItem[] = [];
 
   // Filter out paid and canceled bills
@@ -49,7 +37,7 @@ function generateAlerts(bills: Bill[]): AlertItem[] {
   );
 
   for (const bill of pendingBills) {
-    const daysUntil = getDaysUntilDue(bill.monthYear, bill.dueDay);
+    const daysUntil = getDaysUntilDue(bill.monthYear, bill.dueDay, today);
     const isOverdue = bill.status === 'overdue' || daysUntil < 0;
 
     if (isOverdue) {
@@ -165,7 +153,9 @@ export function BillAlerts({
   onBillClick,
   className,
 }: BillAlertsProps) {
-  const alerts = generateAlerts(bills);
+  const timezone = useUserTimezone();
+  const today = getTodayInTimezone(timezone);
+  const alerts = generateAlerts(bills, today);
 
   if (alerts.length === 0) {
     return null;
@@ -218,10 +208,12 @@ export function BillAlertBanner({
   onQuickPayClick,
   className,
 }: BillAlertBannerProps) {
+  const timezone = useUserTimezone();
+  const today = getTodayInTimezone(timezone);
   const overdueBills = bills.filter((b) => b.status === 'overdue');
   const dueTodayBills = bills.filter((b) => {
     if (b.status !== 'pending') return false;
-    const daysUntil = getDaysUntilDue(b.monthYear, b.dueDay);
+    const daysUntil = getDaysUntilDue(b.monthYear, b.dueDay, today);
     return daysUntil === 0;
   });
 

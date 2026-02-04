@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Bill } from '../../types';
-import { getDueDateForMonth } from '../../types';
+import { getDaysUntilDue, getTodayInTimezone } from '../../types';
 import { BillCard } from './bill-card';
 import { BillCardSkeleton, StaggerList, StaggerItem } from './bill-animations';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 // =============================================================================
 // Types
@@ -35,18 +36,7 @@ interface GroupedBills {
 // Helpers
 // =============================================================================
 
-function getDaysUntilDue(monthYear: string, dueDay: number): number {
-  const dueDate = getDueDateForMonth(monthYear, dueDay);
-  const today = new Date();
-  const due = new Date(dueDate + 'T00:00:00');
-
-  today.setHours(0, 0, 0, 0);
-
-  const diffTime = due.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
-
-function groupBills(bills: Bill[]): GroupedBills {
+function groupBills(bills: Bill[], today: string): GroupedBills {
   const groups: GroupedBills = {
     overdue: [],
     pending: [],
@@ -60,7 +50,7 @@ function groupBills(bills: Bill[]): GroupedBills {
       groups.overdue.push(bill);
     } else if (bill.status === 'pending') {
       // Check if actually overdue based on date
-      const daysUntil = getDaysUntilDue(bill.monthYear, bill.dueDay);
+      const daysUntil = getDaysUntilDue(bill.monthYear, bill.dueDay, today);
       if (daysUntil < 0) {
         groups.overdue.push(bill);
       } else {
@@ -74,15 +64,15 @@ function groupBills(bills: Bill[]): GroupedBills {
 
   // Sort pending bills by due date (ascending)
   groups.pending.sort((a, b) => {
-    const daysA = getDaysUntilDue(a.monthYear, a.dueDay);
-    const daysB = getDaysUntilDue(b.monthYear, b.dueDay);
+    const daysA = getDaysUntilDue(a.monthYear, a.dueDay, today);
+    const daysB = getDaysUntilDue(b.monthYear, b.dueDay, today);
     return daysA - daysB;
   });
 
   // Sort overdue by how long overdue (most overdue first)
   groups.overdue.sort((a, b) => {
-    const daysA = getDaysUntilDue(a.monthYear, a.dueDay);
-    const daysB = getDaysUntilDue(b.monthYear, b.dueDay);
+    const daysA = getDaysUntilDue(a.monthYear, a.dueDay, today);
+    const daysB = getDaysUntilDue(b.monthYear, b.dueDay, today);
     return daysA - daysB;
   });
 
@@ -187,7 +177,9 @@ export function BillList({
   togglingBillId,
   grouped = true,
 }: BillListProps) {
-  const groupedBills = useMemo(() => groupBills(bills), [bills]);
+  const timezone = useUserTimezone();
+  const today = getTodayInTimezone(timezone);
+  const groupedBills = useMemo(() => groupBills(bills, today), [bills, today]);
 
   if (loading) {
     return <BillListSkeleton />;
@@ -210,6 +202,7 @@ export function BillList({
                 onDelete={onDelete}
                 onTogglePaid={onTogglePaid}
                 isTogglingPaid={togglingBillId === bill.id}
+                today={today}
               />
             </StaggerItem>
           ))}
@@ -235,6 +228,7 @@ export function BillList({
                     onDelete={onDelete}
                     onTogglePaid={onTogglePaid}
                     isTogglingPaid={togglingBillId === bill.id}
+                    today={today}
                   />
                 </StaggerItem>
               ))}
@@ -257,6 +251,7 @@ export function BillList({
                     onDelete={onDelete}
                     onTogglePaid={onTogglePaid}
                     isTogglingPaid={togglingBillId === bill.id}
+                    today={today}
                   />
                 </StaggerItem>
               ))}
@@ -279,6 +274,7 @@ export function BillList({
                     onDelete={onDelete}
                     onTogglePaid={onTogglePaid}
                     isTogglingPaid={togglingBillId === bill.id}
+                    today={today}
                   />
                 </StaggerItem>
               ))}

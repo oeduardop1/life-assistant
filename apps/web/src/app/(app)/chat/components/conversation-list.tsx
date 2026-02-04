@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { conversationItem } from './chat-animations';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { getTodayInTimezone, formatDateISO, getDateDaysAgo } from '@life-assistant/shared';
 import type { Conversation } from '../types';
 
 interface ConversationListProps {
@@ -32,14 +34,12 @@ interface ConversationListProps {
 
 /**
  * Groups conversations by date: Today, Yesterday, This Week, Older
+ * Uses timezone-aware date comparisons
  */
-function groupConversationsByDate(conversations: Conversation[]) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const weekAgo = new Date(today);
-  weekAgo.setDate(weekAgo.getDate() - 7);
+function groupConversationsByDate(conversations: Conversation[], timezone: string) {
+  const today = getTodayInTimezone(timezone);
+  const yesterday = getDateDaysAgo(1, timezone);
+  const weekAgo = getDateDaysAgo(7, timezone);
 
   const groups: { label: string; conversations: Conversation[] }[] = [
     { label: 'Hoje', conversations: [] },
@@ -49,12 +49,12 @@ function groupConversationsByDate(conversations: Conversation[]) {
   ];
 
   conversations.forEach((conv) => {
-    const date = new Date(conv.updatedAt);
-    const convDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    // Format the conversation date in user's timezone
+    const convDate = formatDateISO(new Date(conv.updatedAt), timezone);
 
-    if (convDate.getTime() === today.getTime()) {
+    if (convDate === today) {
       groups[0].conversations.push(conv);
-    } else if (convDate.getTime() === yesterday.getTime()) {
+    } else if (convDate === yesterday) {
       groups[1].conversations.push(conv);
     } else if (convDate > weekAgo) {
       groups[2].conversations.push(conv);
@@ -77,6 +77,7 @@ export function ConversationList({
 }: ConversationListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
+  const timezone = useUserTimezone();
 
   const handleDeleteClick = (e: React.MouseEvent, conversation: Conversation) => {
     e.stopPropagation();
@@ -97,6 +98,12 @@ export function ConversationList({
     setDeleteDialogOpen(false);
   };
 
+  // useMemo MUST be called before any conditional returns (Rules of Hooks)
+  const groupedConversations = useMemo(
+    () => groupConversationsByDate(conversations, timezone),
+    [conversations, timezone]
+  );
+
   if (isLoading) {
     return (
       <div className="flex flex-col h-full p-4 space-y-4">
@@ -109,8 +116,6 @@ export function ConversationList({
       </div>
     );
   }
-
-  const groupedConversations = groupConversationsByDate(conversations);
 
   return (
     <>

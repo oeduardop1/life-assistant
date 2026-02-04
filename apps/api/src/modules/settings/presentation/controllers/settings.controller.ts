@@ -10,7 +10,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { SettingsService } from '../../application/services/settings.service';
-import { UpdateProfileDto, UpdateEmailDto, UpdatePasswordDto } from '../dtos';
+import { UpdateProfileDto, UpdateEmailDto, UpdatePasswordDto, UpdateTimezoneDto } from '../dtos';
 import { CurrentUser } from '../../../../common/decorators';
 import type { AuthenticatedUser } from '../../../../common/types/request.types';
 
@@ -22,6 +22,7 @@ import type { AuthenticatedUser } from '../../../../common/types/request.types';
  * - PATCH /api/settings/profile - Update profile (name)
  * - PATCH /api/settings/email - Update email (rate limited: 3/hour)
  * - PATCH /api/settings/password - Update password (rate limited: 5/hour)
+ * - PATCH /api/settings/timezone - Update timezone
  *
  * @see docs/specs/domains/settings.md for requirements
  */
@@ -35,7 +36,7 @@ export class SettingsController {
   @ApiOperation({ summary: 'Get current user settings' })
   @ApiResponse({
     status: 200,
-    description: 'Returns user settings (name, email)',
+    description: 'Returns user settings (name, email, timezone)',
   })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   async getSettings(@CurrentUser() user: AuthenticatedUser) {
@@ -95,5 +96,21 @@ export class SettingsController {
     @Body() dto: UpdatePasswordDto,
   ) {
     return this.settingsService.updatePassword(user.id, dto);
+  }
+
+  @Patch('timezone')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update user timezone' })
+  @ApiResponse({
+    status: 200,
+    description: 'Timezone updated successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid timezone format' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  async updateTimezone(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateTimezoneDto,
+  ) {
+    return this.settingsService.updateTimezone(user.id, dto);
   }
 }

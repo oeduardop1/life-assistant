@@ -15,8 +15,10 @@ import {
   recordHabitParamsSchema,
   getHabitsParamsSchema,
 } from '@life-assistant/ai';
+import { getTodayInTimezone, getDateDaysAgo } from '@life-assistant/shared';
 import { TrackingService } from './tracking.service';
 import { HabitsService } from './habits.service';
+import { SettingsService } from '../../../settings/application/services/settings.service';
 
 /**
  * Tracking Tool Executor - Executes tracking and habits tools
@@ -30,8 +32,21 @@ export class TrackingToolExecutorService implements ToolExecutor {
 
   constructor(
     private readonly trackingService: TrackingService,
-    private readonly habitsService: HabitsService
+    private readonly habitsService: HabitsService,
+    private readonly settingsService: SettingsService
   ) {}
+
+  /**
+   * Get user's timezone from settings, defaulting to America/Sao_Paulo
+   */
+  private async getUserTimezone(userId: string): Promise<string> {
+    try {
+      const settings = await this.settingsService.getUserSettings(userId);
+      return settings.timezone;
+    } catch {
+      return 'America/Sao_Paulo';
+    }
+  }
 
   /**
    * Execute a tool call
@@ -187,15 +202,18 @@ export class TrackingToolExecutorService implements ToolExecutor {
 
     this.logger.debug(`get_tracking_history params: type=${type}, days=${String(days)}`);
 
-    // Calculate date range
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
+    // Get user timezone for accurate date calculations
+    const timezone = await this.getUserTimezone(userId);
+
+    // Calculate date range using timezone-aware functions
+    const endDateStr = getTodayInTimezone(timezone);
+    const startDateStr = getDateDaysAgo(days - 1, timezone);
 
     // Get history
     const result = await this.trackingService.getHistory(userId, {
       type: type as string,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDateStr,
+      endDate: endDateStr,
       limit: 100,
     });
 
@@ -203,8 +221,8 @@ export class TrackingToolExecutorService implements ToolExecutor {
     const aggregation = await this.trackingService.getAggregations(
       userId,
       type as string,
-      startDate.toISOString().split('T')[0],
-      endDate.toISOString().split('T')[0]
+      startDateStr,
+      endDateStr
     );
 
     this.logger.debug(`get_tracking_history found ${String(result.entries.length)} entries`);
@@ -235,8 +253,8 @@ export class TrackingToolExecutorService implements ToolExecutor {
         'IMPORTANTE: Para update_metric ou delete_metric, use o campo "id" EXATO de cada entry como entryId. Nunca invente IDs.',
       type,
       period: {
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
+        startDate: startDateStr,
+        endDate: endDateStr,
         days,
       },
       entries: formattedEntries,
@@ -414,7 +432,10 @@ export class TrackingToolExecutorService implements ToolExecutor {
     }
 
     const { habitName, date, notes } = parseResult.data;
-    const targetDate = date ?? new Date().toISOString().split('T')[0] ?? '';
+
+    // Get user timezone for accurate date calculation
+    const timezone = await this.getUserTimezone(userId);
+    const targetDate = date ?? getTodayInTimezone(timezone);
 
     this.logger.debug(
       `record_habit params: habitName="${habitName}", date=${targetDate}`
@@ -523,7 +544,9 @@ export class TrackingToolExecutorService implements ToolExecutor {
     // Get today's completions if requested
     let todayCompletions = new Set<string>();
     if (includeCompletionsToday) {
-      const today = new Date().toISOString().split('T')[0] ?? '';
+      // Get user timezone for accurate "today" calculation
+      const timezone = await this.getUserTimezone(userId);
+      const today = getTodayInTimezone(timezone);
       const habitsForDate = await this.habitsService.getHabitsForDate(userId, today);
       todayCompletions = new Set(
         habitsForDate.filter((h) => h.completed).map((h) => h.habit.id)

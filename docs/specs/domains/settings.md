@@ -12,6 +12,7 @@ O módulo Settings é a central de configurações do usuário, organizado em se
 |-------|-----------|-----------|
 | **Perfil** | M0.11 | Nome, avatar |
 | **Segurança** | M0.11 | Email, senha |
+| **Preferências** | M0.11 | Fuso horário |
 | **Telegram** | M3.1 | Conexão com bot |
 | **Calendário** | M3.2 | Google Calendar |
 | **Notificações** | M3.4 | Preferências por tipo/canal |
@@ -96,7 +97,38 @@ imediatamente.
 
 ---
 
-## 4. Integrações (Futuro)
+## 4. Preferências (M0.11)
+
+### 4.1 Fuso Horário
+
+**Armazenamento:** `public.users.timezone` (TEXT NOT NULL, default 'America/Sao_Paulo')
+
+**Regras:**
+- Deve ser um timezone IANA válido (ex: 'America/Sao_Paulo', 'America/Manaus')
+- Validado via `Intl.DateTimeFormat` no backend
+- Coletado durante onboarding, editável em /settings
+
+**Uso no sistema:**
+- Todas as operações de data usam o timezone do usuário
+- "Hoje" = data atual no timezone do usuário (não UTC)
+- Mês atual = mês no timezone do usuário
+- Calendário, tracking, finanças respeitam o timezone
+
+**Fluxo:**
+1. Usuário seleciona timezone na lista
+2. `PATCH /api/settings/timezone`
+3. Atualiza `public.users.timezone`
+4. Frontend atualiza cache de settings
+
+**Timezones comuns (Brasil):**
+- `America/Sao_Paulo` - Brasília (UTC-3)
+- `America/Manaus` - Manaus (UTC-4)
+- `America/Rio_Branco` - Rio Branco (UTC-5)
+- `America/Noronha` - Fernando de Noronha (UTC-2)
+
+---
+
+## 5. Integrações (Futuro)
 
 ### 4.1 Telegram (M3.1)
 
@@ -196,7 +228,15 @@ Body: { currentPassword: string, newPassword: string }
 Response: { success: true }
 ```
 
-### 5.3 Integrações (Futuro)
+### 5.3 Preferências
+
+```
+PATCH /api/settings/timezone
+Body: { timezone: string }
+Response: { success: true, message: "Fuso horário atualizado com sucesso" }
+```
+
+### 5.4 Integrações (Futuro)
 
 ```
 GET    /api/settings/integrations
@@ -246,9 +286,9 @@ Eventos logados:
 | Nome | `public.users.name` | Sincronizado via trigger do auth (ver supabase-auth.md) |
 | Email | `public.users.email` + `auth.users.email` | Leitura em public.users, alteração via Supabase Auth |
 | Senha | `auth.users` | Gerenciado pelo Supabase Auth |
-| Telegram ID | `public.user_profiles.telegram_chat_id` | Integração |
-| Google Token | `public.user_integrations` | Tokens OAuth (criptografado) |
-| Preferências | `public.user_preferences` | Configurações do app |
+| Timezone | `public.users.timezone` | IANA timezone (ex: 'America/Sao_Paulo') |
+| Telegram ID | `public.user_profiles.telegram_chat_id` | Integração (futuro) |
+| Google Token | `public.user_integrations` | Tokens OAuth criptografados (futuro) |
 
 > **Padrão de acesso a dados do usuário:** Para leitura, sempre usar `public.users` via DatabaseService (conforme `supabase-auth.md` §Auth Middleware). Supabase Admin API é usado apenas para operações de autenticação (login, senha, tokens).
 
@@ -256,7 +296,13 @@ Eventos logados:
 
 ```sql
 -- Já existe: auth.users (Supabase)
+-- Já existe: public.users (inclui name, email, timezone)
 -- Já existe: public.user_profiles (M0.8 Onboarding)
+
+-- Coluna timezone em public.users:
+-- timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo'
+-- Armazena IANA timezone string (ex: 'America/Sao_Paulo', 'America/Manaus')
+-- Coletado durante onboarding, editável em /settings
 
 -- Futuro: M3.x
 CREATE TABLE user_integrations (
@@ -267,14 +313,6 @@ CREATE TABLE user_integrations (
   metadata JSONB,
   connected_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, provider)
-);
-
-CREATE TABLE user_preferences (
-  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  notifications JSONB DEFAULT '{}',
-  timezone TEXT DEFAULT 'America/Sao_Paulo',
-  locale TEXT DEFAULT 'pt-BR',
-  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 

@@ -25,6 +25,11 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// Mock useUserTimezone hook
+vi.mock('@/hooks/use-user-timezone', () => ({
+  useUserTimezone: vi.fn(() => 'America/Sao_Paulo'),
+}));
+
 // =============================================================================
 // Test Data
 // =============================================================================

@@ -6,6 +6,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { getCurrentMonthInTimezone, getTodayInTimezone } from '@life-assistant/shared';
 import { AppLoggerService } from '../../../../logger/logger.service';
 import type { Debt, NewDebt } from '@life-assistant/database';
 import {
@@ -16,16 +17,31 @@ import {
   type DebtPaymentHistoryResult,
   type UpcomingInstallmentsResult,
   type DebtProjection,
+  type TodayContext,
 } from '../../domain/ports/debts.repository.port';
+import { SettingsService } from '../../../settings/application/services/settings.service';
 
 @Injectable()
 export class DebtsService {
   constructor(
     @Inject(DEBTS_REPOSITORY)
     private readonly repository: DebtsRepositoryPort,
+    private readonly settingsService: SettingsService,
     private readonly logger: AppLoggerService
   ) {
     this.logger.setContext(DebtsService.name);
+  }
+
+  /**
+   * Get user's timezone from settings, defaulting to America/Sao_Paulo
+   */
+  private async getUserTimezone(userId: string): Promise<string> {
+    try {
+      const settings = await this.settingsService.getUserSettings(userId);
+      return settings.timezone;
+    } catch {
+      return 'America/Sao_Paulo';
+    }
   }
 
   async create(userId: string, data: Omit<NewDebt, 'userId'>): Promise<Debt> {
@@ -130,39 +146,6 @@ export class DebtsService {
     return debt;
   }
 
-  /**
-   * Check and update overdue status for a debt based on current month.
-   * A debt is overdue when currentInstallment < expected installments by time elapsed.
-   */
-  async checkAndUpdateOverdueStatus(
-    userId: string,
-    id: string,
-    currentMonth: string
-  ): Promise<void> {
-    const debt = await this.repository.findById(userId, id);
-    if (!debt || !debt.isNegotiated || debt.status !== 'active') return;
-    if (!debt.startMonthYear || !debt.totalInstallments) return;
-
-    // Calculate expected paid installments
-    const startDate = new Date(debt.startMonthYear + '-01');
-    const currentDate = new Date(currentMonth + '-01');
-
-    const monthsDiff =
-      (currentDate.getFullYear() - startDate.getFullYear()) * 12 +
-      (currentDate.getMonth() - startDate.getMonth()) +
-      1;
-
-    const expectedPaidInstallments = Math.min(monthsDiff, debt.totalInstallments);
-    const actualPaidInstallments = debt.currentInstallment - 1;
-
-    if (actualPaidInstallments < expectedPaidInstallments) {
-      this.logger.log(
-        `Debt ${id} is overdue: expected ${String(expectedPaidInstallments)} paid, actual ${String(actualPaidInstallments)}`
-      );
-      await this.repository.update(userId, id, { status: 'overdue' });
-    }
-  }
-
   async negotiate(
     userId: string,
     id: string,
@@ -249,16 +232,26 @@ export class DebtsService {
     userId: string,
     monthYear?: string
   ): Promise<UpcomingInstallmentsResult> {
-    // Default to current month if not specified
-    const targetMonth =
-      monthYear ??
-      `${String(new Date().getFullYear())}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    // Get user timezone for accurate date calculation
+    const timezone = await this.getUserTimezone(userId);
 
-    this.logger.log(`Getting upcoming installments for ${targetMonth}`);
+    // Default to current month in user's timezone if not specified
+    const targetMonth = monthYear ?? getCurrentMonthInTimezone(timezone);
+
+    // Calculate "today" context in user's timezone for overdue checking
+    // This ensures overdue status is determined based on user's local time, not server time
+    const todayStr = getTodayInTimezone(timezone);
+    const todayContext: TodayContext = {
+      month: todayStr.slice(0, 7), // YYYY-MM
+      day: parseInt(todayStr.slice(8, 10), 10), // DD
+    };
+
+    this.logger.log(`Getting upcoming installments for ${targetMonth} (today: ${todayStr})`);
 
     const installments = await this.repository.getUpcomingInstallments(
       userId,
-      targetMonth
+      targetMonth,
+      todayContext
     );
 
     // Calculate summary

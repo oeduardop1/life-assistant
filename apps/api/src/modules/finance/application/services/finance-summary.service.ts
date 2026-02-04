@@ -1,12 +1,14 @@
 // apps/api/src/modules/finance/application/services/finance-summary.service.ts
 
 import { Injectable } from '@nestjs/common';
+import { getCurrentMonthInTimezone } from '@life-assistant/shared';
 import { AppLoggerService } from '../../../../logger/logger.service';
 import { IncomesService } from './incomes.service';
 import { BillsService } from './bills.service';
 import { VariableExpensesService } from './variable-expenses.service';
 import { DebtsService } from './debts.service';
 import { InvestmentsService } from './investments.service';
+import { SettingsService } from '../../../settings/application/services/settings.service';
 
 export interface FinanceSummary {
   monthYear: string;
@@ -84,15 +86,31 @@ export class FinanceSummaryService {
     private readonly variableExpensesService: VariableExpensesService,
     private readonly debtsService: DebtsService,
     private readonly investmentsService: InvestmentsService,
+    private readonly settingsService: SettingsService,
     private readonly logger: AppLoggerService
   ) {
     this.logger.setContext(FinanceSummaryService.name);
   }
 
+  /**
+   * Get user's timezone from settings, defaulting to America/Sao_Paulo
+   */
+  private async getUserTimezone(userId: string): Promise<string> {
+    try {
+      const settings = await this.settingsService.getUserSettings(userId);
+      return settings.timezone;
+    } catch {
+      return 'America/Sao_Paulo';
+    }
+  }
+
   async getSummary(userId: string, monthYear?: string): Promise<FinanceSummary> {
-    // Default to current month
+    // Get user timezone for accurate month calculation
+    const timezone = await this.getUserTimezone(userId);
+
+    // Default to current month in user's timezone
     const targetMonth =
-      monthYear ?? new Date().toISOString().slice(0, 7); // YYYY-MM
+      monthYear ?? getCurrentMonthInTimezone(timezone);
 
     this.logger.log(`Getting finance summary for user ${userId}, month ${targetMonth}`);
 
@@ -199,7 +217,9 @@ export class FinanceSummaryService {
     endMonth?: string,
     monthsCount = 6
   ): Promise<MonthlyEvolutionResult> {
-    const end = endMonth ?? new Date().toISOString().slice(0, 7);
+    // Get user timezone for accurate month calculation
+    const timezone = await this.getUserTimezone(userId);
+    const end = endMonth ?? getCurrentMonthInTimezone(timezone);
     const months = this.generateMonthRange(end, monthsCount);
 
     const startMonth = months[0] ?? end;

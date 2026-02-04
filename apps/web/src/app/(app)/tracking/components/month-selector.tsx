@@ -4,8 +4,9 @@ import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { formatMonthDisplay, isCurrentMonth } from '../types';
+import { formatMonthDisplay, isCurrentMonthInTimezone } from '../types';
 import { useTracking } from '../context/tracking-context';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
 
 /**
  * MonthSelector - Navigation component for selecting month in tracking calendar
@@ -20,9 +21,10 @@ import { useTracking } from '../context/tracking-context';
 export function MonthSelector() {
   const { currentMonth, goToPreviousMonth, goToNextMonth, goToToday } =
     useTracking();
+  const timezone = useUserTimezone();
 
   const formattedMonth = formatMonthDisplay(currentMonth);
-  const isCurrentMonthView = isCurrentMonth(currentMonth);
+  const isCurrentMonthView = isCurrentMonthInTimezone(currentMonth, timezone);
 
   return (
     <div className="flex items-center gap-1">

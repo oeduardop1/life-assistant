@@ -278,6 +278,22 @@ export const validationRules: Record<TrackingType, { min?: number; max?: number;
  */
 import { Scale, Droplet, Moon, Activity, Smile, Zap, PenLine, type LucideIcon } from 'lucide-react';
 
+// Import timezone utilities from shared package
+// These are the authoritative implementations - local helpers below are kept for backward compatibility
+import {
+  getPreviousMonth as sharedGetPreviousMonth,
+  getNextMonth as sharedGetNextMonth,
+  getDaysInMonth as sharedGetDaysInMonth,
+  getFirstDayOfMonth as sharedGetFirstDayOfMonth,
+  formatMonthDisplay as sharedFormatMonthDisplay,
+  // Timezone-aware functions (require timezone parameter)
+  getTodayInTimezone,
+  getCurrentMonthInTimezone,
+  isTodayInTimezone,
+  isCurrentMonthInTimezone,
+  formatDateDisplay as sharedFormatDateDisplay,
+} from '@life-assistant/shared';
+
 export const trackingTypeIcons: Record<TrackingType, LucideIcon> = {
   weight: Scale,
   water: Droplet,
@@ -705,84 +721,23 @@ export const fullDayOfWeekLabels = [
 // Calendar Helper Functions
 // =============================================================================
 
-/**
- * Get current month in YYYY-MM format
- */
-export function getCurrentMonth(): string {
-  return new Date().toISOString().slice(0, 7);
-}
+// Re-export pure calculation functions from shared (no timezone needed)
+export const getPreviousMonth = sharedGetPreviousMonth;
+export const getNextMonth = sharedGetNextMonth;
+export const getDaysInMonth = sharedGetDaysInMonth;
+export const getFirstDayOfMonth = sharedGetFirstDayOfMonth;
+export const formatMonthDisplay = sharedFormatMonthDisplay;
 
-/**
- * Get today's date in YYYY-MM-DD format
- */
-export function getTodayDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/**
- * Format month for display (e.g., "Janeiro 2026")
- */
-export function formatMonthDisplay(monthYear: string): string {
-  const [year, month] = monthYear.split('-');
-  const months = [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro',
-  ];
-  const monthIndex = parseInt(month ?? '1', 10) - 1;
-  return `${months[monthIndex]} ${year}`;
-}
-
-/**
- * Get previous month in YYYY-MM format
- */
-export function getPreviousMonth(monthYear: string): string {
-  const [year, month] = monthYear.split('-').map(Number);
-  const date = new Date(year ?? 2026, (month ?? 1) - 2, 1);
-  return date.toISOString().slice(0, 7);
-}
-
-/**
- * Get next month in YYYY-MM format
- */
-export function getNextMonth(monthYear: string): string {
-  const [year, month] = monthYear.split('-').map(Number);
-  const date = new Date(year ?? 2026, month ?? 1, 1);
-  return date.toISOString().slice(0, 7);
-}
+// Re-export timezone-aware functions from shared
+// Components should use useUserTimezone() hook to get timezone
+export { getTodayInTimezone, getCurrentMonthInTimezone, isTodayInTimezone, isCurrentMonthInTimezone };
 
 /**
  * Format date for display (e.g., "Terça, 7 de Janeiro")
+ * Uses timezone for correct day of week display
  */
-export function formatDateDisplay(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  const dayOfWeek = fullDayOfWeekLabels[date.getDay()];
-  const day = date.getDate();
-  const months = [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro',
-  ];
-  const month = months[date.getMonth()];
-  return `${dayOfWeek}, ${day} de ${month}`;
+export function formatDateDisplay(dateStr: string, timezone: string): string {
+  return sharedFormatDateDisplay(dateStr, timezone);
 }
 
 /**
@@ -794,20 +749,6 @@ export function parseMonthYear(monthYear: string): { year: number; month: number
 }
 
 /**
- * Check if a date is today
- */
-export function isToday(dateStr: string): boolean {
-  return dateStr === getTodayDate();
-}
-
-/**
- * Check if a month is the current month
- */
-export function isCurrentMonth(monthYear: string): boolean {
-  return monthYear === getCurrentMonth();
-}
-
-/**
  * Get mood color based on score
  */
 export function getMoodColor(score: number | undefined): 'green' | 'yellow' | 'red' | 'gray' {
@@ -815,18 +756,4 @@ export function getMoodColor(score: number | undefined): 'green' | 'yellow' | 'r
   if (score >= 7) return 'green';
   if (score >= 4) return 'yellow';
   return 'red';
-}
-
-/**
- * Get days in a month
- */
-export function getDaysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate();
-}
-
-/**
- * Get first day of month (0 = Sunday, 6 = Saturday)
- */
-export function getFirstDayOfMonth(year: number, month: number): number {
-  return new Date(year, month - 1, 1).getDay();
 }

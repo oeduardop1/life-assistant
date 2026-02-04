@@ -16,6 +16,9 @@ vi.mock('framer-motion', () => ({
 }));
 
 describe('MonthSummary', () => {
+  // Fixed "today" date for testing - January 3rd, 2026
+  const TODAY = '2026-01-03';
+
   const createDay = (
     date: string,
     options: Partial<CalendarDaySummary> = {}
@@ -32,7 +35,7 @@ describe('MonthSummary', () => {
     it('should_not_render_for_future_month', () => {
       // Future month with no data
       const { container } = render(
-        <MonthSummary days={[]} year={2099} month={12} />
+        <MonthSummary days={[]} year={2099} month={12} today={TODAY} />
       );
 
       expect(container.firstChild).toBeNull();
@@ -45,7 +48,7 @@ describe('MonthSummary', () => {
         createDay('2026-01-03', { hasData: true, moodScore: 6, moodColor: 'yellow', habitsCompleted: 1, habitsTotal: 3 }),
       ];
 
-      render(<MonthSummary days={days} year={2026} month={1} />);
+      render(<MonthSummary days={days} year={2026} month={1} today={TODAY} />);
 
       // Check that stats labels are displayed
       expect(screen.getByText('streak atual')).toBeInTheDocument();
@@ -62,7 +65,7 @@ describe('MonthSummary', () => {
         createDay('2026-01-03', { hasData: true, moodScore: 6, moodColor: 'yellow' }),
       ];
 
-      render(<MonthSummary days={days} year={2026} month={1} />);
+      render(<MonthSummary days={days} year={2026} month={1} today={TODAY} />);
 
       // Average: (7 + 8 + 6) / 3 = 7.0
       expect(screen.getByText('7.0')).toBeInTheDocument();
@@ -74,7 +77,7 @@ describe('MonthSummary', () => {
         createDay('2026-01-02', { hasData: true, habitsCompleted: 4, habitsTotal: 4 }),
       ];
 
-      render(<MonthSummary days={days} year={2026} month={1} />);
+      render(<MonthSummary days={days} year={2026} month={1} today={TODAY} />);
 
       // Percentage: (2 + 4) / (4 + 4) = 6/8 = 75%
       expect(screen.getByText('75')).toBeInTheDocument();
@@ -85,7 +88,7 @@ describe('MonthSummary', () => {
         createDay('2026-01-01', { hasData: true, habitsCompleted: 1, habitsTotal: 2 }),
       ];
 
-      render(<MonthSummary days={days} year={2026} month={1} />);
+      render(<MonthSummary days={days} year={2026} month={1} today={TODAY} />);
 
       // No mood data, should show "—"
       expect(screen.getByText('—')).toBeInTheDocument();
@@ -103,7 +106,7 @@ describe('MonthSummary', () => {
         createDay('2026-01-03', { hasData: true }),
       ];
 
-      render(<MonthSummary days={days} year={2026} month={1} />);
+      render(<MonthSummary days={days} year={2026} month={1} today={TODAY} />);
 
       // The component should display some streak value
       expect(screen.getByText('streak atual')).toBeInTheDocument();
@@ -119,7 +122,7 @@ describe('MonthSummary', () => {
         createDay('2026-01-04', { hasData: true }),
       ];
 
-      render(<MonthSummary days={days} year={2026} month={1} />);
+      render(<MonthSummary days={days} year={2026} month={1} today={TODAY} />);
 
       // The "dias" section should show tracked/total format
       // Look for the days section label to verify it rendered

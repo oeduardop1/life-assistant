@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Smile, CheckCircle2, Calendar } from 'lucide-react';
 import type { CalendarDaySummary } from '../../types';
-import { getTodayDate } from '../../types';
+import { formatDateISO } from '@life-assistant/shared';
 
 interface MonthSummaryProps {
   /** Calendar days data for the month */
@@ -13,6 +13,8 @@ interface MonthSummaryProps {
   year: number;
   /** Month number (1-12) */
   month: number;
+  /** Today's date in YYYY-MM-DD format (timezone-aware) */
+  today: string;
 }
 
 interface MonthStats {
@@ -34,9 +36,9 @@ interface MonthStats {
 function calculateMonthStats(
   days: CalendarDaySummary[],
   year: number,
-  month: number
+  month: number,
+  today: string
 ): MonthStats {
-  const today = getTodayDate();
   const monthStr = `${year}-${String(month).padStart(2, '0')}`;
   const isCurrentMonth = today.startsWith(monthStr);
   const isPastMonth = today > `${monthStr}-31`;
@@ -90,14 +92,18 @@ function calculateMonthStats(
   );
 
   // Check from today backwards
-  const checkDate = new Date(today);
+  // Parse today string to get a date object for iteration
+  const [todayYear, todayMonth, todayDay] = today.split('-').map(Number);
+  const checkDate = new Date(todayYear!, todayMonth! - 1, todayDay!);
+
   for (const dayData of sortedDays) {
-    const checkDateStr = checkDate.toISOString().split('T')[0];
+    // Format checkDate as YYYY-MM-DD without using toISOString (which converts to UTC)
+    const checkDateStr = formatDateISO(checkDate, 'UTC'); // Using UTC since we're just doing date arithmetic
 
     if (dayData.date === checkDateStr && dayData.hasData) {
       currentStreak++;
       checkDate.setDate(checkDate.getDate() - 1);
-    } else if (dayData.date < checkDateStr!) {
+    } else if (dayData.date < checkDateStr) {
       // Gap found, stop counting
       break;
     }
@@ -147,10 +153,10 @@ const itemVariants = {
  *
  * @see docs/specs/domains/tracking.md §3.2 for calendar UI
  */
-export function MonthSummary({ days, year, month }: MonthSummaryProps) {
+export function MonthSummary({ days, year, month, today }: MonthSummaryProps) {
   const stats = useMemo(
-    () => calculateMonthStats(days, year, month),
-    [days, year, month]
+    () => calculateMonthStats(days, year, month, today),
+    [days, year, month, today]
   );
 
   // Don't show if no data at all

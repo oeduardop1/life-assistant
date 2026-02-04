@@ -66,6 +66,12 @@ class UpdatePasswordDto {
   newPassword!: string;
 }
 
+class UpdateTimezoneDto {
+  @IsString()
+  @MinLength(1, { message: 'Timezone é obrigatório' })
+  timezone!: string;
+}
+
 // ========================================================================
 // Mock SettingsService
 // ========================================================================
@@ -74,6 +80,7 @@ const mockSettingsService = {
   updateProfile: vi.fn(),
   updateEmail: vi.fn(),
   updatePassword: vi.fn(),
+  updateTimezone: vi.fn(),
 };
 
 // ========================================================================
@@ -174,6 +181,15 @@ class TestSettingsController {
     @Body() dto: UpdatePasswordDto,
   ) {
     return mockSettingsService.updatePassword(user.id, dto);
+  }
+
+  @Patch('timezone')
+  @HttpCode(HttpStatus.OK)
+  async updateTimezone(
+    @CurrentUser() user: { id: string },
+    @Body() dto: UpdateTimezoneDto,
+  ) {
+    return mockSettingsService.updateTimezone(user.id, dto);
   }
 }
 
@@ -487,6 +503,131 @@ describe('Settings Endpoints (Integration)', () => {
         .expect(401);
 
       expect(response.body.statusCode).toBe(401);
+    });
+  });
+
+  // =========================================================================
+  // PATCH /api/settings/timezone
+  // =========================================================================
+  describe('PATCH /api/settings/timezone', () => {
+    const validTimezoneData = {
+      timezone: 'America/Sao_Paulo',
+    };
+
+    it('should_update_timezone', async () => {
+      const token = await createToken({ sub: 'user-123' });
+      mockSettingsService.updateTimezone.mockResolvedValue({
+        success: true,
+        message: 'Fuso horário atualizado com sucesso',
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch('/api/settings/timezone')
+        .set('Authorization', `Bearer ${token}`)
+        .send(validTimezoneData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+      });
+      expect(mockSettingsService.updateTimezone).toHaveBeenCalledWith('user-123', validTimezoneData);
+    });
+
+    it('should_accept_valid_iana_timezones', async () => {
+      const token = await createToken({ sub: 'user-123' });
+      const validTimezones = [
+        'America/Sao_Paulo',
+        'America/Manaus',
+        'America/Rio_Branco',
+        'America/Noronha',
+        'Europe/London',
+        'Asia/Tokyo',
+      ];
+
+      for (const tz of validTimezones) {
+        mockSettingsService.updateTimezone.mockResolvedValue({
+          success: true,
+          message: 'Fuso horário atualizado com sucesso',
+        });
+
+        const response = await request(app.getHttpServer())
+          .patch('/api/settings/timezone')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ timezone: tz })
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          success: true,
+        });
+      }
+    });
+
+    it('should_reject_invalid_timezone', async () => {
+      const token = await createToken({ sub: 'user-123' });
+      mockSettingsService.updateTimezone.mockRejectedValue(
+        new BadRequestException('Timezone inválido. Use formato IANA (ex: America/Sao_Paulo)'),
+      );
+
+      const response = await request(app.getHttpServer())
+        .patch('/api/settings/timezone')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ timezone: 'Invalid/Timezone' })
+        .expect(400);
+
+      expect(response.body.statusCode).toBe(400);
+    });
+
+    it('should_reject_empty_timezone', async () => {
+      const token = await createToken({ sub: 'user-123' });
+
+      const response = await request(app.getHttpServer())
+        .patch('/api/settings/timezone')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ timezone: '' })
+        .expect(400);
+
+      expect(response.body.statusCode).toBe(400);
+    });
+
+    it('should_reject_missing_timezone', async () => {
+      const token = await createToken({ sub: 'user-123' });
+
+      const response = await request(app.getHttpServer())
+        .patch('/api/settings/timezone')
+        .set('Authorization', `Bearer ${token}`)
+        .send({})
+        .expect(400);
+
+      expect(response.body.statusCode).toBe(400);
+    });
+
+    it('should_return_401_without_token', async () => {
+      const response = await request(app.getHttpServer())
+        .patch('/api/settings/timezone')
+        .send(validTimezoneData)
+        .expect(401);
+
+      expect(response.body.statusCode).toBe(401);
+    });
+
+    it('should_return_settings_with_timezone', async () => {
+      const token = await createToken({ sub: 'user-123' });
+      mockSettingsService.getUserSettings.mockResolvedValue({
+        name: 'Test User',
+        email: 'test@example.com',
+        timezone: 'America/Sao_Paulo',
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/api/settings')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        name: 'Test User',
+        email: 'test@example.com',
+        timezone: 'America/Sao_Paulo',
+      });
     });
   });
 });

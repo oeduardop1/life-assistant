@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TrackingController } from './presentation/controllers/tracking.controller';
 import { HabitsController } from './presentation/controllers/habits.controller';
 import { CustomMetricController } from './presentation/controllers/custom-metric.controller';
@@ -11,6 +11,7 @@ import { TrackingEntryRepository } from './infrastructure/repositories/tracking-
 import { HabitsRepository } from './infrastructure/repositories/habits.repository';
 import { CustomMetricRepository } from './infrastructure/repositories/custom-metric.repository';
 import { TRACKING_ENTRY_REPOSITORY, HABITS_REPOSITORY, CUSTOM_METRIC_REPOSITORY } from './domain/ports';
+import { SettingsModule } from '../settings/settings.module';
 
 /**
  * TrackingModule - Unified tracking for metrics, habits, and custom metrics
@@ -27,6 +28,7 @@ import { TRACKING_ENTRY_REPOSITORY, HABITS_REPOSITORY, CUSTOM_METRIC_REPOSITORY 
  * @see ADR-015 for Low Friction Tracking Philosophy
  */
 @Module({
+  imports: [forwardRef(() => SettingsModule)],
   // Note: CustomMetricController must come before TrackingController
   // because TrackingController has a GET :id route that would capture "custom-metrics"
   controllers: [CustomMetricController, HabitsController, TrackingController],
