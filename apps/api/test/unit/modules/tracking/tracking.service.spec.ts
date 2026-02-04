@@ -699,11 +699,12 @@ describe('TrackingService', () => {
         endDate: '2024-01-31',
       });
 
+      // Date strings are passed directly to avoid timezone conversion issues
       expect(mockRepository.findByUserId).toHaveBeenCalledWith(
         'user-123',
         expect.objectContaining({
-          startDate: expect.any(Date),
-          endDate: expect.any(Date),
+          startDate: '2024-01-01',
+          endDate: '2024-01-31',
         })
       );
     });

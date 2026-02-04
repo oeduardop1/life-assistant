@@ -53,35 +53,38 @@ export class CalendarService {
   /**
    * Get month summary for calendar view
    *
+   * Uses date strings directly to avoid timezone conversion issues.
+   *
    * @see docs/specs/domains/tracking.md §3.2 for calendar format
    */
   async getMonthSummary(userId: string, year: number, month: number): Promise<CalendarMonthResponse> {
     const monthStr = `${String(year)}-${String(month).padStart(2, '0')}`;
     this.logger.log(`Getting calendar summary for ${monthStr} for user ${userId}`);
 
-    // Calculate date range for the month
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0); // Last day of month
+    // Calculate date range for the month using pure string manipulation
+    // This avoids timezone issues with Date objects
+    const startDateStr = `${monthStr}-01`;
+    const daysInMonth = this.getDaysInMonth(year, month);
+    const endDateStr = `${monthStr}-${String(daysInMonth).padStart(2, '0')}`;
 
-    // Get all tracking entries for the month
+    // Get all tracking entries for the month using string dates
     const entries = await this.trackingRepository.findByUserId(userId, {
-      startDate,
-      endDate,
+      startDate: startDateStr,
+      endDate: endDateStr,
       limit: 1000,
     });
 
     // Get all habits
     const habits = await this.habitsService.findAll(userId);
 
-    // Get completions for the month
-    const completions = await this.getCompletionsForMonth(userId, startDate, endDate);
+    // Get completions for the month using string dates
+    const completions = await this.getCompletionsForMonth(userId, startDateStr, endDateStr);
 
-    // Build day summaries
+    // Build day summaries using string-based iteration
     const days: CalendarDaySummary[] = [];
-    const currentDate = new Date(startDate);
 
-    while (currentDate <= endDate) {
-      const dateStr = this.formatDate(currentDate);
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${monthStr}-${String(day).padStart(2, '0')}`;
       const dayEntries = entries.filter((e) => e.entryDate === dateStr);
       const dayCompletions = completions.filter((c) => c.completionDate === dateStr);
 
@@ -104,30 +107,36 @@ export class CalendarService {
         habitsTotal,
         hasData: dayEntries.length > 0 || dayCompletions.length > 0,
       });
-
-      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return { month: monthStr, days };
   }
 
   /**
+   * Get number of days in a month (pure calculation, no timezone issues)
+   */
+  private getDaysInMonth(year: number, month: number): number {
+    // Use UTC to avoid timezone issues - we just need the number of days
+    return new Date(Date.UTC(year, month, 0)).getUTCDate();
+  }
+
+  /**
    * Get detailed data for a specific day
+   *
+   * Uses date string directly to avoid timezone conversion issues.
+   * The date parameter should be in YYYY-MM-DD format (user's local date).
    */
   async getDayDetail(userId: string, date: string): Promise<DayDetailResponse> {
     this.logger.log(`Getting day detail for ${date} for user ${userId}`);
 
-    // Parse date
-    const dateObj = new Date(date);
-    const startDate = new Date(dateObj);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(dateObj);
-    endDate.setHours(23, 59, 59, 999);
+    // Use date string directly - no Date object conversion needed
+    // This avoids timezone issues where new Date('2026-02-04') creates UTC midnight,
+    // which in local time could be the previous day (e.g., Feb 3 at 21:00 in UTC-3)
 
-    // Get tracking entries for the day
+    // Get tracking entries for the day using string comparison
     const metrics = await this.trackingRepository.findByUserId(userId, {
-      startDate,
-      endDate,
+      startDate: date, // Pass string directly
+      endDate: date,   // Same date for single-day query
       limit: 100,
     });
 
@@ -139,28 +148,27 @@ export class CalendarService {
 
   /**
    * Get tracking entries for a specific date
+   *
+   * Uses date string directly to avoid timezone conversion issues.
    */
   async getMetricsByDate(userId: string, date: string): Promise<TrackingEntry[]> {
-    const dateObj = new Date(date);
-    const startDate = new Date(dateObj);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(dateObj);
-    endDate.setHours(23, 59, 59, 999);
-
+    // Use date string directly - no Date object conversion needed
     return this.trackingRepository.findByUserId(userId, {
-      startDate,
-      endDate,
+      startDate: date, // Pass string directly
+      endDate: date,   // Same date for single-day query
       limit: 100,
     });
   }
 
   /**
    * Get completions for a month (internal helper)
+   *
+   * Accepts date strings (YYYY-MM-DD format) to avoid timezone issues.
    */
   private async getCompletionsForMonth(
     userId: string,
-    startDate: Date,
-    endDate: Date
+    startDateStr: string,
+    endDateStr: string
   ): Promise<HabitCompletion[]> {
     // Get all habits to get their IDs
     const habits = await this.habitsService.findAll(userId);
@@ -169,11 +177,11 @@ export class CalendarService {
     const allCompletions: HabitCompletion[] = [];
 
     for (const habit of habits) {
-      const completions = await this.habitsService.getCompletionsForDateRange(
+      const completions = await this.habitsService.getCompletionsForDateRangeStr(
         userId,
         habit.id,
-        startDate,
-        endDate
+        startDateStr,
+        endDateStr
       );
       allCompletions.push(...completions);
     }
@@ -191,12 +199,5 @@ export class CalendarService {
     if (moodScore >= 7) return 'green';
     if (moodScore >= 4) return 'yellow';
     return 'red';
-  }
-
-  /**
-   * Format date as YYYY-MM-DD
-   */
-  private formatDate(date: Date): string {
-    return date.toISOString().split('T')[0] ?? '';
   }
 }

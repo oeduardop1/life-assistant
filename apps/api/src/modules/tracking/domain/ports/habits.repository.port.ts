@@ -11,11 +11,16 @@ export interface HabitSearchParams {
 
 /**
  * Search parameters for habit completions
+ *
+ * Date parameters accept either Date objects or YYYY-MM-DD strings.
+ * Prefer strings to avoid timezone conversion issues.
  */
 export interface HabitCompletionSearchParams {
   habitId?: string;
-  startDate?: Date;
-  endDate?: Date;
+  /** Start date filter - accepts Date or YYYY-MM-DD string (preferred) */
+  startDate?: Date | string;
+  /** End date filter - accepts Date or YYYY-MM-DD string (preferred) */
+  endDate?: Date | string;
   limit?: number;
   offset?: number;
 }

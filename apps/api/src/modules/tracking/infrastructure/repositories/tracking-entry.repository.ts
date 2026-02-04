@@ -15,9 +15,26 @@ import type {
 } from '@life-assistant/database';
 
 /**
- * Convert Date to YYYY-MM-DD string format
+ * Convert Date or string to YYYY-MM-DD string format.
+ *
+ * IMPORTANT: When passing a Date object, this uses toISOString() which converts to UTC.
+ * This can cause timezone issues if the Date was created from a local time.
+ * Prefer passing YYYY-MM-DD strings directly to avoid timezone conversion issues.
+ *
+ * @param date - Date object or YYYY-MM-DD string
+ * @returns YYYY-MM-DD string
  */
-function formatDateToString(date: Date): string {
+function formatDateToString(date: Date | string): string {
+  if (typeof date === 'string') {
+    // Already a string - validate format and return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+    // If it's an ISO timestamp string, extract just the date part
+    return date.split('T')[0] ?? '';
+  }
+  // Date object - convert to ISO and extract date
+  // WARNING: This can cause timezone issues!
   return date.toISOString().split('T')[0] ?? '';
 }
 

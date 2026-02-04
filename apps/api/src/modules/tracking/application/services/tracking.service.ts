@@ -156,12 +156,13 @@ export class TrackingService {
   ): Promise<PaginatedTrackingEntries> {
     const { type, area, subArea, startDate, endDate, limit = 50, offset = 0 } = params;
 
+    // Pass date strings directly to avoid timezone conversion issues
     const searchParams: TrackingEntrySearchParams = { limit, offset };
     if (type) searchParams.type = type;
     if (area) searchParams.area = area;
     if (subArea) searchParams.subArea = subArea;
-    if (startDate) searchParams.startDate = new Date(startDate);
-    if (endDate) searchParams.endDate = new Date(endDate);
+    if (startDate) searchParams.startDate = startDate; // Pass string directly
+    if (endDate) searchParams.endDate = endDate;       // Pass string directly
 
     const entries = await this.trackingRepository.findByUserId(userId, searchParams);
 
@@ -170,8 +171,8 @@ export class TrackingService {
     if (type) countParams.type = type;
     if (area) countParams.area = area;
     if (subArea) countParams.subArea = subArea;
-    if (startDate) countParams.startDate = new Date(startDate);
-    if (endDate) countParams.endDate = new Date(endDate);
+    if (startDate) countParams.startDate = startDate; // Pass string directly
+    if (endDate) countParams.endDate = endDate;       // Pass string directly
 
     const allEntries = await this.trackingRepository.findByUserId(userId, countParams);
     const total = allEntries.length;
