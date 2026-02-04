@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, History } from 'lucide-react';
+import { Plus, History, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   ManualTrackForm,
@@ -11,8 +11,10 @@ import {
   InsightsPlaceholder,
   GroupedTimeline,
   type PeriodFilter,
+  type MetricSelection,
+  parseMetricSelection,
 } from '../components';
-import { type TrackingType } from '../types';
+import { CustomMetricsManager } from '../components/custom-metrics';
 
 /**
  * Metrics page for tracking module - Redesigned
@@ -29,9 +31,16 @@ import { type TrackingType } from '../types';
  */
 export default function MetricsPage() {
   const [period, setPeriod] = useState<PeriodFilter>('30d');
-  const [selectedType, setSelectedType] = useState<TrackingType>('weight');
+  const [selectedMetric, setSelectedMetric] = useState<MetricSelection>('weight');
   const [showForm, setShowForm] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [showCustomMetricsManager, setShowCustomMetricsManager] = useState(false);
+
+  // Parse selection to get effective type for detail panel
+  const { type: selectedType } = useMemo(
+    () => parseMetricSelection(selectedMetric),
+    [selectedMetric]
+  );
 
   // Calculate date range based on period
   const { startDate, endDate } = useMemo(() => {
@@ -47,19 +56,35 @@ export default function MetricsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with filters and action button */}
+      {/* Header with filters and action buttons */}
       <div className="flex items-center justify-between gap-4">
         <MetricsPageFilters period={period} onPeriodChange={setPeriod} />
-        <Button onClick={() => setShowForm(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Métrica
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowCustomMetricsManager(!showCustomMetricsManager)}
+            size="sm"
+          >
+            <Settings2 className="h-4 w-4 mr-2" />
+            Gerenciar
+          </Button>
+          <Button onClick={() => setShowForm(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Registrar
+          </Button>
+        </div>
       </div>
+
+      {/* Custom Metrics Manager (collapsible) */}
+      {showCustomMetricsManager && (
+        <CustomMetricsManager />
+      )}
 
       {/* Metric Type Selector */}
       <MetricSelector
-        selected={selectedType}
-        onSelect={setSelectedType}
+        selected={selectedMetric}
+        onSelect={setSelectedMetric}
+        includeCustomMetrics
       />
 
       {/* Main Detail Panel - Chart + Stats + Consistency unified */}

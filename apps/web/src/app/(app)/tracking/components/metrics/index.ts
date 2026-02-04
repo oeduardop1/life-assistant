@@ -25,7 +25,13 @@ export { EditMetricModal } from './edit-metric-modal';
 export { DeleteMetricDialog } from './delete-metric-dialog';
 
 // New unified metrics page components (redesign)
-export { MetricSelector, metricColors, TRACKING_TYPES } from './metric-selector';
+export {
+  MetricSelector,
+  metricColors,
+  TRACKING_TYPES,
+  type MetricSelection,
+  parseMetricSelection,
+} from './metric-selector';
 export { MetricDetailPanel } from './metric-detail-panel';
 export { InsightsPlaceholder } from './insights-placeholder';
 export { GroupedTimeline } from './grouped-timeline';

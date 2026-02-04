@@ -154,6 +154,15 @@ CREATE POLICY "Users can only access own memory_consolidations" ON memory_consol
   FOR ALL USING (user_id = (SELECT auth.uid()));
 
 -- ============================================================================
+-- Custom Metrics (M2.1)
+-- ============================================================================
+
+ALTER TABLE custom_metric_definitions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can only access own custom_metric_definitions" ON custom_metric_definitions
+  FOR ALL USING (user_id = (SELECT auth.uid()));
+
+-- ============================================================================
 -- Finance Tables (M2.2)
 -- ============================================================================
 

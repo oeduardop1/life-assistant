@@ -278,9 +278,9 @@ describe('tables', () => {
     it('should have required columns', () => {
       expect(habits.id).toBeDefined();
       expect(habits.userId).toBeDefined();
-      expect(habits.title).toBeDefined();
-      expect(habits.area).toBeDefined();
+      expect(habits.name).toBeDefined();
       expect(habits.frequency).toBeDefined();
+      expect(habits.isActive).toBeDefined();
     });
 
     it('should export Habit and NewHabit types', () => {

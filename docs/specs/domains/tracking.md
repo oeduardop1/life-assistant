@@ -291,6 +291,95 @@ enum TrackingType {
 | **energy** | value | `1-10` | score |
 | **custom** | value | `number` (sem limites) | custom |
 
+### 4.2 Custom Metrics (Métricas Personalizadas)
+
+> Métricas personalizadas permitem ao usuário rastrear qualquer valor numérico não coberto pelos tipos built-in.
+
+#### Definição
+
+```typescript
+interface CustomMetricDefinition {
+  id: string;
+  userId: string;
+  name: string;              // "Livros Lidos", "Pressão Arterial"
+  description?: string;
+  icon: string;              // emoji, default '📊'
+  color?: string;            // hex color
+  unit: string;              // "livros", "mmHg"
+  minValue?: number;         // validação opcional
+  maxValue?: number;         // validação opcional
+  area: LifeArea;            // default 'learning'
+  subArea?: SubArea;
+  isActive: boolean;
+  deletedAt?: Date;          // soft delete
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+#### Regras de Negócio
+
+| Regra | Descrição |
+|-------|-----------|
+| Nome único | Nome único por usuário (case-insensitive) |
+| Nome máximo | 100 caracteres |
+| Unidade máxima | 20 caracteres |
+| Soft delete | Preserva histórico de tracking_entries |
+| Validação | min/max opcionais, aplicados em tracking_entries |
+
+#### Vinculação com tracking_entries
+
+Quando o usuário registra uma métrica custom:
+- `tracking_entries.type` = `'custom'`
+- `tracking_entries.metadata` = `{ customMetricId: '<uuid>' }`
+
+Isso permite:
+- Manter `tracking_entries` inalterada (sem adicionar coluna)
+- Usar campo `metadata` existente (JSONB)
+- Filtrar/agregar por `customMetricId`
+
+#### Endpoints
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/tracking/custom-metrics` | Criar definição |
+| GET | `/tracking/custom-metrics` | Listar definições |
+| GET | `/tracking/custom-metrics/:id` | Buscar por ID |
+| PATCH | `/tracking/custom-metrics/:id` | Atualizar |
+| DELETE | `/tracking/custom-metrics/:id` | Soft delete |
+
+#### Data Model
+
+```sql
+CREATE TABLE custom_metric_definitions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon VARCHAR(50) DEFAULT '📊',
+  color VARCHAR(7),
+  unit VARCHAR(20) NOT NULL,
+  min_value DECIMAL(10,2),
+  max_value DECIMAL(10,2),
+  area life_area NOT NULL DEFAULT 'learning',
+  sub_area sub_area,
+  is_active BOOLEAN DEFAULT true,
+  deleted_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Índice único parcial para nome case-insensitive
+CREATE UNIQUE INDEX custom_metric_defs_user_name_unique
+ON custom_metric_definitions (user_id, LOWER(name))
+WHERE deleted_at IS NULL;
+
+-- RLS
+ALTER TABLE custom_metric_definitions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user_access" ON custom_metric_definitions
+  FOR ALL USING (user_id = (SELECT auth.uid()));
+```
+
 ---
 
 ## 5. Habits (Hábitos)

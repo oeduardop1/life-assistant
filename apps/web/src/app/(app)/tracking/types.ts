@@ -359,6 +359,78 @@ export function getVariationColor(variation: number | null, type: TrackingType):
 }
 
 // =============================================================================
+// Custom Metric Types (M2.1 Custom Metrics)
+// =============================================================================
+
+/**
+ * Custom metric definition from API
+ *
+ * @see docs/specs/domains/tracking.md §4.2
+ */
+export interface CustomMetricDefinition {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string | null;
+  icon: string;
+  color?: string | null;
+  unit: string;
+  minValue?: string | null; // Stored as string (decimal in DB)
+  maxValue?: string | null;
+  area: LifeArea;
+  subArea?: SubArea | null;
+  isActive: boolean;
+  deletedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Create custom metric payload
+ */
+export interface CreateCustomMetricInput {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  unit: string;
+  minValue?: number;
+  maxValue?: number;
+  area?: LifeArea;
+  subArea?: SubArea;
+}
+
+/**
+ * Update custom metric payload
+ */
+export interface UpdateCustomMetricInput {
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  unit?: string;
+  minValue?: number | null;
+  maxValue?: number | null;
+  area?: LifeArea;
+  subArea?: SubArea | null;
+  isActive?: boolean;
+}
+
+/**
+ * API response for single custom metric
+ */
+export interface CustomMetricResponse {
+  metric: CustomMetricDefinition;
+}
+
+/**
+ * API response for custom metric list
+ */
+export interface CustomMetricsListResponse {
+  metrics: CustomMetricDefinition[];
+}
+
+// =============================================================================
 // Habit Types (M2.1 Unified Tracking)
 // =============================================================================
 

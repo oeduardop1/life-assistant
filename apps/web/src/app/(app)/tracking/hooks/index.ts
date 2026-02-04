@@ -51,3 +51,15 @@ export {
 
 // Navigation hooks
 export { useSwipeNavigation } from './use-swipe-navigation';
+
+// Custom Metrics hooks
+export {
+  customMetricsKeys,
+  useCustomMetrics,
+  useCustomMetric,
+  useCreateCustomMetric,
+  useUpdateCustomMetric,
+  useDeleteCustomMetric,
+  useHasCustomMetrics,
+  useCustomMetricOptions,
+} from './use-custom-metrics';

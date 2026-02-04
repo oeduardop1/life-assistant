@@ -49,4 +49,16 @@ export {
   GroupedTimeline,
   metricColors,
   TRACKING_TYPES,
+  // Custom metrics helpers
+  type MetricSelection,
+  parseMetricSelection,
 } from './metrics';
+
+// Custom metrics components
+export {
+  CustomMetricForm,
+  CreateCustomMetricModal,
+  EditCustomMetricModal,
+  DeleteCustomMetricDialog,
+  CustomMetricsManager,
+} from './custom-metrics';

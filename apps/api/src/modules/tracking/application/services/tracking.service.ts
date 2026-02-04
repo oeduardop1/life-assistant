@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import type {
   TrackingEntry,
   TrackingType,
@@ -11,6 +11,10 @@ import {
   type TrackingEntrySearchParams,
   type TrackingAggregation,
 } from '../../domain/ports/tracking-entry.repository.port';
+import {
+  CustomMetricRepositoryPort,
+  CUSTOM_METRIC_REPOSITORY,
+} from '../../domain/ports/custom-metric.repository.port';
 
 /**
  * Parameters for recording a metric (from chat or form)
@@ -83,7 +87,9 @@ export class TrackingService {
 
   constructor(
     @Inject(TRACKING_ENTRY_REPOSITORY)
-    private readonly trackingRepository: TrackingEntryRepositoryPort
+    private readonly trackingRepository: TrackingEntryRepositoryPort,
+    @Inject(CUSTOM_METRIC_REPOSITORY)
+    private readonly customMetricRepository: CustomMetricRepositoryPort
   ) {}
 
   /**
@@ -101,6 +107,11 @@ export class TrackingService {
 
     // Validate value according to type-specific rules
     this.validateValue(type, value);
+
+    // Validate customMetricId for custom metrics
+    if (type === 'custom') {
+      await this.validateCustomMetricId(userId, params.metadata);
+    }
 
     // Get defaults for this type (ADR-017: includes defaultSubArea)
     const defaultRules = { defaultUnit: 'unit', defaultArea: 'learning' as LifeArea, defaultSubArea: 'informal' as SubArea };
@@ -287,5 +298,35 @@ export class TrackingService {
         `Value for ${type} must be at most ${String(rules.maxValue)}`
       );
     }
+  }
+
+  /**
+   * Validate customMetricId exists and belongs to user
+   * @throws BadRequestException if customMetricId is missing
+   * @throws NotFoundException if custom metric not found
+   */
+  private async validateCustomMetricId(
+    userId: string,
+    metadata: Record<string, unknown> | undefined
+  ): Promise<void> {
+    const customMetricId = metadata?.customMetricId as string | undefined;
+
+    if (!customMetricId) {
+      throw new BadRequestException(
+        'customMetricId is required in metadata for custom metrics'
+      );
+    }
+
+    const customMetric = await this.customMetricRepository.findById(userId, customMetricId);
+
+    if (!customMetric) {
+      throw new NotFoundException(
+        `Custom metric with id "${customMetricId}" not found`
+      );
+    }
+
+    this.logger.debug(
+      `Validated custom metric "${customMetric.name}" (${customMetricId}) for user ${userId}`
+    );
   }
 }

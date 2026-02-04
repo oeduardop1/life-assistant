@@ -36,3 +36,6 @@ export * from './audit';
 export * from './user-memories';
 export * from './knowledge-items';
 export * from './memory-consolidations';
+
+// Custom Metrics (M2.1)
+export * from './custom-metrics';
