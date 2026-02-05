@@ -47,6 +47,12 @@ RESET_MODE=false
 FORCE_MODE=false
 VERBOSE_MODE=false
 
+# Supabase CLI path (resolved in resolve_supabase_cli)
+SUPABASE_BIN=""
+
+# Step count (adjusted when --reset is used)
+TOTAL_STEPS=2
+
 # Track errors and timing
 ERRORS=0
 WARNINGS=0
@@ -157,6 +163,16 @@ show_progress() {
     return $?
 }
 
+# Resolve and cache the Supabase CLI binary path
+resolve_supabase_cli() {
+    if command -v supabase &>/dev/null; then
+        SUPABASE_BIN="supabase"
+    else
+        SUPABASE_BIN="npx -y supabase"
+    fi
+    print_verbose "Supabase binary: $SUPABASE_BIN"
+}
+
 # =============================================================================
 # Help & Usage
 # =============================================================================
@@ -223,6 +239,7 @@ parse_args() {
         case $1 in
             --reset|-r)
                 RESET_MODE=true
+                TOTAL_STEPS=3
                 shift
                 ;;
             --force|-f)
@@ -288,7 +305,13 @@ confirm_reset() {
     echo -e "${YELLOW}This action CANNOT be undone.${NC}"
     echo ""
 
-    # Interactive confirmation
+    # Interactive confirmation (requires terminal)
+    if [[ ! -t 0 ]]; then
+        print_error "Cannot confirm: stdin is not a terminal"
+        print_debug "Use --force (-f) to skip confirmation in non-interactive mode"
+        exit 1
+    fi
+
     echo -ne "Type ${BOLD}'yes'${NC} to confirm: "
     read -r confirmation
 
@@ -329,10 +352,6 @@ get_docker_compose_containers() {
 get_docker_compose_container_names() {
     # Only get life-assistant containers that are NOT supabase (Redis, MinIO)
     docker ps --filter "name=life-assistant" --format "{{.Names}}" 2>/dev/null | grep -v "^supabase" || true
-}
-
-get_all_containers() {
-    docker ps -aq --filter "name=supabase" --filter "name=life-assistant" 2>/dev/null || true
 }
 
 check_supabase_running() {
@@ -444,7 +463,7 @@ remove_container() {
 }
 
 stop_supabase_via_cli() {
-    print_header "Step 1/3: Stopping Supabase"
+    print_header "Step 1/$TOTAL_STEPS: Stopping Supabase"
 
     if ! check_supabase_running; then
         print_success "Supabase is not running"
@@ -458,32 +477,49 @@ stop_supabase_via_cli() {
     # Try graceful stop via Supabase CLI first
     start_step "Attempting graceful stop via Supabase CLI"
 
-    local stop_args=""
+    local stop_args=()
     if [[ "$RESET_MODE" == "true" ]]; then
-        stop_args="--no-backup"
+        # Check if --no-backup flag is supported
+        if $SUPABASE_BIN stop --help 2>&1 | grep -q "no-backup"; then
+            stop_args+=("--no-backup")
+        else
+            print_verbose "--no-backup flag not supported in this Supabase CLI version"
+        fi
     fi
 
-    print_debug "Command: npx -y supabase stop $stop_args"
+    print_debug "Command: $SUPABASE_BIN stop ${stop_args[*]}"
 
-    # Run in background with timeout
-    (timeout "$SUPABASE_TIMEOUT" npx -y supabase stop $stop_args &>/dev/null) &
+    # Capture output to temp file for diagnostics
+    local supabase_log
+    supabase_log=$(mktemp /tmp/supabase-stop-XXXXXX.log)
+
+    # Run in background with progress (single timeout via show_progress)
+    ($SUPABASE_BIN stop "${stop_args[@]}" >> "$supabase_log" 2>&1) &
     local pid=$!
 
     if show_progress $pid "Supabase CLI stop" "$SUPABASE_TIMEOUT"; then
         end_step
         print_success "Supabase stopped via CLI"
+        print_verbose "Supabase output: $(cat "$supabase_log")"
+        rm -f "$supabase_log"
         return 0
     else
         end_step
         print_warning "Supabase CLI timed out or failed, using Docker directly"
+        print_verbose "Last Supabase output:"
+        if [[ "$VERBOSE_MODE" == "true" ]]; then
+            tail -10 "$supabase_log" >&2
+        fi
+        rm -f "$supabase_log"
     fi
 
     # Fallback: Stop containers directly via Docker
     stop_containers_directly "supabase"
+    cleanup_orphan_networks "supabase"
 }
 
 stop_docker_services() {
-    print_header "Step 2/3: Stopping Docker Services (Redis + MinIO)"
+    print_header "Step 2/$TOTAL_STEPS: Stopping Docker Services (Redis + MinIO)"
 
     if [[ ! -f "$DOCKER_COMPOSE_FILE" ]]; then
         print_warning "Docker Compose file not found, skipping..."
@@ -501,26 +537,36 @@ stop_docker_services() {
 
     start_step "Running docker compose down"
 
-    local down_args=""
+    local down_args=("--remove-orphans")
     if [[ "$RESET_MODE" == "true" ]]; then
-        down_args="-v --remove-orphans"
+        down_args+=("-v")
         print_debug "Command: docker compose down -v --remove-orphans"
     else
-        down_args="--remove-orphans"
         print_debug "Command: docker compose down --remove-orphans"
     fi
 
-    # Run in background with timeout
-    (timeout "$DOCKER_COMPOSE_TIMEOUT" docker compose -f "$DOCKER_COMPOSE_FILE" down $down_args &>/dev/null) &
+    # Capture output to temp file for diagnostics
+    local compose_log
+    compose_log=$(mktemp /tmp/compose-down-XXXXXX.log)
+
+    # Run in background with progress (single timeout via show_progress)
+    (docker compose -f "$DOCKER_COMPOSE_FILE" down "${down_args[@]}" >> "$compose_log" 2>&1) &
     local pid=$!
 
     if show_progress $pid "docker compose down" "$DOCKER_COMPOSE_TIMEOUT"; then
         end_step
         print_success "Docker services stopped"
+        print_verbose "Compose output: $(cat "$compose_log")"
+        rm -f "$compose_log"
         return 0
     else
         end_step
         print_warning "Docker compose timed out, stopping containers directly"
+        print_verbose "Last compose output:"
+        if [[ "$VERBOSE_MODE" == "true" ]]; then
+            tail -10 "$compose_log" >&2
+        fi
+        rm -f "$compose_log"
     fi
 
     # Fallback: Stop containers directly
@@ -578,12 +624,38 @@ stop_containers_directly() {
     fi
 }
 
+cleanup_orphan_networks() {
+    local filter=$1
+    local networks
+    networks=$(docker network ls --filter "name=$filter" -q 2>/dev/null || true)
+
+    if [[ -z "$networks" ]]; then
+        return 0
+    fi
+
+    print_debug "Cleaning up $filter networks"
+    while IFS= read -r net_id; do
+        [[ -z "$net_id" ]] && continue
+        # Disconnect all containers before removing
+        local connected
+        connected=$(docker network inspect "$net_id" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null || true)
+        if [[ -n "$connected" ]]; then
+            for container in $connected; do
+                docker network disconnect -f "$net_id" "$container" &>/dev/null || true
+            done
+        fi
+        if ! docker network rm "$net_id" &>/dev/null; then
+            print_verbose "Could not remove network $net_id"
+        fi
+    done <<< "$networks"
+}
+
 # =============================================================================
 # Reset Mode - Volume Cleanup
 # =============================================================================
 
 remove_volumes() {
-    print_header "Step 3/3: Removing Data Volumes"
+    print_header "Step 3/$TOTAL_STEPS: Removing Data Volumes"
 
     local supabase_volumes
     local dc_volumes
@@ -604,6 +676,7 @@ remove_volumes() {
 
     local removed=0
     local failed=0
+    local failed_volumes=()
 
     while read -r vol; do
         [[ -z "$vol" ]] && continue
@@ -615,9 +688,28 @@ remove_volumes() {
             print_verbose "Removed: $vol"
         else
             failed=$((failed + 1))
-            print_warning "Could not remove: $vol (may be in use)"
+            failed_volumes+=("$vol")
+            print_verbose "Could not remove: $vol (will retry)"
         fi
     done <<< "$all_volumes"
+
+    # Retry failed volumes after a short delay (containers may still be releasing locks)
+    if [[ $failed -gt 0 ]]; then
+        print_debug "Waiting 2s for containers to release volume locks..."
+        sleep 2
+
+        local retry_failed=0
+        for vol in "${failed_volumes[@]}"; do
+            if timeout "$VOLUME_TIMEOUT" docker volume rm "$vol" &>/dev/null; then
+                removed=$((removed + 1))
+                failed=$((failed - 1))
+                print_verbose "Removed on retry: $vol"
+            else
+                retry_failed=$((retry_failed + 1))
+                print_warning "Could not remove: $vol (may be in use)"
+            fi
+        done
+    fi
 
     if [[ $failed -eq 0 ]]; then
         print_success "All volumes removed ($removed total)"
@@ -711,6 +803,7 @@ show_manual_cleanup() {
 
 main() {
     parse_args "$@"
+    resolve_supabase_cli
 
     local total_start=$SECONDS
 

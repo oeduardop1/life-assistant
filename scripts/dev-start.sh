@@ -33,7 +33,7 @@ readonly DOCKER_COMPOSE_FILE="$PROJECT_ROOT/infra/docker/docker-compose.yml"
 
 # Timeouts (in seconds) - can be overridden with --timeout
 DEFAULT_REDIS_TIMEOUT=30
-DEFAULT_SUPABASE_TIMEOUT=120
+DEFAULT_SUPABASE_TIMEOUT=180
 DEFAULT_DB_WAIT_TIMEOUT=60
 
 REDIS_TIMEOUT=$DEFAULT_REDIS_TIMEOUT
@@ -43,6 +43,7 @@ DB_WAIT_TIMEOUT=$DEFAULT_DB_WAIT_TIMEOUT
 # Operation modes
 CLEAN_MODE=false
 VERBOSE_MODE=false
+USER_SET_TIMEOUT=false
 SKIP_MIGRATIONS=false
 FORCE_SEED=false
 SKIP_IMAGE_CLEANUP=false
@@ -52,6 +53,9 @@ CLEAN_BUILD_CACHE=false
 readonly SUPABASE_API_PORT=54321
 readonly SUPABASE_DB_PORT=54322
 readonly SUPABASE_STUDIO_PORT=54323
+
+# Supabase CLI path (resolved in ensure_supabase_cli)
+SUPABASE_BIN=""
 
 # Track state
 CLEANUP_DONE=false
@@ -211,7 +215,7 @@ ${BOLD}OPTIONS${NC}
 
     ${GREEN}--clean-cache${NC}     Also clean unused Docker build cache
 
-    ${GREEN}--timeout, -t${NC} N   Set timeout for operations in seconds (default: 120)
+    ${GREEN}--timeout, -t${NC} N   Set timeout for operations in seconds (default: 180, auto-increases on first run)
 
     ${GREEN}--verbose, -v${NC}     Show detailed debug output
 
@@ -302,6 +306,7 @@ parse_args() {
                 SUPABASE_TIMEOUT=$2
                 REDIS_TIMEOUT=$((SUPABASE_TIMEOUT / 4))
                 DB_WAIT_TIMEOUT=$((SUPABASE_TIMEOUT / 2))
+                USER_SET_TIMEOUT=true
                 shift 2
                 ;;
             --help|-h)
@@ -366,19 +371,34 @@ check_ports() {
     local ports_in_use=()
     local check_ports=($SUPABASE_API_PORT $SUPABASE_DB_PORT $SUPABASE_STUDIO_PORT 6379 9000)
 
+    # Detect available port checking tool
+    local port_checker=""
+    if command -v lsof &>/dev/null; then
+        port_checker="lsof"
+    elif command -v ss &>/dev/null; then
+        port_checker="ss"
+    else
+        print_warning "Neither lsof nor ss available — skipping port check"
+        return 0
+    fi
+
+    print_verbose "Using $port_checker for port checks"
+
     for port in "${check_ports[@]}"; do
-        if lsof -i ":$port" &>/dev/null; then
-            # Check if it's our own container
-            local process
-            process=$(lsof -i ":$port" -t 2>/dev/null | head -1)
-            if [[ -n "$process" ]]; then
-                local process_name
-                process_name=$(ps -p "$process" -o comm= 2>/dev/null || echo "unknown")
-                if [[ ! "$process_name" =~ docker|containerd ]]; then
-                    ports_in_use+=("$port")
-                    print_verbose "Port $port in use by: $process_name (PID: $process)"
-                fi
+        local in_use=false
+        if [[ "$port_checker" == "lsof" ]]; then
+            if lsof -i ":$port" -sTCP:LISTEN &>/dev/null 2>&1; then
+                in_use=true
             fi
+        elif [[ "$port_checker" == "ss" ]]; then
+            if ss -tlnp "sport = :$port" 2>/dev/null | grep -q ":$port"; then
+                in_use=true
+            fi
+        fi
+
+        if [[ "$in_use" == "true" ]]; then
+            ports_in_use+=("$port")
+            print_verbose "Port $port appears to be in use"
         fi
     done
 
@@ -408,6 +428,14 @@ ensure_supabase_cli() {
         print_error "Failed to initialize Supabase CLI"
         exit 1
     fi
+
+    # Resolve and cache the binary path to avoid repeated npx lookups
+    if command -v supabase &>/dev/null; then
+        SUPABASE_BIN="supabase"
+    else
+        SUPABASE_BIN="npx -y supabase"
+    fi
+    print_verbose "Supabase binary: $SUPABASE_BIN"
 }
 
 # =============================================================================
@@ -418,36 +446,43 @@ cleanup_zombie_containers() {
     print_info "Cleaning up zombie containers..."
 
     local zombies=0
+    local stale_statuses=("exited" "created" "restarting" "dead")
+    local name_filters=("supabase" "life-assistant")
 
-    # Stop and remove any stopped supabase containers
-    local stopped_containers
-    stopped_containers=$(docker ps -aq --filter "name=supabase" --filter "status=exited" 2>/dev/null || true)
+    for name in "${name_filters[@]}"; do
+        for status in "${stale_statuses[@]}"; do
+            local containers
+            containers=$(docker ps -aq --filter "name=$name" --filter "status=$status" 2>/dev/null || true)
 
-    if [[ -n "$stopped_containers" ]]; then
-        local count
-        count=$(echo "$stopped_containers" | wc -l | tr -d ' ')
-        print_debug "Removing $count stopped Supabase containers"
-        echo "$stopped_containers" | xargs -r docker rm -f &>/dev/null || true
-        zombies=$((zombies + count))
-    fi
+            if [[ -n "$containers" ]]; then
+                local count
+                count=$(echo "$containers" | wc -l | tr -d ' ')
+                print_debug "Removing $count $name containers (status: $status)"
+                echo "$containers" | xargs -r docker rm -f &>/dev/null || true
+                zombies=$((zombies + count))
+            fi
+        done
+    done
 
-    # Stop and remove any stopped life-assistant containers
-    stopped_containers=$(docker ps -aq --filter "name=life-assistant" --filter "status=exited" 2>/dev/null || true)
-
-    if [[ -n "$stopped_containers" ]]; then
-        local count
-        count=$(echo "$stopped_containers" | wc -l | tr -d ' ')
-        print_debug "Removing $count stopped life-assistant containers"
-        echo "$stopped_containers" | xargs -r docker rm -f &>/dev/null || true
-        zombies=$((zombies + count))
-    fi
-
-    # Clean up dangling networks
+    # Clean up dangling networks (disconnect containers first)
     local networks
     networks=$(docker network ls --filter "name=supabase" -q 2>/dev/null || true)
     if [[ -n "$networks" ]]; then
         print_debug "Cleaning up Supabase networks"
-        echo "$networks" | xargs -r docker network rm &>/dev/null || true
+        while IFS= read -r net_id; do
+            [[ -z "$net_id" ]] && continue
+            # Disconnect all containers before removing
+            local connected
+            connected=$(docker network inspect "$net_id" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null || true)
+            if [[ -n "$connected" ]]; then
+                for container in $connected; do
+                    docker network disconnect -f "$net_id" "$container" &>/dev/null || true
+                done
+            fi
+            if ! docker network rm "$net_id" &>/dev/null; then
+                print_verbose "Could not remove network $net_id (may be in use by Docker Compose)"
+            fi
+        done <<< "$networks"
     fi
 
     if [[ $zombies -gt 0 ]]; then
@@ -483,7 +518,7 @@ force_stop_running() {
 
     # Run supabase stop to clean up properly
     print_debug "Running supabase stop for cleanup"
-    timeout 30 npx -y supabase stop &>/dev/null || true
+    timeout 30 $SUPABASE_BIN stop &>/dev/null || true
 
     print_success "Cleanup complete"
 }
@@ -574,7 +609,10 @@ cleanup_build_cache() {
 # =============================================================================
 
 check_supabase_running() {
-    docker ps --filter "name=supabase_db" --filter "status=running" --format "{{.Names}}" 2>/dev/null | grep -q "supabase"
+    local count
+    count=$(docker ps --filter "name=supabase" --filter "status=running" -q 2>/dev/null | wc -l | tr -d ' ')
+    # Supabase local runs ~10-12 containers. Minimum 8 indicates complete startup.
+    [[ $count -ge 8 ]]
 }
 
 check_redis_ready() {
@@ -588,6 +626,35 @@ check_postgres_ready() {
 get_running_container_count() {
     local filter=$1
     docker ps --filter "name=$filter" --filter "status=running" -q 2>/dev/null | wc -l | tr -d ' '
+}
+
+# Detect if images need downloading and adjust timeout accordingly
+detect_supabase_timeout() {
+    if [[ "$USER_SET_TIMEOUT" == "true" ]]; then
+        print_verbose "Using user-specified timeout: ${SUPABASE_TIMEOUT}s"
+        return 0
+    fi
+
+    local missing_images=0
+    local key_images=(
+        "public.ecr.aws/supabase/postgres"
+        "public.ecr.aws/supabase/gotrue"
+        "public.ecr.aws/supabase/studio"
+    )
+
+    for img in "${key_images[@]}"; do
+        if ! docker images "$img" --format '{{.ID}}' 2>/dev/null | grep -q .; then
+            missing_images=$((missing_images + 1))
+        fi
+    done
+
+    if [[ $missing_images -gt 0 ]]; then
+        SUPABASE_TIMEOUT=600
+        DB_WAIT_TIMEOUT=$((SUPABASE_TIMEOUT / 2))
+        print_info "Downloading Docker images (~2GB). This is a one-time operation."
+        print_debug "On WSL2 this may take 5-10 minutes due to I/O overhead"
+        print_debug "Timeout set to ${SUPABASE_TIMEOUT}s"
+    fi
 }
 
 # =============================================================================
@@ -634,6 +701,9 @@ start_docker_services() {
 start_supabase() {
     start_step 2 4 "Supabase (PostgreSQL + Auth + Studio)"
 
+    # Adjust timeout if images need downloading
+    detect_supabase_timeout
+
     # Check if already running
     if check_supabase_running; then
         print_warning "Supabase is already running"
@@ -644,11 +714,24 @@ start_supabase() {
         return 0
     fi
 
+    # Check for partially running state (some containers up, but not enough)
+    local partial_count
+    partial_count=$(get_running_container_count "supabase")
+    if [[ $partial_count -gt 0 ]]; then
+        print_warning "Supabase partially running ($partial_count containers). Restarting..."
+        timeout 30 $SUPABASE_BIN stop &>/dev/null || true
+        sleep 2
+    fi
+
     print_info "Starting Supabase services..."
     print_debug "This may take 1-2 minutes on first run"
 
-    # Run supabase start in background with progress
-    (timeout "$SUPABASE_TIMEOUT" npx -y supabase start 2>&1) &
+    # Capture supabase output to temp file for diagnostics
+    local supabase_log
+    supabase_log=$(mktemp /tmp/supabase-start-XXXXXX.log)
+
+    # Run supabase start in background with progress (single timeout via show_progress)
+    ($SUPABASE_BIN start >> "$supabase_log" 2>&1) &
     local pid=$!
 
     if show_progress $pid "Supabase starting" "$SUPABASE_TIMEOUT"; then
@@ -658,16 +741,25 @@ start_supabase() {
             local count
             count=$(get_running_container_count "supabase")
             print_success "Supabase started ($count containers)"
+            print_verbose "Supabase log: $(cat "$supabase_log")"
         else
             print_error "Supabase process completed but containers not running"
+            print_info "Supabase output:"
+            tail -20 "$supabase_log" >&2
             show_supabase_troubleshooting
+            rm -f "$supabase_log"
             return 1
         fi
     else
         print_error "Supabase start timed out after ${SUPABASE_TIMEOUT}s"
+        print_info "Last output from Supabase:"
+        tail -20 "$supabase_log" >&2
         show_supabase_troubleshooting
+        rm -f "$supabase_log"
         return 1
     fi
+
+    rm -f "$supabase_log"
 
     # Wait for PostgreSQL to be fully ready
     print_info "Waiting for PostgreSQL to be ready..."
@@ -709,7 +801,7 @@ show_supabase_status() {
 
     # Use subshell with || true to prevent script exit on failure
     local status_output
-    status_output=$(npx -y supabase status 2>&1) || true
+    status_output=$($SUPABASE_BIN status 2>&1) || true
 
     if [[ -n "$status_output" ]] && ! echo "$status_output" | grep -q "Error\|error\|failed"; then
         echo ""
@@ -740,11 +832,17 @@ apply_database_schema() {
 
     # Detect if this is a fresh database (no users table = first setup)
     local is_fresh_db=false
-    local db_check
+    local db_check=""
+    local db_check_exit=0
     db_check=$(docker exec supabase_db_life-assistant psql -U postgres -d postgres -tAc \
-        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users');" 2>/dev/null) || true
+        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users');" 2>&1) || db_check_exit=$?
 
-    if [[ "$db_check" != "t" ]]; then
+    if [[ $db_check_exit -ne 0 ]]; then
+        print_warning "Could not query database (exit code: $db_check_exit)"
+        print_verbose "Output: $db_check"
+        print_debug "Assuming fresh database"
+        is_fresh_db=true
+    elif [[ "$db_check" != "t" ]]; then
         is_fresh_db=true
         print_info "Fresh database detected - will run migrations + seed"
     else
@@ -757,11 +855,29 @@ apply_database_schema() {
     local has_pending_migrations=true
 
     # Count migration SQL files
-    migration_files_count=$(find "$PROJECT_ROOT/packages/database/src/migrations" -maxdepth 1 -name "*.sql" 2>/dev/null | wc -l | tr -d ' ')
+    local migrations_dir="$PROJECT_ROOT/packages/database/src/migrations"
+
+    if [[ ! -d "$migrations_dir" ]]; then
+        print_warning "Migrations directory not found: $migrations_dir"
+        print_debug "Expected at: packages/database/src/migrations/"
+        has_pending_migrations=true
+    else
+        shopt -s nullglob
+        local sql_files=("$migrations_dir"/*.sql)
+        shopt -u nullglob
+        migration_files_count=${#sql_files[@]}
+        print_verbose "Found $migration_files_count migration files"
+    fi
 
     # Count journal entries (if table exists)
+    local journal_exit=0
     journal_entries_count=$(docker exec supabase_db_life-assistant psql -U postgres -d postgres -tAc \
-        "SELECT COUNT(*)::int FROM drizzle.__drizzle_migrations;" 2>/dev/null) || journal_entries_count=0
+        "SELECT COUNT(*)::int FROM drizzle.__drizzle_migrations;" 2>/dev/null) || journal_exit=$?
+
+    if [[ $journal_exit -ne 0 ]]; then
+        print_verbose "Migration journal not found (first migration)"
+        journal_entries_count=0
+    fi
 
     if [[ "$migration_files_count" -eq "$journal_entries_count" ]] && [[ "$journal_entries_count" -gt 0 ]]; then
         has_pending_migrations=false
@@ -819,9 +935,15 @@ apply_database_schema() {
 
     # Apply RLS policies (only if not already enabled)
     # Check if RLS is enabled on the users table as indicator
-    local rls_enabled
+    local rls_enabled=""
+    local rls_exit=0
     rls_enabled=$(docker exec supabase_db_life-assistant psql -U postgres -d postgres -tAc \
-        "SELECT relrowsecurity FROM pg_class WHERE relname = 'users' AND relnamespace = 'public'::regnamespace;" 2>/dev/null) || rls_enabled=""
+        "SELECT relrowsecurity FROM pg_class WHERE relname = 'users' AND relnamespace = 'public'::regnamespace;" 2>&1) || rls_exit=$?
+
+    if [[ $rls_exit -ne 0 ]]; then
+        print_verbose "Could not check RLS status (exit code: $rls_exit)"
+        rls_enabled=""
+    fi
 
     if [[ "$rls_enabled" == "t" ]]; then
         print_success "RLS policies already applied"
