@@ -74,10 +74,11 @@ export function CompletionHeatmap({
   // Generate grid data: 12 weeks x 7 days
   const gridData = useMemo(() => {
     const today = endDate ? parseISO(endDate) : new Date();
-    const totalDays = weeks * 7;
 
-    // Start from the beginning of the week containing (today - totalDays)
-    const startDate = startOfWeek(addDays(today, -totalDays + 1), { weekStartsOn: 0 });
+    // Anchor to today's week, then go back (weeks - 1) weeks
+    // This guarantees today's week is always the last column
+    const todayWeekStart = startOfWeek(today, { weekStartsOn: 0 });
+    const startDate = addDays(todayWeekStart, -(weeks - 1) * 7);
 
     const rows: DayData[][] = [];
 
@@ -106,24 +107,20 @@ export function CompletionHeatmap({
     return rows;
   }, [completionMap, frequency, frequencyDays, weeks, endDate]);
 
-  // Get month labels for the header
-  const monthLabels = useMemo(() => {
-    const labels: { label: string; weekIndex: number }[] = [];
+  // Map of weekIndex → month label (only where a new month starts)
+  const monthLabelSet = useMemo(() => {
+    const set = new Map<number, string>();
     let lastMonth = -1;
 
-    // Use the first row to determine months
     gridData[0]?.forEach((day, weekIndex) => {
       const month = day.dateObj.getMonth();
       if (month !== lastMonth) {
-        labels.push({
-          label: format(day.dateObj, 'MMM', { locale: ptBR }),
-          weekIndex,
-        });
+        set.set(weekIndex, format(day.dateObj, 'MMM', { locale: ptBR }));
         lastMonth = month;
       }
     });
 
-    return labels;
+    return set;
   }, [gridData]);
 
   if (isLoading) {
@@ -135,41 +132,31 @@ export function CompletionHeatmap({
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-2">
-        {/* Month labels */}
-        <div className="flex pl-6">
-          <div className="flex-1 relative h-4 text-xs text-muted-foreground">
-            {monthLabels.map(({ label, weekIndex }) => (
-              <span
-                key={`${label}-${weekIndex}`}
-                className="absolute capitalize"
-                style={{ left: `${(weekIndex / weeks) * 100}%` }}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Grid */}
+        {/* Grid with integrated month labels */}
         <div className="flex gap-1">
-          {/* Day of week labels */}
-          <div className="flex flex-col gap-[3px] pr-1">
-            {dayLabels.map((label, i) => (
-              <div
-                key={i}
-                className="h-3 w-4 text-[10px] text-muted-foreground flex items-center justify-end"
-              >
-                {i % 2 === 1 ? label : ''}
-              </div>
-            ))}
+          {/* Day of week labels column */}
+          <div className="flex flex-col">
+            {/* Spacer for month label row */}
+            <div className="h-4" />
+            {/* Day labels */}
+            <div className="flex flex-col gap-[3px] pr-1">
+              {dayLabels.map((label, i) => (
+                <div
+                  key={i}
+                  className="h-3 w-4 text-[10px] text-muted-foreground flex items-center justify-end"
+                >
+                  {i % 2 === 1 ? label : ''}
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Heatmap cells */}
+          {/* Week columns with month labels on top */}
           <div className="flex gap-[3px]">
             {Array.from({ length: weeks }).map((_, weekIndex) => (
               <motion.div
                 key={weekIndex}
-                className="flex flex-col gap-[3px]"
+                className="flex flex-col"
                 initial={prefersReducedMotion ? {} : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{
@@ -177,18 +164,26 @@ export function CompletionHeatmap({
                   duration: 0.2,
                 }}
               >
-                {gridData.map((row) => {
-                  const day = row[weekIndex];
-                  if (!day) return null;
+                {/* Month label */}
+                <div className="h-4 text-xs text-muted-foreground capitalize leading-4">
+                  {monthLabelSet.get(weekIndex) ?? ''}
+                </div>
 
-                  return (
-                    <HeatmapCell
-                      key={day.date}
-                      day={day}
-                      habitColor={habitColor}
-                    />
-                  );
-                })}
+                {/* Day cells */}
+                <div className="flex flex-col gap-[3px]">
+                  {gridData.map((row) => {
+                    const day = row[weekIndex];
+                    if (!day) return null;
+
+                    return (
+                      <HeatmapCell
+                        key={day.date}
+                        day={day}
+                        habitColor={habitColor}
+                      />
+                    );
+                  })}
+                </div>
               </motion.div>
             ))}
           </div>
