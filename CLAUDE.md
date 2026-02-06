@@ -11,14 +11,17 @@ Life Assistant AI is a SaaS platform with integrated AI that serves as a memory,
 **Architecture:** Modular Monolith + Clean Architecture (presentation/application/domain/infrastructure)
 ```
 life-assistant/
-├── apps/web/        # Next.js frontend
-├── apps/api/        # NestJS backend
-├── packages/        # Shared libraries
-├── docs/            # Documentation
-│   ├── adr/         # Architecture Decision Records
-│   ├── specs/       # Domain-driven specs (core/, domains/, integrations/)
-│   └── milestones/  # Tasks and progress
-└── infra/           # Docker, deployment
+├── apps/web/           # Next.js 16 frontend (React 19, Tailwind v4, shadcn/ui)
+├── apps/api/           # NestJS 11 backend (Clean Architecture, BullMQ)
+├── packages/ai/        # LLM abstraction layer (Claude + Gemini adapters, tool definitions)
+├── packages/config/    # Zod-validated environment config (loadConfig, validateEnv)
+├── packages/database/  # Drizzle ORM schemas, migrations, RLS policies
+├── packages/shared/    # Shared enums, constants, date/currency utils
+├── docs/               # Documentation
+│   ├── adr/            # Architecture Decision Records (ADR-006 to ADR-019)
+│   ├── specs/          # Domain-driven specs (core/, domains/, integrations/)
+│   └── milestones/     # Tasks and progress
+└── infra/docker/       # Docker Compose (Redis, MinIO); PostgreSQL runs via Supabase CLI containers (not in this file)
 ```
 
 ## Infrastructure
@@ -32,13 +35,48 @@ life-assistant/
 
 ## Commands
 ```bash
-pnpm dev              # Start dev servers
+pnpm dev              # Start all dev servers (web + api)
 pnpm build            # Production build
 pnpm typecheck        # TypeScript check
 pnpm lint             # ESLint
 pnpm test             # Unit tests
-pnpm test:e2e         # E2E tests
+pnpm test:e2e         # E2E tests (Playwright)
+pnpm format           # Prettier format all files
+pnpm format:check     # Check formatting without writing
+pnpm infra:up         # Start Docker (Redis, MinIO) + Supabase + migrations + seed
+pnpm infra:down       # Stop all local infrastructure
+pnpm clean            # Remove dist/ and node_modules/
 ```
+
+Package-specific: `pnpm --filter @life-assistant/<pkg> <script>` (e.g. `pnpm --filter @life-assistant/database db:migrate`)
+
+## Getting Started
+```bash
+pnpm install                   # Install all dependencies
+cp .env.example .env           # Create env file (fill in API keys)
+pnpm infra:up                  # Start Redis, MinIO, Supabase, run migrations + seed
+pnpm dev                       # Start web (localhost:3000) + api (localhost:4000)
+```
+
+First run downloads Docker images (~5 min). Subsequent starts take ~30s.
+Useful flags: `--seed` (force re-seed), `--clean` (reset containers). Teardown: `pnpm infra:down` or `pnpm infra:down --reset` (delete all data).
+
+**Requires:** Node >=24, pnpm >=10, Docker, Supabase CLI.
+
+## Environment
+
+Copy `.env.example` to `.env` and fill in required values.
+
+| Category | Variables | Notes |
+|----------|-----------|-------|
+| App | `PORT`, `FRONTEND_URL` | Default: 4000, http://localhost:3000 |
+| Database | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET` | Auto-filled by `supabase start` |
+| Redis | `REDIS_URL` | Default: redis://localhost:6379 |
+| AI/LLM | `LLM_PROVIDER`, `GEMINI_API_KEY`, `LLM_MODEL` | Default provider: gemini |
+| Storage | `R2_*` or MinIO vars | Local: MinIO on port 9000 |
+| Observability | `SENTRY_DSN`, `AXIOM_*` | Optional in dev |
+
+Frontend vars (`NEXT_PUBLIC_*`) go in `apps/web/.env.local` — Next.js does not load the root `.env`.
 
 ## Documentation Reference
 
@@ -47,18 +85,46 @@ pnpm test:e2e         # E2E tests
 | Category | Topic | Document |
 |----------|-------|----------|
 | **Core** | Architecture, Stack, Testing | `docs/specs/core/architecture.md` |
+| | Frontend Architecture, Design System | `docs/specs/core/frontend-architecture.md` |
 | | Auth, RLS, LGPD | `docs/specs/core/auth-security.md` |
 | | Database, Naming, Migrations | `docs/specs/core/data-conventions.md` |
+| | API Contract (REST + SSE) | `docs/specs/core/api-contract.md` |
+| | Error Handling, HTTP Codes | `docs/specs/core/errors.md` |
+| | UX States (Loading, Empty, Error) | `docs/specs/core/ux-states.md` |
+| | Realtime Protocol (SSE + Socket.io) | `docs/specs/core/realtime.md` |
+| | Observability (Sentry, Axiom) | `docs/specs/core/observability.md` |
+| | Data Import (CSV/JSON) | `docs/specs/core/data-import.md` |
 | | AI Persona, Prompts, LLM | `docs/specs/core/ai-personality.md` |
 | | User Journeys | `docs/specs/core/user-journeys.md` |
-| **Domains** | Finance (M2.2) | `docs/specs/domains/finance.md` |
-| | Memory (ADR-012) | `docs/specs/domains/memory.md` |
+| **Domains** | Dashboard, Life Balance Score | `docs/specs/domains/dashboard.md` |
+| | Finance | `docs/specs/domains/finance.md` |
 | | Tracking (ADR-015/017) | `docs/specs/domains/tracking.md` |
-| | People, Vault | `docs/specs/domains/*.md` |
-| | Goals, Notifications, Chat | `docs/specs/domains/*.md` |
-| | Settings (M0.11+) | `docs/specs/domains/settings.md` |
-| **Integrations** | Telegram, Google Calendar, Stripe | `docs/specs/integrations/*.md` |
-| | Supabase Auth, Gemini, Cloudflare R2 | `docs/specs/integrations/*.md` |
+| | Memory (ADR-012) | `docs/specs/domains/memory.md` |
+| | Goals | `docs/specs/domains/goals.md` |
+| | Chat | `docs/specs/domains/chat.md` |
+| | Notifications | `docs/specs/domains/notifications.md` |
+| | Settings | `docs/specs/domains/settings.md` |
+| | Vault | `docs/specs/domains/vault.md` |
+| | Notes | `docs/specs/domains/notes.md` |
+| | Health | `docs/specs/domains/health.md` |
+| | Wellbeing | `docs/specs/domains/wellbeing.md` |
+| | Professional | `docs/specs/domains/professional.md` |
+| | Learning | `docs/specs/domains/learning.md` |
+| | Spiritual | `docs/specs/domains/spiritual.md` |
+| | Family | `docs/specs/domains/family.md` |
+| | Reports | `docs/specs/domains/reports.md` |
+| | Assistant & Agenda | `docs/specs/domains/assistant-agenda.md` |
+| | SaaS & Multi-tenancy | `docs/specs/domains/saas.md` |
+| **Integrations** | Supabase Auth | `docs/specs/integrations/supabase-auth.md` |
+| | Gemini LLM | `docs/specs/integrations/gemini.md` |
+| | Telegram Bot | `docs/specs/integrations/telegram.md` |
+| | Google Calendar | `docs/specs/integrations/google-calendar.md` |
+| | Cloudflare R2 | `docs/specs/integrations/cloudflare-r2.md` |
+| | Stripe Billing | `docs/specs/integrations/stripe.md` |
+| | Resend Email | `docs/specs/integrations/resend.md` |
+| | Web Push | `docs/specs/integrations/web-push.md` |
+| | WhatsApp | `docs/specs/integrations/whatsapp.md` |
+| | Apple Calendar | `docs/specs/integrations/apple-calendar.md` |
 | **Other** | Tasks & Progress | `docs/milestones/` |
 | | Pending Decisions | `TBD_TRACKER.md` |
 | | Navigation & Glossary | `docs/specs/README.md` |
@@ -74,6 +140,8 @@ pnpm test:e2e         # E2E tests
 - Any reference to tasks in docs/milestones/
 
 **SKIP THIS PROTOCOL FOR:** Documentation, questions, refactoring, code review, or any task not tied to a milestone.
+
+**Authorization required** before: creating files, updating docs, adding/completing milestone tasks.
 
 Follow these steps IN ORDER for milestone work — including planning.
 Do NOT skip steps. Do NOT start planning or coding before completing steps 1-3.
@@ -111,13 +179,6 @@ After Step 1 is complete:
 ```
    **STOP and wait for authorization. Do NOT proceed until approved.**
 
-> **IMPORTANTE:** Atualizações de documentação devem ser feitas APENAS em:
-> - `docs/specs/core/` — Para arquitetura, auth, convenções, AI
-> - `docs/specs/domains/` — Para regras de negócio por módulo
-> - `docs/specs/integrations/` — Para APIs externas
->
-> **NUNCA atualize arquivos em `docs/specs/legacy/`** — esses são apenas referência histórica.
-
 ### Step 3: Create/Refine Plan
 
 After Steps 1-2 are complete:
@@ -148,14 +209,6 @@ After Steps 1-2 are complete:
 
 1. Update milestone files (see "Updating Milestones" section below)
 2. Request confirmation before marking task complete
-
-## Authorization Required
-
-**ALWAYS ask before:**
-- Creating new files
-- Updating any documentation
-- Adding tasks to milestones
-- Marking tasks as completed
 
 ## Updating Milestones
 
@@ -193,18 +246,6 @@ Then:
 - 🟡 In progress
 - 🟢 Completed
 - 🔵 Blocked
-
-## Context7 Usage
-
-Query Context7: before creating plans, during code generation, when errors occur, when unsure about APIs.
-```
-1. resolve-library-id → get ID
-2. query-docs → fetch documentation
-3. Compare with project docs
-4. If divergence → STOP and notify
-```
-
-If no coverage: ask "Context7 has no docs for [library]. Proceed with general knowledge?"
 
 ## TBD Tracker
 
