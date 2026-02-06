@@ -226,6 +226,36 @@ export function CustomMetricForm({
           )}
         />
 
+        {/* Color */}
+        <FormField
+          control={form.control}
+          name="color"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cor (opcional)</FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={field.value || '#6366f1'}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="h-9 w-12 cursor-pointer rounded-md border border-input p-1"
+                  />
+                  <Input
+                    placeholder="#6366f1"
+                    {...field}
+                    className="flex-1 font-mono"
+                  />
+                </div>
+              </FormControl>
+              <FormDescription>
+                Cor para identificar a métrica
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Min/Max Values */}
         <div className="grid grid-cols-2 gap-4">
           <FormField

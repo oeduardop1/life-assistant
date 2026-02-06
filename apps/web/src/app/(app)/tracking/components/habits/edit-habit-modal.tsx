@@ -30,6 +30,7 @@ export function EditHabitModal({ habit, onClose }: EditHabitModalProps) {
     icon: string;
     color?: string;
     frequency: 'daily' | 'weekdays' | 'weekends' | 'custom';
+    frequencyDays?: number[];
     periodOfDay: 'morning' | 'afternoon' | 'evening' | 'anytime';
   }) => {
     if (!habit) return;
@@ -43,6 +44,7 @@ export function EditHabitModal({ habit, onClose }: EditHabitModalProps) {
           icon: values.icon,
           color: values.color,
           frequency: values.frequency,
+          frequencyDays: values.frequencyDays,
           periodOfDay: values.periodOfDay,
         },
       });
@@ -73,6 +75,7 @@ export function EditHabitModal({ habit, onClose }: EditHabitModalProps) {
               icon: habit.icon,
               color: habit.color ?? undefined,
               frequency: habit.frequency,
+              frequencyDays: habit.frequencyDays ?? [],
               periodOfDay: habit.periodOfDay,
             }}
             onSubmit={handleSubmit}

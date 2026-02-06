@@ -29,6 +29,7 @@ export function CreateHabitModal({ open, onClose }: CreateHabitModalProps) {
     icon: string;
     color?: string;
     frequency: 'daily' | 'weekdays' | 'weekends' | 'custom';
+    frequencyDays?: number[];
     periodOfDay: 'morning' | 'afternoon' | 'evening' | 'anytime';
   }) => {
     try {
@@ -38,6 +39,7 @@ export function CreateHabitModal({ open, onClose }: CreateHabitModalProps) {
         icon: values.icon,
         color: values.color,
         frequency: values.frequency,
+        frequencyDays: values.frequencyDays,
         periodOfDay: values.periodOfDay,
       });
 
