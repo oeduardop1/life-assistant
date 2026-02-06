@@ -29,8 +29,8 @@ import { useUserTimezone } from '@/hooks/use-user-timezone';
 import { getTodayInTimezone } from '@life-assistant/shared';
 
 interface GroupedTimelineProps {
-  startDate: string;
-  endDate: string;
+  startDate?: string;
+  endDate?: string;
   filterType?: TrackingType | 'all';
 }
 
@@ -58,8 +58,8 @@ export function GroupedTimeline({
   const { entries, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useTrackingEntriesFlat({
       type: filterType === 'all' ? undefined : filterType,
-      startDate,
-      endDate,
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
       limit: 50,
     });
 
@@ -131,9 +131,9 @@ export function GroupedTimeline({
   if (groupedEntries.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        <p>Nenhum registro no período selecionado.</p>
+        <p>Nenhum registro encontrado.</p>
         <p className="text-sm mt-1">
-          Adicione métricas para ver seu histórico.
+          Adicione métricas para ver seus registros.
         </p>
       </div>
     );

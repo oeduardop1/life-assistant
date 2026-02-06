@@ -33,12 +33,6 @@ export {
 // Metrics page components
 export {
   MetricsPageFilters,
-  MetricsStatsTable,
-  MetricsStatsTableSkeleton,
-  MetricsConsistencyBars,
-  MetricsConsistencyBarsSkeleton,
-  MetricsTimeline,
-  MetricsTimelineSkeleton,
   EditMetricModal,
   DeleteMetricDialog,
   type PeriodFilter,

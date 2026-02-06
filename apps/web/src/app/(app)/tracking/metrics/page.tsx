@@ -106,15 +106,11 @@ export default function MetricsPage() {
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <History className="h-4 w-4" />
-          {showTimeline ? 'Ocultar histórico' : 'Ver histórico completo'}
+          {showTimeline ? 'Ocultar registros' : 'Ver registros'}
         </button>
 
         {showTimeline && (
-          <GroupedTimeline
-            startDate={startDate}
-            endDate={endDate}
-            filterType={selectedType}
-          />
+          <GroupedTimeline filterType={selectedType} />
         )}
       </div>
 
