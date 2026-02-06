@@ -236,16 +236,6 @@ export const subAreaLabels: Record<SubArea, string> = {
 };
 
 /**
- * Human-readable labels for sources (PT-BR)
- */
-export const sourceLabels: Record<TrackingSource, string> = {
-  form: 'Formulário',
-  chat: 'Conversa',
-  api: 'API',
-  telegram: 'Telegram',
-};
-
-/**
  * Default units by tracking type
  */
 export const defaultUnits: Record<TrackingType, string> = {
@@ -316,13 +306,6 @@ export const trackingTypeColors: Record<TrackingType, string> = {
   energy: 'text-orange-500',
   custom: 'text-gray-500',
 };
-
-/**
- * Parse numeric value from string
- */
-export function parseTrackingValue(value: string): number {
-  return parseFloat(value);
-}
 
 /**
  * Format tracking value for display
@@ -555,14 +538,6 @@ export interface UpdateHabitInput {
   isActive?: boolean;
 }
 
-/**
- * Complete habit payload
- */
-export interface CompleteHabitInput {
-  date?: string;
-  notes?: string;
-}
-
 // =============================================================================
 // Habit API Responses
 // =============================================================================
@@ -650,7 +625,7 @@ export interface DayDetailResponse {
 
 export type TrackingTab = 'calendar' | 'metrics' | 'insights' | 'streaks' | 'habits';
 
-export interface TrackingTabItem {
+interface TrackingTabItem {
   id: TrackingTab;
   label: string;
   href: string;
@@ -693,43 +668,9 @@ export const periodOfDayLabels: Record<PeriodOfDay, string> = {
 };
 
 /**
- * Mood color mapping based on score
- */
-export const moodColorClasses: Record<string, string> = {
-  green: 'bg-green-500',
-  yellow: 'bg-yellow-500',
-  red: 'bg-red-500',
-  gray: 'bg-gray-300',
-};
-
-/**
- * Mood fill colors for calendar day cells (Year in Pixels style)
- * Uses CSS variables defined in globals.css for theme support
- */
-export const moodFillClasses: Record<string, string> = {
-  green: 'bg-[var(--tracking-fill-good)]',
-  yellow: 'bg-[var(--tracking-fill-neutral)]',
-  red: 'bg-[var(--tracking-fill-poor)]',
-  gray: 'bg-[var(--tracking-fill-empty)]',
-};
-
-/**
  * Day of week labels (Portuguese)
  */
 export const dayOfWeekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
-/**
- * Full day of week labels (Portuguese)
- */
-export const fullDayOfWeekLabels = [
-  'Domingo',
-  'Segunda',
-  'Terça',
-  'Quarta',
-  'Quinta',
-  'Sexta',
-  'Sábado',
-];
 
 // =============================================================================
 // Calendar Helper Functions

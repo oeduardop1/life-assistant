@@ -25,6 +25,7 @@ import {
   trackingTypeLabels,
   trackingTypeIcons,
   defaultUnits,
+  formatTrackingValue,
 } from '../../types';
 import { metricColors } from './metric-selector';
 
@@ -268,7 +269,7 @@ export function MetricDetailPanel({
               </p>
               <div className="flex items-baseline gap-2">
                 <span className={cn('text-3xl font-bold', colors.text)}>
-                  {formatValue(aggregation?.latestValue ?? 0, unit)}
+                  {formatTrackingValue(aggregation?.latestValue ?? 0, unit)}
                 </span>
                 {aggregation?.variation !== null && (
                   <VariationBadge value={aggregation.variation} type={type} />
@@ -280,17 +281,17 @@ export function MetricDetailPanel({
             <div className="grid grid-cols-2 gap-3">
               <StatCard
                 label="Média"
-                value={aggregation?.average !== null ? formatValue(aggregation.average, unit) : '-'}
+                value={aggregation?.average !== null ? formatTrackingValue(aggregation.average, unit) : '-'}
                 icon={<BarChart3 className="h-3.5 w-3.5" />}
               />
               <StatCard
                 label="Mínimo"
-                value={aggregation?.min !== null ? formatValue(aggregation.min, unit) : '-'}
+                value={aggregation?.min !== null ? formatTrackingValue(aggregation.min, unit) : '-'}
                 icon={<TrendingDown className="h-3.5 w-3.5" />}
               />
               <StatCard
                 label="Máximo"
-                value={aggregation?.max !== null ? formatValue(aggregation.max, unit) : '-'}
+                value={aggregation?.max !== null ? formatTrackingValue(aggregation.max, unit) : '-'}
                 icon={<TrendingUp className="h-3.5 w-3.5" />}
               />
               <StatCard
@@ -450,7 +451,7 @@ function CustomTooltip({ active, payload, unit, color }: CustomTooltipProps) {
     <div className="bg-popover/95 backdrop-blur-sm border rounded-lg shadow-lg px-3 py-2">
       <p className="text-xs text-muted-foreground">{data.payload.date}</p>
       <p className="text-sm font-semibold" style={{ color }}>
-        {formatValue(data.value, unit)}
+        {formatTrackingValue(data.value, unit)}
       </p>
     </div>
   );
@@ -469,14 +470,6 @@ function formatChartDate(dateStr: string): string {
   }
 }
 
-function formatValue(value: number, unit: string): string {
-  if (unit === 'kg') return `${value.toFixed(1)} ${unit}`;
-  if (unit === 'ml') return `${value.toLocaleString('pt-BR')} ${unit}`;
-  if (unit === 'horas' || unit === 'hours') return `${value.toFixed(1)}h`;
-  if (unit === 'min') return `${value} ${unit}`;
-  if (unit === 'pontos' || unit === 'score') return `${value}/10`;
-  return `${value} ${unit}`;
-}
 
 function getYAxisDomain(
   type: TrackingType,

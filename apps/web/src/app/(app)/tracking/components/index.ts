@@ -5,8 +5,6 @@
  */
 
 export { ManualTrackForm } from './manual-track-form';
-export { MetricCard, MetricCardsGrid } from './metric-card';
-export { MetricChart, MetricChartsGrid } from './metric-chart';
 export { MonthSelector } from './month-selector';
 
 // Calendar components
@@ -24,7 +22,6 @@ export {
 // Habit management components
 export {
   HabitForm,
-  HabitList,
   CreateHabitModal,
   EditHabitModal,
   DeleteHabitDialog,

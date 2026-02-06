@@ -22,8 +22,5 @@ export { MetricBar, WaterBar, SleepBar } from './metric-bar';
 export { HabitCheckbox } from './habit-checkbox';
 export { StreakBadge } from './streak-badge';
 
-// Legacy (kept for backward compatibility)
-export { ProgressRing } from './progress-ring';
-
 // Animation utilities
 export * from './animations';

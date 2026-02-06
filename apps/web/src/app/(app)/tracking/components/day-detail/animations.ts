@@ -11,16 +11,10 @@ import type { Variants, Transition } from 'framer-motion';
 // Spring Configuration
 // =============================================================================
 
-export const springConfig = {
+const springConfig = {
   type: 'spring' as const,
   stiffness: 300,
   damping: 24,
-};
-
-export const softSpringConfig = {
-  type: 'spring' as const,
-  stiffness: 400,
-  damping: 28,
 };
 
 // =============================================================================
