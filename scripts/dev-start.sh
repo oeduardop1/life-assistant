@@ -611,8 +611,10 @@ cleanup_build_cache() {
 check_supabase_running() {
     local count
     count=$(docker ps --filter "name=supabase" --filter "status=running" -q 2>/dev/null | wc -l | tr -d ' ')
-    # Supabase local runs ~10-12 containers. Minimum 8 indicates complete startup.
-    [[ $count -ge 8 ]]
+    # With disabled services (realtime, storage, edge_runtime, analytics) expect ~7 containers:
+    # db, kong, postgrest, gotrue, studio, pg_meta, inbucket.
+    # Minimum 5 indicates complete startup.
+    [[ $count -ge 5 ]]
 }
 
 check_redis_ready() {
