@@ -74,7 +74,9 @@ allowed_cidrs = ["0.0.0.0/0"]
 allowed_cidrs_v6 = ["::/0"]
 
 [realtime]
-enabled = true
+# Disabled: project uses SSE for chat streaming + Socket.io (NestJS) planned for push.
+# See docs/specs/core/realtime.md
+enabled = false
 # Bind realtime via either IPv4 or IPv6. (default: IPv4)
 # ip_version = "IPv6"
 # The maximum length in bytes of HTTP request headers. (default: 4096)
@@ -102,7 +104,9 @@ port = 54324
 # sender_name = "Admin"
 
 [storage]
-enabled = true
+# Disabled: project uses Cloudflare R2 (MinIO locally) for file storage.
+# See docs/specs/integrations/cloudflare-r2.md
+enabled = false
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
@@ -355,7 +359,8 @@ authorization_url_path = "/oauth/consent"
 allow_dynamic_registration = false
 
 [edge_runtime]
-enabled = true
+# Disabled: all backend logic runs on NestJS (Railway). No Supabase Edge Functions used.
+enabled = false
 # Supported request policies: `oneshot`, `per_worker`.
 # `per_worker` (default) — enables hot reload during local development.
 # `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
@@ -369,7 +374,9 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+# Disabled: project uses Sentry (errors) + Axiom (structured logs) for observability.
+# See docs/specs/core/observability.md
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"

@@ -70,16 +70,16 @@ _Pendente_
 
 | Status | Quantidade |
 |--------|------------|
-| 🔴 Pendente | 6 |
+| 🔴 Pendente | 7 |
 | 🟡 Em discussão | 0 |
 | 🟢 Resolvido | 5 |
-| **Total** | **11** |
+| **Total** | **12** |
 
 | Prioridade | Quantidade |
 |------------|------------|
 | 🔴 Bloqueante | 0 |
 | 🟡 Alta | 0 |
-| 🟢 Baixa | 11 |
+| 🟢 Baixa | 12 |
 
 ---
 
@@ -321,6 +321,48 @@ _Pendente — Comportamento atual: retorna 50 (neutro) conforme ADR-015_
 
 **Implementação:**
 _Pendente — Definir após validação do Life Balance Score com as 5 áreas que têm dados_
+
+---
+
+### [TBD-208] Migrar E2E tests de PostgREST para API/Drizzle e desabilitar PostgREST
+
+| Campo | Valor |
+|-------|-------|
+| **Status** | 🔴 Pendente |
+| **Prioridade** | 🟢 Baixa |
+| **Categoria** | Técnico |
+| **Origem** | Análise de containers Supabase CLI (sessão 2026-02-06) |
+| **Data** | 2026-02-06 |
+
+**Contexto:**
+Análise dos containers do Supabase CLI revelou que PostgREST (`[api]` no `config.toml`) não é usado em produção — o backend usa Drizzle ORM com conexão direta ao PostgreSQL. Porém, 2 arquivos dependem de PostgREST:
+- `apps/web/e2e/setup/global-setup.ts` — chamadas `DELETE/GET/POST/PATCH /rest/v1/users` para seed/cleanup de dados de teste
+- `apps/api/scripts/trigger-consolidation.ts` — `GET /rest/v1/memory_consolidations` para polling de resultados
+
+Esses são os únicos motivos para manter PostgREST habilitado no `config.toml`.
+
+**Pergunta/Decisão necessária:**
+Migrar essas dependências e desabilitar PostgREST para economizar 1 container?
+
+**Opções consideradas:**
+1. **Migrar E2E para API do backend** — global-setup.ts passa a usar `POST /api/...` ou chamadas diretas ao Drizzle
+   - Prós: Testa os mesmos endpoints que produção usa, mais realista
+   - Contras: Precisa de endpoints admin ou seed helper no backend
+2. **Migrar E2E para Drizzle direto** — global-setup.ts importa o database client e opera direto no PG
+   - Prós: Sem dependência de nenhuma API intermediária
+   - Contras: E2E test setup acoplado ao schema do banco
+3. **Manter como está** — PostgREST fica habilitado
+   - Prós: Zero trabalho
+   - Contras: Container desnecessário rodando, inconsistência (prod não usa PostgREST)
+
+**Recomendação da IA:**
+Opção 2 — Migrar para Drizzle direto é o mais limpo para test setup. Não é urgente.
+
+**Decisão:**
+_Pendente — baixa prioridade, fazer quando houver refactor de E2E tests_
+
+**Implementação:**
+_Pendente_
 
 ---
 
@@ -641,5 +683,5 @@ Atualizado `chat.service.ts` para contar apenas `role: 'user'` no rate limit.
 
 ---
 
-*Última atualização: 26 Janeiro 2026*
-*Revisão: Adicionada nota sobre pesos fixos (1.0) no TBD-207*
+*Última atualização: 06 Fevereiro 2026*
+*Revisão: Adicionado TBD-208 (migrar E2E de PostgREST para Drizzle)*
