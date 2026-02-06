@@ -102,7 +102,7 @@ export class IncomesController {
     if (dto.expectedAmount !== undefined)
       updateData.expectedAmount = dto.expectedAmount.toString();
     if (dto.actualAmount !== undefined)
-      updateData.actualAmount = dto.actualAmount.toString();
+      updateData.actualAmount = dto.actualAmount?.toString() ?? null;
     if (dto.isRecurring !== undefined) updateData.isRecurring = dto.isRecurring;
     if (dto.monthYear !== undefined) updateData.monthYear = dto.monthYear;
     if (dto.currency !== undefined) updateData.currency = dto.currency;

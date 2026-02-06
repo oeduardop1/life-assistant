@@ -93,11 +93,11 @@ export class UpdateIncomeDto {
   @Min(0.01)
   expectedAmount?: number;
 
-  @ApiPropertyOptional({ example: 5000 })
+  @ApiPropertyOptional({ example: 5000, nullable: true })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  actualAmount?: number;
+  actualAmount?: number | null;
 
   @ApiPropertyOptional()
   @IsOptional()
