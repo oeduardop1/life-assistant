@@ -1,10 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Pencil, Archive, X, Clock } from 'lucide-react';
+import { Pencil, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,12 +21,11 @@ interface HabitDetailPanelProps {
 }
 
 /**
- * HabitDetailPanel - Unified view of heatmap + stats + timeline for a single habit
+ * HabitDetailPanel - Unified view of heatmap + stats for a single habit
  *
  * Features:
  * - Header with habit icon, name, frequency, period
  * - Grid layout with CompletionHeatmap + HabitStatsSidebar
- * - Recent timeline section showing last 7 completions
  * - Edit and Archive buttons
  * - Smooth transitions when habit changes
  */
@@ -39,12 +35,6 @@ export function HabitDetailPanel({
   onArchive,
 }: HabitDetailPanelProps) {
   const { data: completionsData, isLoading } = useHabitCompletions(habit.id);
-
-  // Get recent completions for timeline (last 7 entries)
-  const recentCompletions = useMemo(() => {
-    if (!completionsData?.completions) return [];
-    return completionsData.completions.slice(0, 7);
-  }, [completionsData]);
 
   const defaultColors = {
     bg: 'bg-emerald-50 dark:bg-emerald-950/30',
@@ -142,93 +132,7 @@ export function HabitDetailPanel({
         />
       </div>
 
-      {/* Recent Timeline */}
-      {recentCompletions.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-border/50">
-          <h4 className="text-sm font-medium text-muted-foreground mb-3">
-            Conclusões Recentes
-          </h4>
-          <div className="space-y-2">
-            {recentCompletions.map((completion) => (
-              <TimelineEntry
-                key={completion.id}
-                date={completion.completionDate}
-                completedAt={completion.completedAt}
-                habitColor={habit.color}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state for no data */}
-      {!isLoading && completionsData?.completions.length === 0 && (
-        <div className="mt-6 pt-6 border-t border-border/50">
-          <EmptyTimeline habitName={habit.name} />
-        </div>
-      )}
     </motion.div>
-  );
-}
-
-interface TimelineEntryProps {
-  date: string;
-  completedAt: string;
-  habitColor?: string | null;
-}
-
-function TimelineEntry({ date, completedAt, habitColor }: TimelineEntryProps) {
-  const formattedDate = useMemo(() => {
-    const dateObj = parseISO(date);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const dateStr = format(dateObj, 'yyyy-MM-dd');
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
-
-    if (dateStr === todayStr) return 'Hoje';
-    if (dateStr === yesterdayStr) return 'Ontem';
-    return format(dateObj, "EEEE, d 'de' MMMM", { locale: ptBR });
-  }, [date]);
-
-  const formattedTime = useMemo(() => {
-    return format(parseISO(completedAt), 'HH:mm');
-  }, [completedAt]);
-
-  return (
-    <div className="flex items-center gap-3 py-2">
-      <div
-        className="h-2 w-2 rounded-full"
-        style={{
-          backgroundColor: habitColor || 'var(--habit-dot-completed)',
-        }}
-      />
-      <div className="flex-1 flex items-center justify-between">
-        <span className="text-sm capitalize">{formattedDate}</span>
-        <span className="text-xs text-muted-foreground flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          {formattedTime}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function EmptyTimeline({ habitName }: { habitName: string }) {
-  return (
-    <div className="text-center py-8">
-      <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-muted mb-3">
-        <X className="h-6 w-6 text-muted-foreground" />
-      </div>
-      <p className="text-muted-foreground">
-        Nenhuma conclusão registrada para {habitName}
-      </p>
-      <p className="text-sm text-muted-foreground/70 mt-1">
-        Complete este hábito para começar a rastrear
-      </p>
-    </div>
   );
 }
 
