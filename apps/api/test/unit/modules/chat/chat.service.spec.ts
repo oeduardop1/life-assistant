@@ -113,6 +113,18 @@ vi.mock('@life-assistant/ai', () => ({
     parameters: {},
     requiresConfirmation: false,
   },
+  getDebtPaymentHistoryTool: {
+    name: 'get_debt_payment_history',
+    description: 'Get debt payment history',
+    parameters: {},
+    requiresConfirmation: false,
+  },
+  getUpcomingInstallmentsTool: {
+    name: 'get_upcoming_installments',
+    description: 'Get upcoming debt installments',
+    parameters: {},
+    requiresConfirmation: false,
+  },
 }));
 
 import { ChatService } from '../../../../src/modules/chat/application/services/chat.service.js';
@@ -203,6 +215,9 @@ describe('ChatService', () => {
   let mockTrackingToolExecutor: {
     execute: ReturnType<typeof vi.fn>;
   };
+  let mockFinanceToolExecutor: {
+    execute: ReturnType<typeof vi.fn>;
+  };
   let mockLLM: {
     stream: ReturnType<typeof vi.fn>;
     generateText: ReturnType<typeof vi.fn>;
@@ -252,6 +267,10 @@ describe('ChatService', () => {
       execute: vi.fn(),
     };
 
+    mockFinanceToolExecutor = {
+      execute: vi.fn(),
+    };
+
     // Create mock LLM
     mockLLM = {
       stream: vi.fn(),
@@ -264,14 +283,15 @@ describe('ChatService', () => {
     vi.mocked(createLLMFromEnv).mockReturnValue(mockLLM as unknown as ReturnType<typeof createLLMFromEnv>);
 
     // Create service instance with mocks
-    // Constructor order: contextBuilder, confirmationStateService, conversationRepository, messageRepository, memoryToolExecutor, trackingToolExecutor
+    // Constructor order: contextBuilder, confirmationStateService, conversationRepository, messageRepository, memoryToolExecutor, trackingToolExecutor, financeToolExecutor
     chatService = new ChatService(
       mockContextBuilder as unknown as ConstructorParameters<typeof ChatService>[0],
       mockConfirmationStateService as unknown as ConstructorParameters<typeof ChatService>[1],
       mockConversationRepository as unknown as ConstructorParameters<typeof ChatService>[2],
       mockMessageRepository as unknown as ConstructorParameters<typeof ChatService>[3],
       mockMemoryToolExecutor as unknown as ConstructorParameters<typeof ChatService>[4],
-      mockTrackingToolExecutor as unknown as ConstructorParameters<typeof ChatService>[5]
+      mockTrackingToolExecutor as unknown as ConstructorParameters<typeof ChatService>[5],
+      mockFinanceToolExecutor as unknown as ConstructorParameters<typeof ChatService>[6]
     );
   });
 

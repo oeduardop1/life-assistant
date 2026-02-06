@@ -16,7 +16,7 @@ import { formatCurrency } from '../../types';
 // Types
 // =============================================================================
 
-export type IncomeEmptyStateType =
+type IncomeEmptyStateType =
   | 'no-incomes'
   | 'filter-empty'
   | 'all-received';
@@ -304,30 +304,3 @@ export function IncomeEmptyState({
   );
 }
 
-// =============================================================================
-// Section Empty State
-// =============================================================================
-
-interface SectionEmptyStateProps {
-  message: string;
-  className?: string;
-}
-
-/**
- * SectionEmptyState - Simple inline empty state for list sections
- */
-export function IncomeSectionEmptyState({ message, className }: SectionEmptyStateProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className={cn(
-        'flex items-center justify-center py-8 px-4 text-center',
-        'border-2 border-dashed border-border/50 rounded-xl',
-        className
-      )}
-    >
-      <p className="text-sm text-muted-foreground">{message}</p>
-    </motion.div>
-  );
-}

@@ -217,27 +217,6 @@ describe('IncomesService', () => {
     });
   });
 
-  describe('delete', () => {
-    it('should_delete_income_when_found', async () => {
-      mockRepository.delete.mockResolvedValue(true);
-
-      await expect(service.delete('user-123', 'income-123')).resolves.toBeUndefined();
-      expect(mockRepository.delete).toHaveBeenCalledWith('user-123', 'income-123');
-    });
-
-    it('should_throw_NotFoundException_when_not_found', async () => {
-      mockRepository.delete.mockResolvedValue(false);
-
-      await expect(
-        service.delete('user-123', 'non-existent')
-      ).rejects.toThrow(NotFoundException);
-
-      await expect(
-        service.delete('user-123', 'non-existent')
-      ).rejects.toThrow('Income with id non-existent not found');
-    });
-  });
-
   describe('sumByMonthYear', () => {
     it('should_return_sum_for_expectedAmount', async () => {
       mockRepository.sumByMonthYear.mockResolvedValue(15000);

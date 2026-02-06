@@ -49,24 +49,6 @@ export function useExpenses(params: ExpenseQueryParams = {}) {
   });
 }
 
-/**
- * Hook to fetch single expense by ID
- *
- * @param id - Expense ID
- */
-export function useExpense(id: string | undefined) {
-  const api = useAuthenticatedApi();
-
-  return useQuery({
-    queryKey: [...financeKeys.expenses(), id],
-    queryFn: async () => {
-      const response = await api.get<ExpenseResponse>(`/finance/expenses/${id}`);
-      return response.expense;
-    },
-    enabled: api.isAuthenticated && !!id,
-  });
-}
-
 // =============================================================================
 // Mutation Hooks
 // =============================================================================

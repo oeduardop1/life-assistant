@@ -118,23 +118,6 @@ export enum VaultCategory {
   OTHER = 'other',
 }
 
-// ExpenseCategory - Categorias de despesas - docs/specs/system.md §3.3
-export enum ExpenseCategory {
-  FOOD = 'food',
-  TRANSPORT = 'transport',
-  HOUSING = 'housing',
-  HEALTH = 'health',
-  EDUCATION = 'education',
-  ENTERTAINMENT = 'entertainment',
-  SHOPPING = 'shopping',
-  BILLS = 'bills',
-  SUBSCRIPTIONS = 'subscriptions',
-  TRAVEL = 'travel',
-  GIFTS = 'gifts',
-  INVESTMENTS = 'investments',
-  OTHER = 'other',
-}
-
 // Arrays para iteração
 export const ALL_USER_STATUSES = Object.values(UserStatus);
 export const ALL_LIFE_AREAS = Object.values(LifeArea);
@@ -143,4 +126,3 @@ export const ALL_TRACKING_TYPES = Object.values(TrackingType);
 export const ALL_CONVERSATION_TYPES = Object.values(ConversationType);
 export const ALL_VAULT_ITEM_TYPES = Object.values(VaultItemType);
 export const ALL_VAULT_CATEGORIES = Object.values(VaultCategory);
-export const ALL_EXPENSE_CATEGORIES = Object.values(ExpenseCategory);

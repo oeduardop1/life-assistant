@@ -53,4 +53,3 @@ export const debtPayments = pgTable(
 
 // Types
 export type DebtPayment = typeof debtPayments.$inferSelect;
-export type NewDebtPayment = typeof debtPayments.$inferInsert;

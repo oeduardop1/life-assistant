@@ -50,24 +50,6 @@ export function useBills(params: BillQueryParams = {}) {
   });
 }
 
-/**
- * Hook to fetch single bill by ID
- *
- * @param id - Bill ID
- */
-export function useBill(id: string | undefined) {
-  const api = useAuthenticatedApi();
-
-  return useQuery({
-    queryKey: [...financeKeys.bills(), id],
-    queryFn: async () => {
-      const response = await api.get<BillResponse>(`/finance/bills/${id}`);
-      return response.bill;
-    },
-    enabled: api.isAuthenticated && !!id,
-  });
-}
-
 // =============================================================================
 // Mutation Hooks
 // =============================================================================

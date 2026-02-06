@@ -5,7 +5,6 @@ import { createElement } from 'react';
 import {
   useFinanceSummary,
   useHasFinanceData,
-  extractKPIs,
   financeKeys,
 } from '../../hooks/use-finance';
 import type { FinanceSummary } from '../../types';
@@ -245,69 +244,3 @@ describe('useHasFinanceData', () => {
   });
 });
 
-// =============================================================================
-// extractKPIs Tests
-// =============================================================================
-
-describe('extractKPIs', () => {
-  it('should_return_null_when_summary_is_undefined', () => {
-    expect(extractKPIs(undefined)).toBeNull();
-  });
-
-  it('should_extract_income_kpis', () => {
-    const result = extractKPIs(mockSummary);
-
-    expect(result?.income).toEqual({
-      expected: 5000,
-      actual: 4800,
-    });
-  });
-
-  it('should_extract_budget_kpis', () => {
-    const result = extractKPIs(mockSummary);
-
-    expect(result?.budget).toEqual({
-      budgeted: 3500,
-      spent: 3200,
-    });
-  });
-
-  it('should_extract_balance', () => {
-    const result = extractKPIs(mockSummary);
-
-    expect(result?.balance).toBe(1600);
-  });
-
-  it('should_extract_bills_kpis', () => {
-    const result = extractKPIs(mockSummary);
-
-    expect(result?.bills).toEqual({
-      total: 2000,
-      count: mockSummary.billsCount,
-    });
-  });
-
-  it('should_extract_debts_kpis', () => {
-    const result = extractKPIs(mockSummary);
-
-    expect(result?.debts).toEqual({
-      totalDebts: 2,
-      totalAmount: 10000,
-      totalPaid: 4000,
-      totalRemaining: 6000,
-      monthlyInstallment: 500,
-    });
-  });
-
-  it('should_extract_investments_kpis', () => {
-    const result = extractKPIs(mockSummary);
-
-    expect(result?.investments).toEqual({
-      totalInvestments: 3,
-      currentAmount: 15000,
-      goalAmount: 50000,
-      monthlyContribution: 1000,
-      progress: 30,
-    });
-  });
-});

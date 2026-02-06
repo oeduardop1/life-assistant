@@ -3,7 +3,7 @@
 import { Injectable } from '@nestjs/common';
 import { eq, and, count, sql } from '@life-assistant/database';
 import { DatabaseService } from '../../../../database/database.service';
-import type { Debt, NewDebt, DebtPayment, DebtStatus } from '@life-assistant/database';
+import type { Debt, NewDebt, DebtStatus } from '@life-assistant/database';
 import type {
   DebtsRepositoryPort,
   DebtSearchParams,
@@ -416,30 +416,6 @@ export class DebtsRepository implements DebtsRepositoryPort {
 
     // Debt is visible if monthYear is within [startMonthYear, endMonth]
     return debt.startMonthYear <= monthYear && monthYear <= endMonth;
-  }
-
-  async recordPayment(
-    userId: string,
-    debtId: string,
-    data: { installmentNumber: number; amount: number; monthYear: string }
-  ): Promise<DebtPayment> {
-    return this.db.withUserId(userId, async (db) => {
-      const [payment] = await db
-        .insert(this.db.schema.debtPayments)
-        .values({
-          userId,
-          debtId,
-          installmentNumber: data.installmentNumber,
-          amount: data.amount.toString(),
-          monthYear: data.monthYear,
-        })
-        .returning();
-
-      if (!payment) {
-        throw new Error('Failed to record debt payment');
-      }
-      return payment;
-    });
   }
 
   async sumPaymentsByMonthYear(

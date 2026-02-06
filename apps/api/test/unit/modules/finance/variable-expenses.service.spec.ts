@@ -202,27 +202,6 @@ describe('VariableExpensesService', () => {
     });
   });
 
-  describe('delete', () => {
-    it('should_delete_expense_when_found', async () => {
-      mockRepository.delete.mockResolvedValue(true);
-
-      await expect(service.delete('user-123', 'expense-123')).resolves.toBeUndefined();
-      expect(mockRepository.delete).toHaveBeenCalledWith('user-123', 'expense-123');
-    });
-
-    it('should_throw_NotFoundException_when_not_found', async () => {
-      mockRepository.delete.mockResolvedValue(false);
-
-      await expect(
-        service.delete('user-123', 'non-existent')
-      ).rejects.toThrow(NotFoundException);
-
-      await expect(
-        service.delete('user-123', 'non-existent')
-      ).rejects.toThrow('Variable expense with id non-existent not found');
-    });
-  });
-
   describe('sumByMonthYear', () => {
     it('should_return_sum_for_expectedAmount', async () => {
       mockRepository.sumByMonthYear.mockResolvedValue(3500);

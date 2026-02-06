@@ -21,6 +21,8 @@ import {
   markBillPaidTool,
   createExpenseTool,
   getDebtProgressTool,
+  getDebtPaymentHistoryTool,
+  getUpcomingInstallmentsTool,
   type LLMPort,
   type Message as LLMMessage,
   type ToolLoopConfig,
@@ -106,6 +108,8 @@ export class ChatService {
     markBillPaidTool,
     createExpenseTool,
     getDebtProgressTool,
+    getDebtPaymentHistoryTool,
+    getUpcomingInstallmentsTool,
   ];
 
   /**
@@ -129,6 +133,8 @@ export class ChatService {
     mark_bill_paid: 'finance',
     create_expense: 'finance',
     get_debt_progress: 'finance',
+    get_debt_payment_history: 'finance',
+    get_upcoming_installments: 'finance',
   };
 
   /**

@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import {
   useIncomes,
-  useIncome,
   useCreateIncome,
   useUpdateIncome,
   useDeleteIncome,
@@ -167,38 +166,6 @@ describe('useIncomes', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-  });
-});
-
-// =============================================================================
-// useIncome Tests
-// =============================================================================
-
-describe('useIncome', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should_fetch_single_income_by_id', async () => {
-    const response: IncomeResponse = { income: mockIncome };
-    mockGet.mockResolvedValue(response);
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useIncome('income-1'), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(mockGet).toHaveBeenCalledWith('/finance/incomes/income-1');
-    expect(result.current.data).toEqual(mockIncome);
-  });
-
-  it('should_not_fetch_when_id_is_undefined', () => {
-    const wrapper = createWrapper();
-    renderHook(() => useIncome(undefined), { wrapper });
-
-    expect(mockGet).not.toHaveBeenCalled();
   });
 });
 

@@ -38,7 +38,6 @@ import {
   type HabitFrequency,
   type NotificationType,
   type NotificationStatus,
-  type ExpenseCategory,
   type SubscriptionStatus,
   type ExportStatus,
   type ExportType,
@@ -406,9 +405,8 @@ describe('enums', () => {
       ]);
     });
 
-    it('should export correct TypeScript type', () => {
-      const category: ExpenseCategory = 'food';
-      expect(expenseCategoryEnum.enumValues).toContain(category);
+    it('should contain food as a valid value', () => {
+      expect(expenseCategoryEnum.enumValues).toContain('food');
     });
   });
 

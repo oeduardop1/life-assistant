@@ -7,7 +7,6 @@ import {
   ConversationType,
   VaultItemType,
   VaultCategory,
-  ExpenseCategory,
   ALL_USER_STATUSES,
   ALL_LIFE_AREAS,
   ALL_SUB_AREAS,
@@ -15,7 +14,6 @@ import {
   ALL_CONVERSATION_TYPES,
   ALL_VAULT_ITEM_TYPES,
   ALL_VAULT_CATEGORIES,
-  ALL_EXPENSE_CATEGORIES,
 } from './enums';
 
 describe('UserStatus', () => {
@@ -150,28 +148,6 @@ describe('VaultCategory', () => {
   });
 });
 
-describe('ExpenseCategory', () => {
-  it('should have 13 values', () => {
-    expect(Object.values(ExpenseCategory)).toHaveLength(13);
-  });
-
-  it('should have correct values', () => {
-    expect(ExpenseCategory.FOOD).toBe('food');
-    expect(ExpenseCategory.TRANSPORT).toBe('transport');
-    expect(ExpenseCategory.HOUSING).toBe('housing');
-    expect(ExpenseCategory.HEALTH).toBe('health');
-    expect(ExpenseCategory.EDUCATION).toBe('education');
-    expect(ExpenseCategory.ENTERTAINMENT).toBe('entertainment');
-    expect(ExpenseCategory.SHOPPING).toBe('shopping');
-    expect(ExpenseCategory.BILLS).toBe('bills');
-    expect(ExpenseCategory.SUBSCRIPTIONS).toBe('subscriptions');
-    expect(ExpenseCategory.TRAVEL).toBe('travel');
-    expect(ExpenseCategory.GIFTS).toBe('gifts');
-    expect(ExpenseCategory.INVESTMENTS).toBe('investments');
-    expect(ExpenseCategory.OTHER).toBe('other');
-  });
-});
-
 describe('ALL_* arrays', () => {
   it('ALL_USER_STATUSES should match UserStatus values', () => {
     expect(ALL_USER_STATUSES).toEqual(Object.values(UserStatus));
@@ -199,9 +175,5 @@ describe('ALL_* arrays', () => {
 
   it('ALL_VAULT_CATEGORIES should match VaultCategory values', () => {
     expect(ALL_VAULT_CATEGORIES).toEqual(Object.values(VaultCategory));
-  });
-
-  it('ALL_EXPENSE_CATEGORIES should match ExpenseCategory values', () => {
-    expect(ALL_EXPENSE_CATEGORIES).toEqual(Object.values(ExpenseCategory));
   });
 });

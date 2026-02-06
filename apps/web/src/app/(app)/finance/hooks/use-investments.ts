@@ -45,24 +45,6 @@ export function useInvestments(params: InvestmentQueryParams = {}) {
   });
 }
 
-/**
- * Hook to fetch single investment by ID
- *
- * @param id - Investment ID
- */
-export function useInvestment(id: string | undefined) {
-  const api = useAuthenticatedApi();
-
-  return useQuery({
-    queryKey: [...financeKeys.investments(), id],
-    queryFn: async () => {
-      const response = await api.get<InvestmentResponse>(`/finance/investments/${id}`);
-      return response.investment;
-    },
-    enabled: api.isAuthenticated && !!id,
-  });
-}
-
 // =============================================================================
 // Mutation Hooks
 // =============================================================================

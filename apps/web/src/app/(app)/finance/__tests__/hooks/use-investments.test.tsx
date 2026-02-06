@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import {
   useInvestments,
-  useInvestment,
   useCreateInvestment,
   useUpdateInvestment,
   useDeleteInvestment,
@@ -173,38 +172,6 @@ describe('useInvestments', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-  });
-});
-
-// =============================================================================
-// useInvestment Tests
-// =============================================================================
-
-describe('useInvestment', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should_fetch_single_investment_by_id', async () => {
-    const response: InvestmentResponse = { investment: mockInvestmentEmergency };
-    mockGet.mockResolvedValue(response);
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useInvestment('inv-1'), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(mockGet).toHaveBeenCalledWith('/finance/investments/inv-1');
-    expect(result.current.data).toEqual(mockInvestmentEmergency);
-  });
-
-  it('should_not_fetch_when_id_is_undefined', () => {
-    const wrapper = createWrapper();
-    renderHook(() => useInvestment(undefined), { wrapper });
-
-    expect(mockGet).not.toHaveBeenCalled();
   });
 });
 

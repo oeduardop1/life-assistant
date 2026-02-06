@@ -19,7 +19,7 @@ import { DebtStatusDto } from './debt.dto';
 import { InvestmentTypeDto } from './investment.dto';
 
 // Base query DTO with pagination
-export class BaseQueryDto {
+class BaseQueryDto {
   @ApiPropertyOptional({ example: 50, default: 50 })
   @IsOptional()
   @Type(() => Number)

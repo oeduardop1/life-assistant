@@ -2,6 +2,7 @@
 
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { getPreviousMonth } from '@life-assistant/shared';
 import { AppLoggerService } from '../../../../logger/logger.service';
 import type { Bill, NewBill } from '@life-assistant/database';
 import {
@@ -10,22 +11,7 @@ import {
   type BillSearchParams,
 } from '../../domain/ports/bills.repository.port';
 
-export type RecurringScope = 'this' | 'future' | 'all';
-
-function getPreviousMonth(monthYear: string): string {
-  const parts = monthYear.split('-');
-  const yearStr = parts[0];
-  const monthStr = parts[1];
-  if (!yearStr || !monthStr) {
-    throw new Error(`Invalid monthYear format: ${monthYear}`);
-  }
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10);
-  if (month === 1) {
-    return `${String(year - 1)}-12`;
-  }
-  return `${String(year)}-${String(month - 1).padStart(2, '0')}`;
-}
+type RecurringScope = 'this' | 'future' | 'all';
 
 @Injectable()
 export class BillsService {
@@ -81,15 +67,6 @@ export class BillsService {
     }
     this.logger.log(`Bill ${id} updated successfully`);
     return bill;
-  }
-
-  async delete(userId: string, id: string): Promise<void> {
-    this.logger.log(`Deleting bill ${id} for user ${userId}`);
-    const deleted = await this.repository.delete(userId, id);
-    if (!deleted) {
-      throw new NotFoundException(`Bill with id ${id} not found`);
-    }
-    this.logger.log(`Bill ${id} deleted successfully`);
   }
 
   async markAsPaid(userId: string, id: string): Promise<Bill> {

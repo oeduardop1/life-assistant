@@ -10,7 +10,6 @@ import type {
   UpdateDebtInput,
   NegotiateDebtInput,
   DebtQueryParams,
-  DebtPaymentHistoryResponse,
   UpcomingInstallmentsResponse,
   DebtProjectionResponse,
 } from '../types';
@@ -66,59 +65,6 @@ export function useAllDebts() {
       return response;
     },
     enabled: api.isAuthenticated,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  });
-}
-
-/**
- * Hook to fetch single debt by ID
- *
- * @param id - Debt ID
- */
-export function useDebt(id: string | undefined) {
-  const api = useAuthenticatedApi();
-
-  return useQuery({
-    queryKey: [...financeKeys.debts(), id],
-    queryFn: async () => {
-      const response = await api.get<DebtResponse>(`/finance/debts/${id}`);
-      return response.debt;
-    },
-    enabled: api.isAuthenticated && !!id,
-  });
-}
-
-/**
- * Hook to fetch payment history for a specific debt
- *
- * Returns all payments made on the debt, including:
- * - Which month each installment belongs to (monthYear)
- * - When each payment was actually made (paidAt)
- * - Whether payment was made early (paidEarly)
- *
- * @param debtId - Debt ID
- * @param params - Query parameters (limit, offset)
- */
-export function useDebtPaymentHistory(
-  debtId: string | undefined,
-  params: { limit?: number; offset?: number } = {}
-) {
-  const api = useAuthenticatedApi();
-
-  return useQuery({
-    queryKey: [...financeKeys.debts(), debtId, 'payments', params],
-    queryFn: async () => {
-      const searchParams = new URLSearchParams();
-      if (params.limit !== undefined) searchParams.set('limit', String(params.limit));
-      if (params.offset !== undefined) searchParams.set('offset', String(params.offset));
-
-      const query = searchParams.toString();
-      const response = await api.get<DebtPaymentHistoryResponse>(
-        `/finance/debts/${debtId}/payments${query ? `?${query}` : ''}`
-      );
-      return response;
-    },
-    enabled: api.isAuthenticated && !!debtId,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }

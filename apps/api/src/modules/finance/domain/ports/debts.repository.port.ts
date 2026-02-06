@@ -114,11 +114,6 @@ export interface DebtsRepositoryPort {
     }
   ): Promise<Debt | null>;
   getSummary(userId: string, monthYear?: string): Promise<DebtSummary>;
-  recordPayment(
-    userId: string,
-    debtId: string,
-    data: { installmentNumber: number; amount: number; monthYear: string }
-  ): Promise<DebtPayment>;
   sumPaymentsByMonthYear(userId: string, monthYear: string): Promise<number>;
   getPaymentHistory(
     userId: string,

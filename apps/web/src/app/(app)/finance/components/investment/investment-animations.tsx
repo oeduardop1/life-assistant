@@ -1,56 +1,13 @@
 'use client';
 
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '../../types';
 
 // =============================================================================
-// Animation Variants - Subtle and elegant
+// Animation Variants
 // =============================================================================
-
-export const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.3, ease: 'easeOut' },
-  },
-  exit: {
-    opacity: 0,
-    y: -5,
-    transition: { duration: 0.15 },
-  },
-};
-
-export const fadeIn: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { duration: 0.25 },
-  },
-  exit: {
-    opacity: 0,
-    transition: { duration: 0.15 },
-  },
-};
-
-export const scaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.95 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: {
-      duration: 0.3,
-      ease: [0.4, 0, 0.2, 1],
-    },
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.98,
-    transition: { duration: 0.15 },
-  },
-};
 
 export const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -76,23 +33,6 @@ export const staggerItem: Variants = {
   exit: {
     opacity: 0,
     y: -4,
-    transition: { duration: 0.15 },
-  },
-};
-
-export const listItem: Variants = {
-  hidden: { opacity: 0, x: -8 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      duration: 0.2,
-      ease: 'easeOut',
-    },
-  },
-  exit: {
-    opacity: 0,
-    x: 8,
     transition: { duration: 0.15 },
   },
 };
@@ -230,29 +170,6 @@ export function InvestmentCardSkeleton() {
 }
 
 // =============================================================================
-// Animated Card Wrapper
-// =============================================================================
-
-interface AnimatedCardProps {
-  children: ReactNode;
-  className?: string;
-}
-
-/**
- * AnimatedCard - Subtle hover animation for cards
- */
-export function AnimatedCard({ children, className }: AnimatedCardProps) {
-  return (
-    <motion.div
-      whileHover={{ y: -1, transition: { duration: 0.15 } }}
-      className={cn('transition-shadow duration-150 hover:shadow-md', className)}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-// =============================================================================
 // Stagger List Components
 // =============================================================================
 
@@ -285,39 +202,6 @@ export function StaggerList({ children, className, 'data-testid': testId }: Stag
 export function StaggerItem({ children, className }: StaggerListProps) {
   return (
     <motion.div variants={staggerItem} className={className}>
-      {children}
-    </motion.div>
-  );
-}
-
-// =============================================================================
-// Animated List Item (with layout animation)
-// =============================================================================
-
-interface AnimatedListItemProps {
-  children: ReactNode;
-  className?: string;
-  layoutId?: string;
-}
-
-/**
- * AnimatedListItem - List item with enter/exit and layout animations
- */
-export function AnimatedListItem({
-  children,
-  className,
-  layoutId,
-}: AnimatedListItemProps) {
-  return (
-    <motion.div
-      layout
-      layoutId={layoutId}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
-      className={className}
-    >
       {children}
     </motion.div>
   );
@@ -366,25 +250,3 @@ export function AnimatedIcon({ children, className }: AnimatedEmptyStateProps) {
     </motion.div>
   );
 }
-
-// =============================================================================
-// Filter Transition
-// =============================================================================
-
-interface FilterTransitionProps {
-  children: ReactNode;
-}
-
-/**
- * FilterTransition - Wrapper for filter/sort animations
- */
-export function FilterTransition({ children }: FilterTransitionProps) {
-  return (
-    <AnimatePresence mode="popLayout">
-      {children}
-    </AnimatePresence>
-  );
-}
-
-// Re-export AnimatePresence for convenience
-export { AnimatePresence };

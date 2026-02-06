@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import {
   useDebts,
-  useDebt,
   useCreateDebt,
   useUpdateDebt,
   useDeleteDebt,
@@ -190,38 +189,6 @@ describe('useDebts', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-  });
-});
-
-// =============================================================================
-// useDebt Tests
-// =============================================================================
-
-describe('useDebt', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should_fetch_single_debt_by_id', async () => {
-    const response: DebtResponse = { debt: mockDebtNegotiated };
-    mockGet.mockResolvedValue(response);
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useDebt('debt-1'), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(mockGet).toHaveBeenCalledWith('/finance/debts/debt-1');
-    expect(result.current.data).toEqual(mockDebtNegotiated);
-  });
-
-  it('should_not_fetch_when_id_is_undefined', () => {
-    const wrapper = createWrapper();
-    renderHook(() => useDebt(undefined), { wrapper });
-
-    expect(mockGet).not.toHaveBeenCalled();
   });
 });
 

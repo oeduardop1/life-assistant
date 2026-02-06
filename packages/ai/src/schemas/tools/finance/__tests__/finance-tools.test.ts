@@ -7,31 +7,28 @@
 import { describe, it, expect } from 'vitest';
 import {
   getFinanceSummaryTool,
-  getFinanceSummaryParamsSchema,
   getPendingBillsTool,
-  getPendingBillsParamsSchema,
   getBillsTool,
-  getBillsParamsSchema,
   getExpensesTool,
-  getExpensesParamsSchema,
   getIncomesTool,
-  getIncomesParamsSchema,
   getInvestmentsTool,
-  getInvestmentsParamsSchema,
   markBillPaidTool,
-  markBillPaidParamsSchema,
   createExpenseTool,
-  createExpenseParamsSchema,
   getDebtProgressTool,
-  getDebtProgressParamsSchema,
   getDebtPaymentHistoryTool,
-  getDebtPaymentHistoryParamsSchema,
   getUpcomingInstallmentsTool,
-  getUpcomingInstallmentsParamsSchema,
-  financeTools,
-  financeReadTools,
-  financeWriteTools,
 } from '../index.js';
+import { getFinanceSummaryParamsSchema } from '../get-finance-summary.tool.js';
+import { getPendingBillsParamsSchema } from '../get-pending-bills.tool.js';
+import { getBillsParamsSchema } from '../get-bills.tool.js';
+import { getExpensesParamsSchema } from '../get-expenses.tool.js';
+import { getIncomesParamsSchema } from '../get-incomes.tool.js';
+import { getInvestmentsParamsSchema } from '../get-investments.tool.js';
+import { markBillPaidParamsSchema } from '../mark-bill-paid.tool.js';
+import { createExpenseParamsSchema } from '../create-expense.tool.js';
+import { getDebtProgressParamsSchema } from '../get-debt-progress.tool.js';
+import { getDebtPaymentHistoryParamsSchema } from '../get-debt-payment-history.tool.js';
+import { getUpcomingInstallmentsParamsSchema } from '../get-upcoming-installments.tool.js';
 
 describe('Finance Tool Definitions', () => {
   describe('get_finance_summary', () => {
@@ -568,42 +565,4 @@ describe('Finance Tool Definitions', () => {
     });
   });
 
-  describe('Tool arrays', () => {
-    it('should have 11 total finance tools', () => {
-      expect(financeTools.length).toBe(11);
-    });
-
-    it('should have 9 READ tools', () => {
-      expect(financeReadTools.length).toBe(9);
-      financeReadTools.forEach((tool) => {
-        expect(tool.requiresConfirmation).toBe(false);
-      });
-    });
-
-    it('should have 2 WRITE tools', () => {
-      expect(financeWriteTools.length).toBe(2);
-      financeWriteTools.forEach((tool) => {
-        expect(tool.requiresConfirmation).toBe(true);
-      });
-    });
-
-    it('should have correct tools in READ array', () => {
-      const readToolNames = financeReadTools.map((t) => t.name);
-      expect(readToolNames).toContain('get_finance_summary');
-      expect(readToolNames).toContain('get_pending_bills');
-      expect(readToolNames).toContain('get_bills');
-      expect(readToolNames).toContain('get_expenses');
-      expect(readToolNames).toContain('get_incomes');
-      expect(readToolNames).toContain('get_investments');
-      expect(readToolNames).toContain('get_debt_progress');
-      expect(readToolNames).toContain('get_debt_payment_history');
-      expect(readToolNames).toContain('get_upcoming_installments');
-    });
-
-    it('should have correct tools in WRITE array', () => {
-      const writeToolNames = financeWriteTools.map((t) => t.name);
-      expect(writeToolNames).toContain('mark_bill_paid');
-      expect(writeToolNames).toContain('create_expense');
-    });
-  });
 });

@@ -18,7 +18,7 @@ import { CelebrationConfetti } from './expense-animations';
 // Types
 // =============================================================================
 
-export type ExpenseEmptyStateType =
+type ExpenseEmptyStateType =
   | 'no-expenses'
   | 'filter-empty-recurring'
   | 'filter-empty-onetime'

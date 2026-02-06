@@ -1,64 +1,14 @@
 'use client';
 
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 // =============================================================================
-// Animation Variants
+// Animation Variants (internal only)
 // =============================================================================
 
-export const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      stiffness: 300,
-      damping: 24,
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -10,
-    transition: {
-      duration: 0.2,
-    },
-  },
-};
-
-export const fadeIn: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { duration: 0.3 },
-  },
-  exit: {
-    opacity: 0,
-    transition: { duration: 0.2 },
-  },
-};
-
-export const scaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: {
-      type: 'spring',
-      stiffness: 400,
-      damping: 25,
-    },
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.95,
-    transition: { duration: 0.15 },
-  },
-};
-
-export const staggerContainer: Variants = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -69,7 +19,7 @@ export const staggerContainer: Variants = {
   },
 };
 
-export const staggerItem: Variants = {
+const staggerItem: Variants = {
   hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
@@ -85,48 +35,6 @@ export const staggerItem: Variants = {
 // =============================================================================
 // Animated Container Components
 // =============================================================================
-
-interface AnimatedContainerProps {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-}
-
-/**
- * FadeInUp - Animates children with a fade in and slide up effect
- */
-export function FadeInUp({ children, className, delay = 0 }: AnimatedContainerProps) {
-  return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={fadeInUp}
-      transition={{ delay }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-/**
- * ScaleIn - Animates children with a scale and fade effect
- */
-export function ScaleIn({ children, className, delay = 0 }: AnimatedContainerProps) {
-  return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={scaleIn}
-      transition={{ delay }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 /**
  * StaggerList - Container for staggered list animations
@@ -264,7 +172,7 @@ export function HoverCard({ children, className }: HoverCardProps) {
 }
 
 // =============================================================================
-// Shimmer Skeleton
+// Shimmer Skeleton (internal helper)
 // =============================================================================
 
 interface ShimmerSkeletonProps {
@@ -274,10 +182,7 @@ interface ShimmerSkeletonProps {
   height?: string | number;
 }
 
-/**
- * ShimmerSkeleton - Skeleton loading state with shimmer animation
- */
-export function ShimmerSkeleton({
+function ShimmerSkeleton({
   className,
   variant = 'rectangular',
   width,
@@ -433,47 +338,5 @@ export function CelebrationConfetti() {
         />
       ))}
     </div>
-  );
-}
-
-// =============================================================================
-// Loading Overlay
-// =============================================================================
-
-interface LoadingOverlayProps {
-  visible: boolean;
-  message?: string;
-}
-
-/**
- * LoadingOverlay - Full overlay with loading indicator
- */
-export function LoadingOverlay({ visible, message }: LoadingOverlayProps) {
-  return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center gap-3"
-          >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-8 h-8 border-2 border-foreground/20 border-t-foreground rounded-full"
-            />
-            {message && (
-              <span className="text-sm text-muted-foreground">{message}</span>
-            )}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
   );
 }

@@ -2,6 +2,7 @@
 
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { getPreviousMonth } from '@life-assistant/shared';
 import { AppLoggerService } from '../../../../logger/logger.service';
 import type { Income, NewIncome } from '@life-assistant/database';
 import {
@@ -10,22 +11,7 @@ import {
   type IncomeSearchParams,
 } from '../../domain/ports/incomes.repository.port';
 
-export type RecurringScope = 'this' | 'future' | 'all';
-
-function getPreviousMonth(monthYear: string): string {
-  const parts = monthYear.split('-');
-  const yearStr = parts[0];
-  const monthStr = parts[1];
-  if (!yearStr || !monthStr) {
-    throw new Error(`Invalid monthYear format: ${monthYear}`);
-  }
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10);
-  if (month === 1) {
-    return `${String(year - 1)}-12`;
-  }
-  return `${String(year)}-${String(month - 1).padStart(2, '0')}`;
-}
+type RecurringScope = 'this' | 'future' | 'all';
 
 @Injectable()
 export class IncomesService {
@@ -84,15 +70,6 @@ export class IncomesService {
     }
     this.logger.log(`Income ${id} updated successfully`);
     return income;
-  }
-
-  async delete(userId: string, id: string): Promise<void> {
-    this.logger.log(`Deleting income ${id} for user ${userId}`);
-    const deleted = await this.repository.delete(userId, id);
-    if (!deleted) {
-      throw new NotFoundException(`Income with id ${id} not found`);
-    }
-    this.logger.log(`Income ${id} deleted successfully`);
   }
 
   async sumByMonthYear(

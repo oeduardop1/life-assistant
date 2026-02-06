@@ -48,24 +48,6 @@ export function useIncomes(params: IncomeQueryParams = {}) {
   });
 }
 
-/**
- * Hook to fetch single income by ID
- *
- * @param id - Income ID
- */
-export function useIncome(id: string | undefined) {
-  const api = useAuthenticatedApi();
-
-  return useQuery({
-    queryKey: [...financeKeys.incomes(), id],
-    queryFn: async () => {
-      const response = await api.get<IncomeResponse>(`/finance/incomes/${id}`);
-      return response.income;
-    },
-    enabled: api.isAuthenticated && !!id,
-  });
-}
-
 // =============================================================================
 // Mutation Hooks
 // =============================================================================

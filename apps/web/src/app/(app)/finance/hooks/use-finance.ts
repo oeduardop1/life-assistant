@@ -5,7 +5,6 @@ import { useAuthenticatedApi } from '@/hooks/use-authenticated-api';
 import { useUserTimezone } from '@/hooks/use-user-timezone';
 import { getCurrentMonthInTimezone } from '@life-assistant/shared';
 import type {
-  FinanceSummary,
   FinanceSummaryResponse,
   MonthlyEvolutionResponse,
 } from '../types';
@@ -110,47 +109,3 @@ export function useHasFinanceData(monthYear: string) {
   };
 }
 
-// =============================================================================
-// KPI Helpers
-// =============================================================================
-
-/**
- * Extract KPIs from finance summary for dashboard display
- */
-export function extractKPIs(summary: FinanceSummary | undefined) {
-  if (!summary) return null;
-
-  return {
-    income: {
-      expected: summary.totalIncomeExpected,
-      actual: summary.totalIncomeActual,
-    },
-    budget: {
-      budgeted: summary.totalBudgeted,
-      spent: summary.totalSpent,
-    },
-    balance: summary.balance,
-    bills: {
-      total: summary.totalBills,
-      count: summary.billsCount,
-    },
-    expenses: {
-      expected: summary.totalExpensesExpected,
-      actual: summary.totalExpensesActual,
-    },
-    debts: {
-      totalDebts: summary.debts.totalDebts,
-      totalAmount: summary.debts.totalAmount,
-      totalPaid: summary.debts.totalPaid,
-      totalRemaining: summary.debts.totalRemaining,
-      monthlyInstallment: summary.debts.monthlyInstallmentSum,
-    },
-    investments: {
-      totalInvestments: summary.investments.totalInvestments,
-      currentAmount: summary.investments.totalCurrentAmount,
-      goalAmount: summary.investments.totalGoalAmount,
-      monthlyContribution: summary.investments.totalMonthlyContribution,
-      progress: summary.investments.averageProgress,
-    },
-  };
-}

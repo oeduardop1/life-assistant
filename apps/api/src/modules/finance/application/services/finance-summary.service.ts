@@ -60,7 +60,7 @@ export interface FinanceSummary {
   };
 }
 
-export interface MonthlyEvolutionDataPoint {
+interface MonthlyEvolutionDataPoint {
   monthYear: string;
   monthLabel: string;
   income: number;

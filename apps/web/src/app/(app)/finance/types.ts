@@ -11,7 +11,6 @@ import {
   getNextMonth as sharedGetNextMonth,
   formatMonthDisplay as sharedFormatMonthDisplay,
   getCurrentMonthInTimezone,
-  isOverdueInTimezone,
   getTodayInTimezone,
 } from '@life-assistant/shared';
 
@@ -22,7 +21,7 @@ import {
 /**
  * Bills status count breakdown
  */
-export interface BillStatusCount {
+interface BillStatusCount {
   total: number;
   pending: number;
   paid: number;
@@ -33,7 +32,7 @@ export interface BillStatusCount {
 /**
  * Debts summary
  */
-export interface DebtsSummary {
+interface DebtsSummary {
   totalDebts: number;
   totalAmount: number;
   totalPaid: number;
@@ -45,7 +44,7 @@ export interface DebtsSummary {
 /**
  * Investments summary
  */
-export interface InvestmentsSummary {
+interface InvestmentsSummary {
   totalInvestments: number;
   totalCurrentAmount: number;
   totalGoalAmount: number;
@@ -149,37 +148,9 @@ export interface MonthlyDataPoint {
   balance: number;
 }
 
-/**
- * Pending bill for dashboard list
- */
-export interface PendingBill {
-  id: string;
-  description: string;
-  amount: number;
-  dueDate: string;
-  category: string;
-  isOverdue: boolean;
-}
-
-/**
- * Upcoming installment for dashboard list
- */
-export interface UpcomingInstallment {
-  id: string;
-  debtName: string;
-  installmentNumber: number;
-  totalInstallments: number;
-  amount: number;
-  dueDate: string;
-}
-
 // =============================================================================
 // Filter / Query Params
 // =============================================================================
-
-export interface FinanceSummaryParams {
-  monthYear?: string;
-}
 
 /**
  * Scope for recurring item edit/delete operations
@@ -193,7 +164,7 @@ export type RecurringScope = 'this' | 'future' | 'all';
 // Navigation Tabs
 // =============================================================================
 
-export type FinanceTab =
+type FinanceTab =
   | 'overview'
   | 'incomes'
   | 'bills'
@@ -201,7 +172,7 @@ export type FinanceTab =
   | 'debts'
   | 'investments';
 
-export interface FinanceTabItem {
+interface FinanceTabItem {
   id: FinanceTab;
   label: string;
   href: string;
@@ -285,7 +256,7 @@ export const formatMonthDisplay = sharedFormatMonthDisplay;
 
 // Re-export timezone-aware functions from shared
 // Components should use useUserTimezone() hook to get timezone
-export { getCurrentMonthInTimezone, isOverdueInTimezone, getTodayInTimezone };
+export { getCurrentMonthInTimezone, getTodayInTimezone };
 
 /**
  * Get balance color based on value
@@ -475,7 +446,7 @@ export type BillCategory =
 /**
  * Bill status options (matches backend bill_status enum)
  */
-export type BillStatus =
+type BillStatus =
   | 'pending'
   | 'paid'
   | 'overdue'
@@ -595,27 +566,6 @@ export const billStatusLabels: Record<BillStatus, string> = {
 };
 
 /**
- * Bill category colors for badges/icons
- */
-export const billCategoryColors: Record<BillCategory, string> = {
-  housing: 'blue',
-  utilities: 'yellow',
-  subscription: 'purple',
-  insurance: 'green',
-  other: 'gray',
-};
-
-/**
- * Bill status colors for badges
- */
-export const billStatusColors: Record<BillStatus, string> = {
-  pending: 'orange',
-  paid: 'green',
-  overdue: 'red',
-  canceled: 'gray',
-};
-
-/**
  * Bill category options for select dropdown
  */
 export const billCategoryOptions: { value: BillCategory; label: string }[] = [
@@ -629,7 +579,7 @@ export const billCategoryOptions: { value: BillCategory; label: string }[] = [
 /**
  * Bill status filter options for UI
  */
-export type BillStatusFilter = 'all' | 'pending' | 'paid';
+type BillStatusFilter = 'all' | 'pending' | 'paid';
 
 /**
  * Get due date string for a bill given monthYear and dueDay
@@ -885,7 +835,7 @@ export interface DebtProjectionResponse {
 /**
  * Debt status options (matches backend debt_status enum)
  */
-export type DebtStatus = 'active' | 'overdue' | 'paid_off' | 'settled' | 'defaulted';
+type DebtStatus = 'active' | 'overdue' | 'paid_off' | 'settled' | 'defaulted';
 
 /**
  * Debt entity returned from API
@@ -1082,28 +1032,6 @@ export const debtStatusLabels: Record<DebtStatus, string> = {
   defaulted: 'Inadimplente',
 };
 
-/**
- * Debt status colors for badges
- */
-export const debtStatusColors: Record<DebtStatus, string> = {
-  active: 'blue',
-  overdue: 'orange',
-  paid_off: 'green',
-  settled: 'purple',
-  defaulted: 'red',
-};
-
-/**
- * Debt status options for select dropdown
- */
-export const debtStatusOptions: { value: DebtStatus; label: string }[] = [
-  { value: 'active', label: 'Ativo' },
-  { value: 'overdue', label: 'Em Atraso' },
-  { value: 'paid_off', label: 'Quitado' },
-  { value: 'settled', label: 'Acordado' },
-  { value: 'defaulted', label: 'Inadimplente' },
-];
-
 // =============================================================================
 // Debt Helper Functions
 // =============================================================================
@@ -1199,19 +1127,6 @@ export function calculateDebtTotals(debts: Debt[]): DebtTotals {
     negotiatedCount: negotiatedActiveDebts.length,
     pendingNegotiationCount: pendingDebts.length,
   };
-}
-
-/**
- * Get due date for current month based on dueDay
- * @param dueDay - Day of month (1-31)
- * @returns Date string in YYYY-MM-DD format
- */
-export function getDebtDueDateForCurrentMonth(dueDay: number): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const monthYear = `${year}-${String(month).padStart(2, '0')}`;
-  return getDueDateForMonth(monthYear, dueDay);
 }
 
 /**

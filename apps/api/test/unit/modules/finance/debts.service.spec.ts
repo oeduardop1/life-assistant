@@ -38,7 +38,6 @@ describe('DebtsService', () => {
     payInstallment: ReturnType<typeof vi.fn>;
     negotiate: ReturnType<typeof vi.fn>;
     getSummary: ReturnType<typeof vi.fn>;
-    recordPayment: ReturnType<typeof vi.fn>;
     sumPaymentsByMonthYear: ReturnType<typeof vi.fn>;
   };
   let mockSettingsService: {
@@ -62,7 +61,6 @@ describe('DebtsService', () => {
       payInstallment: vi.fn(),
       negotiate: vi.fn(),
       getSummary: vi.fn(),
-      recordPayment: vi.fn(),
       sumPaymentsByMonthYear: vi.fn(),
     };
 

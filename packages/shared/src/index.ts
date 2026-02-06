@@ -14,7 +14,6 @@ export {
   ConversationType,
   VaultItemType,
   VaultCategory,
-  ExpenseCategory,
   ALL_USER_STATUSES,
   ALL_LIFE_AREAS,
   ALL_SUB_AREAS, // ADR-017: Added sub-areas
@@ -22,7 +21,6 @@ export {
   ALL_CONVERSATION_TYPES,
   ALL_VAULT_ITEM_TYPES,
   ALL_VAULT_CATEGORIES,
-  ALL_EXPENSE_CATEGORIES,
 } from './enums';
 
 // Constants

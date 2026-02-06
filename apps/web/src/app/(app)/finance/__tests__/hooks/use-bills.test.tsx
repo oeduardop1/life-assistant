@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import {
   useBills,
-  useBill,
   useCreateBill,
   useUpdateBill,
   useDeleteBill,
@@ -187,38 +186,6 @@ describe('useBills', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-  });
-});
-
-// =============================================================================
-// useBill Tests
-// =============================================================================
-
-describe('useBill', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should_fetch_single_bill_by_id', async () => {
-    const response: BillResponse = { bill: mockBill };
-    mockGet.mockResolvedValue(response);
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useBill('bill-1'), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(mockGet).toHaveBeenCalledWith('/finance/bills/bill-1');
-    expect(result.current.data).toEqual(mockBill);
-  });
-
-  it('should_not_fetch_when_id_is_undefined', () => {
-    const wrapper = createWrapper();
-    renderHook(() => useBill(undefined), { wrapper });
-
-    expect(mockGet).not.toHaveBeenCalled();
   });
 });
 
