@@ -4,385 +4,385 @@
 [![Deploy Web](https://github.com/oeduardop1/life-assistant/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/oeduardop1/life-assistant/actions/workflows/deploy-web.yml)
 [![Deploy API](https://github.com/oeduardop1/life-assistant/actions/workflows/deploy-api.yml/badge.svg)](https://github.com/oeduardop1/life-assistant/actions/workflows/deploy-api.yml)
 
-> Plataforma SaaS com IA integrada que funciona como memoria pessoal, conselheira, assistente e tracker de evolucao.
+> Plataforma SaaS com IA integrada que funciona como memória pessoal, conselheira, assistente e tracker de evolução.
 
-## Pre-requisitos
+`21 ferramentas de IA` | `33+ tabelas com RLS` | `14 ADRs` | `2.000+ testes` | `42 specs de documentação`
 
-- **Node.js** >= 24.0.0 (LTS)
-- **pnpm** >= 10.0.0
-- **Docker** e Docker Compose v5+
+**Para instruções de setup e desenvolvimento, veja [DEVELOPMENT.md](DEVELOPMENT.md).**
 
-## Setup Rapido
+---
 
-```bash
-# 1. Clonar o repositorio
-git clone https://github.com/oeduardop1/life-assistant.git
-cd life-assistant
+## O Problema
 
-# 2. Instalar dependencias
-pnpm install
+As pessoas não possuem um sistema unificado que realmente as conheça.
 
-# 3. Configurar variaveis de ambiente
-cp .env.example .env
-cp apps/web/.env.example apps/web/.env.local
-# Edite os arquivos com suas credenciais (veja "Estrutura de .env" abaixo)
+- **Dados de vida fragmentados** — saúde, finanças, hábitos e metas espalhados em 10+ apps sem nenhuma visão cruzada entre domínios.
+- **IA sem memória** — cada conversa com IA recomeça do zero. Nenhum assistente retém conhecimento de longo prazo sobre o usuário.
+- **Padrões invisíveis** — correlações entre sono, gastos, humor e produtividade passam completamente despercebidas.
+- **Decisões sem contexto** — decisões importantes da vida são tomadas sem referência histórica, levando a erros repetidos.
+- **Sem base de conhecimento pessoal** — fatos, preferências e eventos de vida não ficam armazenados em lugar nenhum acessível ou pesquisável.
 
-# 4. Iniciar toda a infraestrutura (Docker + Supabase + Migrations + Seed)
-pnpm infra:up
+## A Solução
 
-# 5. Executar em modo desenvolvimento
-pnpm dev
+O Life Assistant AI consolida todas as dimensões da vida do usuário em uma plataforma inteligente.
+
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| **Memória Persistente** | A IA acumula conhecimento ao longo das conversas com score de confiança por item |
+| **21 Ferramentas de IA** | Operações de leitura e escrita em finanças, saúde, hábitos, metas e mais |
+| **Fluxo de Confirmação** | Operações de escrita exigem aprovação explícita do usuário (Redis TTL, nível de sistema) |
+| **Consolidação de Memória** | Job noturno que extrai fatos, padrões e mudanças de estado automaticamente |
+| **Inferência em Tempo Real** | Detecção de padrões e contradições sob demanda via ferramenta `analyze_context` |
+| **Life Balance Score** | Score holístico de 0-10 com detalhamento por área da vida |
+| **6 Áreas da Vida** | Saúde, finanças, profissional, aprendizado, espiritual, relacionamentos |
+| **Suporte a Decisões** | Análise estruturada de prós e contras com contexto histórico completo |
+
+### Como funciona na prática
+
+```
+Usuário: "Fui ao médico hoje, estou pesando 82.1kg"
+
+→ IA detecta métrica (peso) e propõe registro
+→ Sistema exibe confirmação: "Registrar peso: 82.1 kg?"
+→ Usuário confirma
+→ Dado salvo no tracking + IA armazena o fato na memória
+
+Naquela noite (3h):
+→ Job de consolidação extrai: "Usuário pesou 82.1kg em 08/02"
+→ Detecta padrão: "Peso diminuindo nas últimas 3 semanas"
+→ Atualiza memória persistente com score de confiança
+
+Próxima conversa:
+→ IA já sabe o peso atual, a tendência, e o contexto médico
 ```
 
-> O `infra:up` ja aplica as migrations do banco. O seed e executado automaticamente apenas na primeira vez (banco vazio). Use `--seed` para forcar o seed em bancos existentes.
+---
 
-## Fluxo de Desenvolvimento Diario
+## Arquitetura de IA
 
-```bash
-# Comecar o dia
-pnpm infra:up     # Inicia Redis, MinIO, PostgreSQL, Auth, Studio (~60s)
-pnpm dev          # Inicia API (4000) + Web (3000)
+> **Diferencial principal:** Tool Use com memória persistente — não é RAG, não é fine-tuning. A LLM decide quais dados buscar, quando, e de qual domínio.
 
-# Veja "Portas e Servicos" abaixo para URLs de acesso
+### Arquitetura Geral do Sistema
 
-# Terminar o dia
-# Ctrl+C para parar o pnpm dev
-pnpm infra:down   # Para toda a infraestrutura (~15s)
+```mermaid
+graph TB
+    subgraph Clientes
+        Web["Web App<br/>Next.js 16"]
+        TG["Telegram Bot<br/>(planejado)"]
+        WA["WhatsApp<br/>(planejado)"]
+    end
+
+    subgraph Frontend["Frontend · Vercel"]
+        NextJS["Next.js 16<br/>React 19 · TanStack Query · Zustand"]
+    end
+
+    subgraph Backend["Backend · Railway"]
+        NestJS["NestJS 11<br/>Clean Architecture"]
+        AIEngine["Motor de IA<br/>Tool Use + Memória"]
+        Workers["BullMQ Workers<br/>Consolidação · Relatórios · Lembretes"]
+    end
+
+    subgraph Dados["Camada de Dados"]
+        PG["PostgreSQL · Supabase<br/>33+ tabelas · RLS"]
+        Redis["Redis<br/>Cache · Filas · Confirmações"]
+        R2["Cloudflare R2<br/>Armazenamento"]
+    end
+
+    subgraph LLM["Provedores LLM"]
+        Gemini["Google Gemini"]
+        Claude["Anthropic Claude"]
+    end
+
+    Web --> NextJS
+    TG --> NestJS
+    WA --> NestJS
+    NextJS -->|"REST + SSE"| NestJS
+    NestJS --> AIEngine
+    NestJS --> Workers
+    AIEngine -->|"Ports & Adapters"| Gemini
+    AIEngine -->|"Ports & Adapters"| Claude
+    NestJS --> PG
+    NestJS --> Redis
+    NestJS --> R2
+    Workers --> PG
+    Workers --> Redis
+    Workers -->|"Prompts de Consolidação"| Gemini
+
+    style AIEngine fill:#4F46E5,color:#fff
+    style PG fill:#38A169,color:#fff
+    style Redis fill:#E53E3E,color:#fff
 ```
 
-> **Nota:** Os dados persistem entre reinicializacoes. O `infra:down` para os containers mas mantem os volumes (dados) e imagens (nao precisa baixar novamente).
+### Fluxo de Tool Use da IA
 
-> **Dica:** Se o `infra:up` falhar, use `pnpm infra:up --clean` para limpar e tentar novamente.
+Este é o coração da plataforma. Cada mensagem do usuário passa por este pipeline:
 
-## Comandos Disponiveis
+```mermaid
+flowchart TB
+    User["Mensagem do Usuário"] --> Reception["Recepção<br/>Rate Limit · Validação · Salvar"]
 
-```bash
-# Infraestrutura (Docker + Supabase)
-pnpm infra:up                # Iniciar toda a infraestrutura + migrations + seed
-pnpm infra:up --clean        # Limpar containers zombie e iniciar (use apos falha)
-pnpm infra:down              # Parar toda a infraestrutura
-pnpm infra:down -rf          # Parar e apagar todos os dados (reset completo)
+    Reception --> Context["Context Builder"]
 
-# Desenvolvimento
-pnpm dev                     # Rodar todos os apps em modo dev
-pnpm --filter web dev        # Rodar apenas o frontend
-pnpm --filter api dev        # Rodar apenas o backend
+    subgraph ContextBuild["Montagem de Contexto"]
+        Memory["Memória do Usuário<br/>~500-800 tokens · sempre presente"]
+        History["Mensagens Recentes<br/>últimas 20 mensagens"]
+        Tools["21 Ferramentas Disponíveis<br/>com schemas Zod"]
+        State["Estado Atual<br/>data/hora · timezone · scores"]
+    end
 
-# Build
-pnpm build                   # Build de todos os packages e apps
+    Context --> Memory
+    Context --> History
+    Context --> Tools
+    Context --> State
 
-# Qualidade de Codigo
-pnpm lint                    # Executar ESLint
-pnpm typecheck               # Verificar tipos TypeScript
-pnpm format                  # Formatar codigo com Prettier
-pnpm format:check            # Verificar formatacao
+    ContextBuild --> Prompt["System Prompt<br/>Personalidade + Memória + Ferramentas + Histórico"]
 
-# Testes
-pnpm test                    # Executar testes unitarios
-pnpm test:e2e                # Executar testes E2E
-pnpm --filter api test:integration  # Testes de integracao da API
+    Prompt --> LLM["LLM · Gemini ou Claude<br/>via Ports & Adapters"]
 
-# Database (requer infra:up rodando)
-pnpm --filter database db:generate  # Gerar migrations a partir do schema
-pnpm --filter database db:migrate   # Aplicar migrations pendentes
-pnpm --filter database db:push      # Push schema direto (dev only)
-pnpm --filter database db:studio    # Abrir Drizzle Studio (GUI)
-pnpm --filter database db:seed      # Popular banco com dados de teste
+    LLM --> Decision{Chamou<br/>ferramenta?}
 
-# Limpeza
-pnpm clean                   # Limpar builds e node_modules
+    Decision -->|"Não"| Stream["Resposta via SSE<br/>streaming em tempo real"]
+
+    Decision -->|"Sim · READ"| ReadExec["Execução Instantânea<br/>search_knowledge · get_finance_summary<br/>get_tracking_history · analyze_context"]
+    ReadExec --> LLM
+
+    Decision -->|"Sim · WRITE"| Confirm["Fluxo de Confirmação<br/>Redis · TTL 5 min"]
+    Confirm --> UserConfirm{Usuário<br/>confirma?}
+    UserConfirm -->|"Sim"| WriteExec["Executa Escrita<br/>record_metric · mark_bill_paid<br/>create_expense · add_knowledge"]
+    UserConfirm -->|"Não"| Cancel["Cancela Operação"]
+    UserConfirm -->|"Corrige"| NewLoop["Novo Loop<br/>com valor corrigido"]
+    WriteExec --> LLM
+    NewLoop --> LLM
+    Cancel --> Stream
+
+    Stream --> Save["Salvar Resposta<br/>+ Log de Tool Calls"]
+
+    LLM -.->|"Máx. 5 iterações"| Decision
+
+    style LLM fill:#4F46E5,color:#fff
+    style Confirm fill:#D69E2E,color:#000
+    style ReadExec fill:#38A169,color:#fff
+    style WriteExec fill:#E53E3E,color:#fff
 ```
 
-## Testando Jobs Manualmente
+### Pipeline de Consolidação de Memória
 
-Alguns jobs (como Memory Consolidation) rodam em horarios especificos (ex: 3AM).
-Durante desenvolvimento, voce pode dispara-los manualmente:
+A cada noite, um job automático transforma conversas em conhecimento persistente:
 
-```bash
-# Requer: pnpm infra:up + pnpm dev rodando
+```mermaid
+flowchart LR
+    subgraph Trigger["Diário às 3h · timezone do usuário"]
+        Cron["BullMQ Cron<br/>timezone-aware"]
+    end
 
-# Opcao 1: Script automatico (recomendado)
-pnpm --filter @life-assistant/api trigger:consolidation --trigger
+    Cron --> Fetch["Buscar Mensagens<br/>desde última consolidação"]
 
-# Opcao 2: Especificar usuario via variaveis de ambiente
-TEST_USER_EMAIL=<email> TEST_USER_PASSWORD=<senha> pnpm --filter @life-assistant/api trigger:consolidation --trigger
+    Fetch --> Skip{Novas<br/>mensagens?}
+    Skip -->|"Não"| Done["Pular · economizar custo"]
 
-# Opcao 3: Especificar usuario e aguardar conclusao do job
-TEST_USER_EMAIL=<email> TEST_USER_PASSWORD=<senha> pnpm --filter @life-assistant/api trigger:consolidation --trigger --wait
+    Skip -->|"Sim"| Extract["Extração via LLM<br/>JSON estruturado"]
 
-# Opcao 4: Apenas obter token (para usar manualmente)
-pnpm --filter @life-assistant/api trigger:consolidation
+    subgraph Extraction["O que é Extraído"]
+        Facts["Fatos Explícitos<br/>confiança: 0.95"]
+        Prefs["Preferências<br/>confiança: 0.90"]
+        Changes["Mudanças de Estado<br/>emprego · relacionamento · local"]
+        Patterns["Padrões Inferidos<br/>confiança: 0.70 · mín. 3 ocorrências"]
+    end
 
-# Opcao 5: curl manual
-curl -X POST http://localhost:4000/api/admin/jobs/memory-consolidation/trigger \
-  -H "Authorization: Bearer <seu-token>" \
-  -H "Content-Type: application/json"
+    Extract --> Facts
+    Extract --> Prefs
+    Extract --> Changes
+    Extract --> Patterns
 
-# Verificar resultado no banco
-# Via Supabase Studio: http://localhost:54323
-# Ou via psql:
-docker exec -it supabase_db_life-assistant psql -U postgres -d postgres \
-  -c "SELECT * FROM memory_consolidations ORDER BY created_at DESC LIMIT 1;"
+    Extraction --> Contradict["Detecção de Contradições<br/>resolução em 3 níveis"]
+
+    subgraph Resolution["Prioridade de Resolução"]
+        T1["Nível 1: Validado pelo usuário"]
+        T2["Nível 2: Maior confiança vence"]
+        T3["Nível 3: Mais recente vence"]
+    end
+
+    Contradict --> T1
+    T1 --> T2
+    T2 --> T3
+
+    Resolution --> Update["Atualizar Base de Conhecimento<br/>+ Memória do Usuário"]
+
+    Update --> Record["Registrar em<br/>memory_consolidations"]
+
+    style Extract fill:#4F46E5,color:#fff
+    style Contradict fill:#D69E2E,color:#000
+    style Update fill:#38A169,color:#fff
 ```
 
-> **Nota:** Endpoints `/admin/*` so existem em `NODE_ENV=development`.
+---
 
-## Estrutura de Arquivos .env
+## Destaques da Arquitetura
 
-O projeto usa arquivos `.env` separados por necessidade dos frameworks:
-
-| Arquivo | Proposito | Lido por |
-|---------|-----------|----------|
-| `.env` (raiz) | Variaveis do backend (DATABASE_URL, SUPABASE_*, REDIS_*, etc) | NestJS via dotenv |
-| `apps/web/.env.local` | Variaveis do frontend (NEXT_PUBLIC_*) | Next.js automaticamente |
-
-**Por que arquivos separados?**
-- O Next.js **so carrega** `.env*` do diretorio do projeto (`apps/web/`)
-- O Turborepo **nao injeta** variaveis de ambiente no runtime
-- Esta e a abordagem padrao para monorepos Next.js + NestJS
-
-**Nota:** Variaveis `NEXT_PUBLIC_*` nao devem ficar no `.env` raiz (nao serao lidas pelo Next.js).
-
-## Estrutura do Projeto
+- **Clean Architecture em 4 camadas** — Apresentação / Aplicação / Domínio / Infraestrutura com separação rigorosa de responsabilidades
+- **Monorepo com 6 pacotes** — `apps/web`, `apps/api`, `packages/ai`, `packages/database`, `packages/shared`, `packages/config`
+- **LLM-agnóstico** — trocar entre Gemini e Claude mudando uma variável de ambiente, sem alterar código
+- **Multi-tenant desde o dia 1** — Row Level Security (RLS) em todas as tabelas, `user_id` obrigatório no nível do banco de dados
+- **14 Architecture Decision Records** — cada decisão arquitetural importante documentada com contexto, alternativas e justificativa
+- **Conformidade LGPD** — direito ao esquecimento, portabilidade de dados, registro de consentimento
 
 ```
 life-assistant/
 ├── apps/
-│   ├── web/                 # Next.js Frontend
-│   └── api/                 # NestJS Backend
+│   ├── web/                  # Next.js 16 · React 19 · Tailwind v4 · shadcn/ui
+│   └── api/                  # NestJS 11 · Clean Architecture · BullMQ
 ├── packages/
-│   ├── ai/                  # Abstracao de LLM (Anthropic, Google)
-│   ├── config/              # Configuracoes e validacao ENV
-│   ├── database/            # Schema Drizzle + migrations (single source of truth)
-│   └── shared/              # Tipos e utilitarios compartilhados
-├── supabase/                # Configuracao Supabase (config.toml, seeds)
-├── scripts/                 # Scripts de automacao
+│   ├── ai/                   # Abstração LLM · Adaptadores Claude + Gemini · 21 ferramentas
+│   ├── database/             # Drizzle ORM · Schemas · Migrations · RLS
+│   ├── config/               # Validação de ENV com Zod
+│   └── shared/               # Tipos · Enums · Utilitários
 ├── docs/
-│   ├── adr/                 # Architecture Decision Records
-│   ├── specs/               # Product, system, engineering specs
-│   └── milestones/          # Tasks and progress
-└── infra/
-    └── docker/              # Docker Compose para dev local
+│   ├── adr/                  # 14 Architecture Decision Records
+│   ├── specs/                # 42 specs (core + domínios + integrações)
+│   └── milestones/           # Roadmap e progresso
+└── infra/docker/             # Docker Compose (Redis, MinIO)
 ```
 
-## Referencia de Desenvolvimento
+---
 
-### Portas e Servicos
+## Stack Tecnológica
 
-| Servico | Porta | Descricao |
-|---------|-------|-----------|
-| **Supabase API** | 54321 | REST API e Auth (GoTrue) |
-| **PostgreSQL** | 54322 | Banco de dados |
-| **Supabase Studio** | 54323 | Dashboard de administracao |
-| **Inbucket** | 54324 | Captura de emails de desenvolvimento |
-| **Redis** | 6379 | Cache e filas (BullMQ) |
-| **MinIO** | 9000/9001 | Storage S3-compatible |
-| **Web (Next.js)** | 3000 | Frontend (quando rodando) |
-| **API (NestJS)** | 4000 | Backend (quando rodando) |
+| Camada | Tecnologia | Propósito |
+|--------|-----------|-----------|
+| **Frontend** | Next.js 16 + React 19 | App Router, Turbopack, SSR |
+| **UI** | Tailwind v4 + shadcn/ui | Design system acessível, CSS-first |
+| **Estado** | TanStack Query + Zustand | Estado servidor + estado local com persistência |
+| **Backend** | NestJS 11 | Modular, injeção de dependência, enterprise-grade |
+| **ORM** | Drizzle ORM | Type-safe, source of truth para migrações |
+| **Banco de Dados** | PostgreSQL (Supabase) | RLS, Auth integrado, 33+ tabelas |
+| **Cache/Filas** | Redis + BullMQ | Confirmações, jobs, rate limiting |
+| **IA** | Camada de abstração própria | Adaptadores Claude + Gemini, 21 ferramentas com schemas Zod |
+| **Autenticação** | Supabase Auth + jose | JWT, social login, RLS integrado |
+| **Tempo Real** | Server-Sent Events (SSE) | Streaming de respostas da IA |
+| **Infraestrutura** | Vercel + Railway + Supabase | Managed, auto-scaling |
+| **Observabilidade** | Sentry + Axiom | Error tracking + logs estruturados |
+| **Testes** | Vitest + Playwright | Unitários, integração, E2E |
 
-### Observabilidade
+---
 
-- **Sentry**: Error tracking e performance monitoring configurado em ambos apps (web e api)
-- **Logs**: Estruturados via `AppLoggerService` no backend
+## Status do Projeto
 
-### Comandos Uteis
-
-```bash
-# Ver status do Supabase
-npx supabase status
-
-# Resetar banco (aplica todas migrations do Supabase)
-npx supabase db reset
-
-# Ver logs do Docker
-docker compose -f infra/docker/docker-compose.yml logs -f
-
-# Verificar Redis
-docker exec life-assistant-redis redis-cli ping
-
-# Verificar API (requer pnpm dev rodando)
-curl http://localhost:4000/api/health        # Liveness check (basico)
-curl http://localhost:4000/api/health/ready  # Readiness check (com dependencias)
+```
+Fase 0: Fundação          ████████████████████  100%   (11 milestones)
+Fase 1: IA Conselheira    ████████████████░░░░   80%   (8/10 milestones)
+Fase 2: Life Tracker      ██████████████░░░░░░   70%   (3.5/5 milestones)
+Fase 3: Assistente        ░░░░░░░░░░░░░░░░░░░░    0%   (planejado)
 ```
 
-### API Documentation (Swagger)
+### Em Números
 
-Em desenvolvimento, a documentacao da API esta disponivel via Swagger UI:
+| Métrica | Valor |
+|---------|-------|
+| Tabelas no banco | 33+ com RLS em todas |
+| Ferramentas de IA | 21 (13 leitura + 8 escrita) |
+| Testes | 2.000+ (unitários + integração + E2E) |
+| ADRs | 14 decisões arquiteturais documentadas |
+| Documentação | 42 specs (12 core + 19 domínios + 11 integrações) |
+| Entidades de schema | 28 arquivos de domínio |
 
-```bash
-# Acesse enquanto o backend estiver rodando (pnpm dev)
-open http://localhost:4000/api/docs
+### Domínios Implementados
+
+| Domínio | Status | Descrição |
+|---------|--------|-----------|
+| **Chat & Memória** | Completo | Conversa com IA via SSE, memória persistente, consolidação noturna |
+| **Tracking & Hábitos** | Completo | 7 tipos de métricas, streaks, calendário mensal, records pessoais |
+| **Finanças** | Completo | Receitas, contas fixas, despesas variáveis, dívidas, investimentos, recorrência |
+| **Metas** | Completo | Metas mensuráveis com milestones, progresso automático, 6 áreas da vida |
+| **Configurações** | Completo | Perfil, email, senha com medidor de força |
+| **Dashboard** | Em progresso | Life Balance Score, trends, relatórios |
+| **Telegram Bot** | Planejado | Interação via mensageria |
+| **Google Calendar** | Planejado | Sincronização de agenda |
+| **Vault** | Planejado | Armazenamento criptografado (AES-256-GCM) |
+| **Stripe Billing** | Planejado | Planos Free/Pro/Premium |
+
+---
+
+## Decisões Arquiteturais de IA
+
+Cada decisão crítica da camada de IA está documentada em ADRs (Architecture Decision Records) com contexto, alternativas avaliadas e justificativa.
+
+### ADR-012: Tool Use + Consolidação de Memória
+
+> **Substituiu RAG por Tool Use.** RAG injetava chunks aleatórios por similaridade semântica — sem controle, alto custo de embeddings, contexto fragmentado. A nova abordagem: **a LLM decide quais dados buscar** via chamadas de ferramentas.
+
+| Componente | Antes (RAG) | Depois (Tool Use) |
+|------------|-------------|-------------------|
+| pgvector | Obrigatório | **Removido** |
+| LangChain.js | Obrigatório | **Removido** |
+| Embeddings | A cada mensagem | Não utilizado |
+| Contexto | Chunks por similaridade | Memória do usuário + ferramentas |
+| Aprendizado | Manual | Automático (consolidação noturna) |
+
+### ADR-014: Inferência em Tempo Real
+
+> Estende ADR-012 com a ferramenta `analyze_context` para **detecção de padrões e contradições durante a conversa**. Ex: usuário menciona dívida em janeiro e insônia em fevereiro — a IA pode inferir correlação com ansiedade financeira.
+
+Arquitetura em dois níveis:
+- **Nível 1 (Batch):** Job às 3h extrai padrões com mín. 3 ocorrências e confiança >= 0.7
+- **Nível 2 (Real-time):** Ferramenta `analyze_context` chamada sob demanda, sem persistência
+
+### ADR-015: Tracking de Baixo Atrito
+
+> **Captura conversacional com confirmação.** A IA detecta métricas mencionadas naturalmente ("fui ao médico, estou 82kg") e propõe registro. O sistema garante confirmação — não a IA (que poderia ignorá-la).
+
+Princípios:
+- **Detectar, não cobrar** — IA nunca pergunta "você registrou seu peso hoje?"
+- **Oferecer, não insistir** — tom de sugestão, não obrigação
+- **Confirmar, não assumir** — `requiresConfirmation: true` no nível do sistema
+- **Score resiliente** — dados faltantes = score neutro (50), sem penalização
+
+### ADR-016: Decisões via Knowledge Items
+
+> **Não criou módulo dedicado de decisões.** Análise mostrou que `add_knowledge` + `search_knowledge` + Modo Conselheiro já cobrem 100% do caso de uso. Resultado: zero tabelas novas, zero ferramentas novas, zero jobs adicionais.
+
+### Advanced Tool Use (Anthropic Beta)
+
+O adaptador Claude utiliza o beta header `advanced-tool-use-2025-11-20` da Anthropic para suporte nativo a `input_examples` nas definições de ferramentas. Isso permite que o LLM receba exemplos concretos de uso de cada ferramenta, melhorando significativamente a precisão das chamadas.
+
+```
+Claude:  input_examples nativo (beta header advanced-tool-use-2025-11-20)
+Gemini:  workaround via enrichDescriptionWithExamples() — exemplos inline na description
 ```
 
-> **Nota:** Swagger so esta disponivel em `NODE_ENV=development`. Em producao, use a spec OpenAPI gerada localmente.
+Cada uma das 21 ferramentas inclui exemplos de entrada que demonstram ao LLM exatamente como e quando chamá-las — reduzindo chamadas incorretas e melhorando a qualidade das respostas.
 
-**Emails de desenvolvimento:** Em ambiente local, todos os emails (confirmacao, reset de senha) sao capturados no Inbucket. Acesse http://localhost:54324 para visualizar.
+---
 
-### Opcoes de Infraestrutura
+## Por que Esta Arquitetura Importa
 
-Os scripts `infra:up` e `infra:down` possuem opcoes avancadas para diferentes cenarios.
+### Não é RAG
 
-**Iniciar (`pnpm infra:up`)**
+Abordagens tradicionais de RAG recuperam chunks aleatórios por similaridade semântica. O Life Assistant usa **Tool Use**: a LLM decide quais dados buscar, quando, e de qual domínio. O resultado é contexto mais relevante a um custo menor — sem necessidade de computar embeddings por mensagem. pgvector e LangChain foram **removidos** em favor desta abordagem (ADR-012).
 
-| Flag | Descricao |
-|------|-----------|
-| `--clean, -c` | Limpa containers zombie antes de iniciar (use apos falha) |
-| `--timeout, -t N` | Timeout em segundos (default: 120) |
-| `--verbose, -v` | Mostra output detalhado para debug |
-| `--skip-migrations` | Pula migrations e seed do banco |
-| `--seed, -s` | Forca o seed do banco mesmo em bancos existentes (idempotente) |
-| `--help, -h` | Mostra todas as opcoes |
+### Não é efêmera
 
-**Parar (`pnpm infra:down`)**
+Diferente do ChatGPT ou assistentes genéricos, **cada conversa enriquece uma base de conhecimento persistente**. A consolidação de memória extrai fatos toda noite com score de confiança. A IA genuinamente "conhece" o usuário ao longo do tempo — preferências, padrões, decisões passadas, mudanças de estado.
 
-| Flag | Descricao |
-|------|-----------|
-| `--reset, -r` | Para e **apaga todos os dados** (volumes) |
-| `--force, -f` | Sem confirmacao (para CI/scripts) |
-| `--timeout, -t N` | Timeout em segundos (default: 30) |
-| `--verbose, -v` | Mostra output detalhado para debug |
-| `--help, -h` | Mostra todas as opcoes |
+### Sem vendor lock-in
 
-**Exemplos**
+O padrão **Ports & Adapters** significa que trocar de Gemini para Claude (ou qualquer LLM futuro) requer mudar uma variável de ambiente. Zero alteração de código. A camada de abstração (`packages/ai/`) isola completamente a aplicação dos provedores. Funcionalidades específicas como Advanced Tool Use (Claude) ou Function Calling (Gemini) são tratadas internamente pelos adaptadores.
 
-```bash
-# Iniciar apos falha anterior (recomendado)
-pnpm infra:up --clean
+---
 
-# Iniciar com timeout maior e debug
-pnpm infra:up -t 180 -v
+## Documentação
 
-# Reset completo sem confirmacao (CI)
-pnpm infra:down -rf
+| Categoria | Documentos | Cobertura |
+|-----------|-----------|-----------|
+| Arquitetura Core | 12 specs | Stack, auth, API, erros, realtime, IA, observabilidade |
+| Domínios | 19 specs | Finanças, tracking, metas, memória, chat e mais |
+| Integrações | 11 specs | Supabase, Gemini, Telegram, Stripe, Calendar e mais |
+| ADRs | 14 registros | Cada decisão arquitetural importante |
+| Milestones | 4 arquivos de fase | Roadmap completo com tracking de tarefas |
 
-# Ver todas as opcoes
-pnpm infra:up --help
-pnpm infra:down --help
-```
+Para instruções de setup, comandos e detalhes de infraestrutura, veja **[DEVELOPMENT.md](DEVELOPMENT.md)**.
 
-**Troubleshooting**
+---
 
-| Problema | Solucao |
-|----------|---------|
-| Timeout ao iniciar | `pnpm infra:up --clean` |
-| Portas em uso | `pnpm infra:down -rf && pnpm infra:up` |
-| Containers zombie | `pnpm infra:up -c` |
-| Ver o que esta acontecendo | Adicione `-v` ao comando |
-
-### Setup de Producao
-
-Script interativo para configurar variaveis de ambiente em Vercel, Railway e GitHub:
-
-```bash
-pnpm setup:prod          # Setup completo interativo
-pnpm setup:prod:dry      # Preview sem executar mudancas
-pnpm setup:prod:check    # Verificar status atual das variaveis
-pnpm setup:vercel        # Configurar apenas Vercel
-pnpm setup:railway       # Configurar apenas Railway
-```
-
-**Pre-requisitos:** CLIs instalados e autenticados (`vercel login`, `railway login`, `gh auth login`).
-
-Veja `DEPLOYMENT.md` para guia completo de deploy.
-
-## Web App
-
-O frontend e construido com Next.js, React, e shadcn/ui.
-
-### Tecnologias
-
-- **Next.js**: App Router, Turbopack, React 19
-- **Tailwind CSS**: CSS-first configuration
-- **shadcn/ui**: Componentes UI (new-york style)
-- **TanStack Query**: Server state management
-- **Zustand**: Client state com localStorage persistence
-- **Playwright**: E2E testing
-
-### Acessar
-
-```bash
-# Desenvolvimento
-pnpm --filter web dev              # http://localhost:3000
-
-# Build producao
-pnpm --filter web build
-pnpm --filter web start
-
-# Testes E2E
-pnpm --filter web test:e2e
-```
-
-### Status do Projeto
-
-Veja `docs/milestones/` para lista completa de features implementadas e roadmap.
-
-**Milestones concluidos:** Veja `docs/milestones/` para status atual.
-
-Veja `docs/specs/engineering.md` §2.2 para documentacao tecnica completa do frontend.
-
-## API (Backend)
-
-O backend e construido com NestJS seguindo Clean Architecture.
-
-### Tecnologias
-
-- **NestJS**: Framework Node.js enterprise-grade
-- **Drizzle ORM**: Type-safe database access
-- **BullMQ**: Job queues com Redis
-- **Zod**: Runtime validation
-- **Vitest**: Unit e integration testing
-
-### Endpoints Principais
-
-| Modulo | Prefixo | Descricao |
-|--------|---------|-----------|
-| Auth | `/api/auth` | Autenticacao e sessoes |
-| Onboarding | `/api/onboarding` | Fluxo de onboarding |
-| Memory | `/api/memory` | Gestao de conhecimento |
-| Chat | `/api/chat` | Conversas com IA |
-| Health | `/api/health` | Health checks |
-
-### Acessar
-
-```bash
-# Desenvolvimento
-pnpm --filter api dev              # http://localhost:4000
-
-# Build producao
-pnpm --filter api build
-pnpm --filter api start:prod
-
-# Testes
-pnpm --filter api test             # Unit tests
-pnpm --filter api test:integration # Integration tests
-```
-
-Veja `docs/specs/engineering.md` §2.3 para documentacao tecnica completa do backend.
-
-## Deploy
-
-Para deploy em producao, consulte **[DEPLOYMENT.md](DEPLOYMENT.md)**.
-
-| Serviço | Plataforma |
-|---------|------------|
-| Web (Next.js) | [Vercel](https://vercel.com) |
-| API (NestJS) | [Railway](https://railway.app) |
-| Database | [Supabase](https://supabase.com) |
-
-## Documentacao
-
-| Documento | Descricao |
-|-----------|-----------|
-| `docs/specs/product.md` | O que o app faz, features, personas |
-| `docs/specs/system.md` | Regras de negocio, fluxos, Definition of Done |
-| `docs/specs/engineering.md` | Stack tecnica, arquitetura, padroes |
-| `docs/specs/data-model.md` | Schema do banco, tabelas, relacionamentos |
-| `docs/specs/ai.md` | Comportamento da IA, prompts, Tool Use |
-| `docs/specs/integrations.md` | APIs externas (Telegram, Stripe, Calendar) |
-| `docs/milestones/` | Roadmap de desenvolvimento |
-| `TBD_TRACKER.md` | Decisoes pendentes |
-| `DEPLOYMENT.md` | Guia de deploy em producao |
-
-## Licenca
+## Licença
 
 Projeto privado. Todos os direitos reservados.
