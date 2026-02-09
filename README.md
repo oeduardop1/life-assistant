@@ -245,6 +245,102 @@ life-assistant/
 
 ---
 
+## Infraestrutura Docker
+
+O projeto possui Dockerfiles de produção multi-stage e scripts robustos para orquestração local.
+
+### Desenvolvimento Local
+
+O ambiente local combina Docker Compose (Redis + MinIO) com Supabase CLI (PostgreSQL + Auth + Studio):
+
+```mermaid
+graph LR
+    subgraph DockerCompose["Docker Compose"]
+        Redis["Redis 8 Alpine<br/>Cache · Filas · Confirmações<br/>:6379"]
+        MinIO["MinIO<br/>Storage S3-compatible<br/>:9000 / :9001"]
+    end
+
+    subgraph SupabaseCLI["Supabase CLI"]
+        PG["PostgreSQL 17<br/>33+ tabelas · RLS<br/>:54322"]
+        Auth["Auth API · GoTrue<br/>:54321"]
+        Studio["Studio GUI<br/>:54323"]
+        Inbucket["Inbucket · Emails<br/>:54324"]
+    end
+
+    subgraph DevServers["Servidores Dev"]
+        Web["Next.js<br/>:3000"]
+        API["NestJS<br/>:4000"]
+    end
+
+    API --> Redis
+    API --> PG
+    API --> MinIO
+    API --> Auth
+    Web --> API
+```
+
+Scripts de orquestração (`scripts/dev-start.sh` — ~1.000 linhas):
+- Pre-flight checks (Docker, portas, Supabase CLI)
+- Limpeza de containers zombie
+- Inicialização de Docker Compose + Supabase
+- Migrations automáticas (Drizzle ORM)
+- Seed idempotente (`ON CONFLICT DO NOTHING`)
+- Aplicação de políticas RLS
+- Limpeza de imagens Docker antigas
+
+```bash
+pnpm infra:up              # Inicia tudo + migrations + seed
+pnpm infra:up --clean      # Limpa containers zombie antes de iniciar
+pnpm infra:down            # Para tudo, preserva dados
+pnpm infra:down --reset -f # Reset completo, apaga todos os dados
+```
+
+### Produção — Dockerfiles Multi-Stage
+
+Ambos os apps possuem Dockerfiles otimizados para produção com builds multi-stage:
+
+| App | Base | Stages | Usuário | Health Check | Porta |
+|-----|------|--------|---------|-------------|-------|
+| **API** | `node:24-alpine` | 3 (deps → build → runner) | `nestjs` (uid 1001) | `wget /api/health` (30s) | 4000 |
+| **Web** | `node:24-alpine` | 4 (base → deps → build → runner) | `nextjs` (uid 1001) | — | 3000 |
+
+Características de segurança e otimização:
+- **Usuários não-root** em ambos os containers
+- **Build em ordem de dependência**: shared → config → database → ai → app
+- **Next.js standalone mode** para footprint mínimo
+- **Health checks** integrados no container da API
+
+### Deploy em Produção
+
+```mermaid
+graph LR
+    subgraph Managed["Serviços Gerenciados"]
+        Vercel["Vercel<br/>Web · Next.js"]
+        Railway["Railway<br/>API · NestJS"]
+        Supabase["Supabase Cloud<br/>PostgreSQL · Auth"]
+        Upstash["Upstash Redis<br/>Cache · Filas"]
+        R2["Cloudflare R2<br/>Storage"]
+        Sentry["Sentry<br/>Observabilidade"]
+    end
+
+    Vercel -->|"REST + SSE"| Railway
+    Railway --> Supabase
+    Railway --> Upstash
+    Railway --> R2
+    Vercel --> Sentry
+    Railway --> Sentry
+```
+
+Setup automatizado via script interativo (`scripts/setup-production.sh` — ~1.000 linhas):
+
+```bash
+pnpm setup:prod            # Setup completo (Vercel + Railway + GitHub Secrets)
+pnpm setup:prod --check    # Verificar status atual das variáveis
+pnpm setup:prod --dry-run  # Preview sem executar mudanças
+```
+
+---
+
 ## Stack Tecnológica
 
 | Camada | Tecnologia | Propósito |

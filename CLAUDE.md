@@ -128,6 +128,8 @@ Frontend vars (`NEXT_PUBLIC_*`) go in `apps/web/.env.local` — Next.js does not
 | **Other** | Tasks & Progress | `docs/milestones/` |
 | | Pending Decisions | `TBD_TRACKER.md` |
 | | Navigation & Glossary | `docs/specs/README.md` |
+| | Developer Setup & Commands | `DEVELOPMENT.md` |
+| | Investor Pitch & Architecture | `README.md` |
 
 > ⚠️ **NEVER update `docs/specs/legacy/`** — read-only historical reference.
 
