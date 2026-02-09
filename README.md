@@ -39,22 +39,118 @@ O Life Assistant AI consolida todas as dimensões da vida do usuário em uma pla
 
 ### Como funciona na prática
 
+O exemplo abaixo demonstra o ciclo completo: múltiplas ferramentas em cadeia, inferência cross-domain, detecção de contradições com memória de longo prazo, consolidação noturna e impacto na próxima conversa.
+
 ```
-Usuário: "Fui ao médico hoje, estou pesando 82.1kg"
+━━━ SEGUNDA-FEIRA, 21h ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-→ IA detecta métrica (peso) e propõe registro
-→ Sistema exibe confirmação: "Registrar peso: 82.1 kg?"
-→ Usuário confirma
-→ Dado salvo no tracking + IA armazena o fato na memória
+Usuário: "Fechei um freela de R$4.500 hoje, paguei a fatura do cartão
+          e fiz 40min de esteira. Ah, e estou dormindo mal essa semana"
 
-Naquela noite (3h):
-→ Job de consolidação extrai: "Usuário pesou 82.1kg em 08/02"
-→ Detecta padrão: "Peso diminuindo nas últimas 3 semanas"
-→ Atualiza memória persistente com score de confiança
+→ Tool Loop — Iteração 1/5:
+  LLM chama 3 ferramentas WRITE (confirmação paralela):
+  ├─ create_income (R$4.500, freelance)      → requiresConfirmation: true
+  ├─ mark_bill_paid (cartão, mês atual)      → requiresConfirmation: true
+  └─ record_metric (exercício: 40min)        → requiresConfirmation: true
+  → Redis armazena confirmação (TTL 5 min)
+  → Usuário confirma os 3 de uma vez
 
-Próxima conversa:
-→ IA já sabe o peso atual, a tendência, e o contexto médico
+→ Tool Loop — Iteração 2/5:
+  LLM chama analyze_context (áreas: finance, health, relationships)
+  ├─ Cruza com knowledge_items:
+  │   "Usuário tem dívida de R$12.000" (registrado há 2 semanas, confiança: 0.95)
+  │   "Esposa grávida, previsão para julho" (há 2 meses, confiança: 0.95)
+  ├─ Cruza com tracking:
+  │   "Sono < 5h nos últimos 4 dias"
+  │   "3ª semana consecutiva com exercício regular"
+  └─ Infere: correlação ansiedade financeira ↔ insônia
+
+→ Tool Loop — Iteração 3/5:
+  LLM chama get_finance_summary (mês atual)
+  └─ Retorna: saldo positivo com o freela, reserva cobre 2.3 meses
+
+→ Tool Loop — Iteração 4/5:
+  LLM chama add_knowledge (2 itens):
+  ├─ "Rotina de exercício consistente — 3 semanas" (confiança: 0.75)
+  └─ "Insônia correlacionada com período de dívida" (confiança: 0.70)
+
+IA: "Dia produtivo! Registrei o freela, a fatura como paga e o treino.
+Aliás, é a 3ª semana seguida que você treina — virou rotina!
+Sobre o sono: percebi que sua qualidade caiu desde que conversamos
+sobre a dívida com o banco. Com o freela, seu mês fechou positivo
+— isso deve ajudar. Quer montar um plano de pagamento acelerado
+pra tirar esse peso?"
+
+━━━ TERÇA-FEIRA, 3h — JOB DE CONSOLIDAÇÃO ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+→ BullMQ Cron dispara (timezone do usuário)
+→ Busca mensagens desde última consolidação
+→ Extração via LLM (JSON estruturado):
+
+  Fatos extraídos:
+  ├─ "Receita freelance de R$4.500 em fev/2026" (confiança: 0.95)
+  ├─ "Fatura do cartão quitada em fev/2026" (confiança: 0.95)
+  └─ "Insônia há 4+ dias" (confiança: 0.90)
+
+  Mudança de estado detectada:
+  └─ Finanças: "mês deficitário" → "mês superavitário"
+
+  Padrões inferidos (mín. 3 ocorrências):
+  ├─ "Mantém exercício regular 3x/semana" (confiança: 0.75)
+  └─ "Gastos > R$500 sem comunicar esposa geram conflito"
+      (3 episódios: março, maio, agora — confiança: 0.73)
+
+→ Detecção de contradições (resolução em 3 níveis):
+  └─ Nenhuma contradição — novos fatos complementam os existentes
+
+→ Atualiza user_memory (~500-800 tokens) + knowledge_items
+→ Registra em memory_consolidations
+
+━━━ QUARTA-FEIRA, 19h ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Usuário: "Decidi largar o emprego e focar 100% no freela. E quero
+          comprar um PS5 pra comemorar, tá R$3.200"
+
+→ Tool Loop — Iteração 1/5:
+  LLM chama analyze_context (áreas: professional, finance, relationships)
+  ├─ lookForContradictions: true
+  ├─ Busca knowledge_items:
+  │   "[DECISÃO] Escolheu CLT por estabilidade" (4 meses atrás, confiança: 1.0)
+  │   "Esposa grávida, previsão julho" (confiança: 0.95)
+  │   "Meta: reserva de emergência de 6 meses" (confiança: 0.90)
+  ├─ learnedPatterns (já no system prompt pela consolidação):
+  │   "Gastos > R$500 sem comunicar esposa geram conflito" (confiança: 0.73)
+  │   "Toma decisões impulsivas sob estresse" (confiança: 0.72)
+  └─ Contradição detectada: "CLT por estabilidade" vs "largar emprego"
+
+→ Tool Loop — Iteração 2/5:
+  LLM chama get_finance_summary + search_knowledge (área: finance)
+  └─ Reserva atual: 2.3 meses (meta: 6 meses)
+
+IA: "Entendo a empolgação com o freela! Antes de decidir, quero trazer
+uns pontos das nossas conversas: em outubro você escolheu a CLT
+justamente pela estabilidade, e com o bebê chegando em julho os
+gastos vão aumentar. Sua reserva cobre ~2 meses — a meta era 6.
+
+Sobre o PS5: lembra que compras maiores sem combinar antes com a
+Ana tendem a gerar atrito entre vocês? Que tal conversar com ela
+e montar um plano pra encaixar isso no orçamento?
+
+Quer que a gente faça uma análise estruturada dos cenários
+CLT vs freela com os números reais?"
+
+→ Modo Conselheiro ativado: análise de prós/contras com dados do usuário
 ```
+
+> **O que este exemplo demonstra:**
+> - **4 iterações de Tool Loop** com 8 ferramentas diferentes em uma única conversa
+> - **Confirmação paralela** de 3 operações de escrita simultâneas (Redis TTL)
+> - **Inferência cross-domain**: sono + finanças + relacionamentos cruzados automaticamente
+> - **Detecção de contradição**: decisão atual vs decisão passada armazenada na memória
+> - **Consolidação noturna**: extração de fatos, mudanças de estado e padrões com score de confiança
+> - **Memória de longo prazo**: padrões inferidos há meses influenciam respostas futuras
+> - **Advanced Tool Use**: exemplos de entrada (`input_examples`) via beta Anthropic guiam a precisão das chamadas
+> - **Zero configuração manual**: todo o contexto é construído e mantido automaticamente pela plataforma
 
 ---
 
