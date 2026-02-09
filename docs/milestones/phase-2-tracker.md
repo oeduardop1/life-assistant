@@ -1116,44 +1116,142 @@ _Testes:_
 
 ## M2.3 — Metas (Goals) 🔴
 
-**Objetivo:** Implementar sistema de metas com progresso e milestones.
+**Objetivo:** Implementar sistema de metas com progresso e milestones como aba em /tracking.
+
+**Filosofia:** Baixo atrito. Metas opcionais. Progresso manual.
 
 **Referências:** `docs/specs/domains/goals.md`
 
-> **Nota:** Hábitos foram movidos para M2.1 (Tracking & Habits). Este módulo foca apenas em Goals.
+> **Nota:** Goals é aba em /tracking (rota: `/tracking/goals`). Backend dentro de `modules/tracking/` seguindo padrão de Habits. Notificações proativas ficam para M3.4.
 
 **Tasks:**
 
-**Backend:**
-- [ ] Criar módulo `goals`:
-  - [ ] CRUD de metas (título, área, valor alvo, prazo, milestones)
-  - [ ] Calcular progresso automaticamente
-  - [ ] Notificar meta em risco/concluída
-- [ ] Implementar sub-metas (milestones)
-- [ ] Integrar com tracking entries (progresso automático)
+### Backend — Módulo (dentro de tracking)
 
-**Frontend:**
-- [ ] Criar página `/goals`:
-  - [ ] Lista de metas com progresso
-  - [ ] Criar/editar meta
-  - [ ] Visualizar milestones
-- [ ] Componentes:
-  - [ ] GoalProgress (barra de progresso com percentual)
-  - [ ] GoalCard (resumo da meta)
-  - [ ] GoalForm (criar/editar meta)
-  - [ ] MilestoneList (sub-metas)
+- [ ] Registrar providers de goals em `tracking.module.ts`
+- [ ] `GoalsController` (6 endpoints REST: POST, GET list, GET :id, PATCH, DELETE, PATCH progress)
+- [ ] `GoalMilestonesController` (5 endpoints REST: POST, GET, PATCH, DELETE, PATCH complete)
+- [ ] `GoalsService` (CRUD, progresso, status transitions automáticas)
+- [ ] `GoalMilestonesService` (CRUD, completion)
+- [ ] `GoalsRepository` + `GoalsRepositoryPort` + `GOALS_REPOSITORY` Symbol
+- [ ] `GoalMilestonesRepository` + `GoalMilestonesRepositoryPort` + `GOAL_MILESTONES_REPOSITORY` Symbol
+- [ ] `GoalsToolExecutorService` (delegado pelo tracking-tool-executor)
 
-**Testes:**
-- [ ] Unit: Cálculo de progresso de meta
-- [ ] Integration: CRUD de metas via API
-- [ ] E2E: criar meta → atualizar progresso → completar
+### Backend — DTOs
 
-**Definition of Done:**
-- [ ] CRUD de metas funciona
+- [ ] `CreateGoalDto` (title, area, targetValue > 0, unit, startDate, endDate, description?, milestones?)
+- [ ] `UpdateGoalDto` (todos opcionais)
+- [ ] `GoalQueryDto` (status?, area?, limit, offset)
+- [ ] `UpdateProgressDto` (currentValue >= 0)
+- [ ] `CreateMilestoneDto` (title, targetValue > 0)
+- [ ] `UpdateMilestoneDto` (title?, targetValue?)
+
+### Backend — Lógica de Negócios
+
+- [ ] Status transition: not_started → in_progress (quando currentValue > 0)
+- [ ] Status transition: in_progress → completed (quando currentValue >= targetValue)
+- [ ] Cálculo de progresso: `(currentValue / targetValue) × 100`
+- [ ] Cálculo isAtRisk: `timeElapsed% - progress% > 20`
+- [ ] `parseFloat()` em todos os campos decimais
+
+### Backend — AI Tools
+
+- [ ] Tool definitions em `packages/ai/src/schemas/tools/goals/`:
+  - [ ] `create-goal.tool.ts` (WRITE)
+  - [ ] `get-goals.tool.ts` (READ, com paginação)
+  - [ ] `update-goal.tool.ts` (WRITE)
+  - [ ] `update-goal-progress.tool.ts` (WRITE)
+  - [ ] `delete-goal.tool.ts` (WRITE)
+- [ ] Registrar em `tools/index.ts` (allTools, readTools, writeTools)
+- [ ] `GoalsToolExecutorService` com switch/case para 5 tools
+- [ ] Integrar no tracking-tool-executor (delegação)
+- [ ] Registrar goal tools no `toolToExecutorMap` em `chat.service.ts` (→ 'tracking')
+
+### Frontend — Tab em /tracking
+
+- [ ] Adicionar `'goals'` ao type `TrackingTab` em `types.ts`
+- [ ] Adicionar `{ id: 'goals', label: 'Metas', href: '/tracking/goals', icon: 'Target' }` ao `trackingTabs`
+- [ ] Importar `Target` de lucide-react e adicionar ao `tabIcons` Record em `layout.tsx`
+- [ ] Criar página `/tracking/goals/page.tsx`
+
+### Frontend — Componentes
+
+- [ ] `GoalCard` (card resumo: título, área, progresso, status, prazo)
+- [ ] `GoalList` (lista filtrável com paginação)
+- [ ] `GoalForm` (react-hook-form + Zod: title, area, targetValue, unit, dates)
+- [ ] `GoalProgressBar` (barra visual currentValue/targetValue com percentual)
+- [ ] `GoalStatusBadge` (badge colorido: not_started=gray, in_progress=blue, completed=green, failed=red, canceled=muted)
+- [ ] `MilestoneList` (lista ordenada com checkboxes de completion)
+- [ ] `MilestoneForm` (título, targetValue)
+- [ ] `CreateGoalModal` (dialog com GoalForm)
+- [ ] `EditGoalModal` (dialog com GoalForm em modo edição)
+- [ ] `DeleteGoalDialog` (confirmation dialog)
+- [ ] `UpdateProgressModal` (dialog simples: input de currentValue)
+
+### Frontend — Hooks (React Query)
+
+- [ ] Query key factory: `goalsKeys.list(filters)`, `.goal(id)`, `.milestones(goalId)`
+- [ ] `useGoals(filters)` — useQuery com paginação
+- [ ] `useGoal(id)` — useQuery single com milestones
+- [ ] `useCreateGoal()` — useMutation + invalidate goalsKeys
+- [ ] `useUpdateGoal()` — useMutation
+- [ ] `useDeleteGoal()` — useMutation
+- [ ] `useUpdateGoalProgress()` — useMutation com optimistic update no progressBar
+- [ ] `useCreateMilestone()` — useMutation
+- [ ] `useUpdateMilestone()` — useMutation
+- [ ] `useDeleteMilestone()` — useMutation
+- [ ] `useCompleteMilestone()` — useMutation com optimistic update no checkbox
+
+### Frontend — Types (em tracking/types.ts)
+
+- [ ] `GoalStatus` type union
+- [ ] `Goal` interface (com milestones?, progressPercent?, isAtRisk?, daysRemaining?)
+- [ ] `GoalMilestone` interface
+- [ ] `CreateGoalInput`, `UpdateGoalInput`, `GoalFilters` interfaces
+- [ ] `goalStatusLabels`, `goalStatusColors` constantes (PT-BR)
+- [ ] `calculateGoalProgress()`, `isGoalAtRisk()`, `getDaysRemaining()` helpers
+
+### Testes — Backend
+
+- [ ] Unit: GoalsService CRUD
+- [ ] Unit: GoalsService cálculo de progresso (parseFloat)
+- [ ] Unit: GoalsService status transitions automáticas
+- [ ] Unit: GoalsService cálculo isAtRisk
+- [ ] Unit: GoalMilestonesService CRUD + completion
+- [ ] Unit: GoalsToolExecutorService (5 tools)
+- [ ] Unit: DTOs validação (CreateGoalDto, UpdateGoalDto, GoalQueryDto)
+- [ ] Integration: CRUD goals via API (POST, GET, PATCH, DELETE)
+- [ ] Integration: CRUD milestones via API
+- [ ] Integration: PATCH /goals/:id/progress → status transition automática
+- [ ] Integration: Paginação e filtros (status, area, limit, offset)
+
+### Testes — Frontend
+
+- [ ] Component: GoalCard renderiza progresso corretamente
+- [ ] Component: GoalForm validação (campos obrigatórios, targetValue > 0)
+- [ ] Component: MilestoneList checkbox toggle
+- [ ] Hooks: useGoals fetch + cache invalidation
+- [ ] Hooks: useUpdateGoalProgress optimistic update
+
+### Testes — E2E
+
+- [ ] Criar meta via formulário → aparece na lista
+- [ ] Atualizar progresso → barra atualiza → status muda para in_progress
+- [ ] Completar milestone → checkbox marcado
+- [ ] Meta completada automaticamente (currentValue >= targetValue → status completed)
+- [ ] Navegar para aba Metas em /tracking
+
+### Definition of Done M2.3
+
+- [ ] CRUD goals + milestones (API + UI)
 - [ ] Progresso calculado automaticamente
-- [ ] Milestones funcionam
-- [ ] Notificações de risco/conclusão
-- [ ] Testes passam
+- [ ] Status transitions automáticas (not_started → in_progress → completed)
+- [ ] Tab "Metas" visível e funcional em /tracking
+- [ ] 5 AI Tools implementadas e registradas
+- [ ] Paginação e filtros funcionando
+- [ ] isAtRisk calculado e exibido na UI
+- [ ] Todos os testes passam
+- (Notificações proativas e daily job → M3.4)
 
 ---
 
