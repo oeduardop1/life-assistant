@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -31,7 +31,13 @@ def chat_app() -> FastAPI:
     test_app.state.checkpointer = AsyncMock()
     test_app.state.checkpointer.aget_tuple = AsyncMock(return_value=None)
     test_app.state.session_factory = MagicMock()
-    test_app.state.graph = AsyncMock()
+
+    # Mock graph with aget_state returning no interrupts
+    mock_graph = AsyncMock()
+    mock_state = MagicMock()
+    mock_state.interrupts = ()  # No pending interrupts
+    mock_graph.aget_state = AsyncMock(return_value=mock_state)
+    test_app.state.graph = mock_graph
 
     return test_app
 
@@ -78,11 +84,12 @@ async def test_invoke_returns_sse_stream(chat_app: FastAPI) -> None:
     user_id = str(uuid.uuid4())
     conv_id = str(uuid.uuid4())
 
-    # Mock the graph.astream to yield one token + done
-    async def mock_astream(*args, **kwargs):
+    # Mock astream with new stream_mode=["messages", "updates"] format:
+    # yields 2-tuples (mode, chunk)
+    async def mock_astream(*args: Any, **kwargs: Any) -> Any:
         chunk = AIMessageChunk(content="Olá!")
-        metadata = {"langgraph_node": "general_agent"}
-        yield chunk, metadata
+        metadata = {"langgraph_node": "agent"}
+        yield "messages", (chunk, metadata)
 
     chat_app.state.graph.astream = mock_astream
 
@@ -129,9 +136,7 @@ async def test_invoke_returns_sse_stream(chat_app: FastAPI) -> None:
     # Parse SSE data from response body
     body = response.text
     data_lines = [
-        line.removeprefix("data: ")
-        for line in body.split("\n")
-        if line.startswith("data: ")
+        line.removeprefix("data: ") for line in body.split("\n") if line.startswith("data: ")
     ]
     assert len(data_lines) >= 1
 
@@ -161,7 +166,7 @@ async def test_invoke_error_returns_error_sse(chat_app: FastAPI) -> None:
     mock_conversation.type = "general"
 
     # Make graph.astream raise
-    async def mock_astream_error(*args, **kwargs):
+    async def mock_astream_error(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("LLM unavailable")
         yield  # pragma: no cover — make it an async generator
 
@@ -191,9 +196,7 @@ async def test_invoke_error_returns_error_sse(chat_app: FastAPI) -> None:
     assert response.status_code == 200
     body = response.text
     data_lines = [
-        line.removeprefix("data: ")
-        for line in body.split("\n")
-        if line.startswith("data: ")
+        line.removeprefix("data: ") for line in body.split("\n") if line.startswith("data: ")
     ]
     # Should have at least one error event
     events = [json.loads(d) for d in data_lines if d.strip()]

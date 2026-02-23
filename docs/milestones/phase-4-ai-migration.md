@@ -417,7 +417,7 @@ Implementação completa do pipe Python end-to-end. **Python (16 arquivos criado
 
 ---
 
-## M4.4 — Tracking Tools + Habits + Confirmation Framework 🔴
+## M4.4 — Tracking Tools + Habits + Confirmation Framework 🟡
 
 **Objetivo:** Primeiros tools funcionando no Python com confirmação via `interrupt()`. Tracking é o domínio mais simples — ideal para validar o framework.
 
@@ -432,15 +432,36 @@ Implementação completa do pipe Python end-to-end. **Python (16 arquivos criado
 **Tasks:**
 
 **Confirmation Framework:**
-- [ ] Criar `app/tools/common/confirmation.py`:
+- [x] Criar `app/tools/common/confirmation.py`:
   - Wrapper de `interrupt()` que padroniza o formato de confirmação
-  - Emite SSE event `confirmation_required` com `{ confirmationId, toolName, toolArgs, message, expiresAt }`
-- [ ] Adicionar endpoint POST `/chat/resume` em `app/api/routes/chat.py`:
-  - Recebe `{ thread_id, action: "confirm" | "reject" }`
-  - Executa `Command(resume={"action": "confirm"})` ou `Command(resume={"action": "reject"})`
-  - Retorna SSE stream com resultado
-- [ ] **NestJS:** Proxy do endpoint `/confirm` para Python `/chat/resume`
-- [ ] SSE event `confirmation_required` compatível com frontend atual:
+  - `generate_confirmation_message()` — mensagens em PT (ex: "Registrar peso: 75 kg em 2026-02-23?")
+  - `generate_batch_confirmation_message()` — batch (ex: "Remover 3 registros?")
+  - Constraint de idempotência documentada: código antes de `interrupt()` re-executa no resume — sem side effects antes do interrupt
+  - `expiresAt` = now + 24h (soft limit — checkpoints PostgreSQL não expiram, frontend usa para UX)
+- [x] Criar `app/tools/common/confirmable_tool_node.py` — `ConfirmableToolNode`:
+  - Substitui `ToolNode` do `create_react_agent` para agents com WRITE tools
+  - Separa READ tools (executa imediatamente) de WRITE tools (batch em único `interrupt()`)
+  - 3 ações no resume: `confirm` (executa), `reject` (cancela), `edit` (corrige args e executa)
+  - Emite SSE events `tool_calls` (antes) e `tool_result` (após cada tool)
+- [x] Adicionar endpoint POST `/chat/resume` em `app/api/routes/chat.py`:
+  - Recebe `{ thread_id, action: "confirm" | "reject" | "edit", edited_args?: dict }`
+  - Executa `Command(resume={"action": ..., "args": ...})`
+  - Retorna SSE stream com resultado (reutiliza lógica de streaming)
+- [x] Atualizar streaming em `app/api/routes/chat.py`:
+  - `stream_mode="messages"` → `stream_mode=["messages", "updates"]` para detectar `__interrupt__`
+  - Chunks "updates" com `__interrupt__` → SSE `confirmation_required` + `{ done: true, awaitingConfirmation: true }`
+  - Chunks "updates" com tool data → SSE `tool_calls` e `tool_result`
+- [x] Implementar detecção de confirmação por mensagem em `/chat/invoke`:
+  - Verificar interrupt pendente via `graph.get_state(config)` antes de processar
+  - Classificar intent via LLM: confirm / reject / correction / unrelated
+  - Confirm → `Command(resume={"action": "confirm"})`; Reject → `Command(resume={"action": "reject"})`
+  - Correction → `Command(resume={"action": "edit", "args": corrected_args})`
+  - Unrelated → rejeitar pendente + processar como nova mensagem
+- [x] **NestJS:** Proxy de confirmação para Python:
+  - `confirm/:confirmationId` → Python `/chat/resume` action "confirm"
+  - `reject/:confirmationId` → Python `/chat/resume` action "reject"
+  - Proxy SSE response de volta ao frontend
+- [x] SSE event `confirmation_required` compatível com frontend atual:
   ```json
   {
     "type": "confirmation_required",
@@ -453,7 +474,7 @@ Implementação completa do pipe Python end-to-end. **Python (16 arquivos criado
     }
   }
   ```
-- [ ] SSE event `tool_result` após execução:
+- [x] SSE event `tool_result` após execução:
   ```json
   { "type": "tool_result", "data": { "toolName": "record_metric", "result": "...", "success": true } }
   ```
@@ -484,7 +505,8 @@ Implementação completa do pipe Python end-to-end. **Python (16 arquivos criado
 
 **Tracking Agent:**
 - [ ] Criar `app/agents/domains/tracking.py`:
-  - Usa `create_react_agent()` com os 6 tools acima (4 tracking + 2 habits) (ver nota sobre deprecation em M4.7)
+  - Graph customizado com `ConfirmableToolNode` (batch confirmation de write tools)
+  - 6 tools (4 tracking + 2 habits)
   - System prompt com regras de tracking (timezone, unidades default, regras de confirmação)
 - [ ] Atualizar graph principal: START → general_agent → save_response (tracking agent será integrado ao routing em M4.7)
   - Por enquanto, tracking agent é invocado diretamente quando tools de tracking são necessários
@@ -558,7 +580,8 @@ Implementação completa do pipe Python end-to-end. **Python (16 arquivos criado
 
 **Finance Agent:**
 - [ ] Criar `app/agents/domains/finance.py`:
-  - Usa `create_react_agent()` com os 11 tools (ver nota sobre deprecation em M4.7)
+  - Graph customizado com `ConfirmableToolNode` (batch confirmation de write tools)
+  - 11 tools (9 READ + 2 WRITE)
   - System prompt com regras de finance (categorias PT→EN, formatação monetária BRL, regras de confirmação)
 
 **Lógica de agregação:**
@@ -608,7 +631,8 @@ Implementação completa do pipe Python end-to-end. **Python (16 arquivos criado
 
 **Memory Agent:**
 - [ ] Criar `app/agents/domains/memory.py`:
-  - Usa `create_react_agent()` com os 3 tools (ver nota sobre deprecation em M4.7)
+  - Graph customizado com `ConfirmableToolNode` (confirmation de write tools)
+  - 3 tools (2 READ + 1 WRITE)
   - System prompt com regras de memória (tipos de knowledge, áreas, quando adicionar vs buscar)
 
 **Context Builder Completo:**
@@ -672,14 +696,14 @@ Implementação completa do pipe Python end-to-end. **Python (16 arquivos criado
   - Fallback para `general_agent` quando triage retorna intenção desconhecida
 
 **Agent Registry:**
-- [ ] Cada domain agent é criado com `create_react_agent()` (ou `create_agent` se disponível — ver nota) e seus tools específicos:
+- [ ] Cada domain agent usa graph customizado com `ConfirmableToolNode` (WRITE tools) ou `create_react_agent()` (agents sem tools):
   - `tracking_agent`: 6 tools (M4.4)
   - `finance_agent`: 11 tools (M4.5)
   - `memory_agent`: 3 tools (M4.6)
   - `wellbeing_agent`: 0 tools (counselor mode)
   - `general_agent`: 0 tools (conversacional)
 
-> **Nota sobre `create_react_agent` deprecation:** Em LangGraph v1.0, `create_react_agent` do `langgraph.prebuilt` está em processo de migração para `create_agent` de `langchain.agents`. No momento da implementação, verificar via Context7 qual é a API estável recomendada. Se `create_agent` já estiver estável, usar essa. Caso contrário, `create_react_agent` continua funcional.
+> **Nota sobre `create_react_agent`:** Verificado via Context7 (Fev 2026): `create_react_agent` de `langgraph.prebuilt` é a API estável atual. Sem evidência de deprecation. Usar `create_react_agent` para agents sem WRITE tools (general, wellbeing). Para agents com WRITE tools (tracking, finance, memory), usar graph customizado com `ConfirmableToolNode` para suportar batch confirmation.
 
 **Testes:**
 - [ ] Teste: 20+ mensagens classificadas corretamente pelo triage (cobrindo todos os 5 agents)

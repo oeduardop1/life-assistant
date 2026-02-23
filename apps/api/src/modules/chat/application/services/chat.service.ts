@@ -521,7 +521,21 @@ export class ChatService {
       return;
     }
 
-    // Parse SSE stream from Python and emit to frontend
+    await this.parsePythonSSEStream(response, subject);
+  }
+
+  /**
+   * Parse an SSE stream from the Python AI service and emit events to a Subject.
+   * Shared by proxyToPython() and proxyConfirmToPython().
+   */
+  private async parsePythonSSEStream(
+    response: Response,
+    subject: Subject<MessageEvent>
+  ): Promise<void> {
+    if (!response.body) {
+      subject.complete();
+      return;
+    }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -543,7 +557,15 @@ export class ChatService {
 
             try {
               const data = JSON.parse(dataStr) as Record<string, unknown>;
-              subject.next({ data });
+              if (data.type && typeof data.type === 'string') {
+                // Typed event (tool_calls, tool_result, confirmation_required)
+                subject.next({
+                  type: data.type,
+                  data: (data.data ?? data) as Record<string, unknown>,
+                } as MessageEvent);
+              } else {
+                subject.next({ data } as MessageEvent);
+              }
             } catch {
               // Skip malformed JSON lines
               this.logger.warn(`Malformed SSE data: ${dataStr}`);
@@ -558,6 +580,71 @@ export class ChatService {
     }
 
     subject.complete();
+  }
+
+  /**
+   * Proxy a confirm/reject action to the Python AI service's /chat/resume endpoint.
+   */
+  private async proxyConfirmToPython(
+    conversationId: string,
+    action: 'confirm' | 'reject',
+    subject: Subject<MessageEvent>
+  ): Promise<void> {
+    const pythonUrl = this.appConfig.pythonAiUrl;
+    const serviceSecret = this.appConfig.serviceSecret;
+
+    this.logger.log(
+      `Proxying ${action} to Python AI: ${pythonUrl}/chat/resume for conversation ${conversationId}`
+    );
+
+    const response = await fetch(`${pythonUrl}/chat/resume`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${serviceSecret}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ thread_id: conversationId, action }),
+    });
+
+    if (!response.ok || !response.body) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      this.logger.error(`Python AI resume error (${String(response.status)}): ${errorText}`);
+      subject.next({
+        data: {
+          content: '',
+          done: true,
+          error: 'Erro ao conectar com o serviço de IA',
+        },
+      } as MessageEvent);
+      subject.complete();
+      return;
+    }
+
+    await this.parsePythonSSEStream(response, subject);
+  }
+
+  /**
+   * Proxy a reject action to the Python AI service (non-streaming response).
+   */
+  private async proxyRejectToPython(
+    conversationId: string
+  ): Promise<void> {
+    const pythonUrl = this.appConfig.pythonAiUrl;
+    const serviceSecret = this.appConfig.serviceSecret;
+
+    const response = await fetch(`${pythonUrl}/chat/resume`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${serviceSecret}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ thread_id: conversationId, action: 'reject' }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      this.logger.error(`Python AI reject error (${String(response.status)}): ${errorText}`);
+    }
   }
 
   /**
@@ -1143,6 +1230,24 @@ Analyze the user's message and determine their intent using the respond_to_confi
   ): Promise<Observable<MessageEvent>> {
     const subject = new Subject<MessageEvent>();
 
+    // Python AI uses LangGraph checkpoints for confirmation — proxy to /chat/resume
+    if (this.appConfig.usePythonAi) {
+      this.proxyConfirmToPython(conversationId, 'confirm', subject).catch(
+        (error: unknown) => {
+          this.logger.error('Python confirm proxy error:', error);
+          subject.next({
+            data: {
+              content: 'Erro ao executar a ação. Por favor, tente novamente.',
+              done: true,
+              error: 'execution_error',
+            },
+          } as MessageEvent);
+          subject.complete();
+        }
+      );
+      return subject.asObservable();
+    }
+
     // Get and remove confirmation from Redis
     const confirmation = await this.confirmationStateService.confirm(
       conversationId,
@@ -1190,6 +1295,15 @@ Analyze the user's message and determine their intent using the respond_to_confi
     confirmationId: string,
     reason?: string
   ): Promise<{ success: boolean; message: string }> {
+    // Python AI uses LangGraph checkpoints for confirmation — proxy to /chat/resume
+    if (this.appConfig.usePythonAi) {
+      await this.proxyRejectToPython(conversationId);
+      return {
+        success: true,
+        message: 'Tudo bem, não vou registrar essa informação.',
+      };
+    }
+
     const rejected = await this.confirmationStateService.reject(
       conversationId,
       confirmationId

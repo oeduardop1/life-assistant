@@ -54,8 +54,7 @@ async def save_response(state: AgentState, config: RunnableConfig) -> dict[str, 
             content = raw
         elif isinstance(raw, list):
             content = "".join(
-                block.get("text", "") if isinstance(block, dict) else str(block)
-                for block in raw
+                block.get("text", "") if isinstance(block, dict) else str(block) for block in raw
             )
         else:
             content = str(raw)
