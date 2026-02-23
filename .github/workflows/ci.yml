@@ -107,6 +107,17 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
 
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+
+      - name: Check SQLAlchemy schema drift
+        working-directory: services/ai
+        run: uv run python scripts/check_schema_drift.py
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+
       - name: Build project
         run: pnpm build
 

@@ -380,11 +380,11 @@ float(row.amount)  # fragile, easy to forget
 
 Python service **must** set user context before every database operation:
 ```python
-# Middleware executes this before each request
-await session.execute(text("SET LOCAL app.current_user_id = :uid"), {"uid": user_id})
+# Middleware executes this before each request — matches NestJS set_config('request.jwt.claim.sub', ...)
+await session.execute(text("SET LOCAL request.jwt.claim.sub = :uid"), {"uid": user_id})
 ```
 
-**This is not optional.** Sessions without `SET LOCAL` will return empty results due to RLS policies. Tests that skip this middleware must explicitly fail.
+**This is not optional.** RLS policies use `auth.uid()` which reads `request.jwt.claim.sub`. Sessions without `SET LOCAL` will return empty results due to RLS policies. Tests that skip this middleware must explicitly fail.
 
 ### LangGraph Checkpoint Tables
 

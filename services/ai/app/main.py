@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.api.middleware.auth import ServiceAuthMiddleware
 from app.api.routes.health import router as health_router
 from app.config import get_settings
+from app.db.engine import get_async_engine, get_session_factory
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +18,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     app.state.app_version = settings.APP_VERSION
 
-    # Database engine for health checks and future use
-    db_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
-    engine = create_async_engine(db_url, pool_pre_ping=True)
+    # Database engine + session factory
+    engine = get_async_engine(settings.DATABASE_URL)
     app.state.db_engine = engine
+    app.state.session_factory = get_session_factory(engine)
 
     # LangGraph checkpoint persistence (context manager manages psycopg connection)
     async with AsyncPostgresSaver.from_conn_string(settings.DATABASE_URL) as checkpointer:
