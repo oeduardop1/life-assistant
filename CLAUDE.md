@@ -6,14 +6,15 @@ This file provides guidance to Claude Code when working with this repository.
 
 Life Assistant AI is a SaaS platform with integrated AI that serves as a memory, counselor, personal assistant, and life tracker. See `docs/milestones/` for current progress.
 
-**Stack:** Next.js + NestJS + PostgreSQL (Supabase) + Drizzle + BullMQ + Redis
+**Stack:** Next.js + NestJS + FastAPI/Python (AI Service) + PostgreSQL (Supabase) + Drizzle + SQLAlchemy + BullMQ + Redis
 
 **Architecture:** Modular Monolith + Clean Architecture (presentation/application/domain/infrastructure)
 ```
 life-assistant/
 ├── apps/web/           # Next.js 16 frontend (React 19, Tailwind v4, shadcn/ui)
 ├── apps/api/           # NestJS 11 backend (Clean Architecture, BullMQ)
-├── packages/ai/        # LLM abstraction layer (Claude + Gemini adapters, tool definitions)
+├── services/ai/        # Python AI Service (FastAPI + LangGraph) — NOT in pnpm workspace
+├── packages/ai/        # [DEPRECATED — being migrated to services/ai/ in Phase 4]
 ├── packages/config/    # Zod-validated environment config (loadConfig, validateEnv)
 ├── packages/database/  # Drizzle ORM schemas, migrations, RLS policies
 ├── packages/shared/    # Shared enums, constants, date/currency utils
@@ -29,13 +30,17 @@ life-assistant/
 | Service | Purpose | Environment |
 |---------|---------|-------------|
 | **Vercel** | Frontend hosting (apps/web) | Production |
-| **Railway** | Backend hosting (apps/api) | Production |
+| **Railway** | Backend hosting (apps/api + services/ai) | Production |
 | **Supabase** | Database + Auth | Production |
 | **Sentry** | Error tracking | All environments |
 
 ## Commands
+
+### JS/TS (pnpm + Turborepo)
 ```bash
-pnpm dev              # Start all dev servers (web + api)
+pnpm dev              # Start all dev servers (web + api + python ai via concurrently)
+pnpm dev:js           # Start only JS/TS servers (web + api, without Python)
+pnpm dev:ai           # Start only Python AI service (uvicorn --reload)
 pnpm build            # Production build
 pnpm typecheck        # TypeScript check
 pnpm lint             # ESLint
@@ -43,25 +48,40 @@ pnpm test             # Unit tests
 pnpm test:e2e         # E2E tests (Playwright)
 pnpm format           # Prettier format all files
 pnpm format:check     # Check formatting without writing
-pnpm infra:up         # Start Docker (Redis, MinIO) + Supabase + migrations + seed
+pnpm infra:up         # Start Docker (Redis, MinIO) + Supabase + Python env + migrations + seed
 pnpm infra:down       # Stop all local infrastructure
 pnpm clean            # Remove dist/ and node_modules/
 ```
 
 Package-specific: `pnpm --filter @life-assistant/<pkg> <script>` (e.g. `pnpm --filter @life-assistant/database db:migrate`)
 
+### Python AI Service (uv — run from `services/ai/`)
+```bash
+uv sync               # Install all deps from uv.lock into .venv (≈ pnpm install)
+uv add <package>      # Add runtime dependency (≈ pnpm add)
+uv add --dev <pkg>    # Add dev dependency (≈ pnpm add -D)
+uv run <command>      # Run command in .venv (≈ pnpm exec). Auto-syncs before running
+uv run pytest         # Run tests
+uv run ruff check .   # Lint
+uv run ruff format .  # Format
+uv run mypy app/      # Type check
+uv lock               # Resolve deps and update uv.lock (≈ resolution step of pnpm install)
+```
+
+> **`services/ai/` is NOT in pnpm workspace nor Turborepo.** Python is managed 100% with native tools (uv, ruff, mypy, pytest). `pnpm dev` uses `concurrently` to start Turbo + uvicorn in parallel.
+
 ## Getting Started
 ```bash
-pnpm install                   # Install all dependencies
+pnpm install                   # Install all JS/TS dependencies
 cp .env.example .env           # Create env file (fill in API keys)
-pnpm infra:up                  # Start Redis, MinIO, Supabase, run migrations + seed
-pnpm dev                       # Start web (localhost:3000) + api (localhost:4000)
+pnpm infra:up                  # Start Docker, Supabase, Python env (uv sync), migrations + seed
+pnpm dev                       # Start web (:3000) + api (:4000) + python ai (:8000)
 ```
 
 First run downloads Docker images (~5 min). Subsequent starts take ~30s.
 Useful flags: `--seed` (force re-seed), `--clean` (reset containers). Teardown: `pnpm infra:down` or `pnpm infra:down --reset` (delete all data).
 
-**Requires:** Node >=24, pnpm >=10, Docker, Supabase CLI.
+**Requires:** Node >=24, pnpm >=10, Python >=3.12, uv, Docker, Supabase CLI.
 
 ## Environment
 
@@ -73,10 +93,12 @@ Copy `.env.example` to `.env` and fill in required values.
 | Database | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET` | Auto-filled by `supabase start` |
 | Redis | `REDIS_URL` | Default: redis://localhost:6379 |
 | AI/LLM | `LLM_PROVIDER`, `GEMINI_API_KEY`, `LLM_MODEL` | Default provider: gemini |
+| Python AI | `PYTHON_AI_URL`, `SERVICE_SECRET`, `USE_PYTHON_AI` | Default: http://localhost:8000, feature flag |
 | Storage | `R2_*` or MinIO vars | Local: MinIO on port 9000 |
 | Observability | `SENTRY_DSN`, `AXIOM_*` | Optional in dev |
 
 Frontend vars (`NEXT_PUBLIC_*`) go in `apps/web/.env.local` — Next.js does not load the root `.env`.
+Python AI vars are loaded by `pydantic-settings` from the root `.env` — Python service reads the same file.
 
 ## Documentation Reference
 
@@ -185,7 +207,9 @@ After Step 1 is complete:
 
 After Steps 1-2 are complete:
 1. Create or refine implementation plan
-2. For each dependency: run `pnpm info <package> version` to get latest version
+2. For each dependency:
+   - JS/TS: run `pnpm info <package> version` to get latest version
+   - Python: check PyPI (`https://pypi.org/project/<package>/`) for latest version
 3. Include versions in the plan
 4. Present plan for user approval
 
@@ -195,13 +219,18 @@ After Steps 1-2 are complete:
 
 - Follow patterns from `docs/specs/core/architecture.md`
 - Cite source when stating rules: "Per `docs/specs/domains/finance.md` §3..."
-- Prefer CLI scaffolding over manual file creation
+- **CLI-first:** Always prefer CLI scaffolding over manual file creation:
+  - JS/TS: `nest g`, `pnpm add`, Turborepo generators
+  - Python: `uv init`, `uv add`, `uv add --dev`
+  - Never manually write `pyproject.toml` deps — use `uv add`
+  - Never manually write `package.json` deps — use `pnpm add`
 
 ### Step 5: Test & Fix
 
-1. Run `pnpm typecheck && pnpm lint && pnpm test`
-2. Run `pnpm test:e2e` if UI changes
-3. **If any test fails:**
+1. JS/TS: Run `pnpm typecheck && pnpm lint && pnpm test`
+2. Python: Run `cd services/ai && uv run ruff check . && uv run mypy app/ && uv run pytest`
+3. Run `pnpm test:e2e` if UI changes
+4. **If any test fails:**
    - Query Context7 for the failing library/framework
    - Fix based on Context7 documentation
    - Run tests again
@@ -223,6 +252,7 @@ Identify the correct phase file based on milestone number:
 - M1.x → `phase-1-counselor.md`
 - M2.x → `phase-2-tracker.md`
 - M3.x → `phase-3-assistant.md`
+- M4.x → `phase-4-ai-migration.md`
 
 Then:
 1. Mark tasks: `- [ ]` → `- [x]`
@@ -281,6 +311,8 @@ ALWAYS follow these steps for ANY schema change (new table, modify existing, add
 3. **Generate migration**: `pnpm --filter database db:generate`
 4. **Review** the generated SQL in `packages/database/src/migrations/`
 5. **Apply**: `pnpm --filter database db:migrate`
+6. **Update SQLAlchemy model** in `services/ai/app/db/models/` to match (if table is used by Python)
+7. **CI check** detects drift automatically (compares SQLAlchemy models with DB `information_schema`)
 
 ### Commands
 
@@ -313,7 +345,9 @@ packages/database/src/schema/
 
 ### Decimal/Money Fields
 
-PostgreSQL `DECIMAL` columns are returned as **strings** by Drizzle. Always use `parseFloat()` when doing arithmetic:
+PostgreSQL `DECIMAL` columns behave differently in each ORM:
+
+**Drizzle (NestJS):** Returns as **strings**. Always use `parseFloat()`:
 ```typescript
 // WRONG: string concatenation
 const total = acc + row.amount; // "0" + "100" = "0100"
@@ -322,10 +356,115 @@ const total = acc + row.amount; // "0" + "100" = "0100"
 const total = acc + parseFloat(row.amount); // 0 + 100 = 100
 ```
 
+**SQLAlchemy (Python):** Returns as `Decimal` by default. Use `asdecimal=False` in model definition:
+```python
+# CORRECT: configure at model level
+amount = mapped_column(Numeric(precision=10, scale=2, asdecimal=False))  # returns float
+
+# WRONG: manual conversion everywhere
+float(row.amount)  # fragile, easy to forget
+```
+
+### SQLAlchemy (Python AI Service)
+
+**CRITICAL: SQLAlchemy is a PASSIVE mapping. Drizzle remains the single source of truth for schema.**
+
+- **Models**: `services/ai/app/db/models/*.py` — mirror Drizzle schemas, never generate migrations
+- **Engine**: `create_async_engine` + `async_sessionmaker` with `expire_on_commit=False`
+- **Driver**: `asyncpg` (`postgresql+asyncpg://...`)
+- **Enums**: Python `StrEnum` classes mirroring PostgreSQL `CREATE TYPE`
+
+**NEVER** create migrations from SQLAlchemy. **NEVER** use `alembic` or `metadata.create_all()`.
+
+### RLS in Python (Mandatory)
+
+Python service **must** set user context before every database operation:
+```python
+# Middleware executes this before each request
+await session.execute(text("SET LOCAL app.current_user_id = :uid"), {"uid": user_id})
+```
+
+**This is not optional.** Sessions without `SET LOCAL` will return empty results due to RLS policies. Tests that skip this middleware must explicitly fail.
+
+### LangGraph Checkpoint Tables
+
+LangGraph creates its own tables (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`) via `AsyncPostgresSaver.setup()`.
+
+- **NEVER** create Drizzle schemas for these tables
+- **NEVER** create SQLAlchemy models for these tables
+- **NEVER** include them in migration scripts
+- Call `.setup()` in FastAPI lifespan (startup) — tables are NOT created automatically
+
+### BullMQ + Workers Pattern
+
+BullMQ is Node.js-only in production use. The Python AI service does NOT consume BullMQ queues.
+
+**Worker pattern:** NestJS BullMQ scheduler → HTTP POST → Python endpoint → result
+```
+BullMQ cron (NestJS) → POST /workers/consolidation → Python executes AI logic → returns JSON
+```
+
+The Python service exposes HTTP endpoints for worker jobs. NestJS handles scheduling, retry, and job history via BullMQ. Python handles the AI/LLM execution logic.
+
+## Python Development
+
+### CLI-First Principle
+
+**ALWAYS use CLI tools instead of manually creating/editing config files:**
+
+| Action | Command | Manual equivalent (NEVER do this) |
+|--------|---------|----------------------------------|
+| Init project | `uv init --app --python 3.12` | Manually write pyproject.toml |
+| Add dependency | `uv add fastapi` | Edit pyproject.toml by hand |
+| Add dev dep | `uv add --dev pytest` | Edit [dependency-groups] by hand |
+| Remove dep | `uv remove <pkg>` | Delete from pyproject.toml by hand |
+| Install from lock | `uv sync` | — |
+| Run command | `uv run pytest` | Activate venv + run manually |
+
+### Project Isolation
+
+- All Python deps live in `services/ai/.venv/` — nothing installed globally
+- `uv run` auto-syncs before running (ensures deps are up-to-date)
+- `.venv/` is gitignored. `uv.lock` is committed (like pnpm-lock.yaml)
+- `services/ai/` does NOT appear in `pnpm-workspace.yaml` nor `pnpm-lock.yaml`
+
+### Key Libraries
+
+| Library | Purpose | Notes |
+|---------|---------|-------|
+| `fastapi` | HTTP framework | SSE via `sse-starlette` (no built-in SSE class) |
+| `uvicorn[standard]` | ASGI server | `--reload` for dev, standalone for prod |
+| `langgraph` | AI agent orchestration | `create_react_agent()`, `StateGraph`, `interrupt()` |
+| `langgraph-checkpoint-postgres` | Checkpoint persistence | `AsyncPostgresSaver` — separate package from `langgraph` |
+| `langchain-google-genai` | Gemini LLM adapter | `ChatGoogleGenerativeAI` class |
+| `langchain-anthropic` | Claude LLM adapter | `ChatAnthropic` class |
+| `sqlalchemy[asyncio]` + `asyncpg` | Database (passive ORM) | Drizzle is source of truth for schema |
+| `pydantic` + `pydantic-settings` | Validation + env config | `BaseSettings` loads from `.env` |
+| `sse-starlette` | Server-Sent Events | Required — FastAPI has no built-in SSE |
+| `ruff` | Linter + formatter (dev) | Replaces flake8 + black + isort |
+| `mypy` | Type checker (dev) | Strict mode |
+| `pytest` + `pytest-asyncio` | Testing (dev) | Async test support |
+| `httpx` | Test HTTP client (dev) | FastAPI `TestClient` alternative for async |
+
+### LangChain/LangGraph Patterns
+
+- **Retry**: Built-in `max_retries` on LLM constructors + `.with_retry()` on Runnables. No custom retry code needed
+- **Rate limiting**: `InMemoryRateLimiter` from `langchain_core.rate_limiters` (single-process). For multi-worker prod, consider Redis-based limiter
+- **Tool schemas**: `bind_tools()` auto-converts Pydantic models to provider format. No custom schema converters needed
+- **Confirmation flow**: `interrupt()` + `Command(resume=)` from `langgraph.types`. Checkpoints persisted in PostgreSQL (no Redis TTL)
+
 ## Coding Style
 
+### TypeScript (NestJS, packages/*)
 - TypeScript strict mode + Zod validation (no `any` without justification)
 - Domain names from `docs/specs/core/data-conventions.md`
 - Business rules in `application/` layer only
 - Portuguese in user-facing content, English in code
+
+### Python (services/ai/)
+- Type hints on all functions (enforced by mypy strict)
+- Pydantic models for all data validation (no raw dicts)
+- `ruff` for linting and formatting (configured in pyproject.toml)
+- Async-first: use `async def` for all I/O operations
+- Portuguese in user-facing content (AI responses, tool messages), English in code
 
