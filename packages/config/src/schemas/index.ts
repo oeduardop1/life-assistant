@@ -10,6 +10,7 @@ import { aiSchema, type AiEnv } from './ai';
 import { storageSchema, type StorageEnv } from './storage';
 import { integrationsSchema, type IntegrationsEnv } from './integrations';
 import { observabilitySchema, type ObservabilityEnv } from './observability';
+import { pythonAiSchema, type PythonAiEnv } from './python-ai';
 
 /**
  * Schema combinado de todas as variáveis de ambiente
@@ -21,6 +22,7 @@ export const envSchema = appSchema
   .extend(storageSchema.shape)
   .extend(integrationsSchema.shape)
   .extend(observabilitySchema.shape)
+  .extend(pythonAiSchema.shape)
   .and(aiSchema);
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -34,6 +36,7 @@ export {
   storageSchema,
   integrationsSchema,
   observabilitySchema,
+  pythonAiSchema,
 };
 
 // Re-export tipos
@@ -45,4 +48,5 @@ export type {
   StorageEnv,
   IntegrationsEnv,
   ObservabilityEnv,
+  PythonAiEnv,
 };

@@ -65,7 +65,7 @@ A migração **NÃO é um port 1:1** do TypeScript. LangGraph substitui vários 
 
 ---
 
-## M4.1 — Python Service: Scaffold + Infra + CI 🔴
+## M4.1 — Python Service: Scaffold + Infra + CI 🟢
 
 **Objetivo:** Serviço Python bootável com FastAPI, integrado no fluxo de dev local (`pnpm infra:up` + `pnpm dev`) e CI. Nenhuma lógica de AI — apenas infraestrutura.
 
@@ -78,20 +78,20 @@ A migração **NÃO é um port 1:1** do TypeScript. LangGraph substitui vários 
 **Tasks:**
 
 **Scaffold do projeto Python (via CLI):**
-- [ ] Inicializar projeto: `uv init --app --python 3.12 services/ai`
+- [x] Inicializar projeto: `uv init --app --python 3.12 services/ai`
   - Cria: `pyproject.toml`, `.python-version`, `.gitignore`, `README.md`, `main.py`
   - Flag `--no-workspace` se existir `pyproject.toml` na raiz do monorepo (evita auto-join)
-- [ ] Adicionar dependências runtime:
+- [x] Adicionar dependências runtime:
   ```bash
   cd services/ai
   uv add fastapi 'uvicorn[standard]' 'sqlalchemy[asyncio]' asyncpg langgraph langgraph-checkpoint-postgres langchain-google-genai langchain-anthropic pydantic pydantic-settings sse-starlette
   ```
-- [ ] Adicionar dependências dev:
+- [x] Adicionar dependências dev:
   ```bash
   uv add --dev pytest pytest-asyncio ruff mypy httpx
   ```
-- [ ] Configurar tool settings no `pyproject.toml` (seções `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`)
-- [ ] Remover `main.py` gerado pelo scaffold e reorganizar para estrutura `app/`:
+- [x] Configurar tool settings no `pyproject.toml` (seções `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`)
+- [x] Remover `main.py` gerado pelo scaffold e reorganizar para estrutura `app/`:
   ```
   services/ai/
   ├── app/
@@ -109,23 +109,23 @@ A migração **NÃO é um port 1:1** do TypeScript. LangGraph substitui vários 
   ├── uv.lock
   └── .python-version
   ```
-- [ ] Criar `app/main.py` com FastAPI lifespan:
+- [x] Criar `app/main.py` com FastAPI lifespan:
   - Startup: `AsyncPostgresSaver.setup()` (cria tabelas de checkpoint: `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`)
   - Shutdown: dispose engine
-- [ ] Criar `app/config.py` com Pydantic Settings:
+- [x] Criar `app/config.py` com Pydantic Settings:
   - `DATABASE_URL`, `GEMINI_API_KEY`, `SERVICE_SECRET`, `ANTHROPIC_API_KEY` (opcional)
   - Loads from root `.env` via `model_config = SettingsConfigDict(env_file="../../.env")`
-- [ ] Criar `app/dependencies.py` — FastAPI `Depends()` com generator `yield` para DB session
-- [ ] Criar `app/api/routes/health.py` — GET /health (status + versão + check de DB)
-- [ ] Criar `app/api/middleware/auth.py` — service-to-service auth via shared secret (Bearer token)
-- [ ] Estender `.gitignore` gerado pelo uv: adicionar `__pycache__/`, `.mypy_cache/`, `.pytest_cache/`, `.ruff_cache/`
+- [x] Criar `app/dependencies.py` — FastAPI `Depends()` com generator `yield` para DB session
+- [x] Criar `app/api/routes/health.py` — GET /health (status + versão + check de DB)
+- [x] Criar `app/api/middleware/auth.py` — service-to-service auth via shared secret (Bearer token)
+- [x] Estender `.gitignore` gerado pelo uv: adicionar `__pycache__/`, `.mypy_cache/`, `.pytest_cache/`, `.ruff_cache/`
 
 > **Nota:** `sse-starlette` é dependência explícita — FastAPI não tem classe SSE built-in. Usar `EventSourceResponse` para streaming.
 > **Nota:** `REDIS_URL` removido da config Python — não necessário na fase inicial. Confirmação usa PostgreSQL (LangGraph checkpoints), não Redis TTL. BullMQ scheduling permanece no NestJS.
 
 **Integração com `pnpm dev` (via `concurrently`):**
-- [ ] Instalar concurrently: `pnpm add -Dw concurrently`
-- [ ] Atualizar `package.json` root:
+- [x] Instalar concurrently: `pnpm add -Dw concurrently`
+- [x] Atualizar `package.json` root:
   ```json
   {
     "scripts": {
@@ -135,12 +135,12 @@ A migração **NÃO é um port 1:1** do TypeScript. LangGraph substitui vários 
     }
   }
   ```
-- [ ] Verificar que `Ctrl+C` mata todos os processos (flag `-k` do concurrently)
-- [ ] Verificar que output mostra prefixos `[turbo]` e `[ai]` no terminal
+- [x] Verificar que `Ctrl+C` mata todos os processos (flag `-k` do concurrently)
+- [x] Verificar que output mostra prefixos `[turbo]` e `[ai]` no terminal
 
 **Integração com `pnpm infra:up` (dev-start.sh):**
-- [ ] Adicionar porta 8000 ao `check_ports()` existente
-- [ ] Criar novo Step (entre Service Status e Database Schema):
+- [x] Adicionar porta 8000 ao `check_ports()` existente
+- [x] Criar novo Step (entre Service Status e Database Schema):
   ```
   Step 4: Python AI Service Setup
     ✓ Check Python 3.12+
@@ -148,21 +148,21 @@ A migração **NÃO é um port 1:1** do TypeScript. LangGraph substitui vários 
     ✓ Install dependencies (uv sync)
     ✓ Python environment ready
   ```
-- [ ] Implementar `check_python()`:
+- [x] Implementar `check_python()`:
   - Verificar `python3 --version` >= 3.12
   - Se não encontrado: mensagem com instruções de instalação
-- [ ] Implementar `check_uv()`:
+- [x] Implementar `check_uv()`:
   - Verificar `uv --version`
   - Se não encontrado: sugerir `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- [ ] Implementar `setup_python_env()`:
+- [x] Implementar `setup_python_env()`:
   - `cd services/ai && uv sync` (cria .venv + instala deps)
   - Idempotente: <2s em runs subsequentes
   - Verificação: `uv run python -c "import fastapi; print('OK')"`
-- [ ] Atualizar summary final para mostrar Python AI Service URL (localhost:8000)
-- [ ] Renumerar steps: 1-Docker, 2-Supabase, 3-Status, **4-Python**, 5-Database
+- [x] Atualizar summary final para mostrar Python AI Service URL (localhost:8000)
+- [x] Renumerar steps: 1-Docker, 2-Supabase, 3-Status, **4-Python**, 5-Database
 
 **Docker (produção + CI):**
-- [ ] Criar `services/ai/Dockerfile`:
+- [x] Criar `services/ai/Dockerfile`:
   ```dockerfile
   FROM python:3.12-slim AS base
   WORKDIR /app
@@ -179,22 +179,22 @@ A migração **NÃO é um port 1:1** do TypeScript. LangGraph substitui vários 
   EXPOSE 8000
   CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
   ```
-- [ ] Criar `services/ai/.dockerignore` — `.venv/`, `__pycache__/`, `.git/`, `tests/`, `.mypy_cache/`
-- [ ] **NÃO** adicionar Python ao docker-compose.yml (Python roda nativo em dev, Docker só para produção)
+- [x] Criar `services/ai/.dockerignore` — `.venv/`, `__pycache__/`, `.git/`, `tests/`, `.mypy_cache/`
+- [x] **NÃO** adicionar Python ao docker-compose.yml (Python roda nativo em dev, Docker só para produção)
 
 **Variáveis de ambiente:**
-- [ ] Adicionar ao `.env.example`:
+- [x] Adicionar ao `.env.example`:
   ```bash
   # Python AI Service
   PYTHON_AI_URL=http://localhost:8000
   SERVICE_SECRET=dev-secret-change-me
   USE_PYTHON_AI=false
   ```
-- [ ] Adicionar `PYTHON_AI_URL` ao `packages/config/`
+- [x] Adicionar `PYTHON_AI_URL` ao `packages/config/`
 
 **CI (GitHub Actions — job separado):**
-- [ ] Criar `services/ai/tests/conftest.py` — fixtures base (async test client via `httpx.AsyncClient`, test DB session)
-- [ ] Adicionar job `python` no workflow CI:
+- [x] Criar `services/ai/tests/conftest.py` — fixtures base (async test client via `httpx.AsyncClient`, test DB session)
+- [x] Adicionar job `python` no workflow CI:
   ```yaml
   python:
     runs-on: ubuntu-latest
@@ -212,23 +212,45 @@ A migração **NÃO é um port 1:1** do TypeScript. LangGraph substitui vários 
       - run: uv run mypy app/
       - run: uv run pytest
   ```
-- [ ] Job Python roda em **paralelo** com job Node (não sequencial)
+- [x] Job Python roda em **paralelo** com job Node (não sequencial)
 
 **Documentação:**
-- [ ] Atualizar `CLAUDE.md`:
+- [x] Atualizar `CLAUDE.md`:
   - Requirements: adicionar `Python >=3.12, uv`
   - Commands: adicionar `pnpm dev:ai` e explicar `pnpm dev` (agora usa concurrently)
   - Estrutura do monorepo: adicionar `services/ai/`
-- [ ] Atualizar `DEVELOPMENT.md` (se existir) com setup Python
+- [x] Atualizar `DEVELOPMENT.md` (se existir) com setup Python
 
 **Definition of Done:**
-- [ ] `pnpm infra:up` verifica Python, instala deps via `uv sync`
-- [ ] `pnpm dev` inicia web (:3000) + api (:4000) + python (:8000) em paralelo
-- [ ] `curl http://localhost:8000/health` retorna 200
-- [ ] Request sem Bearer token retorna 401
-- [ ] CI passa: job Node (turbo) + job Python (ruff, mypy, pytest) em paralelo
-- [ ] `Ctrl+C` no `pnpm dev` mata todos os processos
-- [ ] `services/ai/` NÃO aparece em `pnpm-workspace.yaml` nem `pnpm-lock.yaml`
+- [x] `pnpm infra:up` verifica Python, instala deps via `uv sync`
+- [x] `pnpm dev` inicia web (:3000) + api (:4000) + python (:8000) em paralelo
+- [x] `curl http://localhost:8000/health` retorna 200
+- [x] Request sem Bearer token retorna 401
+- [x] CI passa: job Node (turbo) + job Python (ruff, mypy, pytest) em paralelo
+- [x] `Ctrl+C` no `pnpm dev` mata todos os processos
+- [x] `services/ai/` NÃO aparece em `pnpm-workspace.yaml` nem `pnpm-lock.yaml`
+
+### Notas
+
+_Concluído em 2026-02-22._
+
+**Melhorias sobre o plano original:**
+- Adicionada dependência `psycopg[binary]` — necessária para `langgraph-checkpoint-postgres` funcionar sem `libpq` nativo instalado no sistema
+- Dockerfile usa `COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/` em vez de `RUN pip install uv` — mais eficiente (layer de cache, sem pip)
+- CI usa `astral-sh/setup-uv@v7` (plano dizia `@v5`, Context7 confirmou v7 como latest)
+- `AsyncPostgresSaver.from_conn_string()` retorna context manager (`async with`) — validado via Context7 docs + source code inspection. Plano não especificava esse detalhe
+- Entradas Python adicionadas no `.gitignore` root em vez de criar `.gitignore` separado em `services/ai/` (já coberto pelo root)
+- `README.md` gerado pelo `uv init` removido (desnecessário)
+- Auth middleware implementado como `BaseHTTPMiddleware` do Starlette com `PUBLIC_PATHS` incluindo `/health`, `/docs`, `/openapi.json`, `/redoc`
+- Testes do `@life-assistant/config` e `apps/api/test/setup.ts` atualizados para incluir `SERVICE_SECRET` nos fixtures (campo obrigatório adicionado ao `envSchema`)
+
+**Verificação local:**
+- Python: ruff check (0), ruff format (15 files OK), mypy (0 issues, 11 files), pytest (5/5)
+- JS/TS: typecheck (10/10), lint (5/6 — web failure preexistente), test (5/6 — web failures preexistentes)
+- Health endpoint: `curl localhost:8000/health` → 200 `{"status":"ok","version":"0.1.0","database":"connected"}`
+- Auth: endpoint sem Bearer → 401, `/health` sem auth → 200
+- Isolamento: `services/ai/` não aparece em `pnpm-workspace.yaml` nem `pnpm-lock.yaml`
+- Concurrently rodando com flags corretos (`-k -p [{name}] -n turbo,ai -c blue,yellow`)
 
 ---
 

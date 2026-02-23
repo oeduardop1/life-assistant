@@ -360,6 +360,8 @@ describe('envSchema (combined)', () => {
     R2_ACCOUNT_ID: 'account',
     R2_ACCESS_KEY_ID: 'access',
     R2_SECRET_ACCESS_KEY: 'secret',
+    // Python AI
+    SERVICE_SECRET: 'test-secret',
   };
 
   it('should validate complete valid environment', () => {

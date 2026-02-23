@@ -36,6 +36,14 @@ playwright-report
 test-results
 **/e2e/.auth/
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
 # Cache
 .cache
 .eslintcache

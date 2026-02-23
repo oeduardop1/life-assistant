@@ -10,7 +10,9 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "concurrently -k -p [{name}] -n turbo,ai -c blue,yellow \"turbo run dev\" \"cd services/ai && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\"",
+    "dev:js": "turbo run dev",
+    "dev:ai": "cd services/ai && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
+    "concurrently": "^9.2.1",
     "eslint": "9.39.2",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.7.4",

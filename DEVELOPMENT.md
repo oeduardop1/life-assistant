@@ -36,12 +36,50 @@ pnpm dev
 
 > O `infra:up` ja aplica as migrations do banco. O seed e executado automaticamente apenas na primeira vez (banco vazio). Use `--seed` para forcar o seed em bancos existentes.
 
+## Python AI Service
+
+O servico de IA Python (`services/ai/`) roda separado do monorepo JS/TS. Requer **Python >= 3.12** e **uv**.
+
+### Setup
+
+```bash
+# uv sync e executado automaticamente pelo infra:up
+# Para setup manual:
+cd services/ai
+uv sync               # Instala deps do uv.lock
+```
+
+### Executar
+
+```bash
+pnpm dev               # Inicia web + api + python ai (via concurrently)
+pnpm dev:js            # Apenas JS/TS (web + api)
+pnpm dev:ai            # Apenas Python AI (uvicorn --reload na porta 8000)
+```
+
+### Testes e Qualidade
+
+```bash
+cd services/ai
+uv run ruff check .        # Lint
+uv run ruff format --check .  # Format check
+uv run mypy app/           # Type check
+uv run pytest              # Testes
+```
+
+### Notas
+
+- `services/ai/` **NAO** esta no `pnpm-workspace.yaml` nem no Turborepo
+- Deps Python sao gerenciadas 100% com `uv` (nunca editar pyproject.toml manualmente)
+- `.venv/` e local e gitignored; `uv.lock` e commitado
+- `pnpm dev` usa `concurrently` para rodar Turbo + uvicorn em paralelo
+
 ## Fluxo de Desenvolvimento Diario
 
 ```bash
 # Comecar o dia
-pnpm infra:up     # Inicia Redis, MinIO, PostgreSQL, Auth, Studio (~60s)
-pnpm dev          # Inicia API (4000) + Web (3000)
+pnpm infra:up     # Inicia Redis, MinIO, PostgreSQL, Auth, Studio + Python env (~60s)
+pnpm dev          # Inicia API (4000) + Web (3000) + Python AI (8000)
 
 # Veja "Portas e Servicos" abaixo para URLs de acesso
 
@@ -151,10 +189,12 @@ life-assistant/
 │   ├── web/                 # Next.js Frontend
 │   └── api/                 # NestJS Backend
 ├── packages/
-│   ├── ai/                  # Abstracao de LLM (Anthropic, Google)
+│   ├── ai/                  # [DEPRECATED] Abstracao de LLM (migrando para services/ai/)
 │   ├── config/              # Configuracoes e validacao ENV
 │   ├── database/            # Schema Drizzle + migrations (single source of truth)
 │   └── shared/              # Tipos e utilitarios compartilhados
+├── services/
+│   └── ai/                  # Python AI Service (FastAPI + LangGraph)
 ├── supabase/                # Configuracao Supabase (config.toml, seeds)
 ├── scripts/                 # Scripts de automacao
 ├── docs/
@@ -179,6 +219,7 @@ life-assistant/
 | **MinIO** | 9000/9001 | Storage S3-compatible |
 | **Web (Next.js)** | 3000 | Frontend (quando rodando) |
 | **API (NestJS)** | 4000 | Backend (quando rodando) |
+| **AI Service (Python)** | 8000 | Servico de IA (quando rodando) |
 
 ### Observabilidade
 

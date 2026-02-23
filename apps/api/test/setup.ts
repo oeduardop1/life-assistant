@@ -32,5 +32,8 @@ process.env.R2_ACCESS_KEY_ID = 'test-access-key';
 process.env.R2_SECRET_ACCESS_KEY = 'test-secret-key';
 process.env.R2_BUCKET_NAME = 'test-bucket';
 
+// Python AI
+process.env.SERVICE_SECRET = 'test-service-secret';
+
 // Observability
 process.env.LOG_LEVEL = 'error'; // Reduce noise in tests

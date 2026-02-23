@@ -369,7 +369,7 @@ check_ports() {
     print_info "Checking port availability..."
 
     local ports_in_use=()
-    local check_ports=($SUPABASE_API_PORT $SUPABASE_DB_PORT $SUPABASE_STUDIO_PORT 6379 9000)
+    local check_ports=($SUPABASE_API_PORT $SUPABASE_DB_PORT $SUPABASE_STUDIO_PORT 6379 9000 8000)
 
     # Detect available port checking tool
     local port_checker=""
@@ -436,6 +436,74 @@ ensure_supabase_cli() {
         SUPABASE_BIN="npx -y supabase"
     fi
     print_verbose "Supabase binary: $SUPABASE_BIN"
+}
+
+check_python() {
+    print_info "Checking Python..."
+
+    if ! command -v python3 &> /dev/null; then
+        print_error "Python 3 is not installed"
+        print_debug "Install Python 3.12+: https://www.python.org/downloads/"
+        exit 1
+    fi
+
+    local py_version
+    py_version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "0.0")
+
+    local major minor
+    major=$(echo "$py_version" | cut -d. -f1)
+    minor=$(echo "$py_version" | cut -d. -f2)
+
+    if [[ "$major" -lt 3 ]] || { [[ "$major" -eq 3 ]] && [[ "$minor" -lt 12 ]]; }; then
+        print_error "Python >= 3.12 required (found $py_version)"
+        exit 1
+    fi
+
+    print_success "Python $py_version found"
+}
+
+check_uv() {
+    print_info "Checking uv..."
+
+    if ! command -v uv &> /dev/null; then
+        print_error "uv is not installed"
+        print_debug "Install: curl -LsSf https://astral.sh/uv/install.sh | sh"
+        exit 1
+    fi
+
+    local uv_version
+    uv_version=$(uv --version 2>/dev/null | head -1)
+    print_success "uv ready ($uv_version)"
+}
+
+setup_python_env() {
+    start_step 4 5 "Python AI Service"
+
+    local ai_dir="$PROJECT_ROOT/services/ai"
+
+    if [[ ! -f "$ai_dir/pyproject.toml" ]]; then
+        print_warning "Python AI service not found at $ai_dir — skipping"
+        end_step
+        return 0
+    fi
+
+    print_debug "Running uv sync in services/ai/"
+    local sync_exit=0
+    (cd "$ai_dir" && uv sync 2>&1) || sync_exit=$?
+
+    if [[ $sync_exit -ne 0 ]]; then
+        print_error "Failed to sync Python dependencies (exit code: $sync_exit)"
+        return 1
+    fi
+
+    # Verify the environment works
+    if (cd "$ai_dir" && uv run python -c "import fastapi; print('OK')" &>/dev/null); then
+        print_success "Python AI service environment ready"
+    else
+        print_warning "Python environment created but FastAPI import check failed"
+    fi
+
+    end_step
 }
 
 # =============================================================================
@@ -664,7 +732,7 @@ detect_supabase_timeout() {
 # =============================================================================
 
 start_docker_services() {
-    start_step 1 4 "Docker Services (Redis + MinIO)"
+    start_step 1 5 "Docker Services (Redis + MinIO)"
 
     print_info "Starting containers..."
     print_debug "Command: docker compose up -d"
@@ -701,7 +769,7 @@ start_docker_services() {
 }
 
 start_supabase() {
-    start_step 2 4 "Supabase (PostgreSQL + Auth + Studio)"
+    start_step 2 5 "Supabase (PostgreSQL + Auth + Studio)"
 
     # Adjust timeout if images need downloading
     detect_supabase_timeout
@@ -797,7 +865,7 @@ show_supabase_troubleshooting() {
 }
 
 show_supabase_status() {
-    start_step 3 4 "Service Status"
+    start_step 3 5 "Service Status"
 
     print_info "Fetching Supabase status..."
 
@@ -822,7 +890,7 @@ show_supabase_status() {
 }
 
 apply_database_schema() {
-    start_step 4 4 "Database Schema"
+    start_step 5 5 "Database Schema"
 
     if [[ "$SKIP_MIGRATIONS" == "true" ]]; then
         print_warning "Skipping migrations (--skip-migrations flag)"
@@ -986,6 +1054,9 @@ show_summary() {
     echo -e "    Studio:       ${BLUE}localhost:${SUPABASE_STUDIO_PORT}${NC}"
     echo -e "    Inbucket:     ${BLUE}localhost:54324${NC} (dev emails)"
     echo ""
+    echo -e "  ${GREEN}Python AI Service:${NC}"
+    echo -e "    AI Service:   ${BLUE}localhost:8000${NC} (starts with pnpm dev)"
+    echo ""
 
     # Show Docker disk usage
     echo -e "  ${GREEN}Docker Disk Usage:${NC}"
@@ -1034,6 +1105,8 @@ main() {
     check_docker_compose_file
     check_supabase_config
     ensure_supabase_cli
+    check_python
+    check_uv
     check_ports
 
     # Clean mode: stop everything first
@@ -1064,6 +1137,9 @@ main() {
     # Cleanup old images and build cache
     cleanup_old_supabase_images
     cleanup_build_cache
+
+    # Setup Python AI service
+    setup_python_env
 
     apply_database_schema
 
