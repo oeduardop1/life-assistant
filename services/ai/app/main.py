@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
+from app.agents.graph import build_chat_graph
 from app.api.middleware.auth import ServiceAuthMiddleware
+from app.api.routes.chat import router as chat_router
 from app.api.routes.health import router as health_router
 from app.config import get_settings
 from app.db.engine import get_async_engine, get_session_factory
@@ -27,6 +29,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with AsyncPostgresSaver.from_conn_string(settings.DATABASE_URL) as checkpointer:
         await checkpointer.setup()
         app.state.checkpointer = checkpointer
+
+        # Build and store the LangGraph chat graph
+        app.state.graph = build_chat_graph(checkpointer)
 
         logger.info("AI service started (version=%s)", settings.APP_VERSION)
 
@@ -51,6 +56,7 @@ def create_app() -> FastAPI:
 
     # Routes
     app.include_router(health_router)
+    app.include_router(chat_router)
 
     return app
 

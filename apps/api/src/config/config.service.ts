@@ -161,6 +161,22 @@ export class AppConfigService {
   }
 
   // ============================================
+  // Python AI Service Configuration
+  // ============================================
+
+  get pythonAiUrl(): string {
+    return this.config.PYTHON_AI_URL;
+  }
+
+  get serviceSecret(): string {
+    return this.config.SERVICE_SECRET;
+  }
+
+  get usePythonAi(): boolean {
+    return this.config.USE_PYTHON_AI;
+  }
+
+  // ============================================
   // Observability Configuration
   // ============================================
 

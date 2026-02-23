@@ -36,6 +36,7 @@ import {
   createErrorResult,
 } from '@life-assistant/ai';
 import type { Conversation, Message } from '@life-assistant/database';
+import { AppConfigService } from '../../../../config/config.service';
 import { ContextBuilderService } from './context-builder.service';
 import { ConfirmationStateService, type StoredConfirmation } from './confirmation-state.service';
 import { ConversationRepository } from '../../infrastructure/repositories/conversation.repository';
@@ -143,6 +144,7 @@ export class ChatService {
   private readonly combinedExecutor: ToolExecutor;
 
   constructor(
+    private readonly appConfig: AppConfigService,
     private readonly contextBuilder: ContextBuilderService,
     private readonly confirmationStateService: ConfirmationStateService,
     private readonly conversationRepository: ConversationRepository,
@@ -306,6 +308,12 @@ export class ChatService {
     conversationId: string,
     subject: Subject<MessageEvent>
   ): Promise<void> {
+    // Feature flag: proxy to Python AI service
+    if (this.appConfig.usePythonAi) {
+      await this.proxyToPython(userId, conversationId, subject);
+      return;
+    }
+
     // Get conversation
     const conversation = await this.getConversation(userId, conversationId);
 
@@ -453,6 +461,103 @@ export class ChatService {
       subject.complete();
       throw error;
     }
+  }
+
+  /**
+   * Proxy chat to Python AI service via SSE streaming.
+   * Used when USE_PYTHON_AI feature flag is enabled.
+   */
+  private async proxyToPython(
+    userId: string,
+    conversationId: string,
+    subject: Subject<MessageEvent>
+  ): Promise<void> {
+    // Get the last user message
+    const recentMessages = await this.messageRepository.getRecentMessages(
+      userId,
+      conversationId,
+      1
+    );
+    const lastUserMessage = recentMessages.findLast(m => m.role === 'user');
+    if (!lastUserMessage) {
+      subject.next({
+        data: { content: 'Nenhuma mensagem encontrada.', done: true },
+      });
+      subject.complete();
+      return;
+    }
+
+    const pythonUrl = this.appConfig.pythonAiUrl;
+    const serviceSecret = this.appConfig.serviceSecret;
+
+    this.logger.log(
+      `Proxying to Python AI: ${pythonUrl}/chat/invoke for conversation ${conversationId}`
+    );
+
+    const response = await fetch(`${pythonUrl}/chat/invoke`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${serviceSecret}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        conversation_id: conversationId,
+        message: lastUserMessage.content,
+      }),
+    });
+
+    if (!response.ok || !response.body) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      this.logger.error(`Python AI error (${String(response.status)}): ${errorText}`);
+      subject.next({
+        data: {
+          content: '',
+          done: true,
+          error: 'Erro ao conectar com o serviço de IA',
+        },
+      });
+      subject.complete();
+      return;
+    }
+
+    // Parse SSE stream from Python and emit to frontend
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      let readResult = await reader.read();
+      while (!readResult.done) {
+        buffer += decoder.decode(readResult.value as Uint8Array, { stream: true });
+
+        // Parse SSE lines
+        const lines = buffer.split('\n');
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6).trim();
+            if (!dataStr) continue;
+
+            try {
+              const data = JSON.parse(dataStr) as Record<string, unknown>;
+              subject.next({ data });
+            } catch {
+              // Skip malformed JSON lines
+              this.logger.warn(`Malformed SSE data: ${dataStr}`);
+            }
+          }
+        }
+
+        readResult = await reader.read();
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    subject.complete();
   }
 
   /**

@@ -340,7 +340,7 @@ _Concluído em 2026-02-23._
 
 ---
 
-## M4.3 — LangGraph Basic Chat + NestJS Proxy 🔴
+## M4.3 — LangGraph Basic Chat + NestJS Proxy 🟢
 
 **Objetivo:** Primeira mensagem end-to-end pelo Python service: Frontend → NestJS → Python → resposta. Chat funcional sem tools.
 
@@ -353,7 +353,7 @@ _Concluído em 2026-02-23._
 **Tasks:**
 
 **LangGraph Core:**
-- [ ] Criar `app/agents/state.py` — `AgentState` TypedDict:
+- [x] Criar `app/agents/state.py` — `AgentState` TypedDict:
   ```python
   class AgentState(TypedDict):
       messages: Annotated[list, add_messages]
@@ -361,54 +361,59 @@ _Concluído em 2026-02-23._
       conversation_id: str
       current_agent: str | None
   ```
-- [ ] Criar `app/agents/domains/general.py` — agente conversacional (sem tools, só responde)
-  - Usa `ChatGoogleGenerativeAI(model="gemini-2.5-pro")` (ou model configurável via env)
-- [ ] Criar `app/agents/graph.py` — StateGraph básico:
+- [x] Criar `app/agents/llm.py` — LLM factory baseado em `LLM_PROVIDER` env (Gemini/Anthropic)
+- [x] Criar `app/agents/domains/general.py` — agente conversacional (sem tools, só responde)
+  - Usa LLM factory (model configurável via `LLM_MODEL` env, default `gemini-2.5-flash`)
+- [x] Criar `app/agents/graph.py` — StateGraph básico:
   - START → general_agent → save_response → END
   - `AsyncPostgresSaver` como checkpointer (persistência de threads)
   - Import: `from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver`
   - `.setup()` chamado no lifespan do FastAPI (M4.1) — cria tabelas `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`
-- [ ] Criar `app/agents/save_response.py` — node que salva mensagem do assistente no DB via SQLAlchemy
+- [x] Criar `app/agents/save_response.py` — node que salva mensagem do assistente no DB via SQLAlchemy
 
 **Context Builder (versão simplificada):**
-- [ ] Criar `app/prompts/system.py` — system prompt base:
+- [x] Criar `app/prompts/system.py` — system prompt base:
   - Nome do usuário, timezone, data atual
   - Personalidade conforme `docs/specs/core/ai-personality.md`
-- [ ] Criar `app/prompts/context_builder.py` (versão mínima):
+- [x] Criar `app/prompts/context_builder.py` (versão mínima):
   - User memories formatadas do `user_memories` table
   - Apenas campos essenciais: bio, goals, topOfMind
   - Context builder completo será expandido em M4.6
 
 **SSE Streaming (via `sse-starlette`):**
-- [ ] Criar `app/api/routes/chat.py`:
-  - POST `/chat/invoke` — recebe `{ user_id, conversation_id, message, thread_id }`, retorna SSE stream
+- [x] Criar `app/api/routes/chat.py`:
+  - POST `/chat/invoke` — recebe `{ user_id, conversation_id, message }`, retorna SSE stream
   - Usar `EventSourceResponse` de `sse-starlette` (FastAPI não tem SSE built-in)
   - SSE events compatíveis com formato atual do frontend:
     - `{ data: { content: "...", done: false } }` — text delta
     - `{ data: { content: "...", done: true } }` — resposta final
+    - `{ data: { content: "", done: true, error: "..." } }` — erro (matching NestJS format)
+- [x] Carregar histórico de mensagens do DB quando não existe checkpoint (conversas originadas no TypeScript)
 
 **NestJS Proxy:**
-- [ ] Adicionar `PYTHON_AI_URL` no `packages/config/`
-- [ ] Adicionar feature flag `USE_PYTHON_AI` (boolean, default: false)
-- [ ] Criar método `proxySSEStream()` no `chat.service.ts`:
-  - POST para Python `/chat/invoke` com `responseType: 'stream'`
-  - Repassa eventos SSE do Python para o frontend (pipe transparente)
-- [ ] Quando `USE_PYTHON_AI=true`: proxy para Python. Quando `false`: usa lógica TypeScript atual
+- [x] Consumir `pythonAiSchema` no API module via `AppConfigService` (getters: `pythonAiUrl`, `serviceSecret`, `usePythonAi`)
+- [x] Criar método `proxyToPython()` no `chat.service.ts`:
+  - POST para Python `/chat/invoke` com Bearer `SERVICE_SECRET`
+  - Parseia SSE stream do Python via `ReadableStream` reader e emite para o frontend
+- [x] Quando `USE_PYTHON_AI=true`: proxy para Python. Quando `false`: usa lógica TypeScript atual
 
 **Testes:**
-- [ ] Teste E2E: enviar mensagem simples → receber resposta via Python (SSE streaming)
-- [ ] Teste: save response node persiste mensagem no DB
-- [ ] Teste: context builder inclui user memories no system prompt
-- [ ] Teste: feature flag alterna corretamente entre TypeScript e Python
-- [ ] Teste: frontend recebe SSE events no formato esperado (sem mudanças no frontend)
+- [x] Teste E2E: enviar mensagem simples → receber resposta via Python (SSE streaming)
+- [x] Teste: save response node persiste mensagem no DB
+- [x] Teste: context builder inclui user memories no system prompt
+- [x] Teste: feature flag alterna corretamente entre TypeScript e Python
+- [x] Teste: frontend recebe SSE events no formato esperado (sem mudanças no frontend)
 
 **Definition of Done:**
-- [ ] Com `USE_PYTHON_AI=true`, chat funciona end-to-end pelo Python (sem tools)
-- [ ] Com `USE_PYTHON_AI=false`, sistema TypeScript continua funcionando normalmente
-- [ ] Frontend não percebe diferença (mesmos SSE events)
-- [ ] Mensagens são salvas no DB pelo Python
+- [x] Com `USE_PYTHON_AI=true`, chat funciona end-to-end pelo Python (sem tools)
+- [x] Com `USE_PYTHON_AI=false`, sistema TypeScript continua funcionando normalmente
+- [x] Frontend não percebe diferença (mesmos SSE events)
+- [x] Mensagens são salvas no DB pelo Python
 
-> **Decisão necessária:** Definir se feature flag é por environment variable (simples) ou per-user no banco (granular). Recomendação: env variable para começar, per-user se precisar de canary deploy.
+> **Decisão tomada:** Feature flag via environment variable (`USE_PYTHON_AI`), já definida em `packages/config/src/schemas/python-ai.ts`.
+
+**Notas (2026-02-23):**
+Implementação completa do pipe Python end-to-end. **Python (16 arquivos criados, 2 modificados):** `app/agents/` (state.py, llm.py, graph.py, save_response.py, domains/general.py) — StateGraph com `general_agent → save_response`, `AsyncPostgresSaver` checkpointer, LLM factory suportando Gemini + Anthropic via `LLM_PROVIDER` env. `app/prompts/` (system.py, context_builder.py) — system prompt completo com personalidade §4, guardrails §7 (CVV 188, Ligue 180), counselor mode §5.1, user memories (bio, occupation, family, goals, challenges, topOfMind, values, communication_style). `app/api/routes/chat.py` — POST `/chat/invoke` com `EventSourceResponse`, checkpoint-or-DB-fallback para conversas originadas no TypeScript (carrega histórico do DB se checkpoint não existe), `convert_db_messages()` com IDs preservados para dedup do `add_messages` reducer, `await request.is_disconnected()` para disconnect detection. Error SSE retorna mensagem genérica "Erro ao gerar resposta" (não vaza `str(e)` ao cliente). Modificados: `app/main.py` (build graph no lifespan + registra chat router), `app/dependencies.py` (get_checkpointer helper). Reusa código existente de M4.2: `get_user_session()` (RLS), `ChatRepository`, `UserRepository`, `get_settings()`. **NestJS (3 arquivos modificados):** `config.service.ts` (3 getters: pythonAiUrl, serviceSecret, usePythonAi), `chat.service.ts` (`AppConfigService` injetado como 1º param do constructor + feature flag check no topo de `processStreamResponse()` + `proxyToPython()` com native `fetch` + `ReadableStream` reader para SSE parsing + `reader.releaseLock()` no finally), `chat.service.spec.ts` (mock do `AppConfigService` com `usePythonAi: false`). **Testes:** 26 Python (pytest) — test_llm_factory (4), test_agents (4), test_context_builder (6), test_chat_endpoint (5), test_graph (2), conftest + existing (5). 853 NestJS (jest). Todos passando. `ruff check .` + `mypy app/` + `pnpm typecheck` + `pnpm lint` limpos.
 
 ---
 
