@@ -8,7 +8,7 @@ import uuid as _uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, TIMESTAMP, String, Text, func
+from sqlalchemy import JSON, TIMESTAMP, Enum, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,7 +21,15 @@ class Conversation(Base, TimestampMixin, SoftDeleteMixin):
 
     id: Mapped[_uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     user_id: Mapped[_uuid.UUID] = mapped_column(UUID(as_uuid=True))
-    type: Mapped[ConversationType] = mapped_column(String(20), server_default="general")
+    type: Mapped[ConversationType] = mapped_column(
+        Enum(
+            ConversationType,
+            name="conversation_type",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        server_default="general",
+    )
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     conversation_metadata: Mapped[dict[str, Any] | None] = mapped_column(
         "metadata", JSON, nullable=True
@@ -33,7 +41,14 @@ class Message(Base):
 
     id: Mapped[_uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     conversation_id: Mapped[_uuid.UUID] = mapped_column(UUID(as_uuid=True))
-    role: Mapped[MessageRole] = mapped_column(String(20))
+    role: Mapped[MessageRole] = mapped_column(
+        Enum(
+            MessageRole,
+            name="message_role",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+    )
     content: Mapped[str] = mapped_column(Text)
     message_metadata: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSON, nullable=True)
     actions: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)

@@ -47,11 +47,18 @@ async def save_response(state: AgentState, config: RunnableConfig) -> dict[str, 
     settings = get_settings()
 
     async with get_user_session(session_factory, user_id) as session:
-        content = (
-            last_ai_message.content
-            if isinstance(last_ai_message.content, str)
-            else str(last_ai_message.content)
-        )
+        # Gemini returns content as a list of blocks:
+        # [{"type": "text", "text": "..."}] — extract plain text.
+        raw = last_ai_message.content
+        if isinstance(raw, str):
+            content = raw
+        elif isinstance(raw, list):
+            content = "".join(
+                block.get("text", "") if isinstance(block, dict) else str(block)
+                for block in raw
+            )
+        else:
+            content = str(raw)
         await ChatRepository.create_message(
             session,
             {

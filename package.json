@@ -10,9 +10,9 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "concurrently -k -p [{name}] -n turbo,ai -c blue,yellow \"turbo run dev\" \"cd services/ai && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\"",
+    "dev": "concurrently -k -p [{name}] -n turbo,ai -c blue,yellow \"turbo run dev\" \"fuser -k 8000/tcp 2>/dev/null; cd services/ai && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\"",
     "dev:js": "turbo run dev",
-    "dev:ai": "cd services/ai && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:ai": "fuser -k 8000/tcp 2>/dev/null; cd services/ai && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

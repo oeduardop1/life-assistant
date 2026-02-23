@@ -8,12 +8,14 @@ import uuid as _uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import JSON, TIMESTAMP, Date, Integer, Numeric, String, Text
+from sqlalchemy import JSON, TIMESTAMP, Date, Enum, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base, SoftDeleteMixin, TimestampMixin
 from app.db.models.enums import UserPlan, UserStatus
+
+_vc = lambda e: [m.value for m in e]  # noqa: E731  # values_callable shorthand
 
 
 class User(Base, TimestampMixin, SoftDeleteMixin):
@@ -31,12 +33,18 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     locale: Mapped[str] = mapped_column(String(10), server_default="pt-BR")
     currency: Mapped[str] = mapped_column(String(3), server_default="BRL")
     preferences: Mapped[dict[str, Any]] = mapped_column(JSON)
-    plan: Mapped[UserPlan] = mapped_column(String(10), server_default="free")
+    plan: Mapped[UserPlan] = mapped_column(
+        Enum(UserPlan, name="user_plan", create_type=False, values_callable=_vc),
+        server_default="free",
+    )
     plan_expires_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True), nullable=True
     )
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    status: Mapped[UserStatus] = mapped_column(String(20), server_default="pending")
+    status: Mapped[UserStatus] = mapped_column(
+        Enum(UserStatus, name="user_status", create_type=False, values_callable=_vc),
+        server_default="pending",
+    )
     email_verified_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True), nullable=True
     )

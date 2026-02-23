@@ -1,5 +1,6 @@
 """RLS-aware session context managers."""
 
+import uuid as _uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -19,12 +20,14 @@ async def get_user_session(
     Sets ``request.jwt.claim.sub`` so PostgreSQL RLS policies using
     ``auth.uid()`` correctly scope queries to this user.
     ``SET LOCAL`` is scoped to the current transaction.
+
+    Note: ``SET LOCAL`` does not support bind parameters (``$1``) in
+    PostgreSQL's extended query protocol used by asyncpg.  The value is
+    interpolated directly after UUID validation to prevent SQL injection.
     """
+    safe_uid = str(_uuid.UUID(user_id))  # raises ValueError if malformed
     async with session_factory() as session, session.begin():
-        await session.execute(
-            text("SET LOCAL request.jwt.claim.sub = :uid"),
-            {"uid": user_id},
-        )
+        await session.execute(text(f"SET LOCAL request.jwt.claim.sub = '{safe_uid}'"))
         yield session
 
 

@@ -118,7 +118,15 @@ async def stream_chat_response(
                 break
 
             if chunk.content and metadata.get("langgraph_node") == "general_agent":
-                token = chunk.content if isinstance(chunk.content, str) else str(chunk.content)
+                raw = chunk.content
+                if isinstance(raw, str):
+                    token = raw
+                elif isinstance(raw, list):
+                    token = "".join(
+                        b.get("text", "") if isinstance(b, dict) else str(b) for b in raw
+                    )
+                else:
+                    token = str(raw)
                 full_content += token
                 yield {"data": json.dumps({"content": token, "done": False})}
 
