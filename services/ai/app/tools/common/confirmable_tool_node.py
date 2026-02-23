@@ -14,6 +14,7 @@ Flow:
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -95,7 +96,12 @@ class ConfirmableToolNode:
                 for tc in write_calls:
                     results.append(
                         ToolMessage(
-                            content="Operação cancelada pelo usuário.",
+                            content=json.dumps(
+                                {
+                                    "success": False,
+                                    "message": "Operação cancelada pelo usuário.",
+                                }
+                            ),
                             tool_call_id=tc["id"],
                             name=tc["name"],
                         )

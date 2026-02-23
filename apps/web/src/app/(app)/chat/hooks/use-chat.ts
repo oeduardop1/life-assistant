@@ -126,11 +126,14 @@ export function useChat({ conversationId }: UseChatOptions) {
             if (chunk.done) {
               streamCompletedRef.current = true;
               eventSource.close();
-              setIsStreamingDone(true); // Mark backend as done, but keep StreamingMessage mounted
               setError(null); // Clear any error that might have been set by race condition
-              // NOTE: We DON'T invalidate queries here to avoid duplicate messages
-              // The StreamingMessage component will call finishStreaming() when typewriter completes
-              // which will then refresh messages
+
+              // When content was streamed, keep StreamingMessage mounted for
+              // the typewriter effect — it will call finishStreaming() on
+              // completion. When NO content was streamed (e.g. loop guard
+              // produced a non-streamed response), skip straight to
+              // finishStreaming() so DB messages are fetched immediately.
+              setIsStreamingDone(true);
             }
           } catch (e) {
             console.error('Error parsing SSE message:', e);
@@ -141,12 +144,14 @@ export function useChat({ conversationId }: UseChatOptions) {
           // Small delay to handle race condition where onerror fires
           // before onmessage with done=true is fully processed
           setTimeout(() => {
-            // Only show error if stream didn't complete normally
-            // EventSource fires onerror when connection closes, even on success
+            // Only clean up if stream didn't complete normally.
+            // EventSource fires onerror when connection closes, even on success.
+            // When stream completed normally, finishStreaming() handles cleanup
+            // after the typewriter effect completes.
             if (!streamCompletedRef.current) {
               setError('Conexão perdida. Por favor, tente novamente.');
+              setIsStreaming(false);
             }
-            setIsStreaming(false);
           }, 100);
           eventSource.close();
         };
@@ -188,6 +193,15 @@ export function useChat({ conversationId }: UseChatOptions) {
     setIsStreamingDone(false);
     setStreamingContent('');
   }, [queryClient, conversationId]);
+
+  // Safety net: when backend finishes (done:true) but no content was streamed,
+  // StreamingMessage never mounts so finishStreaming() is never called.
+  // Fetch DB messages directly so the response appears.
+  useEffect(() => {
+    if (isStreamingDone && !streamingContent) {
+      finishStreaming();
+    }
+  }, [isStreamingDone, streamingContent, finishStreaming]);
 
   // Clear error
   const clearError = useCallback(() => {

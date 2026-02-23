@@ -40,6 +40,12 @@ async def save_response(state: AgentState, config: RunnableConfig) -> dict[str, 
         logger.warning("save_response: no AI message to persist")
         return {}
 
+    # Skip save when silently rejecting a pending interrupt (unrelated message flow).
+    # The new flow will generate a single combined response instead.
+    if config["configurable"].get("skip_save_response"):
+        logger.info("save_response: skipped (silent rejection)")
+        return {}
+
     session_factory: AsyncSessionFactory = config["configurable"]["session_factory"]
     user_id = state["user_id"]
     conversation_id = state["conversation_id"]

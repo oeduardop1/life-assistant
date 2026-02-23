@@ -16,28 +16,40 @@ from uuid import uuid4
 # ---------------------------------------------------------------------------
 
 _TOOL_MESSAGES: dict[str, str] = {
-    "record_metric": "Registrar {tipo}: {valor} {unidade} em {data}?",
-    "update_metric": "Corrigir {tipo} para {valor_novo}?",
-    "delete_metric": "Remover registro de {tipo} de {data}?",
-    "record_habit": "Marcar hábito '{nome}' como concluído em {data}?",
+    # Tracking tools (M4.4) — English param names from @tool docstrings
+    "record_metric": "Registrar {metric_type}: {value} {unit} em {date}?",
+    "update_metric": "Corrigir entrada para {value}?",
+    "delete_metric": "Remover registro {entry_id}?",
+    "record_habit": "Marcar hábito '{habit_name}' como concluído em {date}?",
+    # Finance tools (M4.5)
     "mark_bill_paid": "Marcar conta '{nome}' como paga em {data}?",
     "create_expense": "Registrar gasto de R${valor} em {categoria}?",
+    # Memory tools (M4.6)
     "add_knowledge": "Salvar: '{conteudo}'?",
 }
 
 _FALLBACK_MESSAGE = "Executar {tool_name}?"
+
+# Defaults for optional args the LLM may omit from tool_calls
+_OPTIONAL_DEFAULTS: dict[str, dict[str, str]] = {
+    "record_metric": {"unit": "", "date": "hoje"},
+    "record_habit": {"date": "hoje"},
+}
 
 
 def generate_confirmation_message(tool_name: str, tool_args: dict[str, Any]) -> str:
     """Build a single-tool confirmation message in PT-BR.
 
     Falls back to a generic message when the tool has no specific template.
+    Fills in defaults for optional args so templates don't fail on KeyError.
     """
     template = _TOOL_MESSAGES.get(tool_name)
     if template is None:
         return _FALLBACK_MESSAGE.format(tool_name=tool_name)
     try:
-        return template.format(**tool_args)
+        # Fill defaults for optional args the LLM may omit
+        args_with_defaults = {**_OPTIONAL_DEFAULTS.get(tool_name, {}), **tool_args}
+        return template.format(**args_with_defaults)
     except KeyError:
         # Args don't match template placeholders — use fallback
         return _FALLBACK_MESSAGE.format(tool_name=tool_name)

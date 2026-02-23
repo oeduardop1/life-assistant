@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -18,6 +18,25 @@ from app.api.routes.chat import router as chat_router
 from tests.conftest import TEST_SERVICE_SECRET
 
 AUTH_HEADERS = {"Authorization": f"Bearer {TEST_SERVICE_SECRET}"}
+
+TEST_USER_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+
+
+def _db_mocks() -> (
+    tuple[MagicMock, MagicMock, MagicMock]
+):
+    """Build mock objects for DB calls used by resume endpoint."""
+    mock_session_cm = AsyncMock()
+    mock_session_cm.__aenter__ = AsyncMock(return_value=AsyncMock())
+    mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+
+    mock_conversation = MagicMock()
+    mock_conversation.type = "general"
+
+    mock_user = MagicMock()
+    mock_user.timezone = "America/Sao_Paulo"
+
+    return mock_session_cm, mock_conversation, mock_user
 
 
 @pytest.fixture
@@ -61,16 +80,24 @@ async def test_resume_confirm_returns_sse(resume_app: FastAPI) -> None:
 
     resume_app.state.graph.astream = mock_astream
 
-    transport = ASGITransport(app=resume_app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/chat/resume",
-            headers=AUTH_HEADERS,
-            json={
-                "thread_id": "conv-123",
-                "action": "confirm",
-            },
-        )
+    session_cm, conv, user = _db_mocks()
+    with (
+        patch("app.api.routes.chat.get_user_session", return_value=session_cm),
+        patch("app.api.routes.chat.ChatRepository.get_conversation", return_value=conv),
+        patch("app.api.routes.chat.build_context", return_value="System prompt"),
+        patch("app.api.routes.chat.UserRepository.get_by_id", return_value=user),
+    ):
+        transport = ASGITransport(app=resume_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/chat/resume",
+                headers=AUTH_HEADERS,
+                json={
+                    "thread_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                    "user_id": TEST_USER_ID,
+                    "action": "confirm",
+                },
+            )
 
     assert response.status_code == 200
     assert "text/event-stream" in response.headers.get("content-type", "")
@@ -100,16 +127,24 @@ async def test_resume_reject_returns_sse(resume_app: FastAPI) -> None:
 
     resume_app.state.graph.astream = mock_astream
 
-    transport = ASGITransport(app=resume_app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/chat/resume",
-            headers=AUTH_HEADERS,
-            json={
-                "thread_id": "conv-123",
-                "action": "reject",
-            },
-        )
+    session_cm, conv, user = _db_mocks()
+    with (
+        patch("app.api.routes.chat.get_user_session", return_value=session_cm),
+        patch("app.api.routes.chat.ChatRepository.get_conversation", return_value=conv),
+        patch("app.api.routes.chat.build_context", return_value="System prompt"),
+        patch("app.api.routes.chat.UserRepository.get_by_id", return_value=user),
+    ):
+        transport = ASGITransport(app=resume_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/chat/resume",
+                headers=AUTH_HEADERS,
+                json={
+                    "thread_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                    "user_id": TEST_USER_ID,
+                    "action": "reject",
+                },
+            )
 
     assert response.status_code == 200
     data_lines = [
@@ -130,16 +165,24 @@ async def test_resume_error_returns_error_sse(resume_app: FastAPI) -> None:
 
     resume_app.state.graph.astream = mock_astream_error
 
-    transport = ASGITransport(app=resume_app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/chat/resume",
-            headers=AUTH_HEADERS,
-            json={
-                "thread_id": "conv-123",
-                "action": "confirm",
-            },
-        )
+    session_cm, conv, user = _db_mocks()
+    with (
+        patch("app.api.routes.chat.get_user_session", return_value=session_cm),
+        patch("app.api.routes.chat.ChatRepository.get_conversation", return_value=conv),
+        patch("app.api.routes.chat.build_context", return_value="System prompt"),
+        patch("app.api.routes.chat.UserRepository.get_by_id", return_value=user),
+    ):
+        transport = ASGITransport(app=resume_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/chat/resume",
+                headers=AUTH_HEADERS,
+                json={
+                    "thread_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                    "user_id": TEST_USER_ID,
+                    "action": "confirm",
+                },
+            )
 
     assert response.status_code == 200
     data_lines = [

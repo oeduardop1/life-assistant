@@ -1,7 +1,7 @@
 """Tracking repository — CRUD for tracking entries, habits, and completions."""
 
 import uuid as _uuid
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from sqlalchemy import delete, select, update
@@ -72,6 +72,11 @@ class TrackingRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def get_habit_by_id(session: AsyncSession, habit_id: _uuid.UUID) -> Habit | None:
+        result = await session.execute(select(Habit).where(Habit.id == habit_id))
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def create_habit_completion(
         session: AsyncSession, data: dict[str, Any]
     ) -> HabitCompletion:
@@ -79,3 +84,53 @@ class TrackingRepository:
         session.add(obj)
         await session.flush()
         return obj
+
+    @staticmethod
+    async def get_completion_for_date(
+        session: AsyncSession,
+        habit_id: _uuid.UUID,
+        user_id: _uuid.UUID,
+        target_date: date,
+    ) -> HabitCompletion | None:
+        result = await session.execute(
+            select(HabitCompletion).where(
+                HabitCompletion.habit_id == habit_id,
+                HabitCompletion.user_id == user_id,
+                HabitCompletion.completion_date == target_date,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_recent_completions(
+        session: AsyncSession,
+        habit_id: _uuid.UUID,
+        user_id: _uuid.UUID,
+        limit: int = 60,
+    ) -> list[HabitCompletion]:
+        result = await session.execute(
+            select(HabitCompletion)
+            .where(
+                HabitCompletion.habit_id == habit_id,
+                HabitCompletion.user_id == user_id,
+            )
+            .order_by(HabitCompletion.completion_date.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    def compute_streak(completions: list[HabitCompletion], from_date: date) -> int:
+        """Compute current streak counting backward from ``from_date``.
+
+        Completions must be pre-sorted by ``completion_date`` descending.
+        """
+        if not completions:
+            return 0
+        dates = {c.completion_date for c in completions}
+        streak = 0
+        day = from_date
+        while day in dates:
+            streak += 1
+            day -= timedelta(days=1)
+        return streak

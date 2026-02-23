@@ -23,6 +23,7 @@ from sse_starlette.sse import EventSourceResponse
 from app.agents.llm import create_llm
 from app.config import get_settings
 from app.db.repositories.chat import ChatRepository
+from app.db.repositories.user import UserRepository
 from app.db.session import get_user_session
 from app.prompts.context_builder import build_context
 from app.tools.common.intent_classifier import classify_confirmation_intent
@@ -112,9 +113,13 @@ def _format_tool_result_events(
     for msg in node_output.get("messages", []):
         if isinstance(msg, ToolMessage):
             content_str = str(msg.content)
-            is_error = content_str.startswith("Erro ao executar") or content_str.startswith(
-                "Operação cancelada"
-            )
+            # Detect errors: JSON format ({"success": false}) or plain text
+            is_error = False
+            try:
+                parsed = json.loads(content_str)
+                is_error = not parsed.get("success", True)
+            except (json.JSONDecodeError, AttributeError):
+                is_error = content_str.startswith("Erro ao executar")
             events.append(
                 {
                     "type": "tool_result",
@@ -149,7 +154,7 @@ async def stream_graph_events(
     - ``mode="updates"``  → ``chunk = {"node": output}`` or
       ``{"__interrupt__": (Interrupt(...),)}``
     """
-    full_content = ""
+    tokens_streamed = False
 
     async for mode, chunk in graph.astream(input_data, config, stream_mode=["messages", "updates"]):
         if await request.is_disconnected():
@@ -158,24 +163,60 @@ async def stream_graph_events(
 
         if mode == "messages":
             msg_chunk, metadata = chunk
-            if (
-                isinstance(msg_chunk, AIMessageChunk)
-                and msg_chunk.content
-                and metadata.get("langgraph_node") == "agent"
-            ):
+            if metadata.get("langgraph_node") != "agent" or not msg_chunk.content:
+                continue
+            # Stream incremental tokens from the LLM
+            if isinstance(msg_chunk, AIMessageChunk):
                 token = _extract_text(msg_chunk.content)
-                full_content += token
-                yield {"data": json.dumps({"content": token, "done": False})}
+                if token:
+                    tokens_streamed = True
+                    yield {"data": json.dumps({"content": token, "done": False})}
+            # Full AIMessage from a non-streaming node (e.g. loop guard)
+            elif isinstance(msg_chunk, AIMessage) and not getattr(
+                msg_chunk, "tool_calls", None
+            ):
+                text = _extract_text(msg_chunk.content)
+                if text and not tokens_streamed:
+                    tokens_streamed = True
+                    yield {"data": json.dumps({"content": text, "done": False})}
 
         elif mode == "updates":
             # Interrupt detection
             if "__interrupt__" in chunk:
                 interrupt_value = chunk["__interrupt__"][0].value
+                confirmation_message = interrupt_value["data"]["message"]
+
+                # Save confirmation message to DB (mirrors NestJS handlePendingConfirmation)
+                session_factory = config["configurable"].get("session_factory")
+                user_id = config["configurable"].get("user_id", "")
+                conv_id = config["configurable"].get("thread_id", "")
+                if session_factory and user_id and conv_id:
+                    try:
+                        async with get_user_session(session_factory, user_id) as session:
+                            await ChatRepository.create_message(session, {
+                                "id": uuid.uuid4(),
+                                "conversation_id": uuid.UUID(conv_id),
+                                "role": "assistant",
+                                "content": confirmation_message,
+                                "message_metadata": {
+                                    "source": "python_ai",
+                                    "pendingConfirmation": {
+                                        "confirmationId": interrupt_value["data"].get(
+                                            "confirmationId"
+                                        ),
+                                        "toolName": interrupt_value["data"].get("toolName"),
+                                        "toolArgs": interrupt_value["data"].get("toolArgs"),
+                                    },
+                                },
+                            })
+                    except Exception:
+                        logger.exception("Failed to save confirmation message")
+
                 yield {"data": json.dumps(interrupt_value)}
                 yield {
                     "data": json.dumps(
                         {
-                            "content": interrupt_value["data"]["message"],
+                            "content": confirmation_message,
                             "done": True,
                             "awaitingConfirmation": True,
                         }
@@ -183,16 +224,31 @@ async def stream_graph_events(
                 }
                 return  # End stream — waiting for /chat/resume
 
-            # Tool call / result events
+            # Tool call / result / non-streamed text events
             for node_name, node_output in chunk.items():
-                if node_name == "agent" and _has_tool_calls(node_output):
-                    yield {"data": json.dumps(_format_tool_calls_event(node_output))}
+                if node_name == "agent":
+                    if _has_tool_calls(node_output):
+                        yield {"data": json.dumps(_format_tool_calls_event(node_output))}
+                    elif not tokens_streamed:
+                        # Agent produced text without streaming (e.g. loop guard).
+                        # Send it so the frontend can display it.
+                        for msg in node_output.get("messages", []):
+                            if (
+                                isinstance(msg, AIMessage)
+                                and msg.content
+                                and not getattr(msg, "tool_calls", None)
+                            ):
+                                text = _extract_text(msg.content)
+                                if text:
+                                    tokens_streamed = True
+                                    yield {"data": json.dumps({"content": text, "done": False})}
                 elif node_name == "tools" and _has_tool_results(node_output):
                     for result_event in _format_tool_result_events(node_output):
                         yield {"data": json.dumps(result_event)}
 
-    if full_content:
-        yield {"data": json.dumps({"content": full_content, "done": True})}
+    # Always send done — content was already streamed token-by-token above.
+    # Don't repeat content here to avoid doubling in the frontend.
+    yield {"data": json.dumps({"content": "", "done": True})}
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +273,7 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
             "configurable": {
                 "thread_id": body.conversation_id,
                 "session_factory": session_factory,
+                "user_id": body.user_id,
             }
         }
 
@@ -225,6 +282,7 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
         # ------------------------------------------------------------------
         state = await graph.aget_state(thread_config)
         has_pending = bool(state and getattr(state, "interrupts", None))
+        pending_op = ""
 
         if has_pending:
             settings = get_settings()
@@ -239,15 +297,82 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
                 if intent.action == "edit" and intent.corrected_args:
                     resume_value["args"] = intent.corrected_args
 
-                resume_config = {**thread_config}
-                async for event in stream_graph_events(
-                    graph, Command(resume=resume_value), resume_config, request
-                ):
-                    yield event
+                # Build system_prompt + user_timezone for the resumed graph
+                async with get_user_session(session_factory, body.user_id) as session:
+                    conversation = await ChatRepository.get_conversation(
+                        session, uuid.UUID(body.conversation_id)
+                    )
+                    conv_type = conversation.type if conversation else "general"
+                    system_prompt = await build_context(session, body.user_id, conv_type)
+                    user = await UserRepository.get_by_id(session, uuid.UUID(body.user_id))
+                    user_timezone = user.timezone if user else "America/Sao_Paulo"
+
+                resume_config: dict[str, Any] = {
+                    "configurable": {
+                        **thread_config["configurable"],
+                        "system_prompt": system_prompt,
+                        "user_timezone": user_timezone,
+                    }
+                }
+
+                if intent.action == "reject":
+                    # Reject: short response, no need for token streaming.
+                    # Use ainvoke to avoid streaming pipeline issues and send
+                    # the complete response in a single SSE event.
+                    result = await graph.ainvoke(
+                        Command(resume=resume_value), resume_config
+                    )
+                    content = ""
+                    for msg in reversed(result.get("messages", [])):
+                        if (
+                            isinstance(msg, AIMessage)
+                            and msg.content
+                            and not getattr(msg, "tool_calls", None)
+                        ):
+                            content = _extract_text(msg.content)
+                            break
+                    if not content:
+                        content = "Operação cancelada."
+                    yield {
+                        "data": json.dumps({"content": content, "done": True})
+                    }
+                else:
+                    # Confirm / edit: stream the response token-by-token
+                    async for event in stream_graph_events(
+                        graph,
+                        Command(resume=resume_value),
+                        resume_config,
+                        request,
+                    ):
+                        yield event
                 return
             else:
-                # Unrelated message — silently reject pending and continue
-                await graph.ainvoke(Command(resume={"action": "reject"}), thread_config)
+                # Unrelated message — silently reject pending and continue.
+                # Use skip_save_response so the rejection doesn't create a
+                # separate assistant message; the new flow below will generate
+                # a single combined response that mentions the cancellation.
+                pending_op = state.interrupts[0].value.get("data", {}).get("message", "")
+
+                async with get_user_session(session_factory, body.user_id) as session:
+                    conversation = await ChatRepository.get_conversation(
+                        session, uuid.UUID(body.conversation_id)
+                    )
+                    conv_type = conversation.type if conversation else "general"
+                    system_prompt = await build_context(session, body.user_id, conv_type)
+                    user = await UserRepository.get_by_id(session, uuid.UUID(body.user_id))
+                    user_timezone = user.timezone if user else "America/Sao_Paulo"
+
+                reject_config: dict[str, Any] = {
+                    "configurable": {
+                        **thread_config["configurable"],
+                        "system_prompt": system_prompt,
+                        "user_timezone": user_timezone,
+                        "skip_save_response": True,
+                    }
+                }
+                await graph.ainvoke(
+                    Command(resume={"action": "reject"}), reject_config
+                )
 
         # ------------------------------------------------------------------
         # Normal flow (no pending interrupt)
@@ -265,6 +390,8 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
                 )
                 conv_type = conversation.type if conversation else "general"
                 system_prompt = await build_context(session, body.user_id, conv_type)
+                user = await UserRepository.get_by_id(session, uuid.UUID(body.user_id))
+                user_timezone = user.timezone if user else "America/Sao_Paulo"
 
             langchain_messages = convert_db_messages(db_messages)
         else:
@@ -275,8 +402,25 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
                 )
                 conv_type = conversation.type if conversation else "general"
                 system_prompt = await build_context(session, body.user_id, conv_type)
+                user = await UserRepository.get_by_id(session, uuid.UUID(body.user_id))
+                user_timezone = user.timezone if user else "America/Sao_Paulo"
 
-            langchain_messages = [HumanMessage(content=body.message)]
+            # If we just silently rejected a pending operation, include context
+            # so the agent can mention the cancellation in its response.
+            if has_pending and pending_op:
+                langchain_messages = [
+                    HumanMessage(
+                        content=(
+                            f"[Nota interna: a operação pendente "
+                            f'("{pending_op}") foi cancelada porque o usuário '
+                            f"mudou de assunto. Mencione brevemente o "
+                            f"cancelamento antes de responder a nova pergunta, "
+                            f"tudo em uma única mensagem.]\n\n{body.message}"
+                        )
+                    )
+                ]
+            else:
+                langchain_messages = [HumanMessage(content=body.message)]
 
         input_state = {
             "messages": langchain_messages,
@@ -286,6 +430,7 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
         }
 
         thread_config["configurable"]["system_prompt"] = system_prompt
+        thread_config["configurable"]["user_timezone"] = user_timezone
 
         async for event in stream_graph_events(graph, input_state, thread_config, request):
             yield event
@@ -302,6 +447,7 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
 
 class _ChatResumeBody(BaseModel):
     thread_id: str
+    user_id: str | None = None
     action: Literal["confirm", "reject", "edit"]
     edited_args: dict[str, dict[str, Any]] | None = None
 
@@ -318,10 +464,34 @@ async def stream_resume_response(request: Request, body: _ChatResumeBody) -> Any
         graph = request.app.state.graph
         session_factory = request.app.state.session_factory
 
+        # Resolve user_id: from body or from checkpointed state
+        base_config: dict[str, Any] = {
+            "configurable": {"thread_id": body.thread_id, "session_factory": session_factory}
+        }
+        user_id = body.user_id
+        if not user_id:
+            state = await graph.aget_state(base_config)
+            user_id = state.values.get("user_id", "") if state else ""
+        if not user_id:
+            raise ValueError("Cannot resolve user_id for resume")
+
+        # Build system_prompt + user_timezone from DB for the resumed graph
+        async with get_user_session(session_factory, user_id) as session:
+            conversation = await ChatRepository.get_conversation(
+                session, uuid.UUID(body.thread_id)
+            )
+            conv_type = conversation.type if conversation else "general"
+            system_prompt = await build_context(session, user_id, conv_type)
+            user = await UserRepository.get_by_id(session, uuid.UUID(user_id))
+            user_timezone = user.timezone if user else "America/Sao_Paulo"
+
         config: dict[str, Any] = {
             "configurable": {
                 "thread_id": body.thread_id,
                 "session_factory": session_factory,
+                "user_id": user_id,
+                "user_timezone": user_timezone,
+                "system_prompt": system_prompt,
             }
         }
 

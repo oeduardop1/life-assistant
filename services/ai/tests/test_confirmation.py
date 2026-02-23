@@ -13,7 +13,7 @@ class TestGenerateConfirmationMessage:
     def test_record_metric(self) -> None:
         msg = generate_confirmation_message(
             "record_metric",
-            {"tipo": "água", "valor": "2", "unidade": "L", "data": "23/02/2026"},
+            {"metric_type": "água", "value": "2", "unit": "L", "date": "23/02/2026"},
         )
         assert "água" in msg
         assert "2" in msg
@@ -32,7 +32,7 @@ class TestGenerateConfirmationMessage:
 
     def test_record_habit(self) -> None:
         msg = generate_confirmation_message(
-            "record_habit", {"nome": "Meditação", "data": "23/02/2026"}
+            "record_habit", {"habit_name": "Meditação", "date": "23/02/2026"}
         )
         assert "Meditação" in msg
 
@@ -50,6 +50,21 @@ class TestGenerateConfirmationMessage:
         msg = generate_confirmation_message("record_metric", {"wrong_key": "val"})
         assert msg == "Executar record_metric?"
 
+    def test_optional_args_filled_with_defaults(self) -> None:
+        """LLM may omit optional args like date/unit — defaults should fill in."""
+        msg = generate_confirmation_message(
+            "record_metric",
+            {"metric_type": "water", "value": 3000},
+        )
+        assert "water" in msg
+        assert "3000" in msg
+        assert "hoje" in msg  # default for missing date
+
+    def test_record_habit_without_date(self) -> None:
+        msg = generate_confirmation_message("record_habit", {"habit_name": "Meditação"})
+        assert "Meditação" in msg
+        assert "hoje" in msg
+
 
 class TestGenerateBatchMessage:
     def test_single_tool_delegates(self) -> None:
@@ -61,7 +76,7 @@ class TestGenerateBatchMessage:
         calls = [
             {
                 "name": "record_metric",
-                "args": {"tipo": "água", "valor": "2", "unidade": "L", "data": "hoje"},
+                "args": {"metric_type": "água", "value": "2", "unit": "L", "date": "hoje"},
                 "id": "1",
             },
             {"name": "add_knowledge", "args": {"conteudo": "gosto de café"}, "id": "2"},
