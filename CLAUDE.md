@@ -158,7 +158,7 @@ Python AI vars are loaded by `pydantic-settings` from the root `.env` — Python
 ## ⚠️ MANDATORY PROTOCOL (PLANNING & IMPLEMENTATION)
 
 **WHEN TO USE:** Only for milestone-related work. Triggers include:
-- "implement M0.X..."
+- "implement M#.X..."
 - "create a plan for milestone..."
 - "work on milestone..."
 - Any reference to tasks in docs/milestones/
