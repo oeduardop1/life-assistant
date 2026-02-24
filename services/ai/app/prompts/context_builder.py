@@ -1,6 +1,11 @@
 """Context builder — loads user info + memories and formats system prompt.
 
 Full TS parity with context-builder.service.ts formatForPrompt().
+
+M4.7: Removed counselor extension append. Domain extensions (tracking,
+finance, memory, wellbeing) are now applied by the agent_node at runtime
+based on triage classification. build_context() returns only the core
+prompt with user context.
 """
 
 from __future__ import annotations
@@ -11,7 +16,7 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 from app.db.repositories.user import UserRepository
-from app.prompts.system import BASE_SYSTEM_PROMPT, COUNSELOR_EXTENSION
+from app.prompts.system import CORE_SYSTEM_PROMPT
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,12 +92,16 @@ def _format_user_memory(memories: UserMemory | None) -> str:
 
 
 async def build_context(session: AsyncSession, user_id: str, conversation_type: str) -> str:
-    """Build the complete system prompt with user context.
+    """Build the core system prompt with user context.
 
     1. Load user profile → name, timezone
     2. Load user memories → full formatted memory
-    3. Format into system prompt template
-    4. If counselor mode, append counselor extension
+    3. Format into CORE_SYSTEM_PROMPT template
+
+    Note: Domain-specific extensions (tracking tools, finance tools, etc.)
+    are appended by the agent_node at runtime based on triage classification.
+    The ``conversation_type`` parameter is accepted for backward compatibility
+    but no longer affects the prompt.
     """
     user = await UserRepository.get_by_id(session, uuid.UUID(user_id))
     memories = await UserRepository.get_memories(session, uuid.UUID(user_id))
@@ -111,15 +120,11 @@ async def build_context(session: AsyncSession, user_id: str, conversation_type: 
     now = datetime.now(tz)
     current_datetime = now.strftime("%d/%m/%Y %H:%M (%A)")
 
-    # Build prompt
-    prompt = BASE_SYSTEM_PROMPT.format(
+    # Build core prompt (domain_tools placeholder left empty — filled by agent_node)
+    return CORE_SYSTEM_PROMPT.format(
         user_name=user_name,
         user_memory=user_memory,
         current_datetime=current_datetime,
         user_timezone=user_timezone,
+        domain_tools="",
     )
-
-    if conversation_type == "counselor":
-        prompt += COUNSELOR_EXTENSION
-
-    return prompt

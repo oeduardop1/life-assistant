@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.agents.graph import build_chat_graph
-from app.agents.llm import create_llm
+from app.agents.llm import create_llm, create_triage_llm
 from app.api.middleware.auth import ServiceAuthMiddleware
 from app.api.routes.chat import router as chat_router
 from app.api.routes.health import router as health_router
@@ -31,9 +31,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await checkpointer.setup()
         app.state.checkpointer = checkpointer
 
-        # Build and store the LangGraph chat graph
+        # Build and store the LangGraph multi-agent chat graph
         llm = create_llm(settings)
-        app.state.graph = build_chat_graph(llm, checkpointer)
+        triage_llm = create_triage_llm(settings)
+        app.state.graph = build_chat_graph(llm, triage_llm, checkpointer)
 
         logger.info("AI service started (version=%s)", settings.APP_VERSION)
 

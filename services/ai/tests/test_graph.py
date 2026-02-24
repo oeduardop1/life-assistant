@@ -24,15 +24,30 @@ def _make_mock_llm() -> MagicMock:
     return mock_llm
 
 
+def _make_mock_triage_llm() -> MagicMock:
+    """Create a mock triage LLM for build_chat_graph."""
+    from app.agents.triage import TriageDecision
+
+    decision = TriageDecision(agent="general", confidence=0.95)
+    mock_router = AsyncMock()
+    mock_router.ainvoke = AsyncMock(return_value=decision)
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output = MagicMock(return_value=mock_router)
+    return mock_llm
+
+
 @pytest.mark.asyncio
 async def test_graph_builds_and_compiles() -> None:
     """build_chat_graph should return a compiled graph with expected nodes."""
     checkpointer = InMemorySaver()
     mock_llm = _make_mock_llm()
-    graph = build_chat_graph(mock_llm, checkpointer)  # type: ignore[arg-type]
+    mock_triage = _make_mock_triage_llm()
+    graph = build_chat_graph(mock_llm, mock_triage, checkpointer)  # type: ignore[arg-type]
 
-    # The compiled graph should have nodes for agent, tools, and save_response
+    # The compiled graph should have nodes for triage, agent, tools, and save_response
     node_names = set(graph.get_graph().nodes.keys())
+    assert "triage" in node_names
     assert "agent" in node_names
     assert "tools" in node_names
     assert "save_response" in node_names
@@ -40,8 +55,9 @@ async def test_graph_builds_and_compiles() -> None:
 
 @pytest.mark.asyncio
 async def test_graph_execution_with_mocked_llm() -> None:
-    """Full graph execution: agent → save_response with mocked LLM."""
+    """Full graph execution: triage → agent → save_response with mocked LLM."""
     mock_llm = _make_mock_llm()
+    mock_triage = _make_mock_triage_llm()
     checkpointer = InMemorySaver()
 
     # Mock save_response to avoid DB calls
@@ -73,7 +89,7 @@ async def test_graph_execution_with_mocked_llm() -> None:
         "app.agents.save_response.get_user_session",
         return_value=mock_session_cm,
     ):
-        graph = build_chat_graph(mock_llm, checkpointer)  # type: ignore[arg-type]
+        graph = build_chat_graph(mock_llm, mock_triage, checkpointer)  # type: ignore[arg-type]
 
         # Collect all streamed events
         events = []
@@ -126,6 +142,7 @@ async def test_loop_guard_breaks_write_tool_re_call() -> None:
     mock_bound.ainvoke = AsyncMock(side_effect=_mock_invoke)
     mock_llm.bind_tools = MagicMock(return_value=mock_bound)
 
+    mock_triage = _make_mock_triage_llm()
     checkpointer = InMemorySaver()
 
     mock_session = AsyncMock()
@@ -168,7 +185,7 @@ async def test_loop_guard_breaks_write_tool_re_call() -> None:
     }
 
     with patch("app.agents.save_response.get_user_session", return_value=mock_session_cm):
-        graph = build_chat_graph(mock_llm, checkpointer)  # type: ignore[arg-type]
+        graph = build_chat_graph(mock_llm, mock_triage, checkpointer)  # type: ignore[arg-type]
 
         events = []
         async for event in graph.astream(input_state, config, stream_mode="values"):

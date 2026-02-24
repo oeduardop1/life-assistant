@@ -950,29 +950,32 @@ async def test_create_expense_budgeted_fallback(
 # ---------------------------------------------------------------------------
 
 
-def test_graph_includes_finance_tools() -> None:
-    from app.agents.graph import ALL_TOOLS
+def test_registry_includes_finance_tools() -> None:
+    from app.agents.registry import build_domain_registry
 
-    tool_names = {t.name for t in ALL_TOOLS}
-    assert "get_finance_summary" in tool_names
-    assert "get_pending_bills" in tool_names
-    assert "get_bills" in tool_names
-    assert "get_expenses" in tool_names
-    assert "get_incomes" in tool_names
-    assert "get_investments" in tool_names
-    assert "get_debt_progress" in tool_names
-    assert "get_debt_payment_history" in tool_names
-    assert "get_upcoming_installments" in tool_names
-    assert "mark_bill_paid" in tool_names
-    assert "create_expense" in tool_names
+    registry = build_domain_registry()
+    finance_tools = {t.name for t in registry["finance"].tools}
+    assert "get_finance_summary" in finance_tools
+    assert "get_pending_bills" in finance_tools
+    assert "get_bills" in finance_tools
+    assert "get_expenses" in finance_tools
+    assert "get_incomes" in finance_tools
+    assert "get_investments" in finance_tools
+    assert "get_debt_progress" in finance_tools
+    assert "get_debt_payment_history" in finance_tools
+    assert "get_upcoming_installments" in finance_tools
+    assert "mark_bill_paid" in finance_tools
+    assert "create_expense" in finance_tools
 
-    # Also still has tracking tools
-    assert "record_metric" in tool_names
-    assert "get_history" in tool_names
+    # Tracking tools are in a separate domain
+    tracking_tools = {t.name for t in registry["tracking"].tools}
+    assert "record_metric" in tracking_tools
+    assert "get_history" in tracking_tools
 
 
-def test_graph_write_tools_include_finance() -> None:
-    from app.agents.graph import ALL_WRITE_TOOLS
+def test_registry_write_tools_include_finance() -> None:
+    from app.agents.registry import build_domain_registry
 
-    assert "mark_bill_paid" in ALL_WRITE_TOOLS
-    assert "create_expense" in ALL_WRITE_TOOLS
+    registry = build_domain_registry()
+    assert "mark_bill_paid" in registry["finance"].write_tools
+    assert "create_expense" in registry["finance"].write_tools

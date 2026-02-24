@@ -761,7 +761,7 @@ _Concluído em 2026-02-23._
 
 ---
 
-## M4.7 — Multi-Agent: Triage + Domain Routing 🔴
+## M4.7 — Multi-Agent: Triage + Domain Routing 🟢
 
 **Objetivo:** Arquitetura multi-agente com triage inteligente roteando mensagens para agentes especializados.
 
@@ -774,49 +774,111 @@ _Concluído em 2026-02-23._
 **Tasks:**
 
 **Triage Node:**
-- [ ] Criar `app/agents/triage.py`:
-  - Usa modelo rápido: `ChatGoogleGenerativeAI(model="gemini-2.0-flash")`
+- [x] Criar `app/agents/triage.py`:
+  - Usa modelo rápido: `ChatGoogleGenerativeAI(model=settings.TRIAGE_LLM_MODEL)` (default: `gemini-flash-latest`)
+  - `TriageDecision` Pydantic model com `with_structured_output()` para classificação determinística
   - Triage prompt com exemplos de roteamento:
-    - "Registra 2L de água" → tracking_agent
-    - "Quanto gastei este mês?" → finance_agent
-    - "O que você sabe sobre mim?" → memory_agent
-    - "Estou me sentindo ansioso" → wellbeing_agent
-    - "Bom dia!" → general_agent
-  - Retorna `{ current_agent: "tracking_agent" | "finance_agent" | "memory_agent" | "wellbeing_agent" | "general_agent" }`
+    - "Registra 2L de água" → tracking
+    - "Quanto gastei este mês?" → finance
+    - "O que você sabe sobre mim?" → memory
+    - "Estou me sentindo ansioso" → wellbeing
+    - "Bom dia!" → general
+  - Retorna `{ current_agent: "tracking" | "finance" | "memory" | "wellbeing" | "general" }`
+  - Factory pattern: `make_triage_node(triage_llm)` captura LLM em closure
+  - Fallback para `"general"` em caso de erro do LLM (try/except com log warning)
+
+**Triage LLM Config:**
+- [x] Adicionar `TRIAGE_LLM_MODEL: str = "gemini-flash-latest"` em `app/config.py`
+- [x] Adicionar `create_triage_llm(settings)` em `app/agents/llm.py` (temperature=0)
+
+**System Prompt Split:**
+- [x] Refatorar `app/prompts/system.py`:
+  - Separar `BASE_SYSTEM_PROMPT` monolítico em:
+    - `CORE_SYSTEM_PROMPT`: persona, regras gerais, segurança, memória do usuário, contexto
+    - `SHARED_MEMORY_INSTRUCTIONS`: instruções de search_knowledge + analyze_context (compartilhado por todos os domínios)
+    - `TRACKING_PROMPT_EXTENSION`: instruções de record_metric, get_history, update/delete_metric, record_habit, get_habits
+    - `FINANCE_PROMPT_EXTENSION`: instruções de todas as ferramentas financeiras
+    - `MEMORY_WRITE_EXTENSION`: instruções de add_knowledge (WRITE)
+    - `WELLBEING_PROMPT_EXTENSION`: modo counselor (atual `COUNSELOR_EXTENSION`)
+  - Cada domain extension = SHARED_MEMORY_INSTRUCTIONS + extensão específica do domínio
+- [x] Atualizar `app/prompts/context_builder.py`:
+  - Remover append de `COUNSELOR_EXTENSION` (extensões agora são aplicadas pelo agent_node)
+  - `build_context()` retorna apenas o prompt core com contexto do usuário
+
+**Memory Tools Compartilhados:**
+- [x] Exportar `MEMORY_READ_TOOLS = [search_knowledge, analyze_context]` em `app/tools/memory/__init__.py`
+- [x] Todos os domain agents recebem memory READ tools (search_knowledge + analyze_context):
+  - tracking: 6 + 2 = 8 tools (4 WRITE)
+  - finance: 11 + 2 = 13 tools (2 WRITE)
+  - memory: 3 tools (1 WRITE)
+  - wellbeing: 0 + 2 = 2 tools (0 WRITE)
+  - general: 0 + 2 = 2 tools (0 WRITE)
 
 **Wellbeing Agent (novo):**
-- [ ] Criar `app/agents/domains/wellbeing.py`:
-  - Sem tools (modo counselor puro)
-  - System prompt com instruções de counselor mode: reflexão profunda, perguntas exploratórias, menos emojis
+- [x] Criar `app/agents/domains/wellbeing.py`:
+  - Export de listas vazias (WELLBEING_TOOLS, WELLBEING_WRITE_TOOLS) seguindo padrão de tracking.py, finance.py, memory.py
+  - Tools reais vêm do registry (memory READ compartilhado)
+  - Modo counselor puro: reflexão profunda, perguntas exploratórias, menos emojis
 
-**Graph Atualizado:**
-- [ ] Atualizar `app/agents/graph.py`:
-  - START → triage → conditional_edges → [tracking_agent, finance_agent, memory_agent, wellbeing_agent, general_agent] → save_response → END
-  - `route_to_agent()` baseado em `state["current_agent"]`
-  - Fallback para `general_agent` quando triage retorna intenção desconhecida
+**Domain Registry:**
+- [x] Criar `app/agents/registry.py`:
+  - `DomainConfig` dataclass: tools, write_tools, prompt_extension
+  - `build_domain_registry()` retorna mapeamento dos 5 domínios
+  - Imports lazy para evitar dependências circulares
 
-**Agent Registry:**
-- [ ] Cada domain agent usa graph customizado com `ConfirmableToolNode` (WRITE tools) ou `create_react_agent()` (agents sem tools):
-  - `tracking_agent`: 6 tools (M4.4)
-  - `finance_agent`: 11 tools (M4.5)
-  - `memory_agent`: 3 tools (M4.6)
-  - `wellbeing_agent`: 0 tools (counselor mode)
-  - `general_agent`: 0 tools (conversacional)
+**Graph Atualizado (Dynamic Dispatch):**
+- [x] Adicionar `build_multi_agent_graph()` em `app/tools/common/agent_factory.py`:
+  - Topologia: START → triage → agent → should_continue → {tools, save_response}
+  - `agent_node` dinâmico: bind tools + prompt extension baseado em `state["current_agent"]`
+  - Pre-bind LLMs por domínio no build time (um `llm.bind_tools()` por domínio)
+  - `ConfirmableToolNode` registrado com ALL tools (deduplicados) — LLM só chama tools que tem bound
+  - Loop guard mantido sem alterações
+- [x] Atualizar `app/agents/graph.py`:
+  - Substituir `build_chat_graph()` por novo entry point usando `build_multi_agent_graph`
+  - Manter `build_domain_agent_graph` no factory para backward compat
+- [x] Atualizar `app/main.py`:
+  - Criar triage LLM e domain LLM no startup
+  - Chamar novo graph builder
 
-> **Nota sobre `create_react_agent`:** Verificado via Context7 (Fev 2026): `create_react_agent` de `langgraph.prebuilt` é a API estável atual. Sem evidência de deprecation. Usar `create_react_agent` para agents sem WRITE tools (general, wellbeing). Para agents com WRITE tools (tracking, finance, memory), usar graph customizado com `ConfirmableToolNode` para suportar batch confirmation.
+> **Nota sobre arquitetura "Dynamic Dispatch":** Verificado via Context7 (Fev 2026): Em vez de subgraphs ou `create_react_agent`, usa um único graph com triage node no início e agent node com dispatch dinâmico. Vantagem: ZERO mudanças no streaming (`chat.py`), no resume/interrupt, e no `ConfirmableToolNode`. Node names "agent" e "tools" permanecem iguais, SSE filtering funciona sem alteração. Pattern validado: `llm.with_structured_output(Pydantic)` é o padrão recomendado pelo LangGraph para routing.
+
+**Estratégia Multi-Domínio:**
+- [x] Mensagens multi-domínio ("como estou financeiramente e na saúde?"): triage roteia para o domínio **primário** (mais relevante). Orquestração multi-agente sequencial diferida para pós-M4.10.
 
 **Testes:**
-- [ ] Teste: 20+ mensagens classificadas corretamente pelo triage (cobrindo todos os 5 agents)
-- [ ] Teste: mensagens ambíguas caem no general_agent
-- [ ] Teste: mensagens multi-domínio ("como estou financeiramente e na saúde?") — definir estratégia (rota para o primeiro, ou executa sequencialmente)
-- [ ] Teste: wellbeing agent responde com tom de counselor
-- [ ] Teste: triage com modelo Flash é significativamente mais rápido que Pro
+- [x] test_triage.py: 20+ mensagens classificadas corretamente pelo triage (cobrindo todos os 5 agents)
+- [x] test_triage.py: mensagens ambíguas caem no general
+- [x] test_triage.py: fallback para general em caso de erro do LLM
+- [x] test_triage.py: mensagens multi-domínio roteiam para domínio primário
+- [x] test_multi_agent_graph.py: roteamento correto para cada domínio
+- [x] test_multi_agent_graph.py: isolamento de tools (tracking não chama finance tools)
+- [x] test_multi_agent_graph.py: wellbeing agent usa prompt de counselor
+- [x] test_multi_agent_graph.py: fallback no graph quando triage falha
+- [x] test_multi_agent_graph.py: resume de interrupt não re-executa triage
+- [x] test_registry.py: registry contém todos os 5 domínios com counts corretos
+- [x] test_registry.py: todos os domínios têm memory READ tools
+- [x] test_llm_factory.py: create_triage_llm funciona corretamente
+- [x] Atualizar test_graph.py para novo builder
+- [x] Atualizar test_context_builder.py para prompt split
 
 **Definition of Done:**
-- [ ] Mensagens são roteadas para o agente correto
-- [ ] Cada agente executa seus tools especializados
-- [ ] Triage usa modelo rápido, agents usam modelo capaz
-- [ ] Fallback funciona para intenções ambíguas
+- [x] Mensagens são roteadas para o agente correto
+- [x] Cada agente executa seus tools especializados + memory READ tools compartilhados
+- [x] Triage usa modelo rápido (Flash), agents usam modelo capaz
+- [x] Fallback funciona para intenções ambíguas e erros do triage
+- [x] System prompt dividido em core + extensões por domínio
+- [x] ZERO mudanças em chat.py, confirmable_tool_node.py, save_response.py
+- [x] Todos os testes passando (ruff + mypy + pytest)
+
+**Notas (2026-02-24):**
+- Arquitetura "Dynamic Dispatch" com ~200 LOC novos (vs ~500-700 LOC para subgraphs/swarm)
+- Triage usa `gemini-flash-latest` com `with_structured_output(TriageDecision)` — temperatura 0, determinístico
+- Default original `gemini-2.0-flash` dava 404 (deprecated pela Google); corrigido para `gemini-flash-latest`
+- Prompt monolítico (252 linhas) dividido em CORE + 6 extensões composáveis
+- ZERO alterações em chat.py, confirmable_tool_node.py, save_response.py, state.py, e todos os 20 tool files
+- `build_domain_agent_graph` mantido no factory para backward compat
+- 214 testes passed, 14 skipped (DB), ruff + mypy clean
+- **Validação manual E2E** (Playwright): 6 cenários testados — general (cumprimento), finance READ (gastos do mês com dados reais do banco), tracking READ (água da semana), tracking WRITE (registrar água + confirmação + verificação no DB), memory (perfil completo do usuário), wellbeing (resposta empática de conselheira). Todos os domínios rotearam corretamente com confidence >= 0.98. Tools chamadas corretas e isoladas por domínio. Memory READ compartilhada usada em 4 dos 6 testes.
 
 ---
 

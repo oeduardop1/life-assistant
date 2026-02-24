@@ -5,10 +5,12 @@ from app.tools.memory.analyze_context import analyze_context
 from app.tools.memory.search_knowledge import search_knowledge
 
 MEMORY_TOOLS = [search_knowledge, add_knowledge, analyze_context]
+MEMORY_READ_TOOLS = [search_knowledge, analyze_context]
 MEMORY_WRITE_TOOLS: set[str] = {"add_knowledge"}
 
 __all__ = [
     "MEMORY_TOOLS",
+    "MEMORY_READ_TOOLS",
     "MEMORY_WRITE_TOOLS",
     "search_knowledge",
     "add_knowledge",

@@ -94,7 +94,11 @@ async def test_context_includes_user_memories() -> None:
 
 
 @pytest.mark.asyncio
-async def test_counselor_mode_appends_extension() -> None:
+async def test_counselor_mode_no_longer_appends_extension() -> None:
+    """M4.7: context_builder no longer appends counselor extension.
+
+    Domain extensions are now applied by agent_node at runtime.
+    """
     session = AsyncMock()
     user = _mock_user()
 
@@ -110,8 +114,8 @@ async def test_counselor_mode_appends_extension() -> None:
     ):
         prompt = await build_context(session, str(uuid.uuid4()), "counselor")
 
-    assert "Modo Especial: Conselheira" in prompt
-    assert "perguntas abertas" in prompt
+    # Counselor extension is NOT appended by build_context anymore
+    assert "Modo Especial: Conselheira" not in prompt
 
 
 @pytest.mark.asyncio
@@ -174,12 +178,12 @@ async def test_missing_user_uses_fallback_name() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tool instruction tests (M4.6)
+# Core prompt content tests (M4.7 — split prompt)
 # ---------------------------------------------------------------------------
 
 
-async def _build_general_prompt() -> str:
-    """Helper to build a general prompt with mocked user."""
+async def _build_core_prompt() -> str:
+    """Helper to build a core prompt with mocked user."""
     session = AsyncMock()
     user = _mock_user()
 
@@ -197,58 +201,29 @@ async def _build_general_prompt() -> str:
 
 
 @pytest.mark.asyncio
-async def test_tool_instructions_memory_tools() -> None:
-    prompt = await _build_general_prompt()
-    assert "### search_knowledge" in prompt
-    assert "### add_knowledge" in prompt
-    assert "### analyze_context" in prompt
-    assert "SEMPRE use quando perguntarem sobre o usuário" in prompt
-
-
-@pytest.mark.asyncio
-async def test_tool_instructions_tracking_tools() -> None:
-    prompt = await _build_general_prompt()
-    assert "### record_metric" in prompt
-    assert "### update_metric" in prompt
-    assert "### delete_metric" in prompt
-    assert "### get_tracking_history" in prompt
-    assert "FLUXO OBRIGATÓRIO (ADR-015)" in prompt
-    assert "REGRA CRÍTICA SOBRE entryId" in prompt
-
-
-@pytest.mark.asyncio
-async def test_tool_instructions_habits_tools() -> None:
-    prompt = await _build_general_prompt()
-    assert "### record_habit" in prompt
-    assert "### get_habits" in prompt
-    assert "NUNCA criar novos hábitos" in prompt
-
-
-@pytest.mark.asyncio
-async def test_tool_instructions_finance_tools() -> None:
-    prompt = await _build_general_prompt()
-    assert "### Ferramentas de Finanças" in prompt
-    assert "get_finance_summary" in prompt
-    assert "get_bills" in prompt
-    assert "get_expenses" in prompt
-    assert "mark_bill_paid" in prompt
-    assert "create_expense" in prompt
-    assert "FLUXO OBRIGATÓRIO para análise financeira" in prompt
-    assert "REGRAS CRÍTICAS" in prompt
-
-
-@pytest.mark.asyncio
-async def test_tool_instructions_present() -> None:
-    """System prompt contains the 'Suas capacidades' section with all tool blocks."""
-    prompt = await _build_general_prompt()
+async def test_core_prompt_has_capabilities_section() -> None:
+    """Core prompt contains the 'Suas capacidades' section."""
+    prompt = await _build_core_prompt()
     assert "## Suas capacidades" in prompt
 
 
 @pytest.mark.asyncio
+async def test_core_prompt_does_not_have_domain_tool_instructions() -> None:
+    """Core prompt from build_context has no domain-specific tool instructions.
+
+    Domain extensions (tracking, finance, etc.) are appended by agent_node.
+    """
+    prompt = await _build_core_prompt()
+    # These are in domain extensions, not in core
+    assert "### record_metric" not in prompt
+    assert "### Ferramentas de Finanças" not in prompt
+    assert "### add_knowledge" not in prompt
+
+
+@pytest.mark.asyncio
 async def test_rules_complete() -> None:
-    """All 11 rules from TS are present."""
-    prompt = await _build_general_prompt()
-    # Check key rules by content
+    """All 11 rules from TS are present in the core prompt."""
+    prompt = await _build_core_prompt()
     assert "NUNCA invente informações" in prompt  # Rule 1
     assert "diagnósticos médicos" in prompt  # Rule 2
     assert "NUNCA julgue" in prompt  # Rule 3
@@ -263,32 +238,9 @@ async def test_rules_complete() -> None:
 
 
 @pytest.mark.asyncio
-async def test_counselor_mode_tom_section() -> None:
-    """Counselor extension includes 'Tom' subsection."""
-    session = AsyncMock()
-    user = _mock_user()
-
-    with (
-        patch(
-            "app.prompts.context_builder.UserRepository.get_by_id",
-            return_value=user,
-        ),
-        patch(
-            "app.prompts.context_builder.UserRepository.get_memories",
-            return_value=None,
-        ),
-    ):
-        prompt = await build_context(session, str(uuid.uuid4()), "counselor")
-
-    assert "### Tom" in prompt
-    assert "pausado e reflexivo" in prompt
-    assert "Minimize emojis" in prompt
-
-
-@pytest.mark.asyncio
 async def test_inferential_reasoning_section() -> None:
     """Inferential reasoning section matches TS."""
-    prompt = await _build_general_prompt()
+    prompt = await _build_core_prompt()
     assert "## Raciocínio Inferencial" in prompt
     assert "FLUXO OBRIGATÓRIO" in prompt
     assert "Stress financeiro + problemas de sono" in prompt
@@ -429,3 +381,61 @@ async def test_empty_sections_skipped() -> None:
     assert "## Em Mente" not in prompt
     assert "## Padrões Observados" not in prompt
     assert "## Comunicação" not in prompt
+
+
+# ---------------------------------------------------------------------------
+# Domain extension content tests (M4.7)
+# ---------------------------------------------------------------------------
+
+
+def test_tracking_extension_has_tool_instructions() -> None:
+    """Tracking prompt extension includes all tracking tool instructions."""
+    from app.prompts.system import TRACKING_PROMPT_EXTENSION
+
+    assert "### record_metric" in TRACKING_PROMPT_EXTENSION
+    assert "### update_metric" in TRACKING_PROMPT_EXTENSION
+    assert "### delete_metric" in TRACKING_PROMPT_EXTENSION
+    assert "### get_tracking_history" in TRACKING_PROMPT_EXTENSION
+    assert "FLUXO OBRIGATÓRIO (ADR-015)" in TRACKING_PROMPT_EXTENSION
+    assert "REGRA CRÍTICA SOBRE entryId" in TRACKING_PROMPT_EXTENSION
+    assert "### record_habit" in TRACKING_PROMPT_EXTENSION
+    assert "### get_habits" in TRACKING_PROMPT_EXTENSION
+    assert "### search_knowledge" in TRACKING_PROMPT_EXTENSION
+    assert "### analyze_context" in TRACKING_PROMPT_EXTENSION
+
+
+def test_finance_extension_has_tool_instructions() -> None:
+    """Finance prompt extension includes all finance tool instructions."""
+    from app.prompts.system import FINANCE_PROMPT_EXTENSION
+
+    assert "### Ferramentas de Finanças" in FINANCE_PROMPT_EXTENSION
+    assert "get_finance_summary" in FINANCE_PROMPT_EXTENSION
+    assert "get_bills" in FINANCE_PROMPT_EXTENSION
+    assert "mark_bill_paid" in FINANCE_PROMPT_EXTENSION
+    assert "create_expense" in FINANCE_PROMPT_EXTENSION
+    assert "FLUXO OBRIGATÓRIO para análise financeira" in FINANCE_PROMPT_EXTENSION
+    assert "REGRAS CRÍTICAS" in FINANCE_PROMPT_EXTENSION
+    assert "### search_knowledge" in FINANCE_PROMPT_EXTENSION
+    assert "### analyze_context" in FINANCE_PROMPT_EXTENSION
+
+
+def test_memory_write_extension_has_add_knowledge() -> None:
+    """Memory write extension includes add_knowledge instructions."""
+    from app.prompts.system import MEMORY_WRITE_EXTENSION
+
+    assert "### add_knowledge" in MEMORY_WRITE_EXTENSION
+    assert "### search_knowledge" in MEMORY_WRITE_EXTENSION
+    assert "### analyze_context" in MEMORY_WRITE_EXTENSION
+
+
+def test_wellbeing_extension_has_counselor_content() -> None:
+    """Wellbeing prompt extension includes counselor mode content."""
+    from app.prompts.system import WELLBEING_PROMPT_EXTENSION
+
+    assert "Modo Especial: Conselheira" in WELLBEING_PROMPT_EXTENSION
+    assert "perguntas abertas" in WELLBEING_PROMPT_EXTENSION
+    assert "### Tom" in WELLBEING_PROMPT_EXTENSION
+    assert "pausado e reflexivo" in WELLBEING_PROMPT_EXTENSION
+    assert "Minimize emojis" in WELLBEING_PROMPT_EXTENSION
+    assert "### search_knowledge" in WELLBEING_PROMPT_EXTENSION
+    assert "### analyze_context" in WELLBEING_PROMPT_EXTENSION

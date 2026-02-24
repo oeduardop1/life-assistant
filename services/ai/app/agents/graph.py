@@ -1,4 +1,9 @@
-"""LangGraph chat graph builder — domain agent with tracking + finance + memory tools."""
+"""LangGraph chat graph builder — multi-agent with triage + domain routing.
+
+M4.7: Replaces the single-agent graph with a triage → dynamic dispatch
+architecture. A fast triage LLM classifies user intent, then the agent
+node dynamically selects tools and prompt extension per domain.
+"""
 
 from typing import Any
 
@@ -6,24 +11,31 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import CompiledStateGraph
 
-from app.agents.domains.finance import FINANCE_TOOLS, FINANCE_WRITE_TOOLS
-from app.agents.domains.memory import MEMORY_TOOLS, MEMORY_WRITE_TOOLS
-from app.agents.domains.tracking import TRACKING_TOOLS, TRACKING_WRITE_TOOLS
-from app.tools.common.agent_factory import build_domain_agent_graph
-
-ALL_TOOLS = TRACKING_TOOLS + FINANCE_TOOLS + MEMORY_TOOLS
-ALL_WRITE_TOOLS = TRACKING_WRITE_TOOLS | FINANCE_WRITE_TOOLS | MEMORY_WRITE_TOOLS
+from app.agents.registry import build_domain_registry
+from app.agents.triage import make_triage_node
+from app.tools.common.agent_factory import build_multi_agent_graph
 
 
 def build_chat_graph(
-    llm: BaseChatModel, checkpointer: AsyncPostgresSaver
+    llm: BaseChatModel,
+    triage_llm: BaseChatModel,
+    checkpointer: AsyncPostgresSaver,
 ) -> CompiledStateGraph[Any]:
-    """Build and compile the chat StateGraph with tracking + finance + memory tools.
+    """Build and compile the multi-agent chat graph.
 
-    Flow: START → agent → should_continue → tools → agent  (loop)
-                                           ↘ save_response → END
+    Flow: START → triage → agent → should_continue → tools → agent (loop)
+                                                    ↘ save_response → END
 
-    The graph is compiled once at startup and reused for every invocation.
-    Thread isolation is achieved via the ``thread_id`` in the config.
+    Parameters
+    ----------
+    llm:
+        Main LLM for domain agents (e.g. gemini-2.5-flash).
+    triage_llm:
+        Fast LLM for triage classification (e.g. gemini-flash-latest).
+    checkpointer:
+        LangGraph checkpoint persistence.
     """
-    return build_domain_agent_graph(llm, ALL_TOOLS, ALL_WRITE_TOOLS, checkpointer)
+    triage_node = make_triage_node(triage_llm)
+    domain_registry = build_domain_registry()
+
+    return build_multi_agent_graph(llm, triage_node, domain_registry, checkpointer)

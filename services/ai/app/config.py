@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     # LLM
     LLM_PROVIDER: str = "gemini"
     LLM_MODEL: str = "gemini-flash-latest"
+    TRIAGE_LLM_MODEL: str = "gemini-flash-latest"
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
 

@@ -35,3 +35,19 @@ def create_llm(settings: Settings, *, temperature: float = 0.7) -> BaseChatModel
 
     msg = f"Unsupported LLM provider: {provider}. Use 'gemini' or 'anthropic'."
     raise ValueError(msg)
+
+
+def create_triage_llm(settings: Settings) -> BaseChatModel:
+    """Create a fast, deterministic LLM for the triage classifier.
+
+    Uses ``TRIAGE_LLM_MODEL`` (default: gemini-flash-latest) with temperature=0
+    for deterministic classification. Always uses the Gemini provider since
+    triage requires speed and low cost over capability.
+    """
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
+    return ChatGoogleGenerativeAI(
+        model=settings.TRIAGE_LLM_MODEL,
+        google_api_key=settings.GEMINI_API_KEY,
+        temperature=0,
+    )
