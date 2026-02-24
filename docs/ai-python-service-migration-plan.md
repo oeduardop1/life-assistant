@@ -610,10 +610,12 @@ python-ai:
 
 **Total estimado: 10-14 semanas**
 
-> **Nota sobre BullMQ:** BullMQ tem pacote Python oficial (v2.19.5, classificado Alpha). A decisão de usar HTTP bridge baseia-se na maturidade do pacote. Opções:
-> (a) **NestJS mantém o scheduler e chama Python via HTTP** (recomendado — menor mudança)
-> (b) Python usa APScheduler/Celery para cron próprio
-> (c) Lib de compatibilidade BullMQ para Python (immaturas, não recomendado)
+> **Nota sobre scheduling (atualizada 2026-02-24):** Adotada arquitetura híbrida após pesquisa técnica:
+> - **(b) Python usa APScheduler para cron de jobs AI** ← ESCOLHIDO (async-native, PostgreSQL persistence, integra com FastAPI lifespan)
+> - ~~(a) NestJS mantém o scheduler e chama Python via HTTP~~ — descartado (complexidade operacional desnecessária para sistema não em produção)
+> - ~~(c) BullMQ Python~~ — descartado (Alpha, sem cron jobs, bugs críticos)
+> - BullMQ permanece no NestJS apenas para jobs CRUD (cleanup-onboarding, calendar sync futuro)
+> - Ver `docs/milestones/phase-4-ai-migration.md` M4.8 para decisão completa
 
 ---
 

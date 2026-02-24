@@ -884,61 +884,119 @@ _Concluído em 2026-02-23._
 
 ## M4.8 — Workers: Memory Consolidation + Contradiction Detection 🔴
 
-**Objetivo:** Migrar jobs assíncronos (memory consolidation, contradiction detection) para Python, mantendo BullMQ como scheduler.
+**Objetivo:** Migrar memory consolidation e contradiction detection para Python com scheduling nativo via APScheduler (arquitetura híbrida: jobs AI em Python, jobs CRUD em NestJS BullMQ).
 
 **Referências:** `docs/ai-python-service-migration-plan.md` §11 Fase 3, `docs/specs/domains/memory.md`
 
 **Dependências:** M4.6
 
-> **Contexto:** `memory-consolidation.processor.ts` (557L) e `contradiction-detector.adapter.ts` (435L) usam LLM para extrair fatos de conversas e detectar contradições. A estratégia recomendada é manter BullMQ no NestJS como scheduler e chamar Python via HTTP para a lógica de AI. Isso minimiza mudanças na infraestrutura de jobs.
+> **Contexto:** `memory-consolidation.processor.ts` (557L), `consolidation-prompt.ts` (337L) e `contradiction-detector.adapter.ts` (435L) usam LLM para extrair fatos de conversas e detectar contradições. Esses são jobs de AI que pertencem ao runtime Python, onde toda a lógica LLM já reside.
+>
+> **Decisão arquitetural (atualizada em 2026-02-24):** Adotar **arquitetura híbrida** em vez de HTTP bridge:
+> - **Jobs AI** (memory consolidation, follow-ups futuros): scheduling + execução em **Python via APScheduler**
+> - **Jobs CRUD** (cleanup-onboarding, hard-deletes, calendar sync futuros): permanecem em **NestJS BullMQ**
+>
+> Essa decisão se baseia em pesquisa técnica detalhada:
+> - **BullMQ Python** (v2.19.5) é classificado Alpha no PyPI, **não suporta cron/repeat jobs** ([Issue #2772](https://github.com/taskforcesh/bullmq/issues/2772)), e tem bugs críticos (Redis disconnect infinite loop [#3103](https://github.com/taskforcesh/bullmq/issues/3103), graceful shutdown quebrado). Descartado.
+> - **HTTP bridge** (NestJS BullMQ → POST → Python) adiciona ponto de falha desnecessário, duplicação de codebases, e complexidade operacional — sem benefício real dado que o sistema não está em produção.
+> - **APScheduler 3.x** é production-ready, async-native (`AsyncIOScheduler`), integra com FastAPI via lifespan, persiste schedules em PostgreSQL via SQLAlchemy + asyncpg (infra que o Python service já usa), e suporta CronTrigger com timezone.
+>
+> **Princípio:** Cada runtime agenda e executa o que é do seu domínio. Sem HTTP bridge para jobs agendados.
 
 **Tasks:**
 
+**APScheduler Setup:**
+- [ ] Adicionar dependência: `uv add apscheduler` (SQLAlchemy + asyncpg já existem)
+- [ ] Criar `app/workers/scheduler.py`:
+  - Configurar `AsyncScheduler` com `SQLAlchemyDataStore` (PostgreSQL persistence)
+  - Configurar `AsyncpgEventBroker` (para coordenação distribuída futura)
+  - Integrar no FastAPI lifespan (`app/main.py`)
+  - Schedules sobrevivem restart do serviço (persistidos em PostgreSQL)
+- [ ] Configurar `ConflictPolicy.replace` para schedules idempotentes no startup
+
 **Memory Consolidation:**
 - [ ] Criar `app/workers/consolidation.py`:
-  - Recebe: `{ user_id, timezone, date }`
-  - Busca mensagens desde última consolidação (via ChatRepository)
-  - Usa LLM para extrair fatos, preferências, insights das mensagens
-  - Atualiza `user_memories`: bio, occupation, family, goals, challenges, topOfMind, values, learnedPatterns
-  - Cria novos `knowledge_items` (com contradiction detection)
-  - Atualiza `knowledge_items` existentes quando informação evolui
-  - Registra consolidation log em `memory_consolidations`
-- [ ] Criar endpoint POST `/workers/consolidation` em `app/api/routes/workers.py`:
-  - Auth via SERVICE_SECRET
-  - Recebe job data, executa consolidation, retorna resultado
-  - Retorna: `{ usersProcessed, usersConsolidated, usersSkipped, errors, completedAt }`
+  - Função `run_consolidation(timezone: str, date: str)` — entry point do scheduler
+  - Query distinct user timezones ativos, registrar CronTrigger por timezone (`0 3 * * *`)
+  - Para cada usuário no timezone:
+    - Buscar mensagens desde `lastConsolidatedAt` (via `MemoryRepository`)
+    - Skip se 0 mensagens (deduplicação)
+    - Executar deduplication phase (contradições em knowledge existente)
+    - Chamar LLM para extrair fatos, preferências, insights
+    - Atualizar `user_memories`: bio, occupation, family, goals, challenges, topOfMind, values, learnedPatterns
+    - Criar novos `knowledge_items` (com contradiction detection)
+    - Atualizar `knowledge_items` existentes quando informação evolui
+    - Registrar consolidation log em `memory_consolidations`
+  - Retorna: `{ users_processed, users_consolidated, users_skipped, errors, completed_at }`
+- [ ] Portar `consolidation-prompt.ts` (337L) para Python:
+  - Prompt builder em português (mesma estrutura do TypeScript)
+  - Parser de response com validação Pydantic (equivalente ao Zod schema atual)
+  - Normalização de tipos inválidos do LLM (ex: `challenge` → `insight`)
+  - Fallback para JSON truncado/malformado
+- [ ] Criar `app/workers/utils.py`:
+  - `refresh_consolidation_schedules(scheduler)` — re-query timezones e upsert schedules
+  - `trigger_consolidation_for_user(user_id)` — trigger manual (dev/testing)
+  - Retry com backoff para falhas de LLM (3 tentativas, exponencial 1s→2s→4s)
 
 **Contradiction Detection:**
-- [ ] Criar `app/memory/contradiction.py`:
-  - Single item: "novo fato torna fato existente obsoleto?"
-  - Batch items: check novo fato contra 3+ fatos existentes em uma chamada LLM
-  - Parse JSON response do LLM com fallback para output truncado
-  - Retorna: `{ is_contradiction, confidence, explanation }`
-- [ ] Integrar com consolidation: antes de salvar knowledge_item, detectar contradições
+- [ ] Expandir `app/tools/memory/_contradiction_detector.py` (138L existente):
+  - Já funciona para batch check durante `add_knowledge` tool
+  - Adicionar modo single-item: "novo fato torna fato existente obsoleto?"
+  - Melhorar parse de JSON com fallback para output truncado (portar lógica do TS)
+  - Manter threshold de confiança 0.7
+- [ ] Integrar com consolidation: antes de salvar knowledge_item, chamar contradiction detection
+- [ ] Reutilizar `ContradictionResult` Pydantic model existente
 
-**NestJS Bridge:**
-- [ ] Atualizar `memory-consolidation.processor.ts`:
-  - Quando `USE_PYTHON_AI=true`: POST para Python `/workers/consolidation` via HTTP
-  - Quando `false`: executa lógica TypeScript atual
-  - BullMQ scheduler permanece no NestJS (sem mudanças no cron/trigger)
+**NestJS Deactivation:**
+- [ ] Atualizar `memory-consolidation.scheduler.ts`:
+  - Quando `USE_PYTHON_AI=true`: **não registrar** schedulers BullMQ para memory-consolidation (skip no `onModuleInit`)
+  - Quando `false`: comportamento atual (fallback TypeScript)
+  - Log indicando qual sistema está ativo: `"Memory consolidation: Python APScheduler"` ou `"Memory consolidation: NestJS BullMQ"`
+- [ ] Manter `cleanup-onboarding` inalterado (não usa LLM, fica no NestJS BullMQ)
+- [ ] Código TypeScript do memory-consolidation NÃO é deletado aqui (cleanup em M4.10)
+
+**Admin/Dev Endpoints:**
+- [ ] Criar endpoint POST `/workers/consolidation/trigger` em `app/api/routes/workers.py`:
+  - Auth via SERVICE_SECRET
+  - Recebe: `{ user_id?: string, timezone?: string }`
+  - Trigger manual para dev/testing (equivalente ao admin endpoint NestJS)
+  - Retorna: `{ status, users_processed, users_consolidated, users_skipped, errors }`
 
 **Testes:**
+- [ ] Teste: APScheduler registra schedules por timezone no startup
 - [ ] Teste: consolidation extrai fatos corretos de conversas
 - [ ] Teste: contradictions detectadas (ex: "gosta de café" → "parou de tomar café")
 - [ ] Teste: user_memories atualizadas corretamente após consolidation
 - [ ] Teste: knowledge_items criados sem duplicatas
-- [ ] Teste: endpoint /workers/consolidation retorna resultado esperado
 - [ ] Teste: batch contradiction detection com múltiplos fatos
+- [ ] Teste: retry funciona após falha de LLM (3 tentativas com backoff)
+- [ ] Teste: schedules persistem após restart do serviço (PostgreSQL store)
+- [ ] Teste: NestJS não registra memory-consolidation schedulers quando `USE_PYTHON_AI=true`
 
 **Definition of Done:**
-- [ ] Consolidation job roda via BullMQ → HTTP → Python → resultado
-- [ ] Fatos extraídos corretamente de conversas
-- [ ] Contradictions detectadas com confiança adequada
+- [ ] APScheduler roda consolidation diariamente às 3:00 AM por timezone
+- [ ] Fatos extraídos corretamente de conversas (equivalente ao TypeScript)
+- [ ] Contradictions detectadas com confiança adequada (threshold 0.7)
+- [ ] Schedules persistidos em PostgreSQL (sobrevivem restart)
+- [ ] NestJS memory-consolidation desativado quando `USE_PYTHON_AI=true`
 - [ ] Resultado equivalente ao sistema TypeScript
 
-> **Decisão tomada:** NestJS BullMQ mantém o scheduling e chama Python via HTTP (opção A — menor mudança). Existe um pacote oficial `bullmq` para Python (v2.19.5) com classe `Worker`, mas está classificado como **Alpha** e não suporta todas as features do Node.js — por isso a decisão de manter o scheduler no NestJS. Se no futuro Python precisar de jobs próprios, considerar APScheduler ou Celery.
+> **Decisão tomada (2026-02-24):** Arquitetura híbrida — jobs AI em Python (APScheduler), jobs CRUD em NestJS (BullMQ). Pesquisa técnica completa documentada na sessão de análise.
 >
-> **Padrão de comunicação:** NestJS BullMQ (cron trigger + retry + job history) → HTTP POST → Python (AI/LLM execution logic) → JSON response. BullMQ retry config permanece no NestJS — Python não precisa implementar retry de job.
+> **Stack de scheduling Python:** APScheduler 3.x + `AsyncIOScheduler` + `SQLAlchemyDataStore` (PostgreSQL) + `CronTrigger`. Roda in-process no FastAPI via lifespan — sem processo separado (diferente de Celery Beat).
+>
+> **Alternativas avaliadas e descartadas:**
+> - BullMQ Python (Alpha, sem cron jobs, bugs críticos)
+> - HTTP bridge NestJS→Python (complexidade operacional desnecessária para sistema não em produção)
+> - Celery (não async-native, impedance mismatch com FastAPI + asyncpg)
+> - Taskiq (pre-1.0, comunidade pequena)
+> - arq (maintenance-only mode)
+>
+> **Padrão de scheduling:**
+> ```
+> Jobs AI:   FastAPI lifespan → APScheduler (CronTrigger, PostgreSQL store) → Python function
+> Jobs CRUD: NestJS BullMQ (cron trigger, Redis) → NestJS processor
+> ```
 
 ---
 
@@ -1027,7 +1085,7 @@ _Concluído em 2026-02-23._
 
 **Dependências:** M4.9
 
-> **Contexto:** Este é o milestone de maior risco — deleta ~13.400 linhas de código AI em produção (~11.600 deletadas + ~2.700 simplificadas). A safety net é o M4.9 (validação de paridade) e o deploy strategy (blue-green ou canary). Rollback é possível revertendo o commit + `USE_PYTHON_AI=false`.
+> **Contexto:** Este é o milestone de maior risco — deleta ~12.650 linhas de código AI (~11.600 + ~1.048 do memory consolidation, que foi migrado para Python APScheduler em M4.8) e simplifica ~1.650 linhas. A safety net é o M4.9 (validação de paridade) e o deploy strategy (blue-green ou canary). Rollback é possível revertendo o commit + `USE_PYTHON_AI=false`.
 
 **Tasks:**
 
@@ -1048,10 +1106,15 @@ _Concluído em 2026-02-23._
 - [ ] Deletar `context-builder.service.ts` (~337L)
 - [ ] Deletar `contradiction-detector.adapter.ts` (~435L)
 
-**Simplificar memory consolidation:**
-- [ ] Remover lógica LLM do `memory-consolidation.processor.ts` (~557L)
-- [ ] Manter apenas: BullMQ trigger → HTTP POST para Python `/workers/consolidation`
-- [ ] Resultado: ~50 linhas (de ~557)
+**Deletar memory consolidation do NestJS (migrado para Python APScheduler em M4.8):**
+- [ ] Deletar `memory-consolidation.processor.ts` (~557L)
+- [ ] Deletar `memory-consolidation.scheduler.ts` (~151L)
+- [ ] Deletar `consolidation-prompt.ts` (~337L)
+- [ ] Remover queue `MEMORY_CONSOLIDATION` de `queues.ts` e `jobs.module.ts`
+- [ ] Remover `MemoryConsolidationScheduler` e `MemoryConsolidationProcessor` dos providers em `jobs.module.ts`
+- [ ] Remover dependência de `MemoryModule` em `JobsModule` (se não usada pelo cleanup-onboarding)
+- [ ] Manter `cleanup-onboarding` intacto (BullMQ, não usa LLM)
+- [ ] Resultado: ~1.048 linhas deletadas (de ~1.048)
 
 **Simplificar chat.service.ts:**
 - [ ] Remover lógica de tool loop TypeScript
@@ -1090,13 +1153,14 @@ _Concluído em 2026-02-23._
 - [ ] `pnpm typecheck && pnpm lint && pnpm test` passam
 - [ ] `pnpm test:e2e` passa
 - [ ] Produção estável por 48h sem novos erros
-- [ ] Total removido: **~11.600 linhas deletadas** + **~2.700 simplificadas** (~1.800 delta removido)
+- [ ] Total removido: **~12.650 linhas deletadas** + **~1.650 simplificadas**
 
 > **Riscos:**
 > - Regressões em edge cases de confirmação (SSE event ordering diferente)
 > - Imports quebrados em arquivos não cobertos pelos testes
 > - Performance em produção diferente de local (latência Railway internal networking)
 > - Rollback plan: reverter commit + `USE_PYTHON_AI=false` no NestJS (requer que packages/ai/ ainda exista no git history)
+> - Memory consolidation: rollback requer reativar BullMQ schedulers no NestJS (código ainda existe até ser deletado neste milestone)
 
 ---
 
@@ -1105,13 +1169,16 @@ _Concluído em 2026-02-23._
 | Métrica | Valor |
 |---|---|
 | Milestones | 10 (M4.1 — M4.10) |
-| Linhas deletadas do NestJS | **~11.600** (deletadas) + **~2.700** (simplificadas, ~1.800 delta removido) |
+| Linhas deletadas do NestJS | **~12.650** (deletadas, inclui memory consolidation ~1.048L migrado para Python) |
+| Linhas simplificadas no NestJS | **~1.650** (chat.service.ts, chat.module.ts, jobs.module.ts) |
 | Linhas adicionadas no NestJS | ~160 (proxy SSE + config + feature flag) |
-| Novo código Python | **~5.000-7.000** (estimativa — Python mais conciso que TypeScript equivalente) |
+| Novo código Python | **~5.500-7.500** (estimativa — inclui APScheduler setup + consolidation) |
 | SQLAlchemy models | ~120-200 linhas (mapeamento passivo + CI check) |
 | Pacote deletado | `packages/ai/` (**7.677 linhas**, 49 arquivos) |
 | Novo diretório | `services/ai/` (Python AI Service) |
-| Serviços NestJS intactos | Auth, REST controllers, domain services, repositories, BullMQ (scheduler) |
+| Serviços NestJS intactos | Auth, REST controllers, domain services, repositories, BullMQ (cleanup + CRUD jobs) |
+| Scheduling AI | APScheduler no Python (memory consolidation, follow-ups futuros) |
+| Scheduling CRUD | BullMQ no NestJS (cleanup-onboarding, calendar sync futuro) |
 | Mudanças no frontend | Nenhuma (SSE events mantêm mesmo formato) |
 
 ### Estrutura do monorepo após migração
@@ -1131,7 +1198,7 @@ life-assistant/
 │       │   ├── memory/         # Contradiction detection
 │       │   ├── prompts/        # System prompt + context builder
 │       │   ├── tools/          # 20 tool implementations
-│       │   └── workers/        # Memory consolidation
+│       │   └── workers/        # APScheduler + Memory consolidation (cron jobs AI)
 │       ├── tests/
 │       ├── pyproject.toml
 │       └── Dockerfile
