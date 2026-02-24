@@ -22,8 +22,8 @@ _TOOL_MESSAGES: dict[str, str] = {
     "delete_metric": "Remover registro {entry_id}?",
     "record_habit": "Marcar hábito '{habit_name}' como concluído em {date}?",
     # Finance tools (M4.5)
-    "mark_bill_paid": "Marcar conta '{nome}' como paga em {data}?",
-    "create_expense": "Registrar gasto de R${valor} em {categoria}?",
+    "mark_bill_paid": "Marcar conta como paga?",
+    "create_expense": "Registrar despesa '{name}' ({category})?",
     # Memory tools (M4.6)
     "add_knowledge": "Salvar: '{conteudo}'?",
 }
@@ -34,6 +34,8 @@ _FALLBACK_MESSAGE = "Executar {tool_name}?"
 _OPTIONAL_DEFAULTS: dict[str, dict[str, str]] = {
     "record_metric": {"unit": "", "date": "hoje"},
     "record_habit": {"date": "hoje"},
+    "mark_bill_paid": {"paid_date": "hoje"},
+    "create_expense": {"category": "outros"},
 }
 
 

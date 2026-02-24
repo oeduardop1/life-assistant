@@ -29,6 +29,7 @@ from app.db.models.finance import (
     Investment,
     VariableExpense,
 )
+from app.tools.finance.create_expense import create_expense
 from app.tools.finance.get_bills import get_bills
 from app.tools.finance.get_debt_payment_history import get_debt_payment_history
 from app.tools.finance.get_debt_progress import get_debt_progress
@@ -38,6 +39,7 @@ from app.tools.finance.get_incomes import get_incomes
 from app.tools.finance.get_investments import get_investments
 from app.tools.finance.get_pending_bills import get_pending_bills
 from app.tools.finance.get_upcoming_installments import get_upcoming_installments
+from app.tools.finance.mark_bill_paid import mark_bill_paid
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -719,6 +721,231 @@ async def test_get_finance_summary_current_month(
 
 
 # ---------------------------------------------------------------------------
+# mark_bill_paid (WRITE)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@patch("app.tools.finance.mark_bill_paid.get_user_session")
+@patch("app.tools.finance.mark_bill_paid.FinanceRepository")
+async def test_mark_bill_paid_success(mock_repo: MagicMock, mock_session: MagicMock) -> None:
+    bill = _make_bill(name="Internet", amount=100.0, status="pending")
+    updated_bill = _make_bill(name="Internet", amount=100.0, status="paid")
+
+    mock_repo.get_bill_by_id = AsyncMock(return_value=bill)
+    mock_repo.mark_bill_paid = AsyncMock(return_value=updated_bill)
+    mock_session.return_value = AsyncMock()
+    mock_session.return_value.__aenter__ = AsyncMock()
+    mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    result = await mark_bill_paid.ainvoke(
+        {"bill_id": "44444444-4444-4444-4444-444444444444"}, _make_config()
+    )
+    parsed = json.loads(result)
+
+    assert parsed["success"] is True
+    assert parsed["bill"]["name"] == "Internet"
+    assert parsed["bill"]["amount"] == 100.0
+    assert "paidAt" in parsed
+    assert "Internet" in parsed["message"]
+
+
+@pytest.mark.asyncio
+@patch("app.tools.finance.mark_bill_paid.get_user_session")
+@patch("app.tools.finance.mark_bill_paid.FinanceRepository")
+async def test_mark_bill_paid_not_found(mock_repo: MagicMock, mock_session: MagicMock) -> None:
+    mock_repo.get_bill_by_id = AsyncMock(return_value=None)
+    mock_session.return_value = AsyncMock()
+    mock_session.return_value.__aenter__ = AsyncMock()
+    mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    result = await mark_bill_paid.ainvoke(
+        {"bill_id": "44444444-4444-4444-4444-444444444444"}, _make_config()
+    )
+    parsed = json.loads(result)
+
+    assert "error" in parsed
+    assert "não encontrada" in parsed["error"]
+
+
+@pytest.mark.asyncio
+@patch("app.tools.finance.mark_bill_paid.get_user_session")
+@patch("app.tools.finance.mark_bill_paid.FinanceRepository")
+async def test_mark_bill_paid_already_paid(mock_repo: MagicMock, mock_session: MagicMock) -> None:
+    bill = _make_bill(name="Internet", status="paid")
+
+    mock_repo.get_bill_by_id = AsyncMock(return_value=bill)
+    mock_session.return_value = AsyncMock()
+    mock_session.return_value.__aenter__ = AsyncMock()
+    mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    result = await mark_bill_paid.ainvoke(
+        {"bill_id": "44444444-4444-4444-4444-444444444444"}, _make_config()
+    )
+    parsed = json.loads(result)
+
+    assert "error" in parsed
+    assert "já está" in parsed["error"]
+
+
+@pytest.mark.asyncio
+@patch("app.tools.finance.mark_bill_paid.get_user_session")
+@patch("app.tools.finance.mark_bill_paid.FinanceRepository")
+async def test_mark_bill_paid_overdue_success(
+    mock_repo: MagicMock, mock_session: MagicMock
+) -> None:
+    bill = _make_bill(name="Aluguel", amount=1500.0, status="overdue")
+    updated = _make_bill(name="Aluguel", amount=1500.0, status="paid")
+
+    mock_repo.get_bill_by_id = AsyncMock(return_value=bill)
+    mock_repo.mark_bill_paid = AsyncMock(return_value=updated)
+    mock_session.return_value = AsyncMock()
+    mock_session.return_value.__aenter__ = AsyncMock()
+    mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    result = await mark_bill_paid.ainvoke(
+        {"bill_id": "44444444-4444-4444-4444-444444444444"}, _make_config()
+    )
+    parsed = json.loads(result)
+
+    assert parsed["success"] is True
+    assert parsed["bill"]["name"] == "Aluguel"
+
+
+@pytest.mark.asyncio
+async def test_mark_bill_paid_invalid_uuid() -> None:
+    result = await mark_bill_paid.ainvoke({"bill_id": "not-a-uuid"}, _make_config())
+    parsed = json.loads(result)
+
+    assert "error" in parsed
+    assert "inválido" in parsed["error"]
+
+
+# ---------------------------------------------------------------------------
+# create_expense (WRITE)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@patch("app.tools.finance.create_expense.get_user_session")
+@patch("app.tools.finance.create_expense.FinanceRepository")
+async def test_create_expense_success(mock_repo: MagicMock, mock_session: MagicMock) -> None:
+    expense = _make_expense(name="Almoço", actual=50.0)
+
+    mock_repo.create_expense = AsyncMock(return_value=expense)
+    mock_session.return_value = AsyncMock()
+    mock_session.return_value.__aenter__ = AsyncMock()
+    mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    result = await create_expense.ainvoke(
+        {"name": "Almoço", "category": "alimentacao", "actual_amount": 50.0},
+        _make_config(),
+    )
+    parsed = json.loads(result)
+
+    assert parsed["success"] is True
+    assert parsed["expense"]["name"] == "Almoço"
+    assert parsed["expense"]["category"] == "food"
+    assert "Alimentação" in parsed["message"]
+
+
+@pytest.mark.asyncio
+@patch("app.tools.finance.create_expense.get_user_session")
+@patch("app.tools.finance.create_expense.FinanceRepository")
+async def test_create_expense_category_mapping(
+    mock_repo: MagicMock, mock_session: MagicMock
+) -> None:
+    """Test all 7 PT→EN category mappings."""
+    mappings = {
+        "alimentacao": "food",
+        "transporte": "transport",
+        "lazer": "entertainment",
+        "saude": "health",
+        "educacao": "education",
+        "vestuario": "shopping",
+        "outros": "other",
+    }
+
+    expense = _make_expense()
+    mock_repo.create_expense = AsyncMock(return_value=expense)
+    mock_session.return_value = AsyncMock()
+    mock_session.return_value.__aenter__ = AsyncMock()
+    mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    for pt_cat, en_cat in mappings.items():
+        result = await create_expense.ainvoke(
+            {"name": "Test", "category": pt_cat, "actual_amount": 10.0},
+            _make_config(),
+        )
+        parsed = json.loads(result)
+
+        assert parsed["success"] is True
+        # Verify the repo was called with the EN category
+        call_data = mock_repo.create_expense.call_args[0][1]
+        assert call_data["category"] == en_cat, f"{pt_cat} should map to {en_cat}"
+
+
+@pytest.mark.asyncio
+@patch("app.tools.finance.create_expense.get_user_session")
+@patch("app.tools.finance.create_expense.FinanceRepository")
+async def test_create_expense_defaults(mock_repo: MagicMock, mock_session: MagicMock) -> None:
+    """No budgeted or actual amount → both default to 0."""
+    expense = _make_expense()
+    mock_repo.create_expense = AsyncMock(return_value=expense)
+    mock_session.return_value = AsyncMock()
+    mock_session.return_value.__aenter__ = AsyncMock()
+    mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    result = await create_expense.ainvoke(
+        {"name": "Test", "category": "outros"},
+        _make_config(),
+    )
+    parsed = json.loads(result)
+
+    assert parsed["success"] is True
+    call_data = mock_repo.create_expense.call_args[0][1]
+    assert call_data["expected_amount"] == 0.0
+    assert call_data["actual_amount"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_create_expense_invalid_category() -> None:
+    result = await create_expense.ainvoke(
+        {"name": "Test", "category": "invalido"},
+        _make_config(),
+    )
+    parsed = json.loads(result)
+
+    assert "error" in parsed
+    assert "inválida" in parsed["error"]
+
+
+@pytest.mark.asyncio
+@patch("app.tools.finance.create_expense.get_user_session")
+@patch("app.tools.finance.create_expense.FinanceRepository")
+async def test_create_expense_budgeted_fallback(
+    mock_repo: MagicMock, mock_session: MagicMock
+) -> None:
+    """Only budgeted_amount provided → expected_amount = budgeted_amount."""
+    expense = _make_expense()
+    mock_repo.create_expense = AsyncMock(return_value=expense)
+    mock_session.return_value = AsyncMock()
+    mock_session.return_value.__aenter__ = AsyncMock()
+    mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    result = await create_expense.ainvoke(
+        {"name": "Test", "category": "alimentacao", "budgeted_amount": 200.0},
+        _make_config(),
+    )
+    parsed = json.loads(result)
+
+    assert parsed["success"] is True
+    call_data = mock_repo.create_expense.call_args[0][1]
+    assert call_data["expected_amount"] == 200.0
+    assert call_data["actual_amount"] == 0.0
+
+
+# ---------------------------------------------------------------------------
 # Graph integration
 # ---------------------------------------------------------------------------
 
@@ -736,7 +963,16 @@ def test_graph_includes_finance_tools() -> None:
     assert "get_debt_progress" in tool_names
     assert "get_debt_payment_history" in tool_names
     assert "get_upcoming_installments" in tool_names
+    assert "mark_bill_paid" in tool_names
+    assert "create_expense" in tool_names
 
     # Also still has tracking tools
     assert "record_metric" in tool_names
     assert "get_history" in tool_names
+
+
+def test_graph_write_tools_include_finance() -> None:
+    from app.agents.graph import ALL_WRITE_TOOLS
+
+    assert "mark_bill_paid" in ALL_WRITE_TOOLS
+    assert "create_expense" in ALL_WRITE_TOOLS

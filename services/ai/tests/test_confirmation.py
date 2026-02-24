@@ -21,10 +21,10 @@ class TestGenerateConfirmationMessage:
 
     def test_create_expense(self) -> None:
         msg = generate_confirmation_message(
-            "create_expense", {"valor": "50.00", "categoria": "alimentação"}
+            "create_expense", {"name": "Almoço", "category": "alimentacao"}
         )
-        assert "R$50.00" in msg
-        assert "alimentação" in msg
+        assert "Almoço" in msg
+        assert "alimentacao" in msg
 
     def test_add_knowledge(self) -> None:
         msg = generate_confirmation_message("add_knowledge", {"conteudo": "Eu gosto de café"})
@@ -38,9 +38,9 @@ class TestGenerateConfirmationMessage:
 
     def test_mark_bill_paid(self) -> None:
         msg = generate_confirmation_message(
-            "mark_bill_paid", {"nome": "Aluguel", "data": "01/03/2026"}
+            "mark_bill_paid", {"bill_id": "123", "paid_date": "2026-03-01"}
         )
-        assert "Aluguel" in msg
+        assert "Marcar conta como paga?" == msg
 
     def test_fallback_for_unknown_tool(self) -> None:
         msg = generate_confirmation_message("some_new_tool", {"foo": "bar"})

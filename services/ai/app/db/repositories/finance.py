@@ -47,6 +47,11 @@ class FinanceRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def get_bill_by_id(session: AsyncSession, bill_id: _uuid.UUID) -> Bill | None:
+        result = await session.execute(select(Bill).where(Bill.id == bill_id))
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def get_pending_bills(session: AsyncSession, user_id: _uuid.UUID) -> list[Bill]:
         result = await session.execute(
             select(Bill).where(Bill.user_id == user_id, Bill.status == "pending")
