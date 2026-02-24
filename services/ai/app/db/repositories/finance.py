@@ -4,7 +4,7 @@ import uuid as _uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.finance import (
@@ -122,6 +122,42 @@ class FinanceRepository:
     async def get_investments(session: AsyncSession, user_id: _uuid.UUID) -> list[Investment]:
         result = await session.execute(select(Investment).where(Investment.user_id == user_id))
         return list(result.scalars().all())
+
+    # --- Debts (additional) ---
+
+    @staticmethod
+    async def get_debt_by_id(
+        session: AsyncSession, user_id: _uuid.UUID, debt_id: _uuid.UUID
+    ) -> Debt | None:
+        result = await session.execute(
+            select(Debt).where(Debt.id == debt_id, Debt.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_debt_payments_for_debts(
+        session: AsyncSession, debt_ids: list[_uuid.UUID]
+    ) -> list[DebtPayment]:
+        if not debt_ids:
+            return []
+        result = await session.execute(
+            select(DebtPayment)
+            .where(DebtPayment.debt_id.in_(debt_ids))
+            .order_by(DebtPayment.installment_number)
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def sum_payments_by_month_year(
+        session: AsyncSession, user_id: _uuid.UUID, month_year: str
+    ) -> float:
+        """Sum all debt payment amounts for a user in a given month."""
+        total = await session.scalar(
+            select(func.coalesce(func.sum(DebtPayment.amount), 0)).where(
+                DebtPayment.user_id == user_id, DebtPayment.month_year == month_year
+            )
+        )
+        return float(total)  # type: ignore[arg-type]
 
     # --- Budgets ---
 

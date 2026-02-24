@@ -587,34 +587,41 @@ _Concluído em 2026-02-23._
 
 **Tasks:**
 
+**Finance Tools — Shared Helpers:**
+- [x] Criar `app/tools/finance/_helpers.py` — TZ utils + ensure_recurring
+  - Funções: get_current_month_tz, get_today_tz, get_days_until_due_day, resolve_month_year, get_previous_month, months_diff
+  - `ensure_recurring_for_month()` — geração lazy de itens recorrentes (bills, incomes, expenses)
+- [x] Adicionar métodos ao `app/db/repositories/finance.py`:
+  - get_debt_by_id, get_debt_payments_for_debts (batch), sum_payments_by_month_year
+
 **Finance Tools — READ (9 tools):**
-- [ ] Criar `app/tools/finance/get_finance_summary.py` — resumo financeiro mensal
-  - Params: month, year (opcionais, default: mês atual)
-  - Retorna: income total, expenses total, bills total, balance, breakdown por categoria
-- [ ] Criar `app/tools/finance/get_pending_bills.py` — contas pendentes
-  - Params: nenhum obrigatório
-  - Retorna: bills com status pending/overdue, valor total pendente
-- [ ] Criar `app/tools/finance/get_bills.py` — todas as contas com status
-  - Params: month, year, status (opcionais)
-  - Retorna: lista de bills com paid/pending/overdue
-- [ ] Criar `app/tools/finance/get_expenses.py` — despesas variáveis
-  - Params: month, year, category (opcionais)
-  - Retorna: lista de expenses com categoria e valor
-- [ ] Criar `app/tools/finance/get_incomes.py` — receitas
+- [x] Criar `app/tools/finance/get_finance_summary.py` — resumo financeiro mensal
+  - Params: period (Literal["current_month", "last_month", "year"], default: "current_month")
+  - Retorna: KPIs (income, budgeted, spent, balance), breakdown por entidade, ensure_recurring para 3 tabelas
+- [x] Criar `app/tools/finance/get_pending_bills.py` — contas pendentes
+  - Params: month, year (opcionais, default: mês atual via TZ)
+  - Retorna: bills com status pending, daysUntilDue, reclassifica overdue, ensure_recurring
+- [x] Criar `app/tools/finance/get_bills.py` — todas as contas com status
+  - Params: month, year, status (opcionais, status default: "all")
+  - Retorna: lista de bills com paid/pending/overdue, daysUntilDue, ensure_recurring
+- [x] Criar `app/tools/finance/get_expenses.py` — despesas variáveis
   - Params: month, year (opcionais)
-  - Retorna: lista de incomes
-- [ ] Criar `app/tools/finance/get_investments.py` — investimentos
-  - Params: nenhum obrigatório
-  - Retorna: lista de investments com tipo e valor
-- [ ] Criar `app/tools/finance/get_debt_progress.py` — progresso de dívidas
-  - Params: debt_id (opcional — todas se omitido)
-  - Retorna: total pago, percentual quitado, parcelas restantes
-- [ ] Criar `app/tools/finance/get_debt_payment_history.py` — histórico de pagamentos de dívida
-  - Params: debt_id
-  - Retorna: lista de pagamentos com data e valor
-- [ ] Criar `app/tools/finance/get_upcoming_installments.py` — próximas parcelas
-  - Params: days_ahead (opcional, default 30)
-  - Retorna: installments com data de vencimento e valor
+  - Retorna: lista de expenses com variance, percentUsed, ensure_recurring
+- [x] Criar `app/tools/finance/get_incomes.py` — receitas
+  - Params: month, year (opcionais)
+  - Retorna: lista de incomes com variance, receivedCount/pendingCount, ensure_recurring
+- [x] Criar `app/tools/finance/get_investments.py` — investimentos
+  - Params: nenhum
+  - Retorna: lista com progress, remainingToGoal, monthsToGoal
+- [x] Criar `app/tools/finance/get_debt_progress.py` — progresso de dívidas
+  - Params: debt_id (opcional), month_year (opcional, YYYY-MM)
+  - Retorna: total pago, percentual, parcelas restantes, projeção de quitação, regras de visibilidade §3.6
+- [x] Criar `app/tools/finance/get_debt_payment_history.py` — histórico de pagamentos de dívida
+  - Params: debt_id (obrigatório), limit (opcional, default 50)
+  - Retorna: lista de pagamentos com paidEarly flag, contexto da dívida
+- [x] Criar `app/tools/finance/get_upcoming_installments.py` — próximas parcelas
+  - Params: month_year (opcional, YYYY-MM, default: mês atual)
+  - Retorna: installments com status (paid/paid_early/overdue/pending), regras de visibilidade §3.6
 
 **Finance Tools — WRITE (2 tools):**
 - [ ] Criar `app/tools/finance/mark_bill_paid.py` — marcar conta como paga (WRITE, confirmation)
@@ -624,21 +631,20 @@ _Concluído em 2026-02-23._
   - Params: description, amount, category, date (opcional)
   - Mapeamento de categorias PT→EN preservado (alimentacao→food, transporte→transport, etc.)
 
-**Finance Agent:**
-- [ ] Criar `app/agents/domains/finance.py`:
-  - Graph customizado com `ConfirmableToolNode` (batch confirmation de write tools)
-  - 11 tools (9 READ + 2 WRITE)
-  - System prompt com regras de finance (categorias PT→EN, formatação monetária BRL, regras de confirmação)
+**Finance Agent Bridge + Graph:**
+- [x] Criar `app/agents/domains/finance.py` — bridge (re-export FINANCE_TOOLS, FINANCE_WRITE_TOOLS)
+- [x] Atualizar `app/agents/graph.py` — merge finance + tracking tools no grafo único
 
 **Lógica de agregação:**
-- [ ] Implementar cálculos mensais: income - expenses - bills = balance
-- [ ] Implementar breakdown por categoria com percentuais
-- [ ] Implementar projeções baseadas em histórico
-- [ ] Garantir que todos os cálculos usam `float` (não `Decimal` nem `string`)
+- [x] Implementar cálculos mensais: income - expenses - bills = balance
+- [x] Implementar breakdown por categoria com percentuais
+- [x] Implementar projeções baseadas em histórico
+- [x] Garantir que todos os cálculos usam `float` (não `Decimal` nem `string`)
 
 **Testes:**
-- [ ] Teste: cada tool isoladamente com dados de seed
-- [ ] Teste: get_finance_summary com múltiplas categorias e breakdown correto
+- [x] Teste: cada READ tool isoladamente com mocks (41 testes)
+- [x] Teste: get_finance_summary com KPI aggregation e breakdown correto
+- [x] Teste: helpers TZ (20 testes) + ensure_recurring (4 testes)
 - [ ] Teste: mark_bill_paid com confirmação
 - [ ] Teste: create_expense com mapeamento de categoria PT→EN
 - [ ] Teste cross-ORM: mesma query financeira via Drizzle e SQLAlchemy retorna mesmos valores
@@ -649,6 +655,19 @@ _Concluído em 2026-02-23._
 - [ ] Valores financeiros são precisos (cross-ORM verification)
 - [ ] Confirmação funciona para mark_bill_paid e create_expense
 - [ ] Categorias PT→EN mapeadas corretamente
+
+**Notas (2026-02-23) — READ tools session:**
+- 9 READ tools implementados: get_finance_summary, get_pending_bills, get_bills, get_expenses, get_incomes, get_investments, get_debt_progress, get_debt_payment_history, get_upcoming_installments
+- `_helpers.py`: TZ utils (6 funções) + `ensure_recurring_for_month()` genérico para 3 entidades (Bill, Income, VariableExpense) via `_ENTITY_CONFIG` dict
+- `__init__.py`: exports FINANCE_TOOLS (list de 9) e FINANCE_WRITE_TOOLS (set vazio, preparado para WRITE tools)
+- Repository: +3 métodos (get_debt_by_id, get_debt_payments_for_debts batch com guard lista vazia, sum_payments_by_month_year com func.coalesce)
+- Graph atualizado: ALL_TOOLS = TRACKING_TOOLS + FINANCE_TOOLS (15 tools total)
+- `pyproject.toml`: adicionado `"app/tools/finance/*.py" = ["TCH002"]` per-file-ignores (RunnableConfig necessário em runtime, mesmo padrão de tracking)
+- 41 testes unitários (mocked), 112 total suite passando (ruff + mypy + pytest limpos)
+- Correções do milestone: params alinhados com NestJS (period em vez de month/year para summary, month_year YYYY-MM para debts, limit para payment_history)
+- E2E manual via Playwright: 9/9 tools testados com dados reais do seed, todos os valores conferem com o banco de dados
+- Verificação de tool calls via LangGraph checkpoints: confirmado que a IA chama tools corretamente (paralelo quando possível, sequencial para resolver IDs como debt_id)
+- WRITE tools (mark_bill_paid, create_expense) serão implementados na próxima sessão
 
 ---
 

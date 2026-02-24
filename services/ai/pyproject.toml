@@ -39,6 +39,7 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM", "TCH"]
 [tool.ruff.lint.per-file-ignores]
 # @tool(parse_docstring=True) needs RunnableConfig at runtime (get_type_hints)
 "app/tools/tracking/*.py" = ["TCH002"]
+"app/tools/finance/*.py" = ["TCH002"]
 
 [tool.mypy]
 python_version = "3.12"
