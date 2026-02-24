@@ -3,9 +3,10 @@
 import uuid as _uuid
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import distinct, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.models.enums import UserStatus
 from app.db.models.users import User, UserMemory
 
 
@@ -28,3 +29,26 @@ class UserRepository:
             update(UserMemory).where(UserMemory.user_id == user_id).values(**data)
         )
         return await UserRepository.get_memories(session, user_id)
+
+    @staticmethod
+    async def get_distinct_timezones(session: AsyncSession) -> list[str]:
+        """Get unique timezones from active users."""
+        result = await session.execute(
+            select(distinct(User.timezone)).where(
+                User.status == UserStatus.ACTIVE,
+                User.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get_users_by_timezone(session: AsyncSession, timezone: str) -> list[User]:
+        """Get active users for a given timezone."""
+        result = await session.execute(
+            select(User).where(
+                User.timezone == timezone,
+                User.status == UserStatus.ACTIVE,
+                User.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())

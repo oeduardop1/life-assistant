@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     LOG_LEVEL: str = Field(default="info")
 
+    # Consolidation (APScheduler)
+    CONSOLIDATION_ENABLED: bool = True
+    CONSOLIDATION_CRON_HOUR: int = 3
+    CONSOLIDATION_CRON_MINUTE: int = 0
+
 
 @lru_cache
 def get_settings() -> Settings:

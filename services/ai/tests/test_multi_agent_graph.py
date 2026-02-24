@@ -103,9 +103,7 @@ async def test_multi_agent_graph_has_expected_nodes() -> None:
     checkpointer = InMemorySaver()
     registry = _make_minimal_registry()
 
-    graph = build_multi_agent_graph(
-        mock_llm, _make_triage_node(), registry, checkpointer
-    )
+    graph = build_multi_agent_graph(mock_llm, _make_triage_node(), registry, checkpointer)
 
     node_names = set(graph.get_graph().nodes.keys())
     assert "triage" in node_names
@@ -245,9 +243,7 @@ async def test_fallback_on_triage_failure() -> None:
     mock_session_cm.__aexit__ = AsyncMock(return_value=None)
 
     with patch("app.agents.save_response.get_user_session", return_value=mock_session_cm):
-        graph = build_multi_agent_graph(
-            mock_llm, bad_triage, registry, checkpointer
-        )
+        graph = build_multi_agent_graph(mock_llm, bad_triage, registry, checkpointer)
         events = []
         async for event in graph.astream(
             _make_input_state("Oi"),

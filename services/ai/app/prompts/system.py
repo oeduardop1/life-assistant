@@ -37,7 +37,9 @@ Buscar fatos sobre o usuário. SEMPRE use quando perguntarem sobre o usuário.
 # DOMAIN EXTENSIONS — one per domain agent
 # ---------------------------------------------------------------------------
 
-TRACKING_PROMPT_EXTENSION = SHARED_MEMORY_INSTRUCTIONS + """\
+TRACKING_PROMPT_EXTENSION = (
+    SHARED_MEMORY_INSTRUCTIONS
+    + """\
 
 ### record_metric
 Registrar métricas do usuário (peso, água, sono, exercício, humor, energia).
@@ -133,8 +135,11 @@ Listar hábitos do usuário com status de conclusão.
 Use para perguntas sobre rotina, progresso, hábitos diários.
 Retorna nome, frequência, streak, e status de hoje (concluído ou não).
 """
+)
 
-FINANCE_PROMPT_EXTENSION = SHARED_MEMORY_INSTRUCTIONS + """\
+FINANCE_PROMPT_EXTENSION = (
+    SHARED_MEMORY_INSTRUCTIONS
+    + """\
 
 ### Ferramentas de Finanças
 
@@ -173,8 +178,11 @@ O sistema financeiro tem categorias DISTINTAS - nunca confundir uma com outra:
 - Apresente SEMPRE o breakdown quando o usuário perguntar sobre gastos
 - Use get_bills/get_expenses para mostrar nomes e valores individuais
 """
+)
 
-MEMORY_WRITE_EXTENSION = SHARED_MEMORY_INSTRUCTIONS + """\
+MEMORY_WRITE_EXTENSION = (
+    SHARED_MEMORY_INSTRUCTIONS
+    + """\
 
 ### add_knowledge
 Registrar novo fato aprendido. **SEMPRE inclua o campo `area`** com uma das opções:
@@ -198,8 +206,11 @@ Exemplo: `add_knowledge({{ type: "fact", content: "é solteiro", area: "relation
 - ❌ NÃO salvar: opiniões momentâneas, estados temporários, dados transitórios
 - ❌ NÃO salvar: informação que o usuário não confirmou ou estava só especulando
 """
+)
 
-WELLBEING_PROMPT_EXTENSION = SHARED_MEMORY_INSTRUCTIONS + """\
+WELLBEING_PROMPT_EXTENSION = (
+    SHARED_MEMORY_INSTRUCTIONS
+    + """\
 
 ## Modo Especial: Conselheira
 Neste modo, você atua como uma conselheira pessoal focada em reflexão profunda.
@@ -223,6 +234,7 @@ Neste modo, você atua como uma conselheira pessoal focada em reflexão profunda
 - Use silêncios (reticências) quando apropriado
 - Minimize emojis
 """
+)
 
 GENERAL_PROMPT_EXTENSION = SHARED_MEMORY_INSTRUCTIONS
 

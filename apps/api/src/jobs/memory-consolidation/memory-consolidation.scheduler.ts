@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { eq } from '@life-assistant/database';
 import { getTodayInTimezone } from '@life-assistant/shared';
+import { AppConfigService } from '../../config/config.service';
 import { DatabaseService } from '../../database/database.service';
 import { AppLoggerService } from '../../logger/logger.service';
 import { QUEUES } from '../queues';
@@ -28,12 +29,18 @@ export class MemoryConsolidationScheduler implements OnModuleInit {
     @InjectQueue(QUEUES.MEMORY_CONSOLIDATION)
     private readonly consolidationQueue: Queue,
     private readonly databaseService: DatabaseService,
-    private readonly logger: AppLoggerService
+    private readonly logger: AppLoggerService,
+    private readonly appConfig: AppConfigService
   ) {
     this.logger.setContext(MemoryConsolidationScheduler.name);
   }
 
   async onModuleInit() {
+    if (this.appConfig.usePythonAi) {
+      this.logger.log('Memory consolidation: Python APScheduler (NestJS BullMQ skipped)');
+      return;
+    }
+    this.logger.log('Memory consolidation: NestJS BullMQ');
     await this.setupScheduledJobs();
   }
 

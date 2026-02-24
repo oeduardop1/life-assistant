@@ -11,12 +11,28 @@ import json
 import logging
 import uuid as _uuid
 from dataclasses import dataclass
+from typing import Any
 
 from app.agents.llm import create_llm
 from app.config import get_settings
 from app.db.models.memory import KnowledgeItem
 
 logger = logging.getLogger(__name__)
+
+
+def _try_extract_json_array(text: str) -> list[dict[str, Any]] | None:
+    """Try to extract a valid JSON array from a possibly truncated response."""
+    for i in range(len(text) - 1, -1, -1):
+        if text[i] == "]":
+            candidate = text[: i + 1]
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                continue
+    return None
+
 
 _CONTRADICTION_PROMPT = """\
 Você é um detector de contradições. Compare o NOVO FATO com cada FATO EXISTENTE e determine se há contradição.
@@ -103,7 +119,16 @@ async def check_contradictions(
             text = text[:-3]
         text = text.strip()
 
-        raw_results = json.loads(text)
+        try:
+            raw_results = json.loads(text)
+        except json.JSONDecodeError:
+            # Try to extract valid JSON array from truncated response
+            raw_results = _try_extract_json_array(text)
+            if raw_results is None:
+                logger.warning("Contradiction detector returned unparseable JSON: %s", text[:200])
+                return []
+            logger.warning("Recovered partial JSON array from truncated contradiction response")
+
         if not isinstance(raw_results, list):
             logger.warning("Contradiction detector returned non-list: %s", type(raw_results))
             return []

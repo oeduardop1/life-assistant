@@ -882,7 +882,7 @@ _Concluído em 2026-02-23._
 
 ---
 
-## M4.8 — Workers: Memory Consolidation + Contradiction Detection 🔴
+## M4.8 — Workers: Memory Consolidation + Contradiction Detection 🟡
 
 **Objetivo:** Migrar memory consolidation e contradiction detection para Python com scheduling nativo via APScheduler (arquitetura híbrida: jobs AI em Python, jobs CRUD em NestJS BullMQ).
 
@@ -906,61 +906,53 @@ _Concluído em 2026-02-23._
 **Tasks:**
 
 **APScheduler Setup:**
-- [ ] Adicionar dependência: `uv add apscheduler` (SQLAlchemy + asyncpg já existem)
-- [ ] Criar `app/workers/scheduler.py`:
-  - Configurar `AsyncScheduler` com `SQLAlchemyDataStore` (PostgreSQL persistence)
-  - Configurar `AsyncpgEventBroker` (para coordenação distribuída futura)
-  - Integrar no FastAPI lifespan (`app/main.py`)
-  - Schedules sobrevivem restart do serviço (persistidos em PostgreSQL)
-- [ ] Configurar `ConflictPolicy.replace` para schedules idempotentes no startup
+- [x] Adicionar dependência: `uv add apscheduler==3.11.2`
+- [x] Adicionar configurações de scheduler ao `app/config.py` Settings:
+  - `CONSOLIDATION_ENABLED`, `CONSOLIDATION_CRON_HOUR`, `CONSOLIDATION_CRON_MINUTE`
+- [x] Criar `app/workers/scheduler.py`:
+  - Configurar `AsyncIOScheduler` com MemoryJobStore (in-memory, re-registra no startup)
+  - Integrar no FastAPI lifespan (`app/main.py`): `scheduler.start()` no startup, `scheduler.shutdown()` no teardown
+  - No startup: query distinct user timezones ativos, registrar `CronTrigger` por timezone
+  - Usar `replace_existing=True` em `add_job()` para idempotência no startup
 
 **Memory Consolidation:**
-- [ ] Criar `app/workers/consolidation.py`:
-  - Função `run_consolidation(timezone: str, date: str)` — entry point do scheduler
-  - Query distinct user timezones ativos, registrar CronTrigger por timezone (`0 3 * * *`)
-  - Para cada usuário no timezone:
-    - Buscar mensagens desde `lastConsolidatedAt` (via `MemoryRepository`)
-    - Skip se 0 mensagens (deduplicação)
-    - Executar deduplication phase (contradições em knowledge existente)
-    - Chamar LLM para extrair fatos, preferências, insights
-    - Atualizar `user_memories`: bio, occupation, family, goals, challenges, topOfMind, values, learnedPatterns
-    - Criar novos `knowledge_items` (com contradiction detection)
-    - Atualizar `knowledge_items` existentes quando informação evolui
-    - Registrar consolidation log em `memory_consolidations`
-  - Retorna: `{ users_processed, users_consolidated, users_skipped, errors, completed_at }`
-- [ ] Portar `consolidation-prompt.ts` (337L) para Python:
+- [x] Criar `app/workers/consolidation.py`:
+  - Função `async run_consolidation(timezone: str)` — entry point do scheduler
+  - Usar `get_service_session()` para bypass de RLS (operação cross-user)
+  - Per-user: messages since lastConsolidatedAt, dedup, LLM call, apply updates, log
+  - Retorna: `ConsolidationResult(users_processed, users_consolidated, users_skipped, errors, completed_at)`
+  - Error handling per-user: falha em um usuário não impede processamento dos demais
+- [x] Portar `consolidation-prompt.ts` (337L) para Python (`consolidation_prompt.py`):
   - Prompt builder em português (mesma estrutura do TypeScript)
   - Parser de response com validação Pydantic (equivalente ao Zod schema atual)
   - Normalização de tipos inválidos do LLM (ex: `challenge` → `insight`)
   - Fallback para JSON truncado/malformado
-- [ ] Criar `app/workers/utils.py`:
-  - `refresh_consolidation_schedules(scheduler)` — re-query timezones e upsert schedules
-  - `trigger_consolidation_for_user(user_id)` — trigger manual (dev/testing)
-  - Retry com backoff para falhas de LLM (3 tentativas, exponencial 1s→2s→4s)
+- [x] Criar `app/workers/utils.py`:
+  - `refresh_schedules(scheduler, session_factory)` — re-query timezones e upsert schedules
+  - `run_consolidation_for_user(user_id)` — trigger manual (dev/testing)
+  - `retry_with_backoff()` — exponencial 1s→2s→4s (3 tentativas)
 
 **Contradiction Detection:**
-- [ ] Expandir `app/tools/memory/_contradiction_detector.py` (138L existente):
-  - Já funciona para batch check durante `add_knowledge` tool
-  - Adicionar modo single-item: "novo fato torna fato existente obsoleto?"
-  - Melhorar parse de JSON com fallback para output truncado (portar lógica do TS)
+- [x] Expandir `app/tools/memory/_contradiction_detector.py`:
+  - Melhorar parse de JSON com fallback para output truncado (`_try_extract_json_array()`)
   - Manter threshold de confiança 0.7
-- [ ] Integrar com consolidation: antes de salvar knowledge_item, chamar contradiction detection
-- [ ] Reutilizar `ContradictionResult` Pydantic model existente
+- [x] Integrar com consolidation: antes de salvar knowledge_item, chamar contradiction detection
+- [x] Reutilizar `ContradictionResult` dataclass existente
 
 **NestJS Deactivation:**
-- [ ] Atualizar `memory-consolidation.scheduler.ts`:
+- [x] Atualizar `memory-consolidation.scheduler.ts`:
   - Quando `USE_PYTHON_AI=true`: **não registrar** schedulers BullMQ para memory-consolidation (skip no `onModuleInit`)
   - Quando `false`: comportamento atual (fallback TypeScript)
   - Log indicando qual sistema está ativo: `"Memory consolidation: Python APScheduler"` ou `"Memory consolidation: NestJS BullMQ"`
-- [ ] Manter `cleanup-onboarding` inalterado (não usa LLM, fica no NestJS BullMQ)
-- [ ] Código TypeScript do memory-consolidation NÃO é deletado aqui (cleanup em M4.10)
+- [x] Manter `cleanup-onboarding` inalterado (não usa LLM, fica no NestJS BullMQ)
+- [x] Código TypeScript do memory-consolidation NÃO é deletado aqui (cleanup em M4.10)
 
 **Admin/Dev Endpoints:**
-- [ ] Criar endpoint POST `/workers/consolidation/trigger` em `app/api/routes/workers.py`:
+- [x] Criar endpoint POST `/workers/consolidation/trigger` em `app/api/routes/workers.py`:
   - Auth via SERVICE_SECRET
   - Recebe: `{ user_id?: string, timezone?: string }`
   - Trigger manual para dev/testing (equivalente ao admin endpoint NestJS)
-  - Retorna: `{ status, users_processed, users_consolidated, users_skipped, errors }`
+  - Retorna: `ConsolidationResult`
 
 **Testes:**
 - [ ] Teste: APScheduler registra schedules por timezone no startup
@@ -970,22 +962,29 @@ _Concluído em 2026-02-23._
 - [ ] Teste: knowledge_items criados sem duplicatas
 - [ ] Teste: batch contradiction detection com múltiplos fatos
 - [ ] Teste: retry funciona após falha de LLM (3 tentativas com backoff)
-- [ ] Teste: schedules persistem após restart do serviço (PostgreSQL store)
+- [ ] Teste: schedules re-registrados após restart do serviço (idempotência)
 - [ ] Teste: NestJS não registra memory-consolidation schedulers quando `USE_PYTHON_AI=true`
+- [ ] Teste: skip user se 0 mensagens desde lastConsolidatedAt (deduplicação)
+- [ ] Teste: falha parcial — um user falha, outros continuam processando
+- [ ] Teste: consolidation log criado corretamente em memory_consolidations
+- [ ] Teste: endpoint admin trigger retorna resposta correta
 
 **Definition of Done:**
 - [ ] APScheduler roda consolidation diariamente às 3:00 AM por timezone
 - [ ] Fatos extraídos corretamente de conversas (equivalente ao TypeScript)
 - [ ] Contradictions detectadas com confiança adequada (threshold 0.7)
-- [ ] Schedules persistidos em PostgreSQL (sobrevivem restart)
+- [ ] Schedules re-registrados no startup (idempotentes via `replace_existing=True`)
 - [ ] NestJS memory-consolidation desativado quando `USE_PYTHON_AI=true`
 - [ ] Resultado equivalente ao sistema TypeScript
 
 > **Decisão tomada (2026-02-24):** Arquitetura híbrida — jobs AI em Python (APScheduler), jobs CRUD em NestJS (BullMQ). Pesquisa técnica completa documentada na sessão de análise.
 >
-> **Stack de scheduling Python:** APScheduler 3.x + `AsyncIOScheduler` + `SQLAlchemyDataStore` (PostgreSQL) + `CronTrigger`. Roda in-process no FastAPI via lifespan — sem processo separado (diferente de Celery Beat).
+> **Decisão atualizada (2026-02-24):** Usar **APScheduler 3.11.2 (estável)** com `AsyncIOScheduler` + `MemoryJobStore` (in-memory). Schedules re-registrados no startup via `add_job(replace_existing=True)` — mesmo padrão do NestJS `upsertJobScheduler`. APScheduler 4.x descartado (ainda alpha, 4.0.0a6). Persistência em PostgreSQL desnecessária para single-process com re-registro automático.
+>
+> **Stack de scheduling Python:** APScheduler 3.11.2 + `AsyncIOScheduler` + `MemoryJobStore` + `CronTrigger(timezone=)`. Roda in-process no FastAPI via lifespan — sem processo separado (diferente de Celery Beat).
 >
 > **Alternativas avaliadas e descartadas:**
+> - APScheduler 4.x (alpha 4.0.0a6 — API instável, sem release estável)
 > - BullMQ Python (Alpha, sem cron jobs, bugs críticos)
 > - HTTP bridge NestJS→Python (complexidade operacional desnecessária para sistema não em produção)
 > - Celery (não async-native, impedance mismatch com FastAPI + asyncpg)
@@ -994,9 +993,17 @@ _Concluído em 2026-02-23._
 >
 > **Padrão de scheduling:**
 > ```
-> Jobs AI:   FastAPI lifespan → APScheduler (CronTrigger, PostgreSQL store) → Python function
+> Jobs AI:   FastAPI lifespan → APScheduler AsyncIOScheduler (CronTrigger, MemoryJobStore) → async Python function
 > Jobs CRUD: NestJS BullMQ (cron trigger, Redis) → NestJS processor
 > ```
+
+**Notas (2026-02-24):**
+- Implementação completa: APScheduler + consolidation worker + prompt parser + contradiction detection + admin endpoint + NestJS guard
+- Novos arquivos Python: `workers/__init__.py`, `scheduler.py`, `consolidation.py`, `consolidation_prompt.py`, `utils.py`, `api/routes/workers.py`
+- Modificados: `config.py` (3 settings), `main.py` (scheduler lifespan + workers route), `db/repositories/user.py` (2 métodos), `tools/memory/_contradiction_detector.py` (JSON fallback)
+- NestJS: `memory-consolidation.scheduler.ts` guarded com `USE_PYTHON_AI` flag via `AppConfigService`
+- Testes pendentes para sessão dedicada (13 test cases documentados acima)
+- `ruff check .` + `mypy app/` + TypeScript tsc all pass
 
 ---
 
