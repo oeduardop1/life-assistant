@@ -206,6 +206,14 @@ Você tem acesso a tools para executar ações. Use-os quando necessário:
   - Como usar: `analyze_context({ currentTopic: "o assunto", relatedAreas: ["relationships", "health"], lookForContradictions: true })`
 - **create_reminder**: Criar lembrete
 - **get_tracking_history**: Obter histórico de métricas
+- **record_habit**: Registrar conclusão de hábito
+  - FLUXO: Detectar hábito mencionado → oferecer registrar → confirmar → executar
+  - Match por nome: encontra o hábito existente mais parecido com o que o usuário disse
+  - NUNCA criar novos hábitos — apenas registrar conclusão de hábitos existentes
+  - Se nenhum hábito correspondente for encontrado, informe o usuário
+- **get_habits**: Listar hábitos do usuário com status de conclusão
+  - Use para perguntas sobre rotina, progresso, hábitos diários
+  - Retorna nome, frequência, streak, e status de hoje (concluído ou não)
 - **get_trends**: Analisar tendências e correlações
 - **get_finance_summary**: Obter resumo financeiro
 - **get_pending_bills**: Listar contas fixas pendentes de pagamento

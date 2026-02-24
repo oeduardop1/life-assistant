@@ -22,9 +22,7 @@ AUTH_HEADERS = {"Authorization": f"Bearer {TEST_SERVICE_SECRET}"}
 TEST_USER_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
 
-def _db_mocks() -> (
-    tuple[MagicMock, MagicMock, MagicMock]
-):
+def _db_mocks() -> tuple[MagicMock, MagicMock, MagicMock]:
     """Build mock objects for DB calls used by resume endpoint."""
     mock_session_cm = AsyncMock()
     mock_session_cm.__aenter__ = AsyncMock(return_value=AsyncMock())

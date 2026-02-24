@@ -171,9 +171,7 @@ async def test_invoke_non_streamed_content_via_updates(chat_app: FastAPI) -> Non
     # This happens when the loop guard intercepts an LLM re-call.
     async def mock_astream(*args: Any, **kwargs: Any) -> Any:
         # The "updates" mode delivers node outputs
-        yield "updates", {
-            "agent": {"messages": [AIMessage(content="Registrado: água = 2000 ml")]}
-        }
+        yield "updates", {"agent": {"messages": [AIMessage(content="Registrado: água = 2000 ml")]}}
 
     chat_app.state.graph.astream = mock_astream
 
@@ -244,9 +242,10 @@ async def test_invoke_empty_gemini_blocks_do_not_shadow_loop_guard(chat_app: Fas
         yield "messages", (empty_chunk, {"langgraph_node": "agent"})
 
         # Loop guard fires and produces text via updates
-        yield "updates", {
-            "agent": {"messages": [AIMessage(content="Pronto! Registrei 2L de água.")]}
-        }
+        yield (
+            "updates",
+            {"agent": {"messages": [AIMessage(content="Pronto! Registrei 2L de água.")]}},
+        )
 
     chat_app.state.graph.astream = mock_astream
 
@@ -557,9 +556,7 @@ async def test_invoke_reject_uses_ainvoke_and_sends_content(chat_app: FastAPI) -
 
     # Mock ainvoke to return a result with the reject response
     reject_response = AIMessage(content="Ok, Eduardo. Não registrei o consumo de água.")
-    chat_app.state.graph.ainvoke = AsyncMock(
-        return_value={"messages": [reject_response]}
-    )
+    chat_app.state.graph.ainvoke = AsyncMock(return_value={"messages": [reject_response]})
 
     # Mock intent classifier to return "reject"
     mock_intent = MagicMock()

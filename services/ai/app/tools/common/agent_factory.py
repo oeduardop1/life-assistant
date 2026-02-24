@@ -72,8 +72,7 @@ def build_domain_agent_graph(
                     text = response.content
                     if isinstance(text, list):
                         text = "".join(
-                            b.get("text", "") if isinstance(b, dict) else str(b)
-                            for b in text
+                            b.get("text", "") if isinstance(b, dict) else str(b) for b in text
                         )
                     if not text:
                         try:

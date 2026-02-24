@@ -8,7 +8,12 @@ from app.tools.tracking.record_metric import record_metric
 from app.tools.tracking.update_metric import update_metric
 
 TRACKING_TOOLS = [
-    record_metric, get_history, update_metric, delete_metric, record_habit, get_habits
+    record_metric,
+    get_history,
+    update_metric,
+    delete_metric,
+    record_habit,
+    get_habits,
 ]
 TRACKING_WRITE_TOOLS = {"record_metric", "update_metric", "delete_metric", "record_habit"}
 

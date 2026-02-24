@@ -172,9 +172,7 @@ async def stream_graph_events(
                     tokens_streamed = True
                     yield {"data": json.dumps({"content": token, "done": False})}
             # Full AIMessage from a non-streaming node (e.g. loop guard)
-            elif isinstance(msg_chunk, AIMessage) and not getattr(
-                msg_chunk, "tool_calls", None
-            ):
+            elif isinstance(msg_chunk, AIMessage) and not getattr(msg_chunk, "tool_calls", None):
                 text = _extract_text(msg_chunk.content)
                 if text and not tokens_streamed:
                     tokens_streamed = True
@@ -193,22 +191,25 @@ async def stream_graph_events(
                 if session_factory and user_id and conv_id:
                     try:
                         async with get_user_session(session_factory, user_id) as session:
-                            await ChatRepository.create_message(session, {
-                                "id": uuid.uuid4(),
-                                "conversation_id": uuid.UUID(conv_id),
-                                "role": "assistant",
-                                "content": confirmation_message,
-                                "message_metadata": {
-                                    "source": "python_ai",
-                                    "pendingConfirmation": {
-                                        "confirmationId": interrupt_value["data"].get(
-                                            "confirmationId"
-                                        ),
-                                        "toolName": interrupt_value["data"].get("toolName"),
-                                        "toolArgs": interrupt_value["data"].get("toolArgs"),
+                            await ChatRepository.create_message(
+                                session,
+                                {
+                                    "id": uuid.uuid4(),
+                                    "conversation_id": uuid.UUID(conv_id),
+                                    "role": "assistant",
+                                    "content": confirmation_message,
+                                    "message_metadata": {
+                                        "source": "python_ai",
+                                        "pendingConfirmation": {
+                                            "confirmationId": interrupt_value["data"].get(
+                                                "confirmationId"
+                                            ),
+                                            "toolName": interrupt_value["data"].get("toolName"),
+                                            "toolArgs": interrupt_value["data"].get("toolArgs"),
+                                        },
                                     },
                                 },
-                            })
+                            )
                     except Exception:
                         logger.exception("Failed to save confirmation message")
 
@@ -319,9 +320,7 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
                     # Reject: short response, no need for token streaming.
                     # Use ainvoke to avoid streaming pipeline issues and send
                     # the complete response in a single SSE event.
-                    result = await graph.ainvoke(
-                        Command(resume=resume_value), resume_config
-                    )
+                    result = await graph.ainvoke(Command(resume=resume_value), resume_config)
                     content = ""
                     for msg in reversed(result.get("messages", [])):
                         if (
@@ -333,9 +332,7 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
                             break
                     if not content:
                         content = "Operação cancelada."
-                    yield {
-                        "data": json.dumps({"content": content, "done": True})
-                    }
+                    yield {"data": json.dumps({"content": content, "done": True})}
                 else:
                     # Confirm / edit: stream the response token-by-token
                     async for event in stream_graph_events(
@@ -370,9 +367,7 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
                         "skip_save_response": True,
                     }
                 }
-                await graph.ainvoke(
-                    Command(resume={"action": "reject"}), reject_config
-                )
+                await graph.ainvoke(Command(resume={"action": "reject"}), reject_config)
 
         # ------------------------------------------------------------------
         # Normal flow (no pending interrupt)
@@ -477,9 +472,7 @@ async def stream_resume_response(request: Request, body: _ChatResumeBody) -> Any
 
         # Build system_prompt + user_timezone from DB for the resumed graph
         async with get_user_session(session_factory, user_id) as session:
-            conversation = await ChatRepository.get_conversation(
-                session, uuid.UUID(body.thread_id)
-            )
+            conversation = await ChatRepository.get_conversation(session, uuid.UUID(body.thread_id))
             conv_type = conversation.type if conversation else "general"
             system_prompt = await build_context(session, user_id, conv_type)
             user = await UserRepository.get_by_id(session, uuid.UUID(user_id))

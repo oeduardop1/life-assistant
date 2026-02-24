@@ -25,7 +25,7 @@ _TOOL_MESSAGES: dict[str, str] = {
     "mark_bill_paid": "Marcar conta como paga?",
     "create_expense": "Registrar despesa '{name}' ({category})?",
     # Memory tools (M4.6)
-    "add_knowledge": "Salvar: '{conteudo}'?",
+    "add_knowledge": "Salvar: '{content}'?",
 }
 
 _FALLBACK_MESSAGE = "Executar {tool_name}?"

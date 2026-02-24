@@ -27,7 +27,7 @@ class TestGenerateConfirmationMessage:
         assert "alimentacao" in msg
 
     def test_add_knowledge(self) -> None:
-        msg = generate_confirmation_message("add_knowledge", {"conteudo": "Eu gosto de café"})
+        msg = generate_confirmation_message("add_knowledge", {"content": "Eu gosto de café"})
         assert "Eu gosto de café" in msg
 
     def test_record_habit(self) -> None:
@@ -40,7 +40,7 @@ class TestGenerateConfirmationMessage:
         msg = generate_confirmation_message(
             "mark_bill_paid", {"bill_id": "123", "paid_date": "2026-03-01"}
         )
-        assert "Marcar conta como paga?" == msg
+        assert msg == "Marcar conta como paga?"
 
     def test_fallback_for_unknown_tool(self) -> None:
         msg = generate_confirmation_message("some_new_tool", {"foo": "bar"})
@@ -68,7 +68,7 @@ class TestGenerateConfirmationMessage:
 
 class TestGenerateBatchMessage:
     def test_single_tool_delegates(self) -> None:
-        calls = [{"name": "add_knowledge", "args": {"conteudo": "test"}, "id": "1"}]
+        calls = [{"name": "add_knowledge", "args": {"content": "test"}, "id": "1"}]
         msg = generate_batch_message(calls)
         assert "Salvar" in msg
 
@@ -79,7 +79,7 @@ class TestGenerateBatchMessage:
                 "args": {"metric_type": "água", "value": "2", "unit": "L", "date": "hoje"},
                 "id": "1",
             },
-            {"name": "add_knowledge", "args": {"conteudo": "gosto de café"}, "id": "2"},
+            {"name": "add_knowledge", "args": {"content": "gosto de café"}, "id": "2"},
         ]
         msg = generate_batch_message(calls)
         assert "2 operações" in msg

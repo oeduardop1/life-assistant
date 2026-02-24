@@ -19,9 +19,7 @@ def _make_mock_llm() -> MagicMock:
     """Create a mock LLM that returns a simple AI message and supports bind_tools."""
     mock_llm = MagicMock()
     mock_bound = AsyncMock()
-    mock_bound.ainvoke = AsyncMock(
-        return_value=AIMessage(content="Tudo bem! Como vai?")
-    )
+    mock_bound.ainvoke = AsyncMock(return_value=AIMessage(content="Tudo bem! Como vai?"))
     mock_llm.bind_tools = MagicMock(return_value=mock_bound)
     return mock_llm
 

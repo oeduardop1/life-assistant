@@ -95,8 +95,7 @@ async def record_habit(
                     "habitName": matched.name,
                     "date": date,
                     "message": (
-                        f'O hábito "{matched.name}" já estava '
-                        f"marcado como concluído em {date}."
+                        f'O hábito "{matched.name}" já estava marcado como concluído em {date}.'
                     ),
                     "alreadyCompleted": True,
                 }

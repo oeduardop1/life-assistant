@@ -4,7 +4,7 @@ import uuid as _uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.memory import KnowledgeItem, MemoryConsolidation
@@ -19,8 +19,10 @@ class MemoryRepository:
         session: AsyncSession,
         user_id: _uuid.UUID,
         *,
+        query: str | None = None,
         item_type: str | None = None,
         area: str | None = None,
+        sub_area: str | None = None,
         limit: int = 50,
     ) -> list[KnowledgeItem]:
         stmt = select(KnowledgeItem).where(
@@ -28,10 +30,20 @@ class MemoryRepository:
             KnowledgeItem.deleted_at.is_(None),
             KnowledgeItem.superseded_by_id.is_(None),
         )
+        if query is not None:
+            pattern = f"%{query}%"
+            stmt = stmt.where(
+                or_(
+                    KnowledgeItem.title.ilike(pattern),
+                    KnowledgeItem.content.ilike(pattern),
+                )
+            )
         if item_type is not None:
             stmt = stmt.where(KnowledgeItem.type == item_type)
         if area is not None:
             stmt = stmt.where(KnowledgeItem.area == area)
+        if sub_area is not None:
+            stmt = stmt.where(KnowledgeItem.sub_area == sub_area)
         stmt = stmt.order_by(KnowledgeItem.created_at.desc()).limit(limit)
         result = await session.execute(stmt)
         return list(result.scalars().all())

@@ -682,7 +682,7 @@ _Concluído em 2026-02-23._
 
 ---
 
-## M4.6 — Memory Tools + Context Builder Completo 🔴
+## M4.6 — Memory Tools + Context Builder Completo 🟢
 
 **Objetivo:** Tools de memória migrados e context builder completo (system prompt com todas as instruções de tools).
 
@@ -694,46 +694,70 @@ _Concluído em 2026-02-23._
 
 **Tasks:**
 
-**Memory Tools (3 tools):**
-- [ ] Criar `app/tools/memory/search_knowledge.py` — busca em knowledge_items (READ)
-  - Params: query, type (opcional), area (opcional), sub_area (opcional)
-  - Busca por keyword/filtros em knowledge_items
-- [ ] Criar `app/tools/memory/add_knowledge.py` — adicionar fato/preferência/insight (WRITE, confirmation)
-  - Params: content, type (fact/preference/insight), area, sub_area (opcionais)
-  - Detecta duplicatas antes de inserir
-- [ ] Criar `app/tools/memory/analyze_context.py` — análise de contexto memória (READ)
-  - Params: query
-  - Retorna knowledge_items relevantes para contexto da conversa
+**MemoryRepository Enhancements:**
+- [x] Enhance `MemoryRepository.search_knowledge()` with keyword search (ILIKE on title+content) and sub_area filter
 
-**Memory Agent:**
-- [ ] Criar `app/agents/domains/memory.py`:
-  - Graph customizado com `ConfirmableToolNode` (confirmation de write tools)
-  - 3 tools (2 READ + 1 WRITE)
-  - System prompt com regras de memória (tipos de knowledge, áreas, quando adicionar vs buscar)
+**Memory Tools (3 tools):**
+- [x] Criar `app/tools/memory/search_knowledge.py` — busca em knowledge_items (READ)
+  - Params: query (keyword ILIKE), type (opcional), area (opcional), sub_area (opcional), limit
+  - Busca por keyword/filtros em knowledge_items
+- [x] Criar `app/tools/memory/add_knowledge.py` — adicionar fato/preferência/insight (WRITE, confirmation)
+  - Params: content, type (fact/preference/memory/insight/person), area, sub_area, confidence
+  - LLM-based contradiction detection (matching TS ContradictionDetectorAdapter)
+  - Supersede contradicted items
+- [x] Criar `app/tools/memory/_contradiction_detector.py` — LLM-based semantic contradiction detection
+  - Uses `create_llm(settings, temperature=0)` for deterministic comparison
+  - PT-BR prompt with contradiction examples
+  - Safe default: returns empty on LLM error
+- [x] Criar `app/tools/memory/analyze_context.py` — análise de contexto memória (READ)
+  - Params: current_topic (str), related_areas (list[str]), look_for_contradictions (bool)
+  - Retorna knowledge_items relevantes, padrões aprendidos, conexões potenciais
+
+**Memory Agent Registration:**
+- [x] Criar `app/agents/domains/memory.py` — re-export MEMORY_TOOLS/MEMORY_WRITE_TOOLS
+- [x] Registrar memory tools em `graph.py` (ALL_TOOLS + ALL_WRITE_TOOLS)
+
+**Confirmation Template Fix:**
+- [x] Fix `confirmation.py` template: `{conteudo}` → `{content}` (match add_knowledge param)
 
 **Context Builder Completo:**
-- [ ] Expandir `app/prompts/context_builder.py` (iniciado em M4.3):
-  - User memories completas: bio, occupation, family, goals, challenges, topOfMind, values, learnedPatterns
-  - Tool instructions completas (~88 linhas):
-    - Memory tools: quando usar search_knowledge vs add_knowledge
-    - Tracking tools: confirmação obrigatória, nunca inventar IDs, timezone do user
-    - Finance tools: mapeamento de categorias, formatação monetária
-    - Habits tools: match por nome, regras de registro
-  - Regras explícitas: "sempre confirme antes de registrar", "nunca invente IDs para update/delete"
-  - Counselor mode: instruções especiais para conversas tipo "counselor"
-- [ ] Integrar context builder no graph principal (substituir versão simplificada de M4.3)
+- [x] Expandir `app/prompts/system.py` — full TS parity (~120 linhas tool instructions):
+  - Memory tools: search_knowledge, add_knowledge, analyze_context com exemplos
+  - Tracking tools: record_metric (ADR-015 flow), update_metric (UUID rules), delete_metric (batch)
+  - Habits tools: record_habit (name matching, confirmation), get_habits
+  - Finance tools: categories, READ/WRITE tools, mandatory flow, critical rules
+  - Inferential reasoning: FLUXO OBRIGATÓRIO, contradiction detection, connection examples
+  - Expanded rules (11 rules matching TS)
+  - Counselor extension: add "Tom" subsection
+- [x] Expandir `app/prompts/context_builder.py`:
+  - Add learnedPatterns (confidence >= 0.7, max 5)
+  - Add feedback_preferences
+  - Use markdown headers (## Sobre o Usuário, ## Valores, etc.)
+  - Skip empty sections, match TS formatForPrompt()
 
 **Testes:**
-- [ ] Teste: search_knowledge com filtros por type/area
-- [ ] Teste: add_knowledge com detecção de duplicata
-- [ ] Teste: context builder produz system prompt equivalente ao TypeScript
-- [ ] Teste: counselor mode altera instruções corretamente
-- [ ] Teste: tool instructions estão presentes e completas no prompt
+- [x] Teste: search_knowledge sem filtros, com type, com area, com keyword ILIKE
+- [x] Teste: add_knowledge basic, title generation, contradiction detection, no contradiction
+- [x] Teste: contradiction detector LLM error retorna safe default
+- [x] Teste: analyze_context multi-area, patterns, hint flag
+- [x] Teste: context builder tool instructions presentes (memory, tracking, finance, habits)
+- [x] Teste: context builder learned patterns, counselor Tom section, all 11 rules
+- [x] Teste: context builder memory formatting com markdown headers
 
 **Definition of Done:**
-- [ ] Memory tools funcionam no Python
-- [ ] Context builder produz system prompt completo e equivalente ao TypeScript
-- [ ] "O que você sabe sobre mim?" retorna informações corretas das user_memories
+- [x] Memory tools funcionam no Python (3 tools registrados em graph.py)
+- [x] Contradiction detection via LLM funciona com safe fallback
+- [x] Context builder produz system prompt completo e equivalente ao TypeScript
+- [x] "O que você sabe sobre mim?" retorna informações corretas das user_memories
+
+**Notas (2026-02-24):**
+- 3 memory tools: search_knowledge (READ), add_knowledge (WRITE+confirmation), analyze_context (READ)
+- LLM-based contradiction detector using `create_llm(settings, temperature=0)` — same pattern as intent classifier
+- Context builder expanded from ~60 to ~280 lines, full TS parity with all tool instructions
+- Memory formatting uses markdown ## headers matching TS formatForPrompt()
+- Counselor extension now includes "Tom" subsection (pausado, reflexivo, minimize emojis)
+- 30 new tests (18 memory tools + 12 context builder expansion), all passing
+- `confirmation.py` template fixed: `{conteudo}` → `{content}` to match tool param name
 
 ---
 

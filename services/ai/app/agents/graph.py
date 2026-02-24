@@ -1,4 +1,4 @@
-"""LangGraph chat graph builder — domain agent with tracking + finance tools."""
+"""LangGraph chat graph builder — domain agent with tracking + finance + memory tools."""
 
 from typing import Any
 
@@ -7,17 +7,18 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import CompiledStateGraph
 
 from app.agents.domains.finance import FINANCE_TOOLS, FINANCE_WRITE_TOOLS
+from app.agents.domains.memory import MEMORY_TOOLS, MEMORY_WRITE_TOOLS
 from app.agents.domains.tracking import TRACKING_TOOLS, TRACKING_WRITE_TOOLS
 from app.tools.common.agent_factory import build_domain_agent_graph
 
-ALL_TOOLS = TRACKING_TOOLS + FINANCE_TOOLS
-ALL_WRITE_TOOLS = TRACKING_WRITE_TOOLS | FINANCE_WRITE_TOOLS
+ALL_TOOLS = TRACKING_TOOLS + FINANCE_TOOLS + MEMORY_TOOLS
+ALL_WRITE_TOOLS = TRACKING_WRITE_TOOLS | FINANCE_WRITE_TOOLS | MEMORY_WRITE_TOOLS
 
 
 def build_chat_graph(
     llm: BaseChatModel, checkpointer: AsyncPostgresSaver
 ) -> CompiledStateGraph[Any]:
-    """Build and compile the chat StateGraph with tracking + finance tools.
+    """Build and compile the chat StateGraph with tracking + finance + memory tools.
 
     Flow: START → agent → should_continue → tools → agent  (loop)
                                            ↘ save_response → END

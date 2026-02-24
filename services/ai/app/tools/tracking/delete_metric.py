@@ -66,8 +66,7 @@ async def delete_metric(
             "success": True,
             "entryId": entry_id,
             "message": (
-                f"Removido: {type_label} de {deleted_value} "
-                f"{deleted_unit or ''} ({deleted_date})"
+                f"Removido: {type_label} de {deleted_value} {deleted_unit or ''} ({deleted_date})"
             ).strip(),
             "deletedValue": deleted_value,
         }

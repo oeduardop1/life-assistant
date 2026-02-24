@@ -111,9 +111,7 @@ def _make_completion(
 @pytest.mark.asyncio
 @patch("app.tools.tracking.record_metric.get_user_session")
 @patch("app.tools.tracking.record_metric.TrackingRepository")
-async def test_record_metric_success(
-    mock_repo: MagicMock, mock_session: MagicMock
-) -> None:
+async def test_record_metric_success(mock_repo: MagicMock, mock_session: MagicMock) -> None:
     """record_metric with valid params returns success JSON with entry ID."""
     mock_entry = _make_tracking_entry(value=2000.0, unit="ml", tracking_type="water")
     mock_repo.create = AsyncMock(return_value=mock_entry)
@@ -208,9 +206,7 @@ async def test_get_history_returns_formatted_entries(
 @pytest.mark.asyncio
 @patch("app.tools.tracking.update_metric.get_user_session")
 @patch("app.tools.tracking.update_metric.TrackingRepository")
-async def test_update_metric_not_found(
-    mock_repo: MagicMock, mock_session: MagicMock
-) -> None:
+async def test_update_metric_not_found(mock_repo: MagicMock, mock_session: MagicMock) -> None:
     """update_metric returns error when entry does not exist."""
     mock_repo.get_by_id = AsyncMock(return_value=None)
     mock_session.return_value = AsyncMock()
@@ -231,9 +227,7 @@ async def test_update_metric_not_found(
 @pytest.mark.asyncio
 @patch("app.tools.tracking.delete_metric.get_user_session")
 @patch("app.tools.tracking.delete_metric.TrackingRepository")
-async def test_delete_metric_success(
-    mock_repo: MagicMock, mock_session: MagicMock
-) -> None:
+async def test_delete_metric_success(mock_repo: MagicMock, mock_session: MagicMock) -> None:
     """delete_metric returns PT-BR message with deleted entry details."""
     entry = _make_tracking_entry(value=80.5)
     mock_repo.get_by_id = AsyncMock(return_value=entry)
@@ -257,9 +251,7 @@ async def test_delete_metric_success(
 @pytest.mark.asyncio
 @patch("app.tools.tracking.record_habit.get_user_session")
 @patch("app.tools.tracking.record_habit.TrackingRepository")
-async def test_record_habit_fuzzy_matching(
-    mock_repo: MagicMock, mock_session: MagicMock
-) -> None:
+async def test_record_habit_fuzzy_matching(mock_repo: MagicMock, mock_session: MagicMock) -> None:
     """record_habit fuzzy matches 'meditar' → 'Meditação' and 'exerc' → 'Exercício'."""
     habits = [
         _make_habit(
