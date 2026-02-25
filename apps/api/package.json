@@ -17,7 +17,6 @@
     "trigger:consolidation": "tsx scripts/trigger-consolidation.ts"
   },
   "dependencies": {
-    "@life-assistant/ai": "workspace:*",
     "@life-assistant/config": "workspace:*",
     "@life-assistant/database": "workspace:*",
     "@life-assistant/shared": "workspace:*",

@@ -5,5 +5,4 @@
  */
 export const QUEUES = {
   CLEANUP_ONBOARDING: 'cleanup-onboarding',
-  MEMORY_CONSOLIDATION: 'memory-consolidation',
 } as const;

@@ -3,7 +3,6 @@ import { OnboardingController } from './presentation/controllers/onboarding.cont
 import { OnboardingService } from './application/services/onboarding.service';
 import { DatabaseModule } from '../../database/database.module';
 import { LoggerModule } from '../../logger/logger.module';
-import { JobsModule } from '../../jobs/jobs.module';
 
 /**
  * OnboardingModule - Handles new user onboarding flow
@@ -24,7 +23,7 @@ import { JobsModule } from '../../jobs/jobs.module';
  * @see docs/specs/engineering.md §4 for Clean Architecture patterns
  */
 @Module({
-  imports: [DatabaseModule, LoggerModule, JobsModule],
+  imports: [DatabaseModule, LoggerModule],
   controllers: [OnboardingController],
   providers: [OnboardingService],
   exports: [OnboardingService],

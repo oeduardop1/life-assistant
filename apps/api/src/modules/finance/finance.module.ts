@@ -19,7 +19,6 @@ import { VariableExpensesService } from './application/services/variable-expense
 import { DebtsService } from './application/services/debts.service';
 import { InvestmentsService } from './application/services/investments.service';
 import { FinanceSummaryService } from './application/services/finance-summary.service';
-import { FinanceToolExecutorService } from './application/services/finance-tool-executor.service';
 
 // Repositories
 import { IncomesRepository } from './infrastructure/repositories/incomes.repository';
@@ -53,7 +52,6 @@ import { INVESTMENTS_REPOSITORY } from './domain/ports/investments.repository.po
     DebtsService,
     InvestmentsService,
     FinanceSummaryService,
-    FinanceToolExecutorService,
 
     // Repositories
     IncomesRepository,
@@ -79,7 +77,6 @@ import { INVESTMENTS_REPOSITORY } from './domain/ports/investments.repository.po
     DebtsService,
     InvestmentsService,
     FinanceSummaryService,
-    FinanceToolExecutorService,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class

@@ -2,11 +2,10 @@ import { Module } from '@nestjs/common';
 import { MemoryController } from './presentation/controllers/memory.controller';
 import { UserMemoryService } from './application/services/user-memory.service';
 import { KnowledgeItemsService } from './application/services/knowledge-items.service';
-import { MemoryToolExecutorService } from './application/services/memory-tool-executor.service';
 import { ContradictionResolutionService } from './application/services/contradiction-resolution.service';
 import { UserMemoryRepository } from './infrastructure/repositories/user-memory.repository';
 import { KnowledgeItemRepository } from './infrastructure/repositories/knowledge-item.repository';
-import { ContradictionDetectorAdapter } from './infrastructure/adapters/contradiction-detector.adapter';
+import { NoOpContradictionDetectorAdapter } from './infrastructure/adapters/noop-contradiction-detector.adapter';
 import {
   USER_MEMORY_REPOSITORY,
   KNOWLEDGE_ITEM_REPOSITORY,
@@ -19,10 +18,11 @@ import {
  * Features:
  * - User memory (compact context for system prompt)
  * - Knowledge items (granular facts, preferences, insights)
- * - Tool executor for search_knowledge and add_knowledge
+ *
+ * Note: Contradiction detection is now handled by the Python AI service.
+ * The NoOp adapter satisfies the DI token for ContradictionResolutionService.
  *
  * @see docs/milestones/phase-1-counselor.md M1.3 for implementation details
- * @see docs/specs/data-model.md §4.5 for entities
  * @see ADR-012 for Tool Use + Memory Consolidation architecture
  */
 @Module({
@@ -31,7 +31,6 @@ import {
     // Application Services
     UserMemoryService,
     KnowledgeItemsService,
-    MemoryToolExecutorService,
     ContradictionResolutionService,
 
     // Repository implementations (injected via symbols for DI)
@@ -39,7 +38,7 @@ import {
     KnowledgeItemRepository,
 
     // Adapter implementations
-    ContradictionDetectorAdapter,
+    NoOpContradictionDetectorAdapter,
 
     // Bind interfaces to implementations
     {
@@ -52,13 +51,12 @@ import {
     },
     {
       provide: CONTRADICTION_DETECTOR,
-      useExisting: ContradictionDetectorAdapter,
+      useExisting: NoOpContradictionDetectorAdapter,
     },
   ],
   exports: [
     UserMemoryService,
     KnowledgeItemsService,
-    MemoryToolExecutorService,
     ContradictionResolutionService,
   ],
 })

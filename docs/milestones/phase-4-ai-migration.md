@@ -1141,68 +1141,166 @@ _Concluído em 2026-02-23._
 
 ---
 
-## M4.10 — NestJS Cleanup + Production Deploy 🔴
+## M4.10 — NestJS Cleanup + Production Deploy 🟡
 
-**Objetivo:** Deletar todo o código TypeScript AI obsoleto (~13.400 linhas), simplificar NestJS para proxy, deploy em produção.
+**Objetivo:** Deletar todo o código TypeScript AI obsoleto, simplificar NestJS para proxy, deploy em produção.
 
 **Referências:** `docs/ai-python-service-migration-plan.md` §5, §7, §12
 
 **Dependências:** M4.9
 
-> **Contexto:** Este é o milestone de maior risco — deleta ~12.650 linhas de código AI (~11.600 + ~1.048 do memory consolidation, que foi migrado para Python APScheduler em M4.8) e simplifica ~1.650 linhas. A safety net é o M4.9 (validação de paridade) e o deploy strategy (blue-green ou canary). Rollback é possível revertendo o commit + `USE_PYTHON_AI=false`.
+> **Contexto:** Este é o milestone de maior risco — deleta todo o código AI do NestJS e simplifica o chat para proxy. A safety net é o M4.9 (validação de paridade) e o deploy strategy (blue-green ou canary). Rollback é possível revertendo o commit (packages/ai/ ainda existe no git history).
 
 **Tasks:**
 
-**Deletar packages/ai/ (~7.677 linhas):**
-- [ ] Deletar diretório `packages/ai/` inteiro
-- [ ] Remover `@life-assistant/ai` do `pnpm-workspace.yaml`
-- [ ] Remover dependências npm: `@anthropic-ai/sdk`, `@google/genai`, `zod-to-json-schema`
-- [ ] Remover referências em `tsconfig` base
+**1. Deletar packages/ai/ (~7.677 linhas, 49 arquivos):**
+- [x] Deletar diretório `packages/ai/` inteiro
+- [x] Remover `"@life-assistant/ai": "workspace:*"` de `apps/api/package.json` (linha 20)
+- [x] Executar `pnpm install` para regenerar `pnpm-lock.yaml`
 
-**Deletar tool executors do NestJS:**
-- [ ] Deletar `tracking-tool-executor.service.ts` (~587L)
-- [ ] Deletar `finance-tool-executor.service.ts` (~1.047L)
-- [ ] Deletar `memory-tool-executor.service.ts` (~297L)
-- [ ] Remover providers dos respectivos modules
+> Nota: `pnpm-workspace.yaml` usa glob `packages/*` — deletar o diretório é suficiente, nada a remover no yaml.
+> Nota: As deps `@anthropic-ai/sdk`, `@google/genai`, `zod-to-json-schema` estão dentro de `packages/ai/package.json` — são deletadas junto com o diretório.
 
-**Deletar serviços AI do NestJS:**
-- [ ] Deletar `confirmation-state.service.ts` (~475L)
-- [ ] Deletar `context-builder.service.ts` (~337L)
-- [ ] Deletar `contradiction-detector.adapter.ts` (~435L)
+**2. Deletar tool executors do NestJS (~1.931L):**
+- [x] Deletar `apps/api/src/modules/tracking/application/services/tracking-tool-executor.service.ts` (~587L)
+- [x] Deletar `apps/api/src/modules/finance/application/services/finance-tool-executor.service.ts` (~1.047L)
+- [x] Deletar `apps/api/src/modules/memory/application/services/memory-tool-executor.service.ts` (~297L)
+- [x] `TrackingModule`: remover `TrackingToolExecutorService` dos providers e exports
+- [x] `FinanceModule`: remover `FinanceToolExecutorService` dos providers e exports
+- [x] `MemoryModule`: remover `MemoryToolExecutorService` dos providers (linha 34) e exports (linha 61)
+- [x] Remover re-export de `tracking-tool-executor` em `apps/api/src/modules/tracking/application/services/index.ts`
+- [x] Remover re-export de `memory-tool-executor` em `apps/api/src/modules/memory/application/services/index.ts`
 
-**Deletar memory consolidation do NestJS (migrado para Python APScheduler em M4.8):**
-- [ ] Deletar `memory-consolidation.processor.ts` (~557L)
-- [ ] Deletar `memory-consolidation.scheduler.ts` (~151L)
-- [ ] Deletar `consolidation-prompt.ts` (~337L)
-- [ ] Remover queue `MEMORY_CONSOLIDATION` de `queues.ts` e `jobs.module.ts`
-- [ ] Remover `MemoryConsolidationScheduler` e `MemoryConsolidationProcessor` dos providers em `jobs.module.ts`
-- [ ] Remover dependência de `MemoryModule` em `JobsModule` (se não usada pelo cleanup-onboarding)
-- [ ] Manter `cleanup-onboarding` intacto (BullMQ, não usa LLM)
-- [ ] Resultado: ~1.048 linhas deletadas (de ~1.048)
+**3. Deletar serviços AI do NestJS (~1.247L):**
+- [x] Deletar `apps/api/src/modules/chat/application/services/confirmation-state.service.ts` (~475L)
+- [x] Deletar `apps/api/src/modules/chat/application/services/context-builder.service.ts` (~337L)
+- [x] Deletar `apps/api/src/modules/memory/infrastructure/adapters/contradiction-detector.adapter.ts` (~435L)
+- [x] Remover re-export de `context-builder.service` em `apps/api/src/modules/chat/application/services/index.ts`
 
-**Simplificar chat.service.ts:**
-- [ ] Remover lógica de tool loop TypeScript
-- [ ] Remover imports de `@life-assistant/ai`
-- [ ] Remover feature flag `USE_PYTHON_AI` (Python é o único caminho)
-- [ ] Resultado: ~200 linhas (de ~1.232) — apenas: salvar msg do user + proxy HTTP/SSE para Python
+**4. Limpar cadeia de contradiction detection no MemoryModule:**
 
-**Simplificar chat.module.ts:**
-- [ ] Remover providers de AI/tools/confirmation
-- [ ] Manter apenas: ChatController, ChatService (proxy), ChatRepository, MessageRepository
+> Contexto: `contradiction-detector.adapter.ts` é a implementação LLM-based do `ContradictionDetectorPort`. Com Python AI fazendo contradiction detection via tools, NestJS precisa de uma alternativa. Duas opções:
+> - **Opção A (recomendada):** Criar um `NoOpContradictionDetectorAdapter` que sempre retorna "sem contradição" (~20L). Python lida com contradictions via tools durante chat. O `ContradictionResolutionService` e `KnowledgeItemsService` continuam funcionando sem breaking changes.
+> - **Opção B:** Criar um `PythonContradictionDetectorAdapter` que faz HTTP POST para Python (~50L). Mais correto mas adiciona acoplamento HTTP.
 
-**Atualizar monorepo:**
-- [ ] Remover imports quebrados em todo o codebase
-- [ ] Atualizar `CLAUDE.md` — remover referências a `packages/ai/`, adicionar `services/ai/`
-- [ ] Atualizar `docs/specs/core/architecture.md` — nova arquitetura de 3 serviços
+- [x] Implementar adapter substituto (NoOp ou Python proxy) para `ContradictionDetectorPort`
+- [x] `MemoryModule`: substituir `ContradictionDetectorAdapter` pelo novo adapter nos providers (linha 42) e binding `CONTRADICTION_DETECTOR` (linhas 54-56)
+- [x] Manter `contradiction-detector.port.ts` (interface + symbol — usados por `ContradictionResolutionService`)
+- [x] Manter `contradiction-resolution.service.ts` (usado por `KnowledgeItemsService` — não importa de `@life-assistant/ai`)
+- [x] Manter export de port em `domain/ports/index.ts` (linha 3)
 
-**Testes de regressão:**
+**5. Deletar memory consolidation do NestJS (migrado para Python APScheduler em M4.8):**
+- [x] Deletar diretório inteiro `apps/api/src/jobs/memory-consolidation/` (4 arquivos: `index.ts`, `consolidation-prompt.ts`, `memory-consolidation.processor.ts`, `memory-consolidation.scheduler.ts`)
+- [x] `queues.ts`: remover `MEMORY_CONSOLIDATION` (linha 8)
+- [x] `jobs.module.ts`: remover imports `MemoryConsolidationProcessor`, `MemoryConsolidationScheduler` (linhas 10-12)
+- [x] `jobs.module.ts`: remover `BullModule.registerQueue({ name: QUEUES.MEMORY_CONSOLIDATION })` (linhas 61-63)
+- [x] `jobs.module.ts`: remover dos providers (linhas 73-74) e exports (linha 79)
+- [x] `jobs.module.ts`: remover import de `MemoryModule` (linha 15) — não usada pelo cleanup-onboarding
+- [x] Manter `cleanup-onboarding` intacto (BullMQ, não usa LLM)
+
+**6. Atualizar dependentes do MemoryConsolidationScheduler:**
+
+> Contexto: Dois arquivos injetam `MemoryConsolidationScheduler` e vão quebrar ao deletá-lo.
+
+- [x] `onboarding.service.ts` (linhas 5, 36, 119): remover import, injeção e chamada `consolidationScheduler.refreshSchedulers()` — Python APScheduler gerencia independentemente
+- [x] `onboarding.module.ts`: remover import de `JobsModule` (não mais necessário)
+- [x] `admin-jobs.controller.ts` (linhas 3, 19, 49): refatorado para fazer HTTP POST para Python AI service endpoint `/workers/consolidation`
+- [x] `admin.module.ts`: atualizado — importa `ConfigModule` em vez de `JobsModule`
+
+**7. Simplificar chat.service.ts (~1.451L → ~350-400L):**
+
+> Contexto: Após remoção do tool loop TS, confirmation intent detection, e todas as dependências de `@life-assistant/ai`, o que resta é: CRUD (~79L), proxy SSE (~166L), confirmation proxies (~110L), generateTitle (~31L), interface/constructor (~30L). Total estimado: ~350-400L.
+
+- [x] Remover lógica de tool loop TypeScript (runToolLoop, tool definitions, availableTools, toolToExecutorMap, combinedExecutor)
+- [x] Remover todos os imports de `@life-assistant/ai` (linha 37)
+- [x] Remover feature flag `USE_PYTHON_AI` — Python é o único caminho (linhas 312, 1234, 1299)
+- [x] Remover injeção de `ContextBuilderService` e `ConfirmationStateService` (linhas 148-149)
+- [x] Remover injeção dos 3 tool executors: `TrackingToolExecutorService`, `FinanceToolExecutorService`, `MemoryToolExecutorService` (linhas 152-154)
+- [x] Remover seção inteira de "Confirmation Intent Detection" (linhas 685-1023, ~340L) — Python lida com intent detection via LangGraph
+- [x] Remover `handlePendingConfirmation()` do NestJS path (linhas 1042-1210) — Python usa LangGraph checkpoints
+- [x] Remover `getPendingConfirmation()` (linhas 1213-1219) — dependia de `ConfirmationStateService` (Redis), Python usa LangGraph checkpoints, e o frontend não consome esse endpoint
+- [x] Simplificar `confirmToolExecution()` e `rejectToolExecution()` — remover branch NestJS, manter apenas proxy Python
+- [x] Manter: CRUD de conversations/messages + `sendMessage()` proxy SSE + `generateTitle()` + confirmation proxy para Python (confirm/reject)
+- [x] Resultado: ~310L — proxy para Python + CRUD operations
+
+**8. Simplificar chat.module.ts e chat.controller.ts:**
+- [x] Remover `ContextBuilderService` dos providers (linha 35)
+- [x] Remover `ConfirmationStateService` dos providers (linha 36) e exports (linha 52)
+- [x] Remover imports de `MemoryModule`, `TrackingModule`, `FinanceModule` (linhas 13-15, 30)
+- [x] `chat.controller.ts`: deletar endpoint `GET conversations/:id/pending-confirmation` (linhas 296-314)
+- [x] Manter apenas: `ConfigModule`, `ChatController`, `ChatService` (proxy), `ConversationRepository`, `MessageRepository`
+
+**9. Remover feature flag USE_PYTHON_AI de todo o codebase:**
+
+> Nota: `memory-consolidation.scheduler.ts` (linha 39) também usa `usePythonAi`, mas é deletado na Task 5. Executar Task 5 antes desta ou em conjunto.
+
+- [ ] `packages/config/src/schemas/python-ai.ts`: remover field `USE_PYTHON_AI` (manter `PYTHON_AI_URL` e `SERVICE_SECRET`)
+- [ ] `apps/api/src/config/config.service.ts`: remover getter `usePythonAi()` (linhas 175-177)
+- [ ] `chat.service.ts`: remover 3 branches `if (this.appConfig.usePythonAi)` (linhas 312, 1234, 1299) — coberto pela Task 7
+- [ ] `.env.example`: remover `USE_PYTHON_AI=false` (linha 69)
+- [ ] `.env`: remover `USE_PYTHON_AI` (confirmado que existe)
+
+**10. Remover LLM config getters não utilizados do NestJS:**
+
+> Contexto: Após deletar `packages/ai/`, os getters `llmProvider()`, `geminiApiKey()`, `geminiModel()`, `anthropicApiKey()`, `claudeModel()` em `config.service.ts` (linhas 91-109) ficam sem consumidores no NestJS. O schema em `packages/config/src/schemas/ai.ts` pode ser mantido para validar que as vars existem no `.env` (Python as consome via pydantic-settings).
+
+- [ ] `apps/api/src/config/config.service.ts`: remover getters LLM não utilizados (linhas 91-109)
+- [ ] Manter `packages/config/src/schemas/ai.ts` — valida vars que Python consome
+
+**11. Atualizar apps/api/Dockerfile (CRÍTICO — deploy quebra sem isso):**
+
+> Contexto: O Dockerfile multi-stage tem 5 referências a `packages/ai/`. Sem atualizar, o Docker build no Railway vai falhar.
+
+- [ ] Remover `COPY packages/ai/package.json ./packages/ai/` (linha 17, stage deps)
+- [ ] Remover `COPY --from=deps /app/packages/ai/node_modules ./packages/ai/node_modules` (linha 37, stage builder)
+- [ ] Remover `RUN pnpm --filter @life-assistant/ai build` (linha 46, stage builder)
+- [ ] Remover `COPY --from=builder ... /app/packages/ai/dist ...` (linha 77, stage runner)
+- [ ] Remover `COPY --from=builder ... /app/packages/ai/package.json ...` (linha 78, stage runner)
+
+**12. Deletar/reescrever arquivos de teste (~8 arquivos):**
+
+> Contexto: Estes testes importam de `@life-assistant/ai` ou testam serviços que serão deletados. Sem tratá-los, `pnpm test` falha.
+
+Deletar testes de serviços removidos:
+- [x] Deletar `test/unit/modules/chat/confirmation-state.service.spec.ts`
+- [x] Deletar `test/unit/modules/chat/context-builder.service.spec.ts`
+- [x] Deletar `test/unit/modules/memory/memory-tool-executor.service.spec.ts`
+- [x] Deletar `test/unit/modules/tracking/tracking-tool-executor.spec.ts`
+- [x] Deletar `test/unit/modules/finance/finance-tool-executor.spec.ts`
+- [x] Deletar `test/unit/jobs/memory-consolidation/memory-consolidation.processor.spec.ts`
+- [x] Deletar `test/unit/jobs/memory-consolidation/memory-consolidation.scheduler.spec.ts`
+- [x] Deletar `test/unit/jobs/memory-consolidation/consolidation-prompt.spec.ts` (encontrado na validação)
+- [x] Deletar `test/integration/memory/memory-consolidation.integration.spec.ts`
+- [x] Deletar `test/integration/jobs/memory-consolidation-job.integration.spec.ts` (encontrado na validação)
+
+Reescrever testes que mudam de lógica:
+- [x] Reescrever `test/unit/modules/chat/chat.service.spec.ts` — testar proxy SSE em vez de tool loop
+- [x] Deletar `test/integration/chat/chat-confirmation-flow.integration.spec.ts` — testava fluxo NestJS obsoleto
+- [x] Deletar `test/integration/memory/memory-tool-executor.integration.spec.ts` — Python cobre
+
+Atualizar test setup:
+- [ ] `test/setup.ts`: remover env vars `LLM_PROVIDER`, `GEMINI_API_KEY`, `GEMINI_MODEL` se não necessárias após cleanup
+
+**13. Atualizar documentação do monorepo:**
+- [ ] Atualizar `CLAUDE.md` — remover referências a `packages/ai/`, atualizar arquitetura (monorepo structure, stack description)
+- [ ] Atualizar `README.md` — linhas 319 e 560 referenciam `packages/ai/`
+- [ ] Atualizar `docs/specs/core/architecture.md` — nova arquitetura de 3 serviços (NestJS proxy + Python AI + Next.js); linha 588 referencia `@life-assistant/ai`
+- [ ] Atualizar `docs/adr/ADR-012-tool-use-memory-consolidation.md` — referencia `packages/ai/` (adicionar nota sobre migração para Python)
+- [ ] Atualizar `docs/adr-012-tool-use-vs-rag-analysis.md` — referencia `packages/ai/`
+- [ ] Atualizar `docs/skills-architecture-proposal.md` — referencia `packages/ai/`
+- [ ] Remover imports quebrados restantes em todo o codebase (buscar `@life-assistant/ai`)
+
+> Nota: `docs/ai-python-service-migration-plan.md` e `docs/milestones/phase-{0,1,2}.md` referenciam `packages/ai/` como contexto histórico — não precisam de atualização.
+
+**14. Testes de regressão:**
 - [ ] `pnpm typecheck` — sem erros de tipo
 - [ ] `pnpm lint` — sem erros de lint
 - [ ] `pnpm test` — todos os testes unitários passam
 - [ ] `pnpm test:e2e` — todos os testes E2E passam (Playwright)
 - [ ] Testes de paridade de M4.9 ainda passam
+- [ ] Verificar que nenhum import de `@life-assistant/ai` sobrou: `grep -r "@life-assistant/ai" apps/ packages/`
 
-**Deploy produção:**
+**15. Deploy produção:**
 - [ ] Railway: criar serviço Python AI (Nixpacks, Python buildpack)
 - [ ] Railway: configurar internal networking (`python-ai.railway.internal:8000`)
 - [ ] Railway: configurar env vars (DATABASE_URL, GEMINI_API_KEY, SERVICE_SECRET, SENTRY_DSN, ENVIRONMENT=production)
@@ -1213,18 +1311,24 @@ _Concluído em 2026-02-23._
 
 **Definition of Done:**
 - [ ] `packages/ai/` deletado (0 linhas)
-- [ ] NestJS `chat.service.ts` é ~200L de proxy (de ~1.232L)
+- [ ] NestJS `chat.service.ts` é ~350-400L de proxy (de ~1.451L)
+- [ ] Endpoint `GET /pending-confirmation` removido ou refatorado para proxiar ao Python
+- [ ] Nenhum import de `@life-assistant/ai` no codebase
+- [ ] Feature flag `USE_PYTHON_AI` removida de todo o codebase
+- [ ] `apps/api/Dockerfile` sem referências a `packages/ai/`
+- [ ] Todos os testes reescritos/deletados conforme necessário
 - [ ] `pnpm typecheck && pnpm lint && pnpm test` passam
 - [ ] `pnpm test:e2e` passa
 - [ ] Produção estável por 48h sem novos erros
-- [ ] Total removido: **~12.650 linhas deletadas** + **~1.650 simplificadas**
 
 > **Riscos:**
 > - Regressões em edge cases de confirmação (SSE event ordering diferente)
-> - Imports quebrados em arquivos não cobertos pelos testes
+> - `ContradictionResolutionService` sem adapter funcional (usar NoOp ou Python proxy)
+> - `onboarding.service.ts` perdendo refresh de timezone para consolidation schedulers
 > - Performance em produção diferente de local (latência Railway internal networking)
-> - Rollback plan: reverter commit + `USE_PYTHON_AI=false` no NestJS (requer que packages/ai/ ainda exista no git history)
-> - Memory consolidation: rollback requer reativar BullMQ schedulers no NestJS (código ainda existe até ser deletado neste milestone)
+> - Rollback plan: reverter commit (packages/ai/ ainda existe no git history) — requer reinstalar deps e rebuild
+>
+> **Ordem de execução recomendada:** Tasks 1-6 (deleções) → Tasks 7-10 (simplificações) → Task 11 (Dockerfile) → Task 12 (testes) → Task 13 (docs) → Task 14 (regressão) → Task 15 (deploy). Tasks 5 e 9 têm dependência implícita (`USE_PYTHON_AI` em `memory-consolidation.scheduler.ts`) — executar Task 5 antes ou junto com Task 9.
 
 ---
 
@@ -1233,12 +1337,16 @@ _Concluído em 2026-02-23._
 | Métrica | Valor |
 |---|---|
 | Milestones | 10 (M4.1 — M4.10) |
-| Linhas deletadas do NestJS | **~12.650** (deletadas, inclui memory consolidation ~1.048L migrado para Python) |
-| Linhas simplificadas no NestJS | **~1.650** (chat.service.ts, chat.module.ts, jobs.module.ts) |
-| Linhas adicionadas no NestJS | ~160 (proxy SSE + config + feature flag) |
+| Pacote deletado | `packages/ai/` (**7.677 linhas**, 49 arquivos) |
+| Serviços NestJS deletados | 6 arquivos (~1.931L tool executors + ~1.247L serviços AI) |
+| Memory consolidation deletado | 4 arquivos (~1.048L, diretório inteiro) |
+| Testes deletados/reescritos | ~10 arquivos (7 deletados + 3 reescritos) |
+| chat.service.ts simplificado | ~1.451L → ~350-400L |
+| Dockerfile atualizado | 5 linhas removidas (referências a packages/ai/) |
+| Config cleanup | Remoção de USE_PYTHON_AI + LLM getters não utilizados |
+| Novo adapter | NoOp/Proxy ContradictionDetector (~20-50L) |
 | Novo código Python | **~5.500-7.500** (estimativa — inclui APScheduler setup + consolidation) |
 | SQLAlchemy models | ~120-200 linhas (mapeamento passivo + CI check) |
-| Pacote deletado | `packages/ai/` (**7.677 linhas**, 49 arquivos) |
 | Novo diretório | `services/ai/` (Python AI Service) |
 | Serviços NestJS intactos | Auth, REST controllers, domain services, repositories, BullMQ (cleanup + CRUD jobs) |
 | Scheduling AI | APScheduler no Python (memory consolidation, follow-ups futuros) |

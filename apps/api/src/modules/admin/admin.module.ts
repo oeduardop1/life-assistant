@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdminJobsController } from './admin-jobs.controller';
-import { JobsModule } from '../../jobs/jobs.module';
+import { ConfigModule } from '../../config/config.module';
 
 /**
  * AdminModule - Development-only administrative endpoints
@@ -11,7 +11,7 @@ import { JobsModule } from '../../jobs/jobs.module';
  * @see docs/specs/engineering.md §7.6 for manual job triggering documentation
  */
 @Module({
-  imports: [JobsModule],
+  imports: [ConfigModule],
   controllers: [AdminJobsController],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class

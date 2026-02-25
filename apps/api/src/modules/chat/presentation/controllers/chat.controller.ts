@@ -254,11 +254,11 @@ export class ChatController {
   })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   @ApiResponse({ status: 404, description: 'Confirmation not found or expired' })
-  async confirmToolExecution(
+  confirmToolExecution(
     @SseCurrentUser() userId: string,
     @Param('id', ParseUUIDPipe) conversationId: string,
     @Param('confirmationId') confirmationId: string
-  ): Promise<Observable<MessageEvent>> {
+  ): Observable<MessageEvent> {
     return this.chatService.confirmToolExecution(userId, conversationId, confirmationId);
   }
 
@@ -291,26 +291,6 @@ export class ChatController {
       confirmationId,
       reason
     );
-  }
-
-  /**
-   * Get pending confirmation for a conversation
-   */
-  @Get('conversations/:id/pending-confirmation')
-  @ApiOperation({ summary: 'Get pending confirmation for conversation' })
-  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
-  @ApiResponse({
-    status: 200,
-    description: 'Pending confirmation details or null',
-  })
-  @ApiResponse({ status: 401, description: 'Not authenticated' })
-  async getPendingConfirmation(
-    @CurrentUser('id') _userId: string,
-    @Param('id', ParseUUIDPipe) conversationId: string
-  ): Promise<{ confirmation: unknown }> {
-    const confirmation =
-      await this.chatService.getPendingConfirmation(conversationId);
-    return { confirmation };
   }
 
   /**

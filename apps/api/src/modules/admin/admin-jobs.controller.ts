@@ -1,6 +1,6 @@
-import { Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { MemoryConsolidationScheduler } from '../../jobs/memory-consolidation/memory-consolidation.scheduler';
+import { AppConfigService } from '../../config/config.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/types/request.types';
 
@@ -10,48 +10,67 @@ import type { AuthenticatedUser } from '../../common/types/request.types';
  * This controller is only available when NODE_ENV=development.
  * Provides endpoints to manually trigger background jobs for testing.
  *
+ * Note: Memory consolidation is now managed by the Python AI service.
+ * This endpoint proxies the trigger to the Python service.
+ *
  * @see docs/specs/engineering.md §7.6 for usage documentation
  */
 @ApiTags('Admin - Jobs')
 @Controller('admin/jobs')
 export class AdminJobsController {
+  private readonly logger = new Logger(AdminJobsController.name);
+
   constructor(
-    private readonly consolidationScheduler: MemoryConsolidationScheduler
+    private readonly appConfig: AppConfigService
   ) {}
 
   /**
-   * Trigger memory consolidation job manually
-   *
-   * This allows developers to test the memory consolidation process
-   * without waiting for the scheduled 3AM execution.
+   * Trigger memory consolidation job manually via Python AI service
    */
   @Post('memory-consolidation/trigger')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({
     summary: 'Trigger memory consolidation job manually (dev only)',
     description:
-      'Queues a memory consolidation job for the authenticated user. ' +
-      'Use this to test memory consolidation during development without waiting for the 3AM schedule.',
+      'Triggers memory consolidation for the authenticated user via the Python AI service. ' +
+      'Use this to test memory consolidation during development without waiting for the scheduled execution.',
   })
   @ApiResponse({
     status: 202,
-    description: 'Job queued successfully',
+    description: 'Job triggered successfully',
     schema: {
       type: 'object',
       properties: {
-        status: { type: 'string', example: 'queued' },
-        jobId: { type: 'string', example: 'consolidation_user-123_manual_1705123456789' },
-        message: { type: 'string', example: 'Memory consolidation job queued for user user-123' },
+        status: { type: 'string', example: 'triggered' },
+        message: { type: 'string', example: 'Memory consolidation triggered for user user-123' },
       },
     },
   })
   async triggerMemoryConsolidation(@CurrentUser() user: AuthenticatedUser) {
-    const jobId = await this.consolidationScheduler.triggerForUser(user.id);
+    const pythonUrl = this.appConfig.pythonAiUrl;
+    const serviceSecret = this.appConfig.serviceSecret;
+
+    const response = await fetch(`${pythonUrl}/workers/consolidation`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${serviceSecret}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ user_id: user.id }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      this.logger.error(`Python consolidation trigger error (${String(response.status)}): ${errorText}`);
+      return {
+        status: 'error',
+        message: `Failed to trigger consolidation: ${errorText}`,
+      };
+    }
 
     return {
-      status: 'queued',
-      jobId,
-      message: `Memory consolidation job queued for user ${user.id}`,
+      status: 'triggered',
+      message: `Memory consolidation triggered for user ${user.id}`,
     };
   }
 }

@@ -3,7 +3,6 @@ import { TrackingController } from './presentation/controllers/tracking.controll
 import { HabitsController } from './presentation/controllers/habits.controller';
 import { CustomMetricController } from './presentation/controllers/custom-metric.controller';
 import { TrackingService } from './application/services/tracking.service';
-import { TrackingToolExecutorService } from './application/services/tracking-tool-executor.service';
 import { HabitsService } from './application/services/habits.service';
 import { CalendarService } from './application/services/calendar.service';
 import { CustomMetricService } from './application/services/custom-metric.service';
@@ -35,7 +34,6 @@ import { SettingsModule } from '../settings/settings.module';
   providers: [
     // Application Services
     TrackingService,
-    TrackingToolExecutorService,
     HabitsService,
     CalendarService,
     CustomMetricService,
@@ -59,7 +57,7 @@ import { SettingsModule } from '../settings/settings.module';
       useExisting: CustomMetricRepository,
     },
   ],
-  exports: [TrackingService, TrackingToolExecutorService, HabitsService, CalendarService, CustomMetricService],
+  exports: [TrackingService, HabitsService, CalendarService, CustomMetricService],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class TrackingModule {}

@@ -2,7 +2,6 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../../../database/database.service';
 import { eq } from '@life-assistant/database';
 import { AppLoggerService } from '../../../../logger/logger.service';
-import { MemoryConsolidationScheduler } from '../../../../jobs/memory-consolidation/memory-consolidation.scheduler';
 import {
   ProfileStepDto,
   TelegramStepDto,
@@ -33,7 +32,6 @@ export class OnboardingService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly logger: AppLoggerService,
-    private readonly consolidationScheduler: MemoryConsolidationScheduler,
   ) {
     this.logger.setContext(OnboardingService.name);
   }
@@ -113,11 +111,6 @@ export class OnboardingService {
           updatedAt: new Date(),
         })
         .where(this.whereUserId(userId));
-    });
-
-    // Update schedulers to include new timezone (async, doesn't block response)
-    this.consolidationScheduler.refreshSchedulers().catch((err: unknown) => {
-      this.logger.error('Failed to refresh consolidation schedulers', err instanceof Error ? err.message : String(err));
     });
 
     this.logger.log(`Profile step saved for user: ${userId}`);
