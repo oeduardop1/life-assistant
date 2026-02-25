@@ -115,8 +115,16 @@
 │   │  │ Modules   │ │ Services  │ │Controllers│ │  Guards   │            │   │
 │   │  └───────────┘ └───────────┘ └───────────┘ └───────────┘            │   │
 │   │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐            │   │
-│   │  │  BullMQ   │ │ SSE (Chat)│ │ Tool Use  │ │ Webhooks  │            │   │
-│   │  │  (Jobs)   │ │ (Realtime)│ │   (AI)    │ │(TG/Stripe)│            │   │
+│   │  │  BullMQ   │ │ SSE Proxy │ │ AI Proxy  │ │ Webhooks  │            │   │
+│   │  │  (Jobs)   │ │ (Realtime)│ │  (HTTP)   │ │(TG/Stripe)│            │   │
+│   │  └───────────┘ └───────────┘ └───────────┘ └───────────┘            │   │
+│   └──────────────────────────────────┬──────────────────────────────────┘   │
+│                                      │ HTTP (interno)                       │
+│   ┌──────────────────────────────────▼──────────────────────────────────┐   │
+│   │                    Python AI Service                                 │   │
+│   │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐            │   │
+│   │  │ FastAPI   │ │ LangGraph │ │  21 Tools │ │ Checkpoint│            │   │
+│   │  │ (Routes)  │ │  (Agent)  │ │(Read/Write)│ │(Postgres) │            │   │
 │   │  └───────────┘ └───────────┘ └───────────┘ └───────────┘            │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -226,10 +234,12 @@ life-assistant/
 │       │   └── jobs/                 # BullMQ processors
 │       └── test/
 │
+├── services/
+│   └── ai/                           # Python AI Service (FastAPI + LangGraph)
+│
 ├── packages/
 │   ├── shared/                       # Tipos e utilitários compartilhados
 │   ├── database/                     # Schema Drizzle + migrations
-│   ├── ai/                           # Core de IA compartilhado
 │   └── config/                       # Configurações e validação de ENV
 │
 ├── infra/
@@ -254,14 +264,20 @@ life-assistant/
 │          ▼                                  ▼                    │
 ├─────────────────────────────────────────────────────────────────┤
 │                       PACKAGES LAYER                             │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│   │  database   │  │     ai      │  │   config    │            │
-│   └──────┬──────┘  └──────┬──────┘  └──────┬──────┘            │
-│          │ pode importar  │ pode importar  │ pode importar      │
-│          ▼                ▼                ▼                    │
+│   ┌─────────────┐              ┌─────────────┐                  │
+│   │  database   │              │   config    │                  │
+│   └──────┬──────┘              └──────┬──────┘                  │
+│          │ pode importar              │ pode importar            │
+│          ▼                            ▼                          │
 │   ┌─────────────────────────────────────────────────────────┐   │
 │   │                        shared                            │   │
 │   │              (types, constants, utils)                   │   │
+│   └─────────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────────┤
+│                      SERVICES (HTTP)                              │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │  services/ai  (Python · FastAPI + LangGraph)             │   │
+│   │  Comunicação via HTTP — NÃO importa packages JS/TS       │   │
 │   └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -269,11 +285,12 @@ life-assistant/
 | Package | Pode importar | NÃO pode importar |
 |---------|---------------|-------------------|
 | `shared` | Nada (é a base) | Qualquer outro package |
-| `config` | `shared` | `database`, `ai`, apps |
-| `database` | `shared`, `config` | `ai`, apps |
-| `ai` | `shared`, `config` | `database`, apps |
+| `config` | `shared` | `database`, apps |
+| `database` | `shared`, `config` | apps |
 | `apps/web` | Todos os packages | `apps/api` |
 | `apps/api` | Todos os packages | `apps/web` |
+
+> **Nota:** `services/ai/` é um serviço Python independente que se comunica com `apps/api` via HTTP. Não participa do grafo de dependências de packages JS/TS.
 
 ---
 
@@ -583,11 +600,6 @@ export {
   DEFAULT_WEIGHTS, TRACKING_VALIDATIONS, RATE_LIMITS, STORAGE_LIMITS,
   formatCurrency, formatDate, normalizeText, sleep, retry,
 };
-```
-
-**`@life-assistant/ai`** (M1.1 - não implementado)
-```typescript
-export { createLLM, type LLMPort, type LLMProvider };
 ```
 
 #### Code Documentation Standards

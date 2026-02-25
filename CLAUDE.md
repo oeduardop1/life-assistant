@@ -14,7 +14,6 @@ life-assistant/
 ├── apps/web/           # Next.js 16 frontend (React 19, Tailwind v4, shadcn/ui)
 ├── apps/api/           # NestJS 11 backend (Clean Architecture, BullMQ)
 ├── services/ai/        # Python AI Service (FastAPI + LangGraph) — NOT in pnpm workspace
-├── packages/ai/        # [DEPRECATED — being migrated to services/ai/ in Phase 4]
 ├── packages/config/    # Zod-validated environment config (loadConfig, validateEnv)
 ├── packages/database/  # Drizzle ORM schemas, migrations, RLS policies
 ├── packages/shared/    # Shared enums, constants, date/currency utils
@@ -92,8 +91,8 @@ Copy `.env.example` to `.env` and fill in required values.
 | App | `PORT`, `FRONTEND_URL` | Default: 4000, http://localhost:3000 |
 | Database | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET` | Auto-filled by `supabase start` |
 | Redis | `REDIS_URL` | Default: redis://localhost:6379 |
-| AI/LLM | `LLM_PROVIDER`, `GEMINI_API_KEY`, `LLM_MODEL` | Default provider: gemini |
-| Python AI | `PYTHON_AI_URL`, `SERVICE_SECRET`, `USE_PYTHON_AI` | Default: http://localhost:8000, feature flag |
+| AI/LLM | `LLM_PROVIDER`, `GEMINI_API_KEY`, `LLM_MODEL` | Python AI service only (pydantic-settings) |
+| Python AI | `PYTHON_AI_URL`, `SERVICE_SECRET` | Default: http://localhost:8000 |
 | Storage | `R2_*` or MinIO vars | Local: MinIO on port 9000 |
 | Observability | `SENTRY_DSN`, `AXIOM_*` | Optional in dev |
 

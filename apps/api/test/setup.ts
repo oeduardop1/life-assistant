@@ -21,11 +21,6 @@ process.env.SUPABASE_JWT_SECRET = 'super-secret-jwt-token-with-at-least-32-chara
 // Redis config
 process.env.REDIS_URL = 'redis://localhost:6379';
 
-// AI config
-process.env.LLM_PROVIDER = 'gemini';
-process.env.GEMINI_API_KEY = 'test-gemini-key';
-process.env.GEMINI_MODEL = 'gemini-flash';
-
 // Storage config
 process.env.R2_ACCOUNT_ID = 'test-account';
 process.env.R2_ACCESS_KEY_ID = 'test-access-key';

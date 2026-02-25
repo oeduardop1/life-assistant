@@ -15,9 +15,6 @@ const validEnv = {
   SUPABASE_JWT_SECRET: 'a'.repeat(32),
   // Redis
   REDIS_URL: 'redis://localhost:6379',
-  // AI
-  LLM_PROVIDER: 'gemini',
-  GEMINI_API_KEY: 'gemini-key',
   // Storage
   R2_ACCOUNT_ID: 'account',
   R2_ACCESS_KEY_ID: 'access',
@@ -45,7 +42,6 @@ describe('loadConfig', () => {
     expect(config.NODE_ENV).toBe('development');
     expect(config.PORT).toBe(4000);
     expect(config.DATABASE_URL).toBe('postgresql://user:pass@localhost:5432/db');
-    expect(config.LLM_PROVIDER).toBe('gemini');
   });
 
   it('should throw error for invalid environment', () => {
@@ -65,7 +61,7 @@ describe('loadConfig', () => {
   });
 
   it('should list all invalid fields in error message', () => {
-    process.env = { LLM_PROVIDER: 'gemini' }; // Missing required fields
+    process.env = {}; // Missing required fields
     try {
       loadConfig();
       expect.fail('Should have thrown');

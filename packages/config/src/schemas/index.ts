@@ -6,7 +6,6 @@ import type { z } from 'zod';
 import { appSchema, type AppEnv } from './app';
 import { databaseSchema, type DatabaseEnv } from './database';
 import { redisSchema, type RedisEnv } from './redis';
-import { aiSchema, type AiEnv } from './ai';
 import { storageSchema, type StorageEnv } from './storage';
 import { integrationsSchema, type IntegrationsEnv } from './integrations';
 import { observabilitySchema, type ObservabilityEnv } from './observability';
@@ -22,8 +21,7 @@ export const envSchema = appSchema
   .extend(storageSchema.shape)
   .extend(integrationsSchema.shape)
   .extend(observabilitySchema.shape)
-  .extend(pythonAiSchema.shape)
-  .and(aiSchema);
+  .extend(pythonAiSchema.shape);
 
 export type EnvConfig = z.infer<typeof envSchema>;
 
@@ -32,7 +30,6 @@ export {
   appSchema,
   databaseSchema,
   redisSchema,
-  aiSchema,
   storageSchema,
   integrationsSchema,
   observabilitySchema,
@@ -44,7 +41,6 @@ export type {
   AppEnv,
   DatabaseEnv,
   RedisEnv,
-  AiEnv,
   StorageEnv,
   IntegrationsEnv,
   ObservabilityEnv,

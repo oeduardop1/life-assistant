@@ -316,7 +316,7 @@ flowchart LR
 ## Destaques da Arquitetura
 
 - **Clean Architecture em 4 camadas** — Apresentação / Aplicação / Domínio / Infraestrutura com separação rigorosa de responsabilidades
-- **Monorepo com 6 pacotes** — `apps/web`, `apps/api`, `packages/ai`, `packages/database`, `packages/shared`, `packages/config`
+- **Monorepo com 5 pacotes** — `apps/web`, `apps/api`, `services/ai`, `packages/database`, `packages/shared`, `packages/config`
 - **LLM-agnóstico** — trocar entre Gemini e Claude mudando uma variável de ambiente, sem alterar código
 - **Multi-tenant desde o dia 1** — Row Level Security (RLS) em todas as tabelas, `user_id` obrigatório no nível do banco de dados
 - **14 Architecture Decision Records** — cada decisão arquitetural importante documentada com contexto, alternativas e justificativa
@@ -327,8 +327,9 @@ life-assistant/
 ├── apps/
 │   ├── web/                  # Next.js 16 · React 19 · Tailwind v4 · shadcn/ui
 │   └── api/                  # NestJS 11 · Clean Architecture · BullMQ
+├── services/
+│   └── ai/                  # Python AI Service · FastAPI + LangGraph · 21 ferramentas
 ├── packages/
-│   ├── ai/                   # Abstração LLM · Adaptadores Claude + Gemini · 21 ferramentas
 │   ├── database/             # Drizzle ORM · Schemas · Migrations · RLS
 │   ├── config/               # Validação de ENV com Zod
 │   └── shared/               # Tipos · Enums · Utilitários
@@ -448,7 +449,7 @@ pnpm setup:prod --dry-run  # Preview sem executar mudanças
 | **ORM** | Drizzle ORM | Type-safe, source of truth para migrações |
 | **Banco de Dados** | PostgreSQL (Supabase) | RLS, Auth integrado, 33+ tabelas |
 | **Cache/Filas** | Redis + BullMQ | Confirmações, jobs, rate limiting |
-| **IA** | Camada de abstração própria | Adaptadores Claude + Gemini, 21 ferramentas com schemas Zod |
+| **IA** | Python AI Service (LangGraph) | FastAPI + LangGraph + Gemini, 21 ferramentas com confirmação |
 | **Autenticação** | Supabase Auth + jose | JWT, social login, RLS integrado |
 | **Tempo Real** | Server-Sent Events (SSE) | Streaming de respostas da IA |
 | **Infraestrutura** | Vercel + Railway + Supabase | Managed, auto-scaling |
@@ -557,7 +558,7 @@ Diferente do ChatGPT ou assistentes genéricos, **cada conversa enriquece uma ba
 
 ### Sem vendor lock-in
 
-O padrão **Ports & Adapters** significa que trocar de Gemini para Claude (ou qualquer LLM futuro) requer mudar uma variável de ambiente. Zero alteração de código. A camada de abstração (`packages/ai/`) isola completamente a aplicação dos provedores. Funcionalidades específicas como Advanced Tool Use (Claude) ou Function Calling (Gemini) são tratadas internamente pelos adaptadores.
+O padrão **Ports & Adapters** significa que trocar de Gemini para Claude (ou qualquer LLM futuro) requer mudar uma variável de ambiente. Zero alteração de código. O serviço Python AI (`services/ai/`) usa LangGraph com adaptadores LangChain, isolando completamente a aplicação dos provedores. Funcionalidades específicas como Tool Use são tratadas internamente pelos adaptadores do LangChain.
 
 ---
 

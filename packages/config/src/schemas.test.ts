@@ -3,7 +3,6 @@ import {
   appSchema,
   databaseSchema,
   redisSchema,
-  aiSchema,
   storageSchema,
   integrationsSchema,
   observabilitySchema,
@@ -144,81 +143,6 @@ describe('redisSchema', () => {
   });
 });
 
-describe('aiSchema', () => {
-  it('should require GEMINI_API_KEY when LLM_PROVIDER=gemini', () => {
-    const result = aiSchema.safeParse({ LLM_PROVIDER: 'gemini' });
-    expect(result.success).toBe(false);
-  });
-
-  it('should accept valid gemini config', () => {
-    const result = aiSchema.safeParse({
-      LLM_PROVIDER: 'gemini',
-      GEMINI_API_KEY: 'test-api-key',
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.GEMINI_MODEL).toBe('gemini-flash');
-    }
-  });
-
-  it('should require ANTHROPIC_API_KEY when LLM_PROVIDER=claude', () => {
-    const result = aiSchema.safeParse({ LLM_PROVIDER: 'claude' });
-    expect(result.success).toBe(false);
-  });
-
-  it('should accept valid claude config', () => {
-    const result = aiSchema.safeParse({
-      LLM_PROVIDER: 'claude',
-      ANTHROPIC_API_KEY: 'test-api-key',
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.CLAUDE_MODEL).toBe('claude-sonnet-4-20250514');
-    }
-  });
-
-  it('should not require ANTHROPIC_API_KEY when LLM_PROVIDER=gemini', () => {
-    const result = aiSchema.safeParse({
-      LLM_PROVIDER: 'gemini',
-      GEMINI_API_KEY: 'test-key',
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('should not require GEMINI_API_KEY when LLM_PROVIDER=claude', () => {
-    const result = aiSchema.safeParse({
-      LLM_PROVIDER: 'claude',
-      ANTHROPIC_API_KEY: 'test-key',
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('should use default model for each provider', () => {
-    const geminiResult = aiSchema.safeParse({
-      LLM_PROVIDER: 'gemini',
-      GEMINI_API_KEY: 'key',
-    });
-    expect(geminiResult.success).toBe(true);
-    if (geminiResult.success) {
-      expect(geminiResult.data.GEMINI_MODEL).toBe('gemini-flash');
-    }
-
-    const claudeResult = aiSchema.safeParse({
-      LLM_PROVIDER: 'claude',
-      ANTHROPIC_API_KEY: 'key',
-    });
-    expect(claudeResult.success).toBe(true);
-    if (claudeResult.success) {
-      expect(claudeResult.data.CLAUDE_MODEL).toBe('claude-sonnet-4-20250514');
-    }
-  });
-
-  it('should reject invalid LLM_PROVIDER', () => {
-    const result = aiSchema.safeParse({ LLM_PROVIDER: 'openai' });
-    expect(result.success).toBe(false);
-  });
-});
-
 describe('storageSchema', () => {
   const validStorage: Record<string, string> = {
     R2_ACCOUNT_ID: 'account-id',
@@ -353,9 +277,6 @@ describe('envSchema (combined)', () => {
     SUPABASE_JWT_SECRET: 'a'.repeat(32),
     // Redis
     REDIS_URL: 'redis://localhost:6379',
-    // AI
-    LLM_PROVIDER: 'gemini',
-    GEMINI_API_KEY: 'gemini-key',
     // Storage
     R2_ACCOUNT_ID: 'account',
     R2_ACCESS_KEY_ID: 'access',
@@ -387,8 +308,6 @@ describe('envSchema (combined)', () => {
       expect(result.data.SUPABASE_URL).toBeDefined();
       // Redis fields
       expect(result.data.REDIS_URL).toBeDefined();
-      // AI fields
-      expect(result.data.LLM_PROVIDER).toBeDefined();
       // Storage fields
       expect(result.data.R2_ACCOUNT_ID).toBeDefined();
       // Observability defaults

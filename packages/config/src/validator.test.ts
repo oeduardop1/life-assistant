@@ -14,9 +14,6 @@ const validEnv = {
   SUPABASE_JWT_SECRET: 'a'.repeat(32),
   // Redis
   REDIS_URL: 'redis://localhost:6379',
-  // AI
-  LLM_PROVIDER: 'gemini',
-  GEMINI_API_KEY: 'gemini-key',
   // Storage
   R2_ACCOUNT_ID: 'account',
   R2_ACCESS_KEY_ID: 'access',
@@ -122,7 +119,7 @@ describe('validateEnv', () => {
   });
 
   it('should list invalid fields in error output', () => {
-    process.env = { LLM_PROVIDER: 'gemini' }; // Missing many required fields
+    process.env = { REDIS_URL: 'redis://localhost:6379' }; // Missing many required fields
     try {
       validateEnv();
     } catch {
@@ -136,9 +133,8 @@ describe('validateEnv', () => {
     expect(errorCalls).toContain('SUPABASE_URL');
   });
 
-  it('should handle errors with empty path', () => {
-    // When LLM_PROVIDER has invalid value, it produces errors that may include root-level issues
-    process.env = { ...validEnv, LLM_PROVIDER: 'invalid' };
+  it('should handle errors with invalid field value', () => {
+    process.env = { ...validEnv, DATABASE_URL: 'http://invalid-prefix' };
     try {
       validateEnv();
     } catch {
