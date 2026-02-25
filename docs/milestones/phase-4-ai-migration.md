@@ -1007,80 +1007,137 @@ _Concluído em 2026-02-23._
 
 ---
 
-## M4.9 — Feature Parity + Parallel Validation 🔴
+## M4.9 — Production Readiness: Observability + Validation 🔴
 
-**Objetivo:** Validar que o sistema Python produz resultados funcionalmente equivalentes ao TypeScript em todos os cenários antes de deletar código.
+**Objetivo:** Preparar o serviço Python para produção: configurar observabilidade (Sentry, logging estruturado), corrigir gaps de validação, e validar paridade funcional com o sistema TypeScript via testes E2E com `USE_PYTHON_AI=true`.
 
-**Referências:** Todos os milestones anteriores (M4.1-M4.8)
+**Referências:** Todos os milestones anteriores (M4.1-M4.8), `docs/specs/core/observability.md`
 
 **Dependências:** M4.7, M4.8
 
-> **Contexto:** Este milestone é uma "safety net" antes da limpeza. Roda ambos os sistemas em paralelo e compara resultados. Qualquer discrepância é corrigida antes de prosseguir para M4.10.
+> **Contexto:** Este milestone fecha os gaps de infra/observabilidade identificados na comparação NestJS↔Python. A funcionalidade de AI/chat (20 tools, confirmation flow, memory consolidation, multi-agent triage) já está em paridade funcional ou melhor no Python. Os gaps são de **infraestrutura de produção**: Sentry (zero error tracking no Python), structured logging (sem JSON, sem request_id), e input validation (aceita mensagem vazia). Além disso, valida paridade funcional via testes E2E Playwright rodando com `USE_PYTHON_AI=true`.
+>
+> **Nota sobre "parallel validation":** NÃO é shadow traffic (rodar ambos os sistemas e comparar). É testar com a flag `USE_PYTHON_AI` alternada — os mesmos testes E2E devem passar com `true` e `false`.
 
 **Tasks:**
 
-**Suite de Paridade (50+ cenários):**
+**Sentry para Python Service (gap: ZERO error tracking hoje):**
+> No NestJS: `@sentry/nestjs@10.32.1` com `nestIntegration()`, auto-capture de exceções, `tracesSampleRate: 0.1` em prod, `sendDefaultPii: false`, disabled em test. No Python: **nada** — erros vão para stdout e são invisíveis.
+- [ ] Instalar SDK: `cd services/ai && uv add 'sentry-sdk[fastapi]'`
+- [ ] Criar `app/observability.py` com `init_sentry(settings)`:
+  - `FastApiIntegration()` — auto-capture de exceções em endpoints
+  - `SqlalchemyIntegration()` — capture de erros de DB
+  - `traces_sample_rate`: 0.1 em prod, 1.0 em dev (match NestJS)
+  - `send_default_pii=False` (match NestJS)
+  - `environment` from settings (`development` | `production`)
+  - `release` from `APP_VERSION`
+  - `enabled`: False quando `ENVIRONMENT=test`
+  - Inicializar apenas se `SENTRY_DSN` estiver configurado (match NestJS: optional)
+- [ ] Chamar `init_sentry()` no topo de `app/main.py` (antes de criar FastAPI app — Sentry precisa instrumentar antes)
+- [ ] Adicionar `SENTRY_DSN` ao `app/config.py` (Settings): `SENTRY_DSN: str = ""` (optional, empty = disabled)
+- [ ] Adicionar `ENVIRONMENT` ao `app/config.py`: `ENVIRONMENT: str = "development"`
+- [ ] Testar: provocar erro intencional → verificar que aparece no Sentry dashboard
+- [ ] Verificar: erros de LLM (timeout, rate limit) capturados automaticamente
+- [ ] Verificar: erros de DB (connection, RLS) capturados automaticamente
+
+**Structured Logging + Request-ID Correlation (gap: plain text logs sem correlação):**
+> No NestJS: `AppLoggerService` (176L) com JSON structured output `{level, message, timestamp, requestId, userId, statusCode, durationMs}` + `RequestIdMiddleware` (45L) propaga `x-request-id` + `LoggingInterceptor` (74L) loga cada request/response. No Python: `logging.getLogger()` default com output `INFO: message` — sem JSON, sem requestId, impossível correlacionar com logs do NestJS.
+- [ ] Criar `app/api/middleware/request_id.py`:
+  - Ler `x-request-id` header do request (propagado pelo NestJS proxy)
+  - Se ausente, gerar `uuid4()`
+  - Armazenar em contexto (ContextVar) para acesso global
+  - Retornar no response header `x-request-id`
+- [ ] Configurar JSON logging formatter em `app/observability.py`:
+  - Format: `{"level", "message", "timestamp", "request_id", "user_id", "duration_ms"}`
+  - Usar `python-json-logger` ou formatter custom (avaliar se dependência extra vale)
+  - Configurar `uvicorn.access` e `uvicorn.error` loggers para JSON
+- [ ] Adicionar middleware de logging (equivalente ao `LoggingInterceptor` do NestJS):
+  - Log de entrada: `POST /chat/invoke {request_id, user_id}`
+  - Log de saída: `POST /chat/invoke 200 {request_id, duration_ms}`
+- [ ] Propagar `request_id` para Sentry (via `sentry_sdk.set_tag("request_id", ...)`)
+- [ ] Testar: fazer request via NestJS proxy → verificar que requestId aparece nos logs Python e Sentry
+
+**Input Validation (gap: aceita mensagem vazia):**
+> No NestJS: `class-validator` com `@IsNotEmpty()` no DTO global validation pipe. No Python: Pydantic `message: str` sem `min_length` — `""` passa.
+- [ ] Adicionar `min_length=1` no Pydantic model de `/chat/invoke`: `message: str = Field(min_length=1)`
+- [ ] Adicionar validação no `/chat/resume`: `action` deve ser `"confirm" | "reject" | "edit"` (Literal type)
+- [ ] Testar: POST com `message: ""` → retorna 422 Validation Error
+
+**Suite de Paridade — Testes E2E Playwright (`USE_PYTHON_AI=true`):**
+> Mesmos testes E2E existentes, executados com flag alternada. O objetivo é garantir que o frontend funciona identicamente. Cenários testados via Playwright (browser real) contra a API com proxy Python ativo.
 - [ ] Mensagens simples:
-  - "Bom dia" → general agent responde
+  - "Bom dia" → triage classifica como general → resposta coerente
   - "Como você está?" → general agent
-  - Conversa tipo counselor → wellbeing agent
-- [ ] Tracking com confirmação:
-  - "Registra 2L de água hoje" → confirm → verificar DB
+  - Conversa tipo counselor → triage classifica como wellbeing
+- [ ] Tracking com confirmação (6 cenários):
+  - "Registra 2L de água hoje" → confirm → verificar registro no DB
   - "Registra 2L de água hoje" → reject → nada salvo
-  - "Quanto peso eu registrei esta semana?" → read → dados corretos
-  - "Apaga o registro de água de ontem" → confirm → delete
-  - "Atualiza meu peso de hoje para 75kg" → confirm → update
-  - "Registra que fiz exercício hoje" → confirm → habit entry
-- [ ] Finance queries:
-  - "Quanto gastei este mês?" → summary correto
-  - "Quais contas vencem esta semana?" → pending bills
+  - "Quanto peso eu registrei esta semana?" → READ tool → dados corretos
+  - "Apaga o registro de água de ontem" → confirm → delete no DB
+  - "Atualiza meu peso de hoje para 75kg" → confirm → update no DB
+  - "Registra que fiz exercício hoje" → confirm → habit completion
+- [ ] Finance queries (5 cenários):
+  - "Quanto gastei este mês?" → `get_finance_summary` → summary correto
+  - "Quais contas vencem esta semana?" → `get_pending_bills` → lista
   - "Registra gasto de R$50 com almoço" → confirm → expense criada
-  - "Marca conta de luz como paga" → confirm → bill updated
-  - "Como estão minhas dívidas?" → debt progress
-- [ ] Memory:
-  - "O que você sabe sobre mim?" → user memories
-  - "Lembra que eu prefiro café sem açúcar" → confirm → knowledge added
-  - Busca em knowledge_items com filtros
-- [ ] Multi-tool:
-  - "Como estou financeiramente e na saúde?" → múltiplos agents/tools
+  - "Marca conta de luz como paga" → confirm → bill status updated
+  - "Como estão minhas dívidas?" → `get_debt_progress` → dados corretos
+- [ ] Memory (3 cenários):
+  - "O que você sabe sobre mim?" → `search_knowledge` / `analyze_context` → user memories
+  - "Lembra que eu prefiro café sem açúcar" → confirm → knowledge item criado
+  - Busca em knowledge_items com filtros (type, area)
 - [ ] Edge cases:
-  - Timeout de LLM → error handling graceful
-  - Tool não encontrado → error message
-  - Confirmação após 5+ minutos → behavior correto (LangGraph checkpoints persistem em PostgreSQL sem TTL por default, diferente do Redis 5min anterior)
-  - Mensagem vazia → rejection ou resposta default
+  - Timeout de LLM → SSE error event graceful (não crash)
+  - Confirmação após 5+ minutos → funciona (LangGraph checkpoints em PostgreSQL sem TTL, melhoria vs Redis 5min do TypeScript)
+  - Mensagem vazia → 422 rejeitado (após fix de input validation)
+  - Duas mensagens rápidas em sequência → sem race condition
+
+> **Nota sobre cenário multi-domain:** "Como estou financeiramente e na saúde?" é roteado pelo triage para UM domínio (limitação arquitetural do single-domain dispatch em M4.7). O agente responde sobre o domínio primário e pode complementar via memory tools (compartilhadas). Isso é comportamento esperado, não bug de paridade — o sistema TypeScript anterior também usava single agent sem routing inteligente.
 
 **SSE Event Compatibility:**
-- [ ] Verificar que todos os SSE events emitidos pelo Python têm o mesmo formato do TypeScript:
-  - `tool_calls` (iteration, toolCalls array)
-  - `tool_result` (toolName, result, success)
-  - `confirmation_required` (confirmationId, toolName, toolArgs, message, expiresAt)
-  - Final response `{ content, done: true }`
-  - Error `{ content, done: true, error }`
-  - `{ done: true, awaitingConfirmation: true }`
-- [ ] Frontend funciona sem nenhuma mudança de código
+> Verificado na análise de código: Python emite os mesmos eventos que o TypeScript. O NestJS proxy (`parsePythonSSEStream()`) já adapta diferenças menores. Diferenças conhecidas e aceitas:
+> - `tool_calls`: Python não inclui campo `iteration` (NestJS proxy não usa esse campo)
+> - `awaitingConfirmation`: Python inclui `content` com mensagem de confirmação (NestJS proxy repassa)
+- [ ] Verificar via testes E2E que todos os SSE events são renderizados corretamente no frontend:
+  - `tool_calls` → UI mostra indicador de tool execution
+  - `tool_result` → UI mostra resultado
+  - `confirmation_required` → UI mostra dialog de confirmação
+  - Final response `{ content, done: true }` → UI mostra resposta
+  - Error `{ content, done: true, error: true }` → UI mostra erro
+  - `{ done: true, awaitingConfirmation: true }` → UI aguarda resposta do usuário
+- [ ] Confirmar que frontend NÃO precisa de mudanças de código
+
+**Memory Consolidation Parity:**
+> Migrado em M4.8 (APScheduler no Python substitui BullMQ no NestJS). NestJS já tem guard `if usePythonAi → skip BullMQ scheduler`. Validar que o worker Python produz resultados equivalentes.
+- [ ] Trigger manual (`POST /workers/consolidation/trigger`) → consolidation executa e retorna métricas
+- [ ] Verificar que `user_memories` é atualizado corretamente (bio, goals, challenges, patterns)
+- [ ] Verificar que `knowledge_items` são criados com contradiction detection
+- [ ] Verificar que `memory_consolidations` audit log é criado
+- [ ] Verificar que scheduler APScheduler registra jobs por timezone no startup
 
 **Performance:**
-- [ ] Load testing: 50 concurrent chat requests ao Python service
-- [ ] Verificar latência do proxy NestJS → Python (deve ser <50ms overhead)
-- [ ] Verificar que triage com Flash model < 500ms
-- [ ] Validar `InMemoryRateLimiter` do LangChain sob carga (single-process). Se insuficiente em produção com múltiplos workers uvicorn, avaliar Redis-based rate limiter como melhoria futura
-
-**Observabilidade:**
-- [ ] Sentry configurado para Python service (error tracking)
-- [ ] Structured logging (JSON) com request_id para correlação com NestJS
-- [ ] Health check inclui status do DB (Python não depende de Redis)
+- [ ] Load testing com k6 ou locust: 50 concurrent chat requests ao Python service
+  - Métricas: p50, p95, p99 latency + error rate
+- [ ] Verificar latência do proxy NestJS → Python (deve ser <50ms overhead em localhost)
+- [ ] Verificar que triage com Flash model < 500ms (p95)
+- [ ] Validar `InMemoryRateLimiter` do LangChain sob carga (single-process). Se insuficiente em produção com múltiplos workers uvicorn, documentar como melhoria futura (Redis-based rate limiter)
 
 **Testes:**
-- [ ] Suite completa de paridade passa (50+ cenários)
-- [ ] Frontend funciona sem mudanças
-- [ ] Load test: sem erros em 50 concurrent requests
-- [ ] Sentry captura erros do Python service
+- [ ] Testes E2E Playwright passam com `USE_PYTHON_AI=true` (mesmos cenários que passam com `false`)
+- [ ] Frontend funciona sem mudanças de código
+- [ ] Load test: sem erros em 50 concurrent requests (p99 < 30s para chat com tool calls)
+- [ ] Sentry captura erros do Python service (verificar no dashboard)
+- [ ] Logs Python em JSON com request_id correlacionável com NestJS
+- [ ] Memory consolidation manual trigger funciona corretamente
 
 **Definition of Done:**
-- [ ] Todos os cenários produzem resultados funcionalmente equivalentes
-- [ ] Frontend funciona identicamente com `USE_PYTHON_AI=true` e `false`
-- [ ] Performance aceitável sob carga
-- [ ] Observabilidade configurada
+- [ ] Sentry configurado e capturando erros do Python (FastAPI + SQLAlchemy integrations)
+- [ ] Logs estruturados (JSON) com request_id propagado do NestJS
+- [ ] Input validation: mensagem vazia rejeitada (422)
+- [ ] Testes E2E passam identicamente com `USE_PYTHON_AI=true` e `false`
+- [ ] Performance aceitável sob carga (50 concurrent, p95 < 15s)
+- [ ] Memory consolidation worker validado (trigger manual + audit log)
+- [ ] Observability spec (`docs/specs/core/observability.md`) atualizada com Python service
 
 ---
 
@@ -1148,7 +1205,7 @@ _Concluído em 2026-02-23._
 **Deploy produção:**
 - [ ] Railway: criar serviço Python AI (Nixpacks, Python buildpack)
 - [ ] Railway: configurar internal networking (`python-ai.railway.internal:8000`)
-- [ ] Railway: configurar env vars (DATABASE_URL, GEMINI_API_KEY, SERVICE_SECRET)
+- [ ] Railway: configurar env vars (DATABASE_URL, GEMINI_API_KEY, SERVICE_SECRET, SENTRY_DSN, ENVIRONMENT=production)
 - [ ] Deploy strategy: blue-green ou canary
 - [ ] Monitoramento pós-deploy: 24-48h de observação
 - [ ] Verificar Sentry: sem novos erros no Python service
@@ -1200,9 +1257,9 @@ life-assistant/
 │   └── ai/                     # Python AI Service (NOVO)
 │       ├── app/
 │       │   ├── agents/         # LangGraph agents + graph
-│       │   ├── api/            # FastAPI routes + middleware
+│       │   ├── api/            # FastAPI routes + middleware (incl. request_id)
 │       │   ├── db/             # SQLAlchemy models + repositories
-│       │   ├── memory/         # Contradiction detection
+│       │   ├── observability.py # Sentry init + JSON logging (M4.9)
 │       │   ├── prompts/        # System prompt + context builder
 │       │   ├── tools/          # 20 tool implementations
 │       │   └── workers/        # APScheduler + Memory consolidation (cron jobs AI)
