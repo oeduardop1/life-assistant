@@ -1066,31 +1066,31 @@ _Concluído em 2026-02-23._
 **Suite de Paridade — Testes E2E Playwright (`USE_PYTHON_AI=true`):**
 > Mesmos testes E2E existentes, executados com flag alternada. O objetivo é garantir que o frontend funciona identicamente. Cenários testados via Playwright (browser real) contra a API com proxy Python ativo.
 - [ ] Mensagens simples:
-  - "Bom dia" → triage classifica como general → resposta coerente
-  - "Como você está?" → general agent
-  - Conversa tipo counselor → triage classifica como wellbeing
+  - [x] "Bom dia" → triage classifica como general → resposta coerente
+  - [ ] "Como você está?" → general agent
+  - [x] Conversa tipo counselor → triage classifica como wellbeing
 - [ ] Tracking com confirmação (6 cenários):
-  - "Registra 2L de água hoje" → confirm → verificar registro no DB
-  - "Registra 2L de água hoje" → reject → nada salvo
-  - "Quanto peso eu registrei esta semana?" → READ tool → dados corretos
-  - "Apaga o registro de água de ontem" → confirm → delete no DB
-  - "Atualiza meu peso de hoje para 75kg" → confirm → update no DB
-  - "Registra que fiz exercício hoje" → confirm → habit completion
-- [ ] Finance queries (5 cenários):
-  - "Quanto gastei este mês?" → `get_finance_summary` → summary correto
-  - "Quais contas vencem esta semana?" → `get_pending_bills` → lista
-  - "Registra gasto de R$50 com almoço" → confirm → expense criada
-  - "Marca conta de luz como paga" → confirm → bill status updated
-  - "Como estão minhas dívidas?" → `get_debt_progress` → dados corretos
+  - [x] "Registra 2L de água hoje" → confirm → verificar registro no DB
+  - [x] "Registra 2L de água hoje" → reject → nada salvo
+  - [ ] "Quanto peso eu registrei esta semana?" → READ tool → dados corretos
+  - [x] "Apaga o registro de água de ontem" → confirm → delete no DB
+  - [ ] "Atualiza meu peso de hoje para 75kg" → confirm → update no DB
+  - [x] "Registra que fiz exercício hoje" → confirm → habit completion
+- [x] Finance queries (5 cenários):
+  - [x] "Quanto gastei este mês?" → `get_finance_summary` → summary correto
+  - [x] "Quais contas vencem esta semana?" → `get_pending_bills` → lista
+  - [x] "Registra gasto de R$50 com almoço" → confirm → expense criada
+  - [x] "Marca conta de luz como paga" → confirm → bill status updated
+  - [x] "Como estão minhas dívidas?" → `get_debt_progress` → dados corretos
 - [ ] Memory (3 cenários):
-  - "O que você sabe sobre mim?" → `search_knowledge` / `analyze_context` → user memories
-  - "Lembra que eu prefiro café sem açúcar" → confirm → knowledge item criado
-  - Busca em knowledge_items com filtros (type, area)
+  - [x] "O que você sabe sobre mim?" → `search_knowledge` / `analyze_context` → user memories
+  - [x] "Lembra que eu prefiro café sem açúcar" → confirm → knowledge item criado
+  - [ ] Busca em knowledge_items com filtros (type, area)
 - [ ] Edge cases:
-  - Timeout de LLM → SSE error event graceful (não crash)
-  - Confirmação após 5+ minutos → funciona (LangGraph checkpoints em PostgreSQL sem TTL, melhoria vs Redis 5min do TypeScript)
-  - Mensagem vazia → 422 rejeitado (após fix de input validation)
-  - Duas mensagens rápidas em sequência → sem race condition
+  - [ ] Timeout de LLM → SSE error event graceful (não crash)
+  - [ ] Confirmação após 5+ minutos → funciona (LangGraph checkpoints em PostgreSQL sem TTL, melhoria vs Redis 5min do TypeScript)
+  - [x] Mensagem vazia → 422 rejeitado (após fix de input validation)
+  - [x] Duas mensagens rápidas em sequência → sem race condition
 
 > **Nota sobre cenário multi-domain:** "Como estou financeiramente e na saúde?" é roteado pelo triage para UM domínio (limitação arquitetural do single-domain dispatch em M4.7). O agente responde sobre o domínio primário e pode complementar via memory tools (compartilhadas). Isso é comportamento esperado, não bug de paridade — o sistema TypeScript anterior também usava single agent sem routing inteligente.
 
@@ -1099,20 +1099,20 @@ _Concluído em 2026-02-23._
 > - `tool_calls`: Python não inclui campo `iteration` (NestJS proxy não usa esse campo)
 > - `awaitingConfirmation`: Python inclui `content` com mensagem de confirmação (NestJS proxy repassa)
 - [ ] Verificar via testes E2E que todos os SSE events são renderizados corretamente no frontend:
-  - `tool_calls` → UI mostra indicador de tool execution
-  - `tool_result` → UI mostra resultado
-  - `confirmation_required` → UI mostra dialog de confirmação
-  - Final response `{ content, done: true }` → UI mostra resposta
-  - Error `{ content, done: true, error: true }` → UI mostra erro
-  - `{ done: true, awaitingConfirmation: true }` → UI aguarda resposta do usuário
-- [ ] Confirmar que frontend NÃO precisa de mudanças de código
+  - [ ] `tool_calls` → UI mostra indicador de tool execution
+  - [ ] `tool_result` → UI mostra resultado
+  - [x] `confirmation_required` → UI mostra confirmação (via chat text, não botões)
+  - [x] Final response `{ content, done: true }` → UI mostra resposta
+  - [x] Error `{ content, done: true, error: true }` → UI mostra erro
+  - [x] `{ done: true, awaitingConfirmation: true }` → UI aguarda resposta do usuário
+- [x] Confirmar que frontend NÃO precisa de mudanças de código
 
 **Memory Consolidation Parity:**
 > Migrado em M4.8 (APScheduler no Python substitui BullMQ no NestJS). NestJS já tem guard `if usePythonAi → skip BullMQ scheduler`. Validar que o worker Python produz resultados equivalentes.
-- [ ] Trigger manual (`POST /workers/consolidation/trigger`) → consolidation executa e retorna métricas
-- [ ] Verificar que `user_memories` é atualizado corretamente (bio, goals, challenges, patterns)
+- [x] Trigger manual (`POST /workers/consolidation/trigger`) → consolidation executa e retorna métricas
+- [x] Verificar que `user_memories` é atualizado corretamente (bio, goals, challenges, patterns)
 - [ ] Verificar que `knowledge_items` são criados com contradiction detection
-- [ ] Verificar que `memory_consolidations` audit log é criado
+- [x] Verificar que `memory_consolidations` audit log é criado
 - [ ] Verificar que scheduler APScheduler registra jobs por timezone no startup
 
 **Performance:**
@@ -1124,11 +1124,11 @@ _Concluído em 2026-02-23._
 
 **Testes:**
 - [ ] Testes E2E Playwright passam com `USE_PYTHON_AI=true` (mesmos cenários que passam com `false`)
-- [ ] Frontend funciona sem mudanças de código
+- [x] Frontend funciona sem mudanças de código
 - [ ] Load test: sem erros em 50 concurrent requests (p99 < 30s para chat com tool calls)
 - [x] Sentry captura erros do Python service (unit tests pass; dashboard verification pending)
 - [x] Logs Python em JSON com request_id correlacionável com NestJS
-- [ ] Memory consolidation manual trigger funciona corretamente
+- [x] Memory consolidation manual trigger funciona corretamente
 
 **Definition of Done:**
 - [x] Sentry configurado e capturando erros do Python (FastAPI + StarletteIntegration)
