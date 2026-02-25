@@ -14,7 +14,6 @@ COPY apps/api/package.json ./apps/api/
 COPY packages/config/package.json ./packages/config/
 COPY packages/database/package.json ./packages/database/
 COPY packages/shared/package.json ./packages/shared/
-COPY packages/ai/package.json ./packages/ai/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile --prod=false
@@ -34,7 +33,6 @@ COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /app/packages/config/node_modules ./packages/config/node_modules
 COPY --from=deps /app/packages/database/node_modules ./packages/database/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/packages/ai/node_modules ./packages/ai/node_modules
 
 # Copy source code
 COPY . .
@@ -43,7 +41,6 @@ COPY . .
 RUN pnpm --filter @life-assistant/shared build
 RUN pnpm --filter @life-assistant/config build
 RUN pnpm --filter @life-assistant/database build
-RUN pnpm --filter @life-assistant/ai build
 RUN pnpm --filter @life-assistant/api build
 
 # ============================================
@@ -74,8 +71,6 @@ COPY --from=builder --chown=nestjs:nodejs /app/packages/config/dist ./node_modul
 COPY --from=builder --chown=nestjs:nodejs /app/packages/config/package.json ./node_modules/@life-assistant/config/package.json
 COPY --from=builder --chown=nestjs:nodejs /app/packages/database/dist ./node_modules/@life-assistant/database/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/database/package.json ./node_modules/@life-assistant/database/package.json
-COPY --from=builder --chown=nestjs:nodejs /app/packages/ai/dist ./node_modules/@life-assistant/ai/dist
-COPY --from=builder --chown=nestjs:nodejs /app/packages/ai/package.json ./node_modules/@life-assistant/ai/package.json
 
 # Switch to non-root user
 USER nestjs

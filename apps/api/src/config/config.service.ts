@@ -85,30 +85,6 @@ export class AppConfigService {
   }
 
   // ============================================
-  // AI Configuration
-  // ============================================
-
-  get llmProvider(): 'gemini' | 'claude' {
-    return this.config.LLM_PROVIDER;
-  }
-
-  get geminiApiKey(): string | undefined {
-    return this.config.GEMINI_API_KEY;
-  }
-
-  get geminiModel(): string | undefined {
-    return this.config.GEMINI_MODEL;
-  }
-
-  get anthropicApiKey(): string | undefined {
-    return this.config.ANTHROPIC_API_KEY;
-  }
-
-  get claudeModel(): string | undefined {
-    return this.config.CLAUDE_MODEL;
-  }
-
-  // ============================================
   // Storage Configuration (R2)
   // ============================================
 
@@ -170,10 +146,6 @@ export class AppConfigService {
 
   get serviceSecret(): string {
     return this.config.SERVICE_SECRET;
-  }
-
-  get usePythonAi(): boolean {
-    return this.config.USE_PYTHON_AI;
   }
 
   // ============================================

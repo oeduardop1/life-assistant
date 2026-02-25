@@ -92,7 +92,6 @@ describe('ChatService', () => {
     };
 
     const mockAppConfig = {
-      usePythonAi: true,
       pythonAiUrl: 'http://localhost:8000',
       serviceSecret: 'test-secret',
     };

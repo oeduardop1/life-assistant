@@ -105,24 +105,6 @@ describe('AppConfigService', () => {
     });
   });
 
-  describe('AI configuration', () => {
-    beforeEach(() => {
-      configService = new AppConfigService();
-    });
-
-    it('should_return_llm_provider', () => {
-      expect(configService.llmProvider).toBe('gemini');
-    });
-
-    it('should_return_gemini_api_key', () => {
-      expect(configService.geminiApiKey).toBeDefined();
-    });
-
-    it('should_return_gemini_model', () => {
-      expect(configService.geminiModel).toBeDefined();
-    });
-  });
-
   describe('storage configuration', () => {
     beforeEach(() => {
       configService = new AppConfigService();
@@ -167,14 +149,6 @@ describe('AppConfigService', () => {
 
     it('should_return_optional_telegram_bot_token', () => {
       expect(configService.telegramBotToken === undefined || typeof configService.telegramBotToken === 'string').toBe(true);
-    });
-
-    it('should_return_optional_anthropic_api_key', () => {
-      expect(configService.anthropicApiKey === undefined || typeof configService.anthropicApiKey === 'string').toBe(true);
-    });
-
-    it('should_return_optional_claude_model', () => {
-      expect(configService.claudeModel === undefined || typeof configService.claudeModel === 'string').toBe(true);
     });
 
     it('should_return_optional_google_client_id', () => {
