@@ -42,6 +42,8 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM", "TCH"]
 "app/tools/tracking/*.py" = ["TCH002"]
 "app/tools/finance/*.py" = ["TCH002"]
 "app/tools/memory/*.py" = ["TCH001", "TCH002", "A002", "E501"]
+# Tests use long patch() lines and mock variable naming conventions
+"tests/*.py" = ["E501", "TCH003", "N806"]
 # System prompt templates have long lines by design (PT-BR instructions)
 "app/prompts/system.py" = ["E501"]
 

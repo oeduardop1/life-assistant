@@ -882,7 +882,7 @@ _Concluído em 2026-02-23._
 
 ---
 
-## M4.8 — Workers: Memory Consolidation + Contradiction Detection 🟡
+## M4.8 — Workers: Memory Consolidation + Contradiction Detection 🟢
 
 **Objetivo:** Migrar memory consolidation e contradiction detection para Python com scheduling nativo via APScheduler (arquitetura híbrida: jobs AI em Python, jobs CRUD em NestJS BullMQ).
 
@@ -955,27 +955,27 @@ _Concluído em 2026-02-23._
   - Retorna: `ConsolidationResult`
 
 **Testes:**
-- [ ] Teste: APScheduler registra schedules por timezone no startup
-- [ ] Teste: consolidation extrai fatos corretos de conversas
-- [ ] Teste: contradictions detectadas (ex: "gosta de café" → "parou de tomar café")
-- [ ] Teste: user_memories atualizadas corretamente após consolidation
-- [ ] Teste: knowledge_items criados sem duplicatas
-- [ ] Teste: batch contradiction detection com múltiplos fatos
-- [ ] Teste: retry funciona após falha de LLM (3 tentativas com backoff)
-- [ ] Teste: schedules re-registrados após restart do serviço (idempotência)
-- [ ] Teste: NestJS não registra memory-consolidation schedulers quando `USE_PYTHON_AI=true`
-- [ ] Teste: skip user se 0 mensagens desde lastConsolidatedAt (deduplicação)
-- [ ] Teste: falha parcial — um user falha, outros continuam processando
-- [ ] Teste: consolidation log criado corretamente em memory_consolidations
-- [ ] Teste: endpoint admin trigger retorna resposta correta
+- [x] Teste: APScheduler registra schedules por timezone no startup
+- [x] Teste: consolidation extrai fatos corretos de conversas
+- [x] Teste: contradictions detectadas (ex: "gosta de café" → "parou de tomar café")
+- [x] Teste: user_memories atualizadas corretamente após consolidation
+- [x] Teste: knowledge_items criados sem duplicatas
+- [x] Teste: batch contradiction detection com múltiplos fatos
+- [x] Teste: retry funciona após falha de LLM (3 tentativas com backoff)
+- [x] Teste: schedules re-registrados após restart do serviço (idempotência)
+- [x] Teste: NestJS não registra memory-consolidation schedulers quando `USE_PYTHON_AI=true`
+- [x] Teste: skip user se 0 mensagens desde lastConsolidatedAt (deduplicação)
+- [x] Teste: falha parcial — um user falha, outros continuam processando
+- [x] Teste: consolidation log criado corretamente em memory_consolidations
+- [x] Teste: endpoint admin trigger retorna resposta correta
 
 **Definition of Done:**
-- [ ] APScheduler roda consolidation diariamente às 3:00 AM por timezone
-- [ ] Fatos extraídos corretamente de conversas (equivalente ao TypeScript)
-- [ ] Contradictions detectadas com confiança adequada (threshold 0.7)
-- [ ] Schedules re-registrados no startup (idempotentes via `replace_existing=True`)
-- [ ] NestJS memory-consolidation desativado quando `USE_PYTHON_AI=true`
-- [ ] Resultado equivalente ao sistema TypeScript
+- [x] APScheduler roda consolidation diariamente às 3:00 AM por timezone
+- [x] Fatos extraídos corretamente de conversas (equivalente ao TypeScript)
+- [x] Contradictions detectadas com confiança adequada (threshold 0.7)
+- [x] Schedules re-registrados no startup (idempotentes via `replace_existing=True`)
+- [x] NestJS memory-consolidation desativado quando `USE_PYTHON_AI=true`
+- [x] Resultado equivalente ao sistema TypeScript
 
 > **Decisão tomada (2026-02-24):** Arquitetura híbrida — jobs AI em Python (APScheduler), jobs CRUD em NestJS (BullMQ). Pesquisa técnica completa documentada na sessão de análise.
 >
@@ -1002,8 +1002,8 @@ _Concluído em 2026-02-23._
 - Novos arquivos Python: `workers/__init__.py`, `scheduler.py`, `consolidation.py`, `consolidation_prompt.py`, `utils.py`, `api/routes/workers.py`
 - Modificados: `config.py` (3 settings), `main.py` (scheduler lifespan + workers route), `db/repositories/user.py` (2 métodos), `tools/memory/_contradiction_detector.py` (JSON fallback)
 - NestJS: `memory-consolidation.scheduler.ts` guarded com `USE_PYTHON_AI` flag via `AppConfigService`
-- Testes pendentes para sessão dedicada (13 test cases documentados acima)
-- `ruff check .` + `mypy app/` + TypeScript tsc all pass
+- Testes completos (18 Python + 1 NestJS): `tests/test_workers.py` (7 testes: scheduler, retry, endpoint trigger), `tests/test_consolidation.py` (11 testes: extraction, contradictions, memory updates, deduplication, partial failure, logging, priority resolution), `memory-consolidation.scheduler.spec.ts` (+1 teste: skip BullMQ when usePythonAi=true)
+- `ruff check .` + `mypy app/` + `pytest` (232 passed) + `vitest` (854 passed) all pass
 
 ---
 

@@ -19,6 +19,9 @@ describe('MemoryConsolidationScheduler', () => {
     debug: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
   };
+  let mockAppConfig: {
+    usePythonAi: boolean;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -44,10 +47,15 @@ describe('MemoryConsolidationScheduler', () => {
       error: vi.fn(),
     };
 
+    mockAppConfig = {
+      usePythonAi: false,
+    };
+
     scheduler = new MemoryConsolidationScheduler(
       mockQueue as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[0],
       mockDatabaseService as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[1],
-      mockLogger as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[2]
+      mockLogger as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[2],
+      mockAppConfig as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[3]
     );
   });
 
@@ -96,6 +104,24 @@ describe('MemoryConsolidationScheduler', () => {
       expect(mockQueue.upsertJobScheduler).not.toHaveBeenCalled();
       expect(mockLogger.log).toHaveBeenCalledWith(
         'No active users found, skipping scheduler setup'
+      );
+    });
+
+    it('should_skip_bullmq_setup_when_use_python_ai_is_true', async () => {
+      mockAppConfig.usePythonAi = true;
+      scheduler = new MemoryConsolidationScheduler(
+        mockQueue as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[0],
+        mockDatabaseService as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[1],
+        mockLogger as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[2],
+        mockAppConfig as unknown as ConstructorParameters<typeof MemoryConsolidationScheduler>[3]
+      );
+
+      await scheduler.onModuleInit();
+
+      expect(mockQueue.upsertJobScheduler).not.toHaveBeenCalled();
+      expect(mockDatabaseService.db.selectDistinct).not.toHaveBeenCalled();
+      expect(mockLogger.log).toHaveBeenCalledWith(
+        'Memory consolidation: Python APScheduler (NestJS BullMQ skipped)'
       );
     });
 
