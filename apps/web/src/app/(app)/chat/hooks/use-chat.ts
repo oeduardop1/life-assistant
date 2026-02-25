@@ -178,9 +178,11 @@ export function useChat({ conversationId }: UseChatOptions) {
 
   // Finish streaming - called by StreamingMessage when typewriter completes
   const finishStreaming = useCallback(async () => {
-    // First, refresh messages and WAIT for it to complete
-    // This ensures MessageBubble is ready before we unmount StreamingMessage
-    await queryClient.invalidateQueries({
+    // refetchQueries returns a promise that resolves AFTER the fetch settles,
+    // unlike invalidateQueries which only marks stale and may resolve before
+    // the background refetch completes. This prevents the race condition where
+    // StreamingMessage unmounts before MessageBubble has the new data.
+    await queryClient.refetchQueries({
       queryKey: ['messages', conversationId],
     });
     // Also refresh conversations to update updatedAt (no need to wait)

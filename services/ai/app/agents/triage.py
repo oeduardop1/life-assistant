@@ -53,6 +53,11 @@ Exemplos:
 - "Lembra que eu gosto de café" → memory
 - "Tô estressado com o trabalho" → wellbeing
 - "Me conta uma curiosidade" → general
+- "Registra meu peso" → tracking
+- "Pesei 80kg hoje" → tracking
+- "Dormi 7 horas" → tracking
+- "Meu humor hoje tá 7" → tracking
+- "Gastei 50 reais no almoço" → finance
 """
 
 

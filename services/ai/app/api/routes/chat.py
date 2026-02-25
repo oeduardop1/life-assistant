@@ -18,6 +18,7 @@ from langchain_core.messages import (
 )
 from langgraph.types import Command
 from pydantic import BaseModel, Field
+from sqlalchemy import text as sa_text
 from sse_starlette.sse import EventSourceResponse
 
 from app.agents.llm import create_llm
@@ -132,6 +133,34 @@ def _format_tool_result_events(
                 }
             )
     return events
+
+
+async def _clear_checkpoint(session_factory: Any, thread_id: str) -> None:
+    """Delete all LangGraph checkpoint data for a thread.
+
+    Called when a checkpoint exists but no interrupt is pending (stale state
+    from a previous completed turn).  Clearing forces the graph to start
+    fresh with full DB history on the next invocation.
+    """
+    try:
+        async with session_factory() as session:
+            await session.execute(
+                sa_text("DELETE FROM checkpoint_writes WHERE thread_id = :tid"),
+                {"tid": thread_id},
+            )
+            await session.execute(
+                sa_text("DELETE FROM checkpoint_blobs WHERE thread_id = :tid"),
+                {"tid": thread_id},
+            )
+            await session.execute(
+                sa_text("DELETE FROM checkpoints WHERE thread_id = :tid"),
+                {"tid": thread_id},
+            )
+            await session.commit()
+    except Exception:
+        logger.warning(
+            "Failed to clear checkpoint for thread %s", thread_id, exc_info=True
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -370,52 +399,50 @@ async def stream_chat_response(request: Request, body: ChatInvokeRequest) -> Any
                 await graph.ainvoke(Command(resume={"action": "reject"}), reject_config)
 
         # ------------------------------------------------------------------
-        # Normal flow (no pending interrupt)
+        # Normal flow (no pending interrupt, or interrupt silently rejected)
         # ------------------------------------------------------------------
         checkpoint = await checkpointer.aget_tuple(thread_config)
 
-        if checkpoint is None:
-            # First Python invocation — load full history from DB
-            async with get_user_session(session_factory, body.user_id) as session:
-                db_messages = await ChatRepository.get_messages(
-                    session, uuid.UUID(body.conversation_id), limit=20
-                )
-                conversation = await ChatRepository.get_conversation(
-                    session, uuid.UUID(body.conversation_id)
-                )
-                conv_type = conversation.type if conversation else "general"
-                system_prompt = await build_context(session, body.user_id, conv_type)
-                user = await UserRepository.get_by_id(session, uuid.UUID(body.user_id))
-                user_timezone = user.timezone if user else "America/Sao_Paulo"
+        # Clear any stale checkpoint so the graph starts fresh with full
+        # DB history.  We only preserve checkpoints for active interrupts
+        # (the confirm/reject/edit path above returns early).
+        if checkpoint is not None:
+            logger.info(
+                "Clearing stale checkpoint for thread %s",
+                body.conversation_id,
+            )
+            await _clear_checkpoint(session_factory, body.conversation_id)
 
-            langchain_messages = convert_db_messages(db_messages)
-        else:
-            # Checkpoint exists — only pass new user message
-            async with get_user_session(session_factory, body.user_id) as session:
-                conversation = await ChatRepository.get_conversation(
-                    session, uuid.UUID(body.conversation_id)
-                )
-                conv_type = conversation.type if conversation else "general"
-                system_prompt = await build_context(session, body.user_id, conv_type)
-                user = await UserRepository.get_by_id(session, uuid.UUID(body.user_id))
-                user_timezone = user.timezone if user else "America/Sao_Paulo"
+        # Load full conversation history from DB
+        async with get_user_session(session_factory, body.user_id) as session:
+            db_messages = await ChatRepository.get_messages(
+                session, uuid.UUID(body.conversation_id), limit=20
+            )
+            conversation = await ChatRepository.get_conversation(
+                session, uuid.UUID(body.conversation_id)
+            )
+            conv_type = conversation.type if conversation else "general"
+            system_prompt = await build_context(session, body.user_id, conv_type)
+            user = await UserRepository.get_by_id(session, uuid.UUID(body.user_id))
+            user_timezone = user.timezone if user else "America/Sao_Paulo"
 
-            # If we just silently rejected a pending operation, include context
-            # so the agent can mention the cancellation in its response.
-            if has_pending and pending_op:
-                langchain_messages = [
-                    HumanMessage(
-                        content=(
-                            f"[Nota interna: a operação pendente "
-                            f'("{pending_op}") foi cancelada porque o usuário '
-                            f"mudou de assunto. Mencione brevemente o "
-                            f"cancelamento antes de responder a nova pergunta, "
-                            f"tudo em uma única mensagem.]\n\n{body.message}"
-                        )
-                    )
-                ]
-            else:
-                langchain_messages = [HumanMessage(content=body.message)]
+        langchain_messages = convert_db_messages(db_messages)
+
+        # If we silently rejected a pending operation, annotate the last
+        # user message so the agent mentions the cancellation.
+        if has_pending and pending_op and langchain_messages:
+            last = langchain_messages[-1]
+            langchain_messages[-1] = HumanMessage(
+                content=(
+                    f"[Nota interna: a operação pendente "
+                    f'("{pending_op}") foi cancelada porque o usuário '
+                    f"mudou de assunto. Mencione brevemente o "
+                    f"cancelamento antes de responder a nova pergunta, "
+                    f"tudo em uma única mensagem.]\n\n"
+                    f"{_extract_text(last.content)}"
+                ),
+                id=last.id,
+            )
 
         input_state = {
             "messages": langchain_messages,
