@@ -17,7 +17,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langgraph.types import Command
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from app.agents.llm import create_llm
@@ -46,7 +46,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 class ChatInvokeRequest(BaseModel):
     user_id: str
     conversation_id: str
-    message: str
+    message: str = Field(min_length=1, max_length=10000)
 
 
 # ---------------------------------------------------------------------------

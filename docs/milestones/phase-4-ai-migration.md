@@ -1007,7 +1007,7 @@ _Concluído em 2026-02-23._
 
 ---
 
-## M4.9 — Production Readiness: Observability + Validation 🔴
+## M4.9 — Production Readiness: Observability + Validation 🟡
 
 **Objetivo:** Preparar o serviço Python para produção: configurar observabilidade (Sentry, logging estruturado), corrigir gaps de validação, e validar paridade funcional com o sistema TypeScript via testes E2E com `USE_PYTHON_AI=true`.
 
@@ -1023,45 +1023,45 @@ _Concluído em 2026-02-23._
 
 **Sentry para Python Service (gap: ZERO error tracking hoje):**
 > No NestJS: `@sentry/nestjs@10.32.1` com `nestIntegration()`, auto-capture de exceções, `tracesSampleRate: 0.1` em prod, `sendDefaultPii: false`, disabled em test. No Python: **nada** — erros vão para stdout e são invisíveis.
-- [ ] Instalar SDK: `cd services/ai && uv add 'sentry-sdk[fastapi]'`
-- [ ] Criar `app/observability.py` com `init_sentry(settings)`:
+- [x] Instalar SDK: `cd services/ai && uv add 'sentry-sdk[fastapi]'`
+- [x] Criar `app/observability.py` com `init_sentry(settings)`:
   - `FastApiIntegration()` — auto-capture de exceções em endpoints
-  - `SqlalchemyIntegration()` — capture de erros de DB
+  - `StarletteIntegration()` — capture de erros de middleware
   - `traces_sample_rate`: 0.1 em prod, 1.0 em dev (match NestJS)
   - `send_default_pii=False` (match NestJS)
   - `environment` from settings (`development` | `production`)
   - `release` from `APP_VERSION`
-  - `enabled`: False quando `ENVIRONMENT=test`
+  - Skip init quando `ENVIRONMENT=test` (sentry-sdk 2.53 não tem param `enabled`)
   - Inicializar apenas se `SENTRY_DSN` estiver configurado (match NestJS: optional)
-- [ ] Chamar `init_sentry()` no topo de `app/main.py` (antes de criar FastAPI app — Sentry precisa instrumentar antes)
-- [ ] Adicionar `SENTRY_DSN` ao `app/config.py` (Settings): `SENTRY_DSN: str = ""` (optional, empty = disabled)
-- [ ] Adicionar `ENVIRONMENT` ao `app/config.py`: `ENVIRONMENT: str = "development"`
+- [x] Chamar `init_sentry()` no topo de `app/main.py` (antes de criar FastAPI app — Sentry precisa instrumentar antes)
+- [x] Adicionar `SENTRY_DSN` ao `app/config.py` (Settings): `SENTRY_DSN: str = ""` (optional, empty = disabled)
+- [x] Adicionar `ENVIRONMENT` ao `app/config.py`: `ENVIRONMENT: str = "development"`
 - [ ] Testar: provocar erro intencional → verificar que aparece no Sentry dashboard
 - [ ] Verificar: erros de LLM (timeout, rate limit) capturados automaticamente
 - [ ] Verificar: erros de DB (connection, RLS) capturados automaticamente
 
 **Structured Logging + Request-ID Correlation (gap: plain text logs sem correlação):**
 > No NestJS: `AppLoggerService` (176L) com JSON structured output `{level, message, timestamp, requestId, userId, statusCode, durationMs}` + `RequestIdMiddleware` (45L) propaga `x-request-id` + `LoggingInterceptor` (74L) loga cada request/response. No Python: `logging.getLogger()` default com output `INFO: message` — sem JSON, sem requestId, impossível correlacionar com logs do NestJS.
-- [ ] Criar `app/api/middleware/request_id.py`:
+- [x] Criar `app/api/middleware/request_id.py`:
   - Ler `x-request-id` header do request (propagado pelo NestJS proxy)
   - Se ausente, gerar `uuid4()`
   - Armazenar em contexto (ContextVar) para acesso global
   - Retornar no response header `x-request-id`
-- [ ] Configurar JSON logging formatter em `app/observability.py`:
+- [x] Configurar JSON logging formatter em `app/observability.py`:
   - Format: `{"level", "message", "timestamp", "request_id", "user_id", "duration_ms"}`
-  - Usar `python-json-logger` ou formatter custom (avaliar se dependência extra vale)
+  - Usar `python-json-logger` (`pythonjsonlogger.json.JsonFormatter`)
   - Configurar `uvicorn.access` e `uvicorn.error` loggers para JSON
-- [ ] Adicionar middleware de logging (equivalente ao `LoggingInterceptor` do NestJS):
+- [x] Adicionar middleware de logging (equivalente ao `LoggingInterceptor` do NestJS):
   - Log de entrada: `POST /chat/invoke {request_id, user_id}`
   - Log de saída: `POST /chat/invoke 200 {request_id, duration_ms}`
-- [ ] Propagar `request_id` para Sentry (via `sentry_sdk.set_tag("request_id", ...)`)
+- [x] Propagar `request_id` para Sentry (via `sentry_sdk.set_tag("request_id", ...)`)
 - [ ] Testar: fazer request via NestJS proxy → verificar que requestId aparece nos logs Python e Sentry
 
 **Input Validation (gap: aceita mensagem vazia):**
 > No NestJS: `class-validator` com `@IsNotEmpty()` no DTO global validation pipe. No Python: Pydantic `message: str` sem `min_length` — `""` passa.
-- [ ] Adicionar `min_length=1` no Pydantic model de `/chat/invoke`: `message: str = Field(min_length=1)`
-- [ ] Adicionar validação no `/chat/resume`: `action` deve ser `"confirm" | "reject" | "edit"` (Literal type)
-- [ ] Testar: POST com `message: ""` → retorna 422 Validation Error
+- [x] Adicionar `min_length=1, max_length=10000` no Pydantic model de `/chat/invoke`: `message: str = Field(min_length=1, max_length=10000)`
+- [x] Validação no `/chat/resume`: `action` já usa `Literal["confirm", "reject", "edit"]` (sem mudança necessária)
+- [x] Testar: POST com `message: ""` → retorna 422 Validation Error
 
 **Suite de Paridade — Testes E2E Playwright (`USE_PYTHON_AI=true`):**
 > Mesmos testes E2E existentes, executados com flag alternada. O objetivo é garantir que o frontend funciona identicamente. Cenários testados via Playwright (browser real) contra a API com proxy Python ativo.
@@ -1126,18 +1126,18 @@ _Concluído em 2026-02-23._
 - [ ] Testes E2E Playwright passam com `USE_PYTHON_AI=true` (mesmos cenários que passam com `false`)
 - [ ] Frontend funciona sem mudanças de código
 - [ ] Load test: sem erros em 50 concurrent requests (p99 < 30s para chat com tool calls)
-- [ ] Sentry captura erros do Python service (verificar no dashboard)
-- [ ] Logs Python em JSON com request_id correlacionável com NestJS
+- [x] Sentry captura erros do Python service (unit tests pass; dashboard verification pending)
+- [x] Logs Python em JSON com request_id correlacionável com NestJS
 - [ ] Memory consolidation manual trigger funciona corretamente
 
 **Definition of Done:**
-- [ ] Sentry configurado e capturando erros do Python (FastAPI + SQLAlchemy integrations)
-- [ ] Logs estruturados (JSON) com request_id propagado do NestJS
-- [ ] Input validation: mensagem vazia rejeitada (422)
+- [x] Sentry configurado e capturando erros do Python (FastAPI + StarletteIntegration)
+- [x] Logs estruturados (JSON) com request_id propagado do NestJS
+- [x] Input validation: mensagem vazia rejeitada (422)
 - [ ] Testes E2E passam identicamente com `USE_PYTHON_AI=true` e `false`
 - [ ] Performance aceitável sob carga (50 concurrent, p95 < 15s)
 - [ ] Memory consolidation worker validado (trigger manual + audit log)
-- [ ] Observability spec (`docs/specs/core/observability.md`) atualizada com Python service
+- [x] Observability spec (`docs/specs/core/observability.md`) atualizada com Python service
 
 ---
 

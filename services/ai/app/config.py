@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
 
+    # Observability
+    SENTRY_DSN: str = ""
+    ENVIRONMENT: str = "development"
+
     # App
     APP_VERSION: str = "0.1.0"
     LOG_LEVEL: str = Field(default="info")

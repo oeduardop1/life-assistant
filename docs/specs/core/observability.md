@@ -46,6 +46,13 @@ Configurações em:
 Instrumentação no bootstrap:
 `apps/api/src/instrument.ts` (importado no topo do `main.ts`).
 
+### 3.3 Python AI Service
+
+Instrumentação em `services/ai/app/observability.py`:
+- `init_sentry()` — `sentry-sdk[fastapi]` com `FastApiIntegration` + `StarletteIntegration`
+- `configure_logging()` — JSON estruturado via `python-json-logger` (`pythonjsonlogger.json.JsonFormatter`)
+- `RequestIdMiddleware` — propaga `x-request-id` do NestJS proxy, gera UUID4 se ausente, injeta em logs via ContextVar
+
 ---
 
 ## 4. Alertas (propostos)

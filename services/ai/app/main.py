@@ -8,13 +8,20 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from app.agents.graph import build_chat_graph
 from app.agents.llm import create_llm, create_triage_llm
 from app.api.middleware.auth import ServiceAuthMiddleware
+from app.api.middleware.request_id import RequestIdMiddleware
 from app.api.routes.chat import router as chat_router
 from app.api.routes.health import router as health_router
 from app.api.routes.workers import router as workers_router
 from app.config import get_settings
 from app.db.engine import get_async_engine, get_session_factory
+from app.observability import configure_logging, init_sentry
 from app.workers.consolidation import set_session_factory
 from app.workers.scheduler import setup_scheduler
+
+# Initialize observability before anything else (matches NestJS: import './instrument')
+_settings = get_settings()
+init_sentry(_settings)
+configure_logging(_settings)
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +74,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Middleware
+    # Middleware (last added = outermost = runs first)
     app.add_middleware(ServiceAuthMiddleware, service_secret=settings.SERVICE_SECRET)
+    app.add_middleware(RequestIdMiddleware)
 
     # Routes
     app.include_router(health_router)
