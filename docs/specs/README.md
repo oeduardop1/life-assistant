@@ -361,17 +361,6 @@ O **Score Geral de Vida** é uma média simples das 6 áreas. Todas as áreas t�
 | [web-push.md](integrations/web-push.md) | 🟡 Planejado | Push notifications (Web) |
 | [apple-calendar.md](integrations/apple-calendar.md) | ⚪ Futuro | Apple Calendar (ICS/CalDAV) |
 
-### Legacy (Arquivos Originais)
-
-Arquivos originais mantidos para referência histórica:
-
-- [product.md](legacy/product.md) — Especificação funcional original
-- [system.md](legacy/system.md) — Regras de negócio original
-- [engineering.md](legacy/engineering.md) — Especificação técnica original
-- [data-model.md](legacy/data-model.md) — Modelo de dados original
-- [ai.md](legacy/ai.md) — Especificação de IA original
-- [integrations.md](legacy/integrations.md) — Integrações original
-
 ---
 
 ## Planos e Monetização

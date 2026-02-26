@@ -152,8 +152,6 @@ Python AI vars are loaded by `pydantic-settings` from the root `.env` — Python
 | | Developer Setup & Commands | `DEVELOPMENT.md` |
 | | Investor Pitch & Architecture | `README.md` |
 
-> ⚠️ **NEVER update `docs/specs/legacy/`** — read-only historical reference.
-
 ## ⚠️ MANDATORY PROTOCOL (PLANNING & IMPLEMENTATION)
 
 **WHEN TO USE:** Only for milestone-related work. Triggers include:

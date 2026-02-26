@@ -1,7 +1,7 @@
 # Apple Calendar (CalDAV)
 
 > Integração futura com Apple Calendar via CalDAV.
-> Fonte: `docs/specs/integrations/README.md` e `docs/specs/legacy/integrations.md`.
+> Fonte: `docs/specs/integrations/README.md`.
 
 ---
 
