@@ -11,7 +11,7 @@ Life Assistant AI is a SaaS platform with integrated AI that serves as a memory,
 **Architecture:** Modular Monolith + Clean Architecture (presentation/application/domain/infrastructure)
 ```
 life-assistant/
-├── apps/web/           # Next.js 16 frontend (React 19, Tailwind v4, shadcn/ui)
+├── apps/web/           # Next.js 16 frontend (React 19, Tailwind v4, shadcn/ui, TanStack Query, react-hook-form)
 ├── apps/api/           # NestJS 11 backend (Clean Architecture, BullMQ)
 ├── services/ai/        # Python AI Service (FastAPI + LangGraph) — NOT in pnpm workspace
 ├── packages/config/    # Zod-validated environment config (loadConfig, validateEnv)
@@ -43,7 +43,7 @@ pnpm dev:ai           # Start only Python AI service (uvicorn --reload)
 pnpm build            # Production build
 pnpm typecheck        # TypeScript check
 pnpm lint             # ESLint
-pnpm test             # Unit tests
+pnpm test             # Unit tests (Vitest)
 pnpm test:e2e         # E2E tests (Playwright)
 pnpm format           # Prettier format all files
 pnpm format:check     # Check formatting without writing
@@ -405,6 +405,23 @@ BullMQ cron (NestJS) → POST /workers/consolidation → Python executes AI logi
 
 The Python service exposes HTTP endpoints for worker jobs. NestJS handles scheduling, retry, and job history via BullMQ. Python handles the AI/LLM execution logic.
 
+### APScheduler (Python-side scheduling)
+
+For timezone-aware jobs that must run at local time (e.g., consolidation at 3 AM per user timezone), Python uses **APScheduler** independently of BullMQ.
+
+```
+APScheduler (Python) → CronTrigger per timezone → run_consolidation() directly
+```
+
+- Setup in `services/ai/app/workers/scheduler.py`
+- Started in FastAPI lifespan (`app/main.py`)
+- Queries distinct user timezones, creates one cron job per timezone
+- `refresh_schedules()` called when new users register
+
+**Two scheduling patterns coexist:**
+- **BullMQ** (NestJS): for jobs triggered by the backend (retry, job history, one-off tasks)
+- **APScheduler** (Python): for timezone-aware cron jobs that run directly in the AI service
+
 ## Python Development
 
 ### CLI-First Principle
@@ -444,6 +461,7 @@ The Python service exposes HTTP endpoints for worker jobs. NestJS handles schedu
 | `mypy` | Type checker (dev) | Strict mode |
 | `pytest` + `pytest-asyncio` | Testing (dev) | Async test support |
 | `httpx` | Test HTTP client (dev) | FastAPI `TestClient` alternative for async |
+| `apscheduler` | Timezone-aware cron scheduling | Consolidation at 3 AM per user timezone (see APScheduler section above) |
 
 ### LangChain/LangGraph Patterns
 
@@ -455,9 +473,13 @@ The Python service exposes HTTP endpoints for worker jobs. NestJS handles schedu
 ## Coding Style
 
 ### TypeScript (NestJS, packages/*)
-- TypeScript strict mode + Zod validation (no `any` without justification)
+- TypeScript strict mode (no `any` without justification)
+- **Validation split:** Zod for config/env (`packages/config/`), class-validator + class-transformer for HTTP DTOs (`apps/api/`)
 - Domain names from `docs/specs/core/data-conventions.md`
 - Business rules in `application/` layer only
+- **Data fetching:** TanStack Query (`useQuery`/`useMutation`) — never raw `fetch` + `useState`
+- **Forms:** react-hook-form (`useForm`) — never manual form state
+- **Test runner:** Vitest (Jest-compatible API, use `vi.fn()` / `vi.mocked()`)
 - Portuguese in user-facing content, English in code
 
 ### Python (services/ai/)
